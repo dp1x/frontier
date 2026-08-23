@@ -1,0 +1,29 @@
+id: tgt-2026-0001
+type: target
+status: active
+created_at: "2026-08-23T12:00:00Z"
+updated_at: "2026-08-23T12:00:00Z"
+summary: Public ML-KEM implementations suitable for differential input-checking analysis.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: human
+    role: maintainer
+    model: null
+    tool: null
+  sources:
+    - localdocs/refs/fips203.pdf
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  implementations: [imp-2026-0001, imp-2026-0002, imp-2026-0003]
+title: ML-KEM implementation landscape (candidate set)
+selection_rationale: >
+  Independent codebases, different languages/lineages, all buildable on commodity
+  hardware. Membership is provisional; the mission pins exact versions during
+  execution and may add/drop candidates with justification.
+candidates:
+  - implementation: imp-2026-0001
+  - implementation: imp-2026-0002
+  - implementation: imp-2026-0003

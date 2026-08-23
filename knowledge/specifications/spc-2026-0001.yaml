@@ -1,0 +1,37 @@
+id: spc-2026-0001
+type: specification
+status: current
+created_at: "2026-08-23T12:00:00Z"
+updated_at: "2026-08-23T12:00:00Z"
+summary: NIST FIPS 203 - Module-Lattice-Based Key-Encapsulation Mechanism Standard (ML-KEM), final, 2024-08-13.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: human
+    role: maintainer
+    model: null
+    tool: null
+  sources:
+    - https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.pdf
+    - localdocs/refs/fips203.pdf
+  parent: null
+  generation: 0
+links:
+  targets: [tgt-2026-0001]
+title: FIPS 203 (ML-KEM)
+normative_sections:
+  - section: "7.2"
+    topic: Encapsulation key check (type check len==384k+32; modulus check Eq 7.1 round-trip ByteEncode12(ByteDecode12(ek[0:384k]))==ek[0:384k])
+    placement_note: >
+      Encaps shall not run with an unchecked ek; however the check need not be
+      performed by the encapsulating party nor with every execution of Encaps -
+      assurance may be acquired through other means (SP 800-227). Verified
+      verbatim from committed PDF p.36.
+  - section: "7.3"
+    topic: Decapsulation input checks (ct type, dk type, hash check); ciphertext check required with EVERY Decaps execution.
+  - section: "4.2.1"
+    topic: ByteEncode/ByteDecode d=12 reduces mod q=3329; values in [3329,4095] possible only for non-canonical arrays.
+local_copy: localdocs/refs/fips203.pdf
+errata_watch: >
+  CSRC planning note dated 2025-11-17 flags potential updates/errata for FIPS
+  203; consult the errata spreadsheet before claiming spec-level conclusions.

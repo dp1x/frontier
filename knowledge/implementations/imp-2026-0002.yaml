@@ -1,0 +1,27 @@
+id: imp-2026-0002
+type: implementation
+status: candidate
+created_at: "2026-08-23T12:00:00Z"
+updated_at: "2026-08-23T12:00:00Z"
+summary: Open Quantum Safe liboqs - ML-KEM via oqs KEM API (version UNVERIFIED).
+epistemic_status: assumption
+provenance:
+  created_by:
+    kind: human
+    role: maintainer
+    model: null
+    tool: null
+  sources: []
+  parent: null
+  generation: 0
+links:
+  targets: [tgt-2026-0001]
+title: liboqs (ML-KEM)
+upstream: https://github.com/open-quantum-safe/liboqs
+language: C
+version:
+  pinned: false
+  note: >
+    Version/commit intentionally NOT recorded - must be verified and pinned by
+    mission msn-2026-0001 before any experiment cites this implementation.
+build_profile: cmake build, moderate size; still lightweight-class per-experiment.
