@@ -1,0 +1,69 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# Scratch / ramdisk leftovers (never commit)
+scratch/
+.scratch/
+R:/
+r:/
+
+# Local env
+.env
+.env.*
+!.env.example
+
+# Caches, corpora, build products
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.whl
+*.tar.gz
+node_modules/
+target/
+.cache/
+.tox/
+.nox/
+
+# Large logs and fuzz corpora
+*.log
+corpus/
+fuzz-out/
+crash-*
+
+# Security-sensitive local-only artifacts
+knowledge/findings/embargoed/*.yaml
+knowledge/findings/embargoed/*.md
+!knowledge/findings/embargoed/README.md
+missions/embargoed/*.yaml
+!missions/embargoed/README.md
+
+# Worktrees
+.worktrees/
