@@ -9,7 +9,6 @@ def test_tiny_hash_experiment_records_observation_and_blocks_unearned_verificati
     repo_root: Path, tmp_path: Path
 ):
     from frontier.execute import run_command
-    from frontier.promotion import can_promote_finding
     from frontier.validate import validate_document
 
     mission = envelope(

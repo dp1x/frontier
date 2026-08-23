@@ -1,6 +1,5 @@
 """Untrusted experiment execution with env scrubbing."""
 
-import os
 from pathlib import Path
 
 from frontier.execute import run_command, scrub_env

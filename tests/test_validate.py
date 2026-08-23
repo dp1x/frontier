@@ -2,10 +2,7 @@
 
 from pathlib import Path
 
-import pytest
-import yaml
-
-from tests.conftest import envelope, provenance, write_yaml
+from tests.conftest import envelope, write_yaml
 
 
 def _mission(**overrides) -> dict:
