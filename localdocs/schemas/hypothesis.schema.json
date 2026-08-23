@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hypothesis.schema.json",
+  "title": "Frontier hypothesis",
+  "type": "object",
+  "required": ["id", "type", "status", "created_at", "updated_at", "summary",
+               "epistemic_status", "provenance", "links", "statement",
+               "falsifiable_predictions"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^hyp-[0-9]{4}-[0-9]{4}$"},
+    "type": {"const": "hypothesis"},
+    "status": {"enum": ["open", "testing", "supported", "rejected",
+                         "inconclusive", "superseded", "archived"]},
+    "created_at": {"type": "string"},
+    "updated_at": {"type": "string"},
+    "summary": {"type": "string", "minLength": 1},
+    "epistemic_status": {"enum": ["idea", "assumption", "hypothesis",
+                                   "observation", "interpretation",
+                                   "verified_conclusion"]},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "links": {"type": "object"},
+    "statement": {"type": "string", "minLength": 10},
+    "falsifiable_predictions": {"type": "array", "minItems": 1,
+                                 "items": {"type": "string"}},
+    "disproof_attempts": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["created_by", "sources"],
+      "properties": {
+        "created_by": {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": {"enum": ["human", "model-agent", "deterministic-tool"]},
+            "role": {"type": ["string", "null"]},
+            "model": {"type": ["string", "null"]},
+            "tool": {"type": ["string", "null"]}
+          }
+        },
+        "sources": {"type": "array"},
+        "parent": {"type": ["string", "null"]},
+        "generation": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

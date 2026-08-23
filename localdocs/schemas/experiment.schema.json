@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "experiment.schema.json",
+  "title": "Frontier experiment",
+  "type": "object",
+  "required": ["id", "type", "status", "created_at", "updated_at", "summary",
+               "epistemic_status", "provenance", "links", "design", "commands",
+               "compute_decision"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^exp-[0-9]{4}-[0-9]{4}$"},
+    "type": {"const": "experiment"},
+    "status": {"enum": ["designed", "running", "complete", "invalid",
+                         "aborted"]},
+    "created_at": {"type": "string"},
+    "updated_at": {"type": "string"},
+    "summary": {"type": "string", "minLength": 1},
+    "epistemic_status": {"enum": ["idea", "assumption", "hypothesis",
+                                   "observation", "interpretation",
+                                   "verified_conclusion"]},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "links": {"type": "object"},
+    "design": {"type": "string", "minLength": 10},
+    "commands": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "compute_decision": {
+      "type": "object",
+      "required": ["location", "isolation"],
+      "properties": {
+        "location": {"enum": ["local", "github-actions", "escalate",
+                               "blocked"]},
+        "isolation": {"type": "string"},
+        "reason": {"type": "string"}
+      }
+    },
+    "determinism": {
+      "type": "object",
+      "properties": {
+        "deterministic": {"type": "boolean"},
+        "seed_policy": {"type": ["string", "null"]},
+        "nondeterminism_notes": {"type": ["string", "null"]}
+      }
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["created_by", "sources"],
+      "properties": {
+        "created_by": {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": {"enum": ["human", "model-agent", "deterministic-tool"]},
+            "role": {"type": ["string", "null"]},
+            "model": {"type": ["string", "null"]},
+            "tool": {"type": ["string", "null"]}
+          }
+        },
+        "sources": {"type": "array"},
+        "parent": {"type": ["string", "null"]},
+        "generation": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

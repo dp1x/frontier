@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "observation.schema.json",
+  "title": "Frontier observation",
+  "type": "object",
+  "required": ["id", "type", "status", "created_at", "updated_at", "summary",
+               "epistemic_status", "provenance", "links", "statement",
+               "environment"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^obs-[0-9]{4}-[0-9]{4}$"},
+    "type": {"const": "observation"},
+    "status": {"enum": ["recorded", "invalidated"]},
+    "created_at": {"type": "string"},
+    "updated_at": {"type": "string"},
+    "summary": {"type": "string", "minLength": 1},
+    "epistemic_status": {"enum": ["idea", "assumption", "hypothesis",
+                                   "observation", "interpretation",
+                                   "verified_conclusion"]},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "links": {"type": "object"},
+    "statement": {"type": "string", "minLength": 10},
+    "environment": {
+      "type": "object",
+      "required": ["where", "isolation"],
+      "properties": {
+        "where": {"enum": ["local", "github-actions", "external"]},
+        "isolation": {"type": "string"},
+        "cwd": {"type": ["string", "null"]},
+        "versions": {"type": "object"}
+      }
+    },
+    "stdout": {"type": ["string", "null"]},
+    "stderr": {"type": ["string", "null"]},
+    "exit_code": {"type": ["integer", "null"]}
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["created_by", "sources"],
+      "properties": {
+        "created_by": {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": {"enum": ["human", "model-agent", "deterministic-tool"]},
+            "role": {"type": ["string", "null"]},
+            "model": {"type": ["string", "null"]},
+            "tool": {"type": ["string", "null"]}
+          }
+        },
+        "sources": {"type": "array"},
+        "parent": {"type": ["string", "null"]},
+        "generation": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

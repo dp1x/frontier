@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finding.schema.json",
+  "title": "Frontier finding",
+  "type": "object",
+  "required": ["id", "type", "status", "created_at", "updated_at", "summary",
+               "epistemic_status", "provenance", "links", "classification",
+               "statement", "disclosure"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^fnd-[0-9]{4}-[0-9]{4}$"},
+    "type": {"const": "finding"},
+    "status": {"enum": ["proposed", "under-review", "verified", "rejected",
+                         "disputed", "stale", "superseded", "archived",
+                         "escalate/security-sensitive"]},
+    "created_at": {"type": "string"},
+    "updated_at": {"type": "string"},
+    "summary": {"type": "string", "minLength": 1},
+    "epistemic_status": {"enum": ["idea", "assumption", "hypothesis",
+                                   "observation", "interpretation",
+                                   "verified_conclusion"]},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "links": {"type": "object"},
+    "classification": {
+      "enum": ["spec-violation", "implementation-bug", "implementation-defined",
+               "undefined-behavior", "spec-ambiguity", "not-a-bug",
+               "interoperability-gap", "verified-known-answer",
+               "implementation-spec-mismatch", "process", "other"]
+    },
+    "statement": {"type": "string", "minLength": 10},
+    "disclosure": {"enum": ["public", "embargoed", "escalate/security-sensitive"]},
+    "limitations": {"type": ["string", "null"]}
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["created_by", "sources"],
+      "properties": {
+        "created_by": {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": {"enum": ["human", "model-agent", "deterministic-tool"]},
+            "role": {"type": ["string", "null"]},
+            "model": {"type": ["string", "null"]},
+            "tool": {"type": ["string", "null"]}
+          }
+        },
+        "sources": {"type": "array"},
+        "parent": {"type": ["string", "null"]},
+        "generation": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

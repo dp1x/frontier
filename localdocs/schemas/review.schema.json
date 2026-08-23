@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "review.schema.json",
+  "title": "Frontier review (independent/adversarial)",
+  "type": "object",
+  "required": ["id", "type", "status", "created_at", "updated_at", "summary",
+               "epistemic_status", "provenance", "links", "role", "verdict",
+               "independent"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^rev-[0-9]{4}-[0-9]{4}$"},
+    "type": {"const": "review"},
+    "status": {"enum": ["complete", "retracted"]},
+    "created_at": {"type": "string"},
+    "updated_at": {"type": "string"},
+    "summary": {"type": "string", "minLength": 1},
+    "epistemic_status": {"enum": ["idea", "assumption", "hypothesis",
+                                   "observation", "interpretation",
+                                   "verified_conclusion"]},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "links": {"type": "object"},
+    "role": {"type": "string"},
+    "verdict": {"enum": ["supports", "disputes", "inconclusive"]},
+    "independent": {"type": "boolean"},
+    "attempts_disproof": {"type": "boolean"},
+    "objections": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["created_by", "sources"],
+      "properties": {
+        "created_by": {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": {"enum": ["human", "model-agent", "deterministic-tool"]},
+            "role": {"type": ["string", "null"]},
+            "model": {"type": ["string", "null"]},
+            "tool": {"type": ["string", "null"]}
+          }
+        },
+        "sources": {"type": "array"},
+        "parent": {"type": ["string", "null"]},
+        "generation": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}
