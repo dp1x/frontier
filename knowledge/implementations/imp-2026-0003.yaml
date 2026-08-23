@@ -1,0 +1,29 @@
+id: imp-2026-0003
+type: implementation
+status: candidate
+created_at: "2026-08-23T12:00:00Z"
+updated_at: "2026-08-23T12:00:00Z"
+summary: OpenSSL - ML-KEM via EVP KEX API (version UNVERIFIED).
+epistemic_status: assumption
+provenance:
+  created_by:
+    kind: human
+    role: maintainer
+    model: null
+    tool: null
+  sources: []
+  parent: null
+  generation: 0
+links:
+  targets: [tgt-2026-0001]
+title: OpenSSL (ML-KEM EVP)
+upstream: https://github.com/openssl/openssl
+language: C
+version:
+  pinned: false
+  note: >
+    Version/commit intentionally NOT recorded. ML-KEM support landed in the
+    3.x series; the exact release and API surface (EVP_PKEY_encapsulate /
+    decapsulate, key import/export validation behavior) must be verified and
+    pinned by mission msn-2026-0001 before any experiment cites it.
+build_profile: large library; prefer system package or prebuilt binary; per-experiment cost still lightweight.
