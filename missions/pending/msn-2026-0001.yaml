@@ -40,7 +40,7 @@ candidate_targets: [tgt-2026-0001]
 dependencies: []
 compute:
   expected_class: lightweight
-  notes: Keygen+encaps on tiny inputs; prefer R: ramdisk scratch; no CI needed unless a build matrix becomes necessary.
+  notes: "Keygen+encaps on tiny inputs; prefer R: ramdisk scratch; no CI needed unless a build matrix becomes necessary."
 budget:
   max_attempts: 24
   max_independent_reviews: 3
