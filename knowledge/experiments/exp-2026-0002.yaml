@@ -31,7 +31,7 @@ commands:
 compute_decision:
   location: local
   isolation: env-scrubbed-scratch
-  reason: lightweight deterministic run in R: scratch
+  reason: "lightweight deterministic run in R: scratch"
 determinism:
   deterministic: true
   seed_policy: keypair/enc coins derived from recorded integer seeds via LCG

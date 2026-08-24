@@ -35,7 +35,7 @@ commands:
 compute_decision:
   location: local
   isolation: env-scrubbed-scratch
-  reason: lightweight deterministic run; R: ramdisk scratch; router says local
+  reason: "lightweight deterministic run; R: ramdisk scratch; router says local"
 determinism:
   deterministic: true
   seed_policy: fixed coins = zero vector; stimulus seeds recorded in manifest
