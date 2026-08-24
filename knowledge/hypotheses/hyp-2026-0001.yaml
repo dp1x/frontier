@@ -1,0 +1,32 @@
+id: hyp-2026-0001
+type: hypothesis
+status: open
+created_at: "2026-08-24T11:45:00Z"
+updated_at: "2026-08-24T11:45:00Z"
+summary: Control - valid keys always encapsulate and roundtrip; decision tables are deterministic and identical across ARM64-native vs x64-emulated execution.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: ox-alpha
+    tool: independent generator B
+  sources: [missions/active/msn-2026-0001.yaml]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  experiments: []
+title: H-B1 harness validity, determinism, emulation-invariance (load-bearing control)
+statement: >
+  On this host every reachable implementation encapsulates successfully with
+  well-formed ek for every parameter set it exposes; ciphertext decapsulates to
+  the same shared secret; the full accept/reject table is bitwise reproducible
+  across repeats and across ARM64-native vs x64-emulated execution.
+falsifiable_predictions:
+  - At least 32 random valid ek per parameter set per library yield 100% accept + shared-secret roundtrip equality.
+  - The malformed-input decision table is identical across >=3 repeats and across native-ARM64 vs x64-emulated builds of the same C harness.
+  - Killing observation - any flaky verdict, roundtrip mismatch on valid keys, or native-vs-emulated disagreement voids all downstream differential rows until repaired.
+disproof_attempts: []
+notes: >
+  Gates every other row; supplies the valid-key baseline column. Not promotable
+  alone; its failure blocks promotion of everything else.

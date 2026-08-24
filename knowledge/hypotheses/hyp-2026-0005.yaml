@@ -1,0 +1,38 @@
+id: hyp-2026-0005
+type: hypothesis
+status: open
+created_at: "2026-08-24T11:45:00Z"
+updated_at: "2026-08-24T11:45:00Z"
+summary: Every candidate lands in exactly one placement class via the two-probe protocol (Probe-A validation-capable entry point vs Probe-B deepest encaps entry without validation).
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: ox-alpha
+    tool: independent generator B
+  sources: [knowledge/implementations/imp-2026-0001.yaml, knowledge/implementations/imp-2026-0002.yaml, knowledge/implementations/imp-2026-0003.yaml, knowledge/implementations/imp-2026-0004.yaml, knowledge/implementations/imp-2026-0005.yaml]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  implementations: [imp-2026-0001, imp-2026-0002, imp-2026-0003, imp-2026-0004, imp-2026-0005]
+title: H-B5 placement taxonomy via two-probe protocol
+statement: >
+  Each candidate lands stably in exactly one placement class - import-only
+  (predicted OpenSSL, Go, RustCrypto), encaps-time (liboqs),
+  nowhere/unsignalable (PQClean), or both - and wherever an unchecked
+  construction surface exists, Probe-B silently encapsulates inputs Probe-A
+  rejects.
+falsifiable_predictions:
+  - PQClean has no Probe-A; Probe-B returns 0 with ciphertext for all malformed inputs - recorded as accepted-unsignalable, never conflated with valid-key success.
+  - liboqs Probe-A equals Probe-B (no import layer); wrong-length is structurally inexpressible, recorded as such rather than as a behavioral result.
+  - Go NewEncapsulationKey768 errors with distinguishable length-vs-modulus messages; no unchecked surface exists (unexported fields) - unchecked encapsulation structurally impossible.
+  - RustCrypto ::new errs on modulus-invalid; if a pinned-version infallible constructor bypasses the checked path, Probe-B through it encapsulates silently - class "import-checked with documented bypass".
+  - Killing observations - Probe-B rejecting after Probe-A accepted (reclassifies as double-checking); any claimed-checked API silently accepting (kills Go/RustCrypto priors).
+disproof_attempts: []
+notes: >
+  This hypothesis IS the differential table's WHERE column. Operational
+  definitions - reject = explicit signal at the library's own API boundary;
+  accept = call completes producing ciphertext material; never inferred from
+  absence of crash. Liveness proof required on valid keys to catch lazy
+  validators.

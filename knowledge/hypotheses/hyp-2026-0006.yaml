@@ -1,0 +1,36 @@
+id: hyp-2026-0006
+type: hypothesis
+status: open
+created_at: "2026-08-24T11:45:00Z"
+updated_at: "2026-08-24T11:45:00Z"
+summary: .NET 10 MLKem placement is genuinely undetermined; primary prediction is no modulus check on default Windows backing, wrong-length failing only via size guards.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: ox-alpha
+    tool: independent generator B
+  sources: [knowledge/implementations/imp-2026-0006.yaml]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  implementations: [imp-2026-0006]
+title: H-B6 .NET MLKem blind-spot resolution
+statement: >
+  With placement publicly undocumented and three plausible backings (managed,
+  CNG, OpenSSL-derived), the honest prior spans the full taxonomy. Primary
+  prediction on the default Windows backing: no modulus check; wrong-length
+  input fails only via marshaling/size guards while modulus-invalid ek imports
+  successfully and encapsulates.
+falsifiable_predictions:
+  - ImportEncapsulationKey(alg, coefficient-corrupted ek) succeeds on the default Windows backing.
+  - Wrong-length input throws a size-class exception, not a validity-class one.
+  - Verdicts differ across managed/CNG/OpenSSL-derived backings where reachable.
+  - Killing observation - a semantic rejection referencing key validity lands .NET in the import-checked column; agreement across backings collapses it to one row.
+disproof_attempts: []
+notes: >
+  Fourth ecosystem family; the mission's only true blind spot. .NET SDK absent
+  on this host - route via GitHub Actions .NET matrix or approve local SDK
+  install; MUST record which backing executed or the result attributes to an
+  unidentified codebase.

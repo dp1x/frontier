@@ -1,0 +1,35 @@
+id: hyp-2026-0004
+type: hypothesis
+status: open
+created_at: "2026-08-24T11:45:00Z"
+updated_at: "2026-08-24T11:45:00Z"
+summary: Type-check enforcement is uniform across parameter sets k=2/3/4 and no library silently decodes an ek belonging to a different parameter set (FIPS 203 section 7 preamble association).
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: ox-alpha
+    tool: independent generator B
+  sources: [localdocs/refs/fips203.pdf#section-7, knowledge/implementations/imp-2026-0002.yaml]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  implementations: [imp-2026-0001, imp-2026-0002, imp-2026-0003, imp-2026-0004]
+title: H-B4 parameter-set uniformity and cross-set confusion
+statement: >
+  Wherever a type check exists it is enforced uniformly across k=2/3/4, and no
+  library decodes an ek whose length belongs to a different parameter set -
+  the latter being the section 7 preamble parameter-association requirement,
+  distinct from Eq. 7.1.
+falsifiable_predictions:
+  - len(ek)-1 and len(ek)+1 are rejected wherever a type check exists.
+  - A 1568-byte buffer holding a valid ML-KEM-1024 ek presented to an ML-KEM-768 context is rejected on length, never silently decoded.
+  - Identical corruption patterns produce identical verdicts across exposed parameter sets.
+  - Killing observation - any set-specific acceptance splits rows or creates an association-violation candidate finding.
+disproof_attempts: []
+notes: >
+  Wave-1 builds were ML-KEM-768-only everywhere; there is currently zero
+  executed evidence for k=2/4 behavior in any library. Go exposes only 768/1024
+  (API scope, not a violation).
