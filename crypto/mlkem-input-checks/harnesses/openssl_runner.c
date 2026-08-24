@@ -9,6 +9,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <openssl/crypto.h>
 #include <openssl/provider.h>
 
 #define MAX_LINE 8192
@@ -36,7 +37,11 @@ int main(int argc, char **argv) {
     FILE *in = fopen(argv[1], "r"), *out = fopen(argv[2], "w");
     if (!in || !out) { perror("open"); return 2; }
 
-    fprintf(out, "META|openssl=%s\n", OPENSSL_VERSION_TEXT);
+    /* Runtime version (OpenSSL_version), not the compile-time macro: catches
+       header/library skew like compiling against system headers while
+       linking a locally built libcrypto. */
+    fprintf(out, "META|runtime_libcrypto=%s|compiled_headers=%s\n",
+            OpenSSL_version(OPENSSL_VERSION), OPENSSL_VERSION_TEXT);
     char line[MAX_LINE];
     static unsigned char ek[4096];
     int total = 0;

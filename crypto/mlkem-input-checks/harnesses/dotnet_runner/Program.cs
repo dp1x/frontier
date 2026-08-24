@@ -5,15 +5,24 @@ using System;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
-var args = Environment.GetCommandLineArgs();
-if (args.Length != 3)
+var cliArgs = Environment.GetCommandLineArgs();
+if (cliArgs.Length != 3)
 {
     Console.Error.WriteLine("usage: dotnet_runner <stimuli.tsv> <report.out>");
     return 2;
 }
 
-using var inStream = new StreamReader(args[1]);
-using var outWriter = new StreamWriter(args[2]);
+// FIPS 203 Table 3: (ciphertext, shared-secret) sizes per parameter set.
+static (int ct, int ss) Sizes(string p) => p switch
+{
+    "ML-KEM-512" => (768, 32),
+    "ML-KEM-768" => (1088, 32),
+    "ML-KEM-1024" => (1568, 32),
+    _ => (0, 0),
+};
+
+using var inStream = new StreamReader(cliArgs[1]);
+using var outWriter = new StreamWriter(cliArgs[2]);
 
 outWriter.WriteLine($"META|runtime={Environment.Version}|os={RuntimeInformation.OSDescription}" +
                     $"|arch={RuntimeInformation.ProcessArchitecture}|mlkemSupported={MLKem.IsSupported}");
@@ -39,12 +48,13 @@ while ((line = inStream.ReadLine()) is not null)
     byte[] ek;
     try { ek = Convert.FromHexString(ekHex); }
     catch { continue; }
+    var (ctLen, ssLen) = Sizes(paramSet);
 
     try
     {
         using var kem = MLKem.ImportEncapsulationKey(alg, ek);
-        byte[] ciphertext = new byte[alg.CiphertextSizeBytes];
-        byte[] sharedSecret = new byte[alg.SharedSecretSizeBytes];
+        byte[] ciphertext = new byte[ctLen];
+        byte[] sharedSecret = new byte[ssLen];
         kem.Encapsulate(ciphertext, sharedSecret);
         outWriter.WriteLine($"{family}|{paramSet}|{expected}|{source}|import-accepted|encap-accepted");
     }
@@ -59,5 +69,5 @@ while ((line = inStream.ReadLine()) is not null)
 }
 
 outWriter.WriteLine($"SUMMARY|total={total}");
-Console.WriteLine($"done: {total} vectors -> {args[2]}");
+Console.WriteLine($"done: {total} vectors -> {cliArgs[2]}");
 return 0;

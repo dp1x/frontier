@@ -28,7 +28,8 @@ jobs:
       - name: Compile runner
         run: |
           gcc -O2 -Wall -o openssl_runner crypto/mlkem-input-checks/harnesses/openssl_runner.c \
-            -I openssl-install/include/openssl -L openssl-install/lib64 -L openssl-install/lib -lcrypto -Wl,-rpath,$PWD/openssl-install/lib64 -Wl,-rpath,$PWD/openssl-install/lib
+            -I openssl-install/include -L openssl-install/lib64 -L openssl-install/lib -lcrypto \
+            -Wl,-rpath,$PWD/openssl-install/lib64 -Wl,-rpath,$PWD/openssl-install/lib
       - name: Run differential
         run: |
           ./openssl_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv openssl_report.tsv
