@@ -16,7 +16,7 @@ $scratchRoot = if ($env:FRONTIER_SCRATCH) { $env:FRONTIER_SCRATCH.TrimEnd('\') }
 $ws = Join-Path $scratchRoot "msn-2026-0001-repro"
 New-Item -ItemType Directory -Force $ws | Out-Null
 
-& $py -c "from frontier.scratch import ensure_capacity; from pathlib import Path; ensure_capacity(Path(r'$($scratchRoot -replace '\\','\\\\'))', 800*1024*1024)"
+& $py -c "import sys; from frontier.scratch import ensure_capacity; from pathlib import Path; ensure_capacity(Path(sys.argv[1]), 800*1024*1024)" "$scratchRoot"
 if ($LASTEXITCODE -ne 0) { throw "capacity gate failed" }
 
 $MSVC = "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC"
