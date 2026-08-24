@@ -1,0 +1,42 @@
+id: obs-2026-0003
+type: observation
+status: recorded
+created_at: "2026-08-24T13:15:00Z"
+updated_at: "2026-08-24T13:15:00Z"
+summary: liboqs rejected all 82 non-canonical vectors (incl. Wycheproof and congruent-plant) at Encaps time and accepted all canonical-content keys, uniformly across k=2/3/4.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command
+  sources: [exp-2026-0003]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  experiments: [exp-2026-0003]
+  implementations: [imp-2026-0002]
+  hypotheses: [hyp-2026-0004, hyp-2026-0005]
+title: liboqs encaps-time modulus rejection uniform across parameter sets
+statement: >
+  199 vectors x ML-KEM-{512,768,1024} via public OQS_KEM_encaps with a hooked
+  deterministic RNG: exactly the 82 length-valid non-canonical vectors were
+  rejected (rc=-1; 27 generated + 19 congruent-plant + 36 Wycheproof), exactly
+  the 108 canonical-content vectors accepted (96 valid controls + 12 rho
+  mutations - no over-validation of the unconstrained seed tail), and the 9
+  wrong-length vectors recorded inexpressible-at-api. Verdicts identical for
+  k=2/3/4 (first executed evidence for k!=3 in this mission). Runner META
+  logged avx2=1 under x64-on-ARM64 emulation; backend selection was runtime
+  automatic.
+environment:
+  where: local
+  isolation: env-scrubbed-scratch
+  cwd: R:\frontier-scratch\msn-2026-0001\harnesses
+  versions:
+    liboqs: 0.16.0 @ 5a1a854b0dc9f2141bdc771c555ee60c37950183
+    mlkem_native: v1.2.0 @ 0ba906cb14b1c241476134d7403a811b382ca498
+stdout: |
+  META|avx2=1|liboqs=0.16.0
+  SUMMARY|total=199|matched=199
+exit_code: 0

@@ -1,0 +1,46 @@
+id: obs-2026-0002
+type: observation
+status: recorded
+created_at: "2026-08-24T13:10:00Z"
+updated_at: "2026-08-24T13:10:00Z"
+summary: Congruent-plant differential on PQClean refuted the ciphertext-equality prediction - encryption randomness derives from H(ek_raw), and honest peers fail closed via implicit rejection.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command
+  sources: [exp-2026-0002, hyp-2026-0007]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  experiments: [exp-2026-0002]
+  implementations: [imp-2026-0001]
+  hypotheses: [hyp-2026-0007, hyp-2026-0008]
+title: PQClean congruent-plant pairing - ct differs, peer decap fails closed
+statement: >
+  On all 8 executed differential rows (keypair-derived ek with congruent
+  overflow planted at coefficient 0): sender-side enc accepted; ct_a !=
+  ct_b (canonical reference) on every row - because (K,r) <- G(m||H(ek))
+  derives the encryption randomness from the RAW key bytes, so changed bytes
+  change r; honest-peer decap of ct_a returned ss_d equal to neither ss_a nor
+  ss_b (implicit rejection triggered by re-encryption mismatch). The S1
+  silent-divergence channel as stated in hyp-2026-0007 is therefore DEAD in
+  its current form for FIPS 203 ML-KEM: raw-key acceptance cannot yield a
+  correctly-decrypting ciphertext with a divergent shared secret when the
+  randomness derives from H(ek). The observed hazard shape is instead a
+  one-sided establishment failure (sender believes key established; peer
+  derives an implicit-rejection secret) - consistent with hyp-2026-0008's
+  pair-property framing but through fail-closed rather than fail-silent
+  mechanics.
+environment:
+  where: local
+  isolation: env-scrubbed-scratch
+  cwd: R:\frontier-scratch\msn-2026-0001\harnesses
+  versions:
+    pqclean: master 0586a824fc0d49df0b6b6e9179d8d15d06d0974f
+    msvc: "14.51.36231"
+stdout: |
+  8 rows: accepted(planted=3348..4033)|ct_eq=0|ss_sender==peer:0|ss_canon==peer:0
+exit_code: 0

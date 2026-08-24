@@ -1,0 +1,37 @@
+id: exp-2026-0004
+type: experiment
+status: complete
+created_at: "2026-08-24T13:36:00Z"
+updated_at: "2026-08-24T13:36:00Z"
+summary: Go stdlib crypto/mlkem stimulus run - NewEncapsulationKey768/1024 import + Encapsulate, error-class classification.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command
+  sources: [hyp-2026-0005]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0005]
+  observations: [obs-2026-0004]
+  implementations: [imp-2026-0004]
+title: Go stdlib differential run
+design: >
+  go build of single-file runner against local GOROOT stdlib (go1.26.4
+  windows/arm64); per vector matching ML-KEM-768/1024 (512 absent from API),
+  mlkem.NewEncapsulationKey{768,1024}(ek) then full encapsulation for liveness;
+  error messages classified length vs modulus by content.
+commands:
+  - "go build -o gobin/go_runner.exe go_runner.go"
+  - "gobin/go_runner.exe stimuli.tsv reports/go_runner_report.tsv"
+compute_decision:
+  location: local
+  isolation: env-scrubbed-scratch
+  reason: lightweight; preinstalled toolchain; no network (stdlib only)
+determinism:
+  deterministic: true
+  seed_policy: import/liveness verdicts are input-determined; no randomness recorded
+  nondeterminism_notes: null

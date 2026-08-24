@@ -1,0 +1,41 @@
+id: exp-2026-0003
+type: experiment
+status: complete
+created_at: "2026-08-24T13:34:00Z"
+updated_at: "2026-08-24T13:34:00Z"
+summary: liboqs stimulus run - all three ML-KEM variants, public OQS_KEM_encaps, hooked deterministic RNG, CPU-feature logging for backend attribution.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command
+  sources: [hyp-2026-0004, hyp-2026-0005]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0004, hyp-2026-0005]
+  observations: [obs-2026-0003]
+  implementations: [imp-2026-0002]
+title: liboqs differential stimulus run
+design: >
+  Reconfigure pinned 0.16.0 clone with OQS_ENABLE_KEM_ML_KEM=ON (all
+  variants), build static oqs.lib (MSVC, x64). Runner sets
+  OQS_randombytes_custom_algorithm to an LCG, iterates the committed manifest
+  through OQS_KEM_new/OQS_KEM_encaps per vector, logs avx2 availability and
+  liboqs version as META. Wrong-length vectors recorded
+  inexpressible-at-api (fixed-size buffers).
+commands:
+  - "cmake -S . -B build-all-kem -G \"Visual Studio 18 2026\" -A x64 <flags>"
+  - "cmake --build build-all-kem --config Release --target oqs"
+  - "cl /nologo /O2 /W4 /I <generated include> oqs_runner.c oqs.lib bcrypt.lib advapi32.lib /Fe:oqs_runner.exe"
+  - "oqs_runner.exe stimuli.tsv reports/oqs_runner_report.tsv"
+compute_decision:
+  location: local
+  isolation: env-scrubbed-scratch
+  reason: lightweight per-vector runs; one-time ~145s build fits ramdisk budget
+determinism:
+  deterministic: true
+  seed_policy: custom RNG = 64-bit LCG, fixed state constant
+  nondeterminism_notes: backend selection is runtime-automatic (avx2=1 under emulation logged)

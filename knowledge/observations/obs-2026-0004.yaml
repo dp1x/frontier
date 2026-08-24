@@ -1,0 +1,38 @@
+id: obs-2026-0004
+type: observation
+status: recorded
+created_at: "2026-08-24T13:20:00Z"
+updated_at: "2026-08-24T13:20:00Z"
+summary: Go stdlib crypto/mlkem rejected all malformed keys with distinguishable length vs modulus error classes; accepted all canonical-content keys (768/1024 only).
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command
+  sources: [exp-2026-0004]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  experiments: [exp-2026-0004]
+  implementations: [imp-2026-0004]
+  hypotheses: [hyp-2026-0005]
+title: Go crypto/mlkem import-time checks with classified errors
+statement: >
+  Go 1.26.4 windows/arm64, crypto/mlkem (stdlib since 1.24): of 135 vectors
+  matching exposed parameter sets (768/1024; ML-KEM-512 absent from the API by
+  design), all 58 non-canonical vectors were rejected at NewEncapsulationKey*
+  with "mlkem: invalid polynomial encoding" and all 5 wrong-length vectors
+  with "mlkem: invalid encapsulation key length" - distinct error classes
+  matching hyp-2026-0005's prediction. All 72 canonical-content vectors
+  (valid controls + rho mutations) imported and encapsulated.
+environment:
+  where: local
+  isolation: env-scrubbed-scratch
+  cwd: R:\frontier-scratch\msn-2026-0001\harnesses
+  versions:
+    go: go1.26.4 windows/arm64
+stdout: |
+  SUMMARY|total=135
+exit_code: 0

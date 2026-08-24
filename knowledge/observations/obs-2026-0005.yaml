@@ -1,0 +1,38 @@
+id: obs-2026-0005
+type: observation
+status: recorded
+created_at: "2026-08-24T13:25:00Z"
+updated_at: "2026-08-24T13:25:00Z"
+summary: RustCrypto ml-kem 0.3.2 rejected all 91 malformed vectors at import (modulus AND wrong-length expressible via slice constructor); accepted all 108 canonical-content vectors.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command
+  sources: [exp-2026-0005]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  experiments: [exp-2026-0005]
+  implementations: [imp-2026-0005]
+  hypotheses: [hyp-2026-0004, hyp-2026-0005]
+title: RustCrypto ml-kem import-time rejection incl. wrong-length
+statement: >
+  ml-kem crate 0.3.2 via EncapsulationKey::new_from_slice + hazmat
+  encapsulate_deterministic: all 82 non-canonical AND all 9 wrong-length
+  vectors rejected at key construction (the slice API can express the type
+  check), all 108 canonical-content vectors accepted, uniform across
+  k=2/3/4. Confirms the source-level prior including its in-tree regression
+  behavior against [0xFF;1184]-style inputs.
+environment:
+  where: local
+  isolation: env-scrubbed-scratch
+  cwd: R:\frontier-scratch\msn-2026-0001\harnesses\rust-runner
+  versions:
+    rustc: "1.96.0"
+    ml_kem_crate: "0.3.2"
+stdout: |
+  SUMMARY|total=199
+exit_code: 0

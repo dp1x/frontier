@@ -1,0 +1,40 @@
+id: obs-2026-0001
+type: observation
+status: recorded
+created_at: "2026-08-24T13:10:00Z"
+updated_at: "2026-08-24T13:10:00Z"
+summary: PQClean accepted every callable vector including all non-canonical families; wrong-length vectors structurally inexpressible at API.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command
+  sources: [exp-2026-0001]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  experiments: [exp-2026-0001]
+  implementations: [imp-2026-0001]
+  hypotheses: [hyp-2026-0005]
+title: PQClean accepts all length-valid inputs regardless of canonicality
+statement: >
+  Across 199 vectors x ML-KEM-{512,768,1024}-clean: 190 callable vectors all
+  returned rc=0 with ciphertext produced - including 27 generated non-canonical,
+  19 congruent-plant, and 36 Wycheproof ModulusOverflow vectors - confirming
+  hyp-2026-0005's nowhere/unsignalable placement prediction. The 9 wrong-length
+  vectors are recorded inexpressible-at-api (no length parameter exists).
+  Zero infrastructure surprises.
+environment:
+  where: local
+  isolation: env-scrubbed-scratch
+  cwd: R:\frontier-scratch\msn-2026-0001\harnesses
+  versions:
+    pqclean: master 0586a824fc0d49df0b6b6e9179d8d15d06d0974f
+    msvc: "14.51.36231"
+    windows_sdk: "10.0.26100.0"
+stdout: |
+  SUMMARY|total=180|matched=180|surprises=0   (first run, 180 vectors)
+  SUMMARY|total=199|matched=199|surprises=0   (final run incl. congruent-plant)
+exit_code: 0
