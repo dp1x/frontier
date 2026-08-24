@@ -1,0 +1,63 @@
+name: mlkem-72-differential
+
+# msn-2026-0001 medium-class legs: OpenSSL 3.5.7 build + .NET 10 MLKem run.
+# Public runners only; no secrets; permissions read-only.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - mission/msn-2026-0001-ci
+
+permissions:
+  contents: read
+
+jobs:
+  openssl:
+    name: OpenSSL 3.5.7 raw-import differential (linux-x64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned OpenSSL
+        run: |
+          git clone --depth 1 --branch openssl-3.5.7 https://github.com/openssl/openssl.git openssl-src
+          cd openssl-src
+          ./Configure no-shared --prefix=$PWD/../openssl-install
+          make -j4 > build.log 2>&1 || (tail -50 build.log && exit 1)
+          make install_sw > /dev/null
+      - name: Compile runner
+        run: |
+          gcc -O2 -Wall -o openssl_runner crypto/mlkem-input-checks/harnesses/openssl_runner.c \
+            -I openssl-install/include/openssl -L openssl-install/lib64 -L openssl-install/lib -lcrypto -Wl,-rpath,$PWD/openssl-install/lib64 -Wl,-rpath,$PWD/openssl-install/lib
+      - name: Run differential
+        run: |
+          ./openssl_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv openssl_report.tsv
+          cat openssl_report.tsv | tail -5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openssl_report
+          path: openssl_report.tsv
+
+  dotnet:
+    name: .NET MLKem import differential (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build runner
+        run: dotnet publish crypto/mlkem-input-checks/harnesses/dotnet_runner -c Release -o out
+      - name: Run differential
+        run: |
+          if ($IsWindows) { $exe = "out/dotnet_runner.exe" } else { $exe = "out/dotnet_runner" }
+          & $exe crypto/mlkem-input-checks/stimuli/stimuli.tsv dotnet_report.tsv
+          Get-Content dotnet_report.tsv | Select-Object -Last 5
+        shell: pwsh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dotnet_report
+          path: dotnet_report.tsv
