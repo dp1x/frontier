@@ -12,11 +12,12 @@ Set-Location $repo
 $py = ".venv\Scripts\python.exe"
 if (-not (Test-Path $py)) { $py = "python" }
 
-$scratchRoot = if ($env:FRONTIER_SCRATCH) { $env:FRONTIER_SCRATCH } else { Join-Path $repo ".scratch" }
+$scratchRoot = if ($env:FRONTIER_SCRATCH) { $env:FRONTIER_SCRATCH.TrimEnd('\') } else { Join-Path $repo ".scratch" }
 $ws = Join-Path $scratchRoot "msn-2026-0001-repro"
 New-Item -ItemType Directory -Force $ws | Out-Null
 
-& $py -c "from frontier.scratch import ensure_capacity; from pathlib import Path; ensure_capacity(Path(r'$scratchRoot'), 800*1024*1024)"
+& $py -c "from frontier.scratch import ensure_capacity; from pathlib import Path; ensure_capacity(Path(r'$($scratchRoot -replace '\\','\\\\'))', 800*1024*1024)"
+if ($LASTEXITCODE -ne 0) { throw "capacity gate failed" }
 
 $MSVC = "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC"
 $msvcVer = (Get-ChildItem $MSVC | Select-Object -First 1).Name
@@ -59,7 +60,8 @@ $cmakeArgs = "-DOQS_PERMIT_UNSUPPORTED_ARCHITECTURE=ON -DOQS_USE_OPENSSL=OFF " +
 "@echo off`r`n$envBlock`r`ncd /d `"$ws\liboqs`"`r`ncmake -S . -B build-all-kem -G `"Visual Studio 18 2026`" -A x64 $cmakeArgs`r`n" | Set-Content "$ws\oqs_cfg.cmd"
 "@echo off`r`n$envBlock`r`ncd /d `"$ws\liboqs`"`r`ncmake --build build-all-kem --config Release --target oqs`r`n" | Set-Content "$ws\oqs_build.cmd"
 foreach ($step in "oqs_cfg","oqs_build") {
-  & $py -c "from frontier.execute import run_command; r=run_command(['cmd.exe','/d','/c',r'$ws\$step.cmd'], cwd=r'$ws\liboqs', timeout_s=1800); exit(r.exit_code)"
+  & $py -c "from frontier.execute import run_command; r=run_command(['cmd.exe','/d','/c',r'$ws\$step.cmd'], cwd=r'$ws\liboqs', timeout_s=1800); print(r.stdout[-1500:] if r.exit_code else ''); exit(r.exit_code)"
+  if ($LASTEXITCODE -ne 0) { throw "$step failed" }
 }
 Copy-Item "$repo\crypto\mlkem-input-checks\harnesses\oqs_runner.c" $ws
 "@echo off`r`n$envBlock`r`ncd /d `"$ws`"`r`ncl /nologo /O2 /W4 /I `"$liboqsBuild\include`" oqs_runner.c `"$liboqsBuild\lib\Release\oqs.lib`" bcrypt.lib advapi32.lib /Fe:oqs_runner.exe`r`n" | Set-Content "$ws\b_oqs.cmd"
@@ -76,6 +78,7 @@ if ($LASTEXITCODE -ne 0) { throw "go build failed" }
 Get-Content "$ws\go_report.tsv" | Select-Object -Last 1
 
 # --- Leg 4: RustCrypto ml-kem ----------------------------------------------
+$env:Path += ";$env:USERPROFILE\.cargo\bin"
 $crate = "$ws\rust-runner"; New-Item -ItemType Directory -Force "$crate\src" | Out-Null
 @"
 [package]
