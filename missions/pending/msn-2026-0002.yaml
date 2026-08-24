@@ -1,0 +1,64 @@
+id: msn-2026-0002
+type: mission
+status: pending
+created_at: "2026-08-25T02:30:00Z"
+updated_at: "2026-08-25T02:30:00Z"
+summary: Execute the cross-path invariance matrix left open by hyp-2026-0002 - same-library divergence in ML-KEM s7.2 checking across import formats, providers, backends, and .NET OS backings.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: ox-alpha
+    tool: "frontier.continuation.evaluate_followup (allowed: justified bounded follow-up)"
+  sources:
+    - knowledge/hypotheses/hyp-2026-0002.yaml
+    - knowledge/observations/obs-2026-0007.yaml
+    - knowledge/observations/obs-2026-0008.yaml
+  parent: msn-2026-0001
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+title: Cross-path invariance of ML-KEM encapsulation-key checks
+objective: >
+  Determine whether FIPS 203 s7.2 check outcomes are invariant across a single
+  library's internal paths: OpenSSL raw-bytes vs DER/SPKI import and default vs
+  FIPS provider at runtime; liboqs forced-ref vs runtime-selected mlkem-native
+  backend; .NET managed/CNG/OpenSSL-backed variants across Windows and Linux.
+  Stimuli, harness patterns, and promotion tooling are inherited from
+  msn-2026-0001's committed pipeline.
+domain: cryptography
+scope: >
+  Same-library path divergence only. Out of scope: new candidate libraries,
+  decapsulation-side checks, timing, performance, protocol-layer placement
+  (covered separately by ai-io prompts aio-2026-0001..0003 outputs when they
+  arrive).
+constraints:
+  - Reuse the committed stimulus manifest and verifier pattern from msn-2026-0001.
+  - Record backend/provider/backing attribution metadata for every verdict row.
+  - All untrusted code through frontier.execute or public CI runners only.
+desired_evidence_level: independently-reviewed
+candidate_targets: [tgt-2026-0001]
+dependencies: []
+compute:
+  expected_class: medium
+  notes: "OpenSSL FIPS module build + multi-config matrix exceeds lightweight envelope; route to public runners."
+budget:
+  max_attempts: 12
+  max_independent_reviews: 2
+  max_compute_runs: 30
+  diminishing_returns_window: 3
+  max_auto_descendants: 2
+acceptance_criteria:
+  - Every cell of the path x format x provider x backing matrix executed with recorded attribution metadata, or explicitly blocked with reason.
+  - hyp-2026-0002 resolved to supported/rejected/inconclusive-with-reason.
+  - Findings promoted only through the standard ladder.
+stopping_conditions:
+  - Matrix complete and reviewed.
+  - Budget exhausted without new discriminating evidence.
+artifacts: []
+follow_ups: []
+notes_path: knowledge/notes/msn-2026-0002.md
+blocked_reason: null
+terminal_reason: null

@@ -1,0 +1,102 @@
+id: msn-2026-0001
+type: mission
+status: verified
+created_at: "2026-08-23T12:00:00Z"
+updated_at: "2026-08-25T02:35:00Z"
+summary: VERIFIED - differential taxonomy of ML-KEM s7.2 encapsulation-key check placement across six pinned implementations; fnd-2026-0001 promoted through the full ladder.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: human
+    role: maintainer
+    model: null
+    tool: null
+  sources:
+    - localdocs/refs/fips203.pdf#section-7.2
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+title: FIPS 203 section 7.2 encapsulation-key checking across public implementations
+objective: >
+  Determine which public ML-KEM implementations perform the FIPS 203 section 7.2
+  encapsulation-key type check (length 384k+32) and modulus check
+  (ByteEncode12(ByteDecode12(ek[0:384k])) == ek[0:384k]) at Encaps time or at
+  key-import time, whether their omission is permitted by the standard's own
+  placement language and by SP 800-227 guidance, and produce a reproducible
+  differential table plus a classified finding.
+domain: cryptography
+scope: >
+  Encapsulation-key checking only. Out of scope: decapsulation-side checks,
+  side channels, timing, performance. One experiment = one implementation x one
+  malformed-key case; every experiment is small and deterministic.
+constraints:
+  - Do not label anything a vulnerability from an unchecked theory.
+  - Versions under test must be pinned to released tags/commits verified during the mission.
+  - All untrusted code runs through frontier.execute with scrubbed environment in scratch.
+  - Preserve negative results (implementations that do check correctly are findings too).
+desired_evidence_level: independently-reviewed
+candidate_targets: [tgt-2026-0001]
+dependencies: []
+compute:
+  expected_class: lightweight
+  notes: "Keygen+encaps on tiny inputs; prefer R: ramdisk scratch; no CI needed unless a build matrix becomes necessary."
+budget:
+  max_attempts: 24
+  max_independent_reviews: 3
+  max_compute_runs: 60
+  diminishing_returns_window: 3
+  max_auto_descendants: 3
+acceptance_criteria:
+  - "MET: six independent public ML-KEM implementations exercised (PQClean, liboqs, OpenSSL, Go stdlib, RustCrypto, .NET) against malformed ek vectors derived from section 4.2.1 decode semantics plus C2SP Wycheproof ModulusOverflow corpus."
+  - "MET: differential table recorded as observations with environment metadata for each run (obs-2026-0001..0009)."
+  - "MET: classification reviewed by an adversarial critic that did not produce the initial interpretation (rev-2026-0001, supports conditionally; all required changes applied)."
+  - "MET: finding artifact carries specification citation, exact versions, reproducer paths, observed vs expected behavior (fnd-2026-0001)."
+stopping_conditions:
+  - "Budget exhausted without new discriminating evidence."
+  - "All candidate implementations characterized and classification reviewed."
+artifacts:
+  - fnd-2026-0001
+  - exp-2026-0001
+  - exp-2026-0002
+  - exp-2026-0003
+  - exp-2026-0004
+  - exp-2026-0005
+  - exp-2026-0006
+  - exp-2026-0007
+  - obs-2026-0001
+  - obs-2026-0002
+  - obs-2026-0003
+  - obs-2026-0004
+  - obs-2026-0005
+  - obs-2026-0006
+  - obs-2026-0007
+  - obs-2026-0008
+  - obs-2026-0009
+  - hyp-2026-0001
+  - hyp-2026-0002
+  - hyp-2026-0003
+  - hyp-2026-0004
+  - hyp-2026-0005
+  - hyp-2026-0006
+  - hyp-2026-0007
+  - hyp-2026-0008
+  - rpr-2026-0001
+  - rev-2026-0001
+  - vrf-2026-0001
+  - imp-2026-0004
+  - imp-2026-0005
+  - imp-2026-0006
+follow_ups: [msn-2026-0002]
+notes_path: knowledge/notes/msn-2026-0001.md
+blocked_reason: null
+terminal_reason: >
+  All candidate implementations characterized (six legs executed and
+  independently reproduced row-for-row), classification adversarially reviewed
+  with every required change applied, finding fnd-2026-0001 promoted to
+  verified via the deterministic ladder (10/10 checks), useful negative
+  results preserved (hyp-2026-0007, hyp-2026-0006 rejections; hyp-2026-0002
+  honestly inconclusive), bounded follow-up msn-2026-0002 created for the
+  cited cross-path invariance residuals. Stopping condition 'all candidate
+  implementations characterized and classification reviewed' satisfied within
+  budget (compute runs ~12 of 60; reviews 1 of 3; attempts well under cap).

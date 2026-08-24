@@ -1,0 +1,139 @@
+id: rpt-2026-0001
+type: report
+status: final
+created_at: "2026-08-25T02:50:00Z"
+updated_at: "2026-08-25T02:50:00Z"
+summary: Mission report for msn-2026-0001 - FIPS 203 s7.2 encapsulation-key checking differential across six public implementations; fnd-2026-0001 verified.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: ox-alpha
+    tool: frontier evidence graph
+  sources:
+    - missions/completed/msn-2026-0001.yaml
+    - knowledge/findings/fnd-2026-0001.yaml
+  parent: msn-2026-0001
+  generation: 0
+links:
+  findings: [fnd-2026-0001]
+  missions: [msn-2026-0001]
+title: Mission report - ML-KEM encapsulation-key checking differential
+report: |
+  OBJECTIVE
+  Determine which public ML-KEM implementations perform FIPS 203 s7.2's
+  encapsulation-key checks (type: len(ek)==384k+32; modulus:
+  ByteEncode12(ByteDecode12(ek[0:384k]))==ek[0:384k]), where the checks live,
+  whether omission is permissible, and produce a reproducible classified
+  differential.
+
+  TARGETS INVESTIGATED (six, lineage-corrected)
+  PQClean clean master 0586a824 (archived; no release tag contains ml-kem -
+  documented pin deviation), liboqs 0.16.0 @ 5a1a854b vendoring mlkem-native
+  v1.2.0 @ 0ba906cb, OpenSSL openssl-3.5.7 @ 8cf17aae, Go stdlib crypto/mlkem
+  go1.26.4, RustCrypto ml-kem crate 0.3.2, .NET MLKem runtime 10.0.11
+  (Windows CNG backing). Scout correction: PQClean and liboqs share the
+  pq-crystals reference lineage; Go/Rust/.NET additions raised
+  distinct-lineage coverage from ~2 to ~5.
+
+  SWARM WORK
+  Wave 1 (parallel): spec analyst (verbatim s7.2/s7.3/s4.2.1 extraction,
+  SP 800-227 FINAL status + errata sweep against NIST primary sources),
+  three implementation archaeologists (pins + file/line citations), test
+  archaeologist (ACVP encapsulationKeyCheck class + Wycheproof
+  ModulusOverflow corpus located), research scout (landscape + exclusions).
+  Wave 2: two independent hypothesis generators (8 hypotheses), adversarial
+  critic. Execution: orchestrator-driven builds/runs through
+  frontier.execute in ramdisk scratch; OpenSSL/.NET legs on public GitHub
+  Actions runners (medium class). Independent reproducer (3 cycles - caught
+  two real infrastructure defects). Adversarial review of the finding.
+
+  KEY HYPOTHESES AND OUTCOMES
+  hyp-2026-0001 control/determinism/emulation-invariance: SUPPORTED
+  (199/199 verdicts identical native-ARM64 vs x64-emulated; post-review
+  controls executed roundtrips 96/96).
+  hyp-2026-0002 backend/format/provider invariance: INCONCLUSIVE honestly
+  bounded - single path per library exercised; residuals carried to
+  msn-2026-0002.
+  hyp-2026-0003 rho-tail over-validation absence: SUPPORTED (no library
+  rejects legal-but-adversarial seed tails).
+  hyp-2026-0004 parameter-set uniformity: SUPPORTED (verdicts identical for
+  k=2/3/4 wherever exposed).
+  hyp-2026-0005 placement taxonomy via two-probe protocol: SUPPORTED -
+  nowhere (PQClean) / Encaps-time (liboqs) / import-time (OpenSSL, Go,
+  RustCrypto, .NET-CNG).
+  hyp-2026-0006 .NET blind spot: REJECTED BY EVIDENCE - CNG backing DOES
+  enforce modulus checking at import with a distinct validity-class error.
+  hyp-2026-0007 silent-divergence channel: REJECTED - encryption randomness
+  derives from G(m||H(raw ek)), so accepted-but-invalid keys re-randomize
+  ciphertexts; honest peers fail closed via implicit rejection. Preserved as
+  a structural negative result (Algorithm 17/18 semantics).
+  hyp-2026-0008 classification grid: SUPPORTED in refined form - PQClean is
+  simultaneously compliant-plausible and an interoperability hazard whose
+  failure shape is ONE-SIDED key establishment (sender succeeds rc=0; peer
+  derives implicit-rejection secret).
+
+  EXPERIMENTS EXECUTED
+  exp-2026-0001 PQClean stimulus run (199 vectors x k=2/3/4, x64 + arm64
+  native); exp-2026-0002 congruent-plant sender/peer differential (v1 peer
+  witness invalidated by swapped decap ABI - caught by demanded controls;
+  v2 corrected); exp-2026-0003 liboqs all-variant run with deterministic RNG
+  hook + CPUID logging; exp-2026-0004 Go run; exp-2026-0005 RustCrypto run;
+  exp-2026-0006 OpenSSL CI build+run (header/library skew caught by runtime
+  version logging and rerun clean); exp-2026-0007 .NET CI run with backing
+  attribution.
+
+  FAILURES AND WHAT THEY TAUGHT
+  - vcvars batch parse failure on this host -> explicit INCLUDE/LIB env
+    blocks (recorded in reproducers).
+  - First CI run compiled against system headers while linking local 3.5.7 ->
+    runtime-vs-compiled version logging added, rerun clean.
+  - Missing harness commits blocked independent reproduction -> fixed
+    (05b5ba0); a fix-introduced nested-quote regression -> fixed with argv
+    passing (d383eab). Reproduction then succeeded row-for-row on all legs.
+  - Swapped decap ABI in congruent harness produced invalid peer-side
+    witness despite plausible-looking output -> positive controls now part
+    of the committed pipeline (96/96 roundtrip).
+  - Finding draft contained an unsupported ACVP-provenance phrase and stale
+    links -> corrected before promotion (rev-2026-0001 objections 1-2).
+
+  INDEPENDENTLY REPRODUCED OBSERVATIONS
+  All four local legs reproduced row-for-row by the independent reproducer
+  from committed commands alone (rpr-2026-0001); CI legs re-executable via
+  .github/workflows/mlkem-diff.yml workflow_dispatch.
+
+  FINAL CLASSIFICATION (fnd-2026-0001, VERIFIED)
+  interoperability-gap, disclosure public. Placement taxonomy: nowhere /
+  Encaps-time / import-time. Omission-at-encaps is not a violation of s7.2's
+  placement language (permissive reading corroborated by SP 800-227 s3.2),
+  though s3.3 admits a stricter reading under which check-free ingestion
+  surfaces are at minimum documentation-deficient. The operational hazard is
+  a one-sided key-establishment failure invisible to component-level
+  conformance testing (inference from shipped coverage).
+
+  EXACT REPRODUCIBLE ARTIFACTS
+  crypto/mlkem-input-checks/{stimuli/stimuli.tsv, tools/gen_vectors.py,
+  tools/flatten_vectors.py, tools/verify_differential.py, harnesses/*,
+  reproduce.ps1, reproducer.md, reports/*.tsv}; CI workflow
+  .github/workflows/mlkem-diff.yml.
+
+  KNOWLEDGE-BASE UPDATES
+  Six implementation artifacts pinned with analysis citations; spec artifact
+  extended (SP 800-227 final status, errata resolution, s3.3 registration);
+  target artifact lineage-corrected with exclusions; indices rebuilt;
+  mission notes rendered (knowledge/notes/msn-2026-0001.md).
+
+  COMMITS CREATED
+  e0123f0 activation .. 03a262f promotion (17 research-state commits; see
+  git log msn-2026-0001 range).
+
+  REMAINING UNCERTAINTIES
+  Cross-path invariance matrix (OpenSSL DER/FIPS-provider, liboqs forced-ref,
+  .NET non-Windows backings) -> msn-2026-0002 pending. Protocol-layer
+  placement and prior-art sweeps await ai-io outputs (aio-2026-0001..0003).
+
+  RECOMMENDED FOLLOW-UPS
+  msn-2026-0002 (created, pending): cross-path invariance matrix. Human
+  decision optional: route aio-2026-0001..0003 through a deep-research
+  system when convenient; outputs will be extracted under ai-io/outputs/.

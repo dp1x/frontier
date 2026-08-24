@@ -100,6 +100,9 @@ TYPE_DIRS = {
 }
 
 _MISSION_QUEUE = ("pending", "active", "completed", "archive", "embargoed")
+# Discovery aids (frontier.index output, human notes) are not evidence
+# artifacts and carry no envelope; the validator must not police them.
+_SKIP_KNOWLEDGE_DIRS = {"indices", "notes"}
 _INDEX_SKIP_DIRS = {"indices", "notes"}
 
 
@@ -216,7 +219,9 @@ def _iter_yaml_docs(root: Path):
     knowledge_root = root / "knowledge"
     if knowledge_root.is_dir():
         folders.extend(
-            child for child in sorted(knowledge_root.iterdir()) if child.is_dir()
+            child
+            for child in sorted(knowledge_root.iterdir())
+            if child.is_dir() and child.name not in _SKIP_KNOWLEDGE_DIRS
         )
     for folder in folders:
         if not folder.is_dir():
