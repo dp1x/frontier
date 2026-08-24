@@ -1,0 +1,37 @@
+id: vrf-2026-0001
+type: verification
+status: pass
+created_at: "2026-08-25T02:16:00Z"
+updated_at: "2026-08-25T02:16:00Z"
+summary: Deterministic re-verification of all headline verdicts from committed raw reports - 10/10 checks pass.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: null
+    model: null
+    tool: crypto/mlkem-input-checks/tools/verify_differential.py
+  sources:
+    - crypto/mlkem-input-checks/reports/
+  parent: msn-2026-0001
+  generation: 0
+links:
+  findings: [fnd-2026-0001]
+  observations: [obs-2026-0001, obs-2026-0002, obs-2026-0003, obs-2026-0004, obs-2026-0005, obs-2026-0006, obs-2026-0007, obs-2026-0008, obs-2026-0009]
+method: deterministic-script
+result: pass
+command: python crypto/mlkem-input-checks/tools/verify_differential.py
+environment:
+  host: windows-arm64 (mission host)
+  python: 3.11.15
+  output: |
+    PASS: PQClean: all 190 callable vectors accepted, 0 surprises, 9 inexpressible-at-api
+    PASS: Control: x64-emulated table == arm64-native table
+    PASS: liboqs: rejection set == all non-canonical families; acceptance set == valid+rho
+    PASS: liboqs: parameter-set uniformity (k=2/3/4 identical)
+    PASS: Go: 58 modulus rejections, 5 length rejections, 72 accepted
+    PASS: Rust: 91 import-rejected (incl. wrong-length), 108 accepted
+    PASS: Congruent-plant: 8 rows, ct differs, peer decap fails closed
+    PASS: Controls: 96/96 valid-key enc->dec shared-secret roundtrips
+    PASS: OpenSSL 3.5.7: 91 import-rejected / 108 import-accepted, 108 encapsulated, runtime version clean
+    PASS: .NET CNG: 82 validity-class + 9 size-class rejections, 108 accepted

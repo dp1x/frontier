@@ -1,10 +1,10 @@
 id: fnd-2026-0001
 type: finding
-status: proposed
+status: verified
 created_at: "2026-08-25T00:30:00Z"
-updated_at: "2026-08-25T00:30:00Z"
-summary: Public ML-KEM implementations diverge structurally in FIPS 203 s7.2 encapsulation-key check placement - nowhere (PQClean), Encaps-time (liboqs/mlkem-native), import-time (OpenSSL/Go/RustCrypto) - and C raw-pointer KEM APIs make the type check inexpressible.
-epistemic_status: observation
+updated_at: "2026-08-25T02:20:00Z"
+summary: Public ML-KEM implementations diverge structurally in FIPS 203 s7.2 encapsulation-key check placement - nowhere (PQClean), Encaps-time (liboqs/mlkem-native), import-time (OpenSSL, Go stdlib, RustCrypto, .NET-CNG) - and common C KEM ABI shapes leave the type check to callers by construction.
+epistemic_status: verified_conclusion
 provenance:
   created_by:
     kind: model-agent
@@ -20,42 +20,64 @@ provenance:
 links:
   specifications: [spc-2026-0001]
   targets: [tgt-2026-0001]
-  implementations: [imp-2026-0001, imp-2026-0002, imp-2026-0003, imp-2026-0004, imp-2026-0005]
-  experiments: [exp-2026-0001, exp-2026-0002, exp-2026-0003, exp-2026-0004, exp-2026-0005]
-  observations: [obs-2026-0001, obs-2026-0002, obs-2026-0003, obs-2026-0004, obs-2026-0005, obs-2026-0006]
-  hypotheses: [hyp-2026-0001, hyp-2026-0002, hyp-2026-0003, hyp-2026-0004, hyp-2026-0005, hyp-2026-0007, hyp-2026-0008]
+  implementations: [imp-2026-0001, imp-2026-0002, imp-2026-0003, imp-2026-0004, imp-2026-0005, imp-2026-0006]
+  experiments: [exp-2026-0001, exp-2026-0002, exp-2026-0003, exp-2026-0004, exp-2026-0005, exp-2026-0006, exp-2026-0007]
+  observations: [obs-2026-0001, obs-2026-0002, obs-2026-0003, obs-2026-0004, obs-2026-0005, obs-2026-0006, obs-2026-0007, obs-2026-0008, obs-2026-0009]
+  hypotheses: [hyp-2026-0001, hyp-2026-0002, hyp-2026-0003, hyp-2026-0004, hyp-2026-0005, hyp-2026-0006, hyp-2026-0007, hyp-2026-0008]
+  reproducers: [rpr-2026-0001]
+  reviews: [rev-2026-0001]
+  verifications: [vrf-2026-0001]
 title: Differential placement taxonomy of ML-KEM encapsulation-key validation
 classification: interoperability-gap
 statement: >
   Across six pinned public implementations exercised with 199 deterministic
-  stimuli (including NIST ACVP-derived and C2SP Wycheproof ModulusOverflow
-  families plus a mission-novel congruent-plant family), FIPS 203 s7.2
-  encapsulation-key checking lands in three distinct placements: absent
-  entirely (PQClean clean, archived master 0586a824 - accepts every
+  stimuli (generated families spanning non-canonical segments at values q,
+  4000 and 4095 across first/middle/last coefficients, wrong-length keys,
+  rho-tail mutations, cross-parameter-set confusion, a mission-novel
+  congruent-plant family, plus C2SP Wycheproof ModulusOverflow passthrough),
+  FIPS 203 s7.2 encapsulation-key checking lands in three distinct placements:
+  absent entirely (PQClean clean, archived master 0586a824 - accepts every
   length-valid input, API cannot signal rejection); enforced inside Encaps
   (liboqs 0.16.0 via mlkem-native v1.2.0 mlk_kem_check_pk, rejects 82/82
   non-canonical uniformly across k=2/3/4); enforced at key import (OpenSSL
-  3.5.7, Go 1.26.4 stdlib crypto/mlkem, RustCrypto ml-kem 0.3.2). In the two
-  dominant C KEM ABI shapes (PQClean fixed-size pointer buffers, OQS fixed-size
-  structs) the s7.2 TYPE check is structurally inexpressible - no length
-  parameter exists - so type-check responsibility is delegated to callers by
-  construction. Under FIPS 203's placement language ("need not be performed by
-  the encapsulating party nor with every execution") and SP 800-227 s3.2
-  assurance cases, omission-at-encaps is NOT a specification violation; it is,
-  however, an interoperation hazard with a precisely characterized shape:
-  exp-2026-0002 proved the naive silent-divergence channel impossible
-  (encryption randomness derives from G(m||H(ek_raw)), so accepted-but-invalid
-  keys re-randomize ciphertexts) and demonstrated the actual failure mode -
-  a sender using an accepting library against an invalid key obtains rc=0
-  success while the honest peer's implicit-rejection decapsulation yields an
-  unrelated secret: a ONE-SIDED key-establishment failure invisible to both
-  parties' component-level self-tests. No tested library over-validates the
-  unconstrained rho tail (hyp-2026-0003 supported), and verdicts are
-  architecture-invariant (native ARM64 == emulated x64, 199/199).
+  3.5.7, Go 1.26.4 stdlib crypto/mlkem, RustCrypto ml-kem 0.3.2, .NET 10
+  MLKem on its default Windows CNG backing). In the two dominant C KEM API
+  shapes the type check is delegated to callers by construction: PQClean's
+  raw-pointer ABI carries no length parameter (a runtime type check is
+  inexpressible there), while OQS's fixed-size structs enforce length
+  statically by typing but offer no runtime rejection signal for wrong-length
+  buffers; RustCrypto's fallible slice constructor shows both checks are
+  expressible outside these conventions. Under FIPS 203 s7.2's placement
+  language ("checking ... need not be performed by the encapsulating party,
+  nor with every execution") corroborated by SP 800-227 s3.2's assurance
+  cases, omission-at-encaps is not a violation of that placement language -
+  though s3.3's "Implementers shall ensure ... only executed on inputs that
+  have been checked" admits a stricter reading under which shipping a
+  check-free ingestion surface is at minimum documentation-deficient, since
+  PQClean neither checks anywhere nor documents caller obligations, and no
+  SP 800-227 assurance case covers a deployment feeding it wire-supplied
+  keys. The operational hazard has a precisely characterized shape:
+  exp-2026-0002 proved the naive silent-divergence channel impossible -
+  (K,r) <- G(m||H(ek)) derives encryption randomness from RAW key bytes, so
+  any accepted-but-invalid key re-randomizes ciphertexts - and demonstrated
+  with correctly-called decapsulation that a sender using an accepting
+  library against an invalid key obtains rc=0 success while the honest peer's
+  implicit-rejection decapsulation yields an unrelated secret: a ONE-SIDED
+  key-establishment failure. By inference from shipped test coverage (no
+  tested library's self-tests feed malformed pk) this failure mode is
+  invisible to component-level conformance testing while detectable at
+  application level; positive controls executed post-review confirm valid-key
+  roundtrips succeed 96/96, isolating the divergence to malformed-key
+  acceptance. No tested library over-validates the unconstrained rho tail;
+  verdicts are architecture-invariant where measured (PQClean clean legs:
+  native ARM64 == x64-emulated, 199/199).
 disclosure: public
 limitations: >
-  .NET 10 MLKem placement pending CI leg at drafting time; OpenSSL DER/SPKI vs
-  raw import format matrix and FIPS-provider runtime behavior not executed;
-  liboqs x86_64 backend ran under emulation with avx2=1 logged but forced-ref
-  comparison not performed; PQClean pinned to archived master HEAD because no
-  release tag contains ml-kem (documented pin deviation).
+  OpenSSL DER/SPKI-vs-raw format matrix, FIPS-provider runtime behavior,
+  liboqs forced-ref backend comparison, and .NET non-Windows backings were
+  not executed; architecture-invariance was measured only on the PQClean C
+  legs; "invisible to component self-tests" is an inference from shipped
+  coverage, not an executed property; PQClean pinned to archived master HEAD
+  because no release tag contains ml-kem (documented pin deviation); PQClean/
+  liboqs share the pq-crystals reference lineage, so independent-lineage
+  weight rests on OpenSSL/Go/RustCrypto/.NET.

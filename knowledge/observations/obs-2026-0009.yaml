@@ -1,0 +1,46 @@
+id: obs-2026-0009
+type: observation
+status: recorded
+created_at: "2026-08-25T02:10:00Z"
+updated_at: "2026-08-25T02:10:00Z"
+summary: Positive controls demanded by adversarial review - 96/96 valid-key roundtrips pass, and the congruent differential re-run with corrected decap ABI reproduces the one-sided failure pattern.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command
+  sources: [crypto/mlkem-input-checks/reports/controls_report.tsv, crypto/mlkem-input-checks/reports/congruent_diff_report_v2.tsv]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  experiments: [exp-2026-0002]
+  implementations: [imp-2026-0001]
+  hypotheses: [hyp-2026-0001, hyp-2026-0008]
+title: Post-review controls - roundtrip passes; congruent pattern confirmed with correct ABI
+statement: >
+  Two controls executed in response to rev-2026-0001 objection 4. (C1)
+  Valid-key full roundtrip (keypair_derand -> enc_derand -> dec) yields equal
+  shared secrets on 96/96 rows across ML-KEM-{512,768,1024} x 32 seeds -
+  executing hyp-2026-0001's previously-untested roundtrip sub-prediction.
+  (C2) Re-running the congruent differential after fixing a swapped decap
+  argument order in the original harness (dec takes (ss, ct, sk); v1 passed
+  (ss, dk, ct), making its peer-side witness invalid) reproduces the same
+  observable pattern through a correctly-called decap: ct_eq=0,
+  ss_sender==peer:0, ss_canon==peer:0 on all 8 planted rows. Direction of all
+  conclusions unchanged; evidence basis now rests on executed controls rather
+  than inference. Process note recorded per anti-slop rules: the defect was
+  caught by demanding a positive control, not by trusting consistent-looking
+  output.
+environment:
+  where: local
+  isolation: env-scrubbed-scratch
+  cwd: R:\frontier-scratch\msn-2026-0001\harnesses
+  versions:
+    pqclean: master 0586a824fc0d49df0b6b6e9179d8d15d06d0974f (x64 rebuild)
+    msvc: "14.51.36231"
+stdout: |
+  controls done: 96 rows, 0 failures
+  congruent v2: 8/8 planted rows ct_eq=0|ss_sender==peer:0|ss_canon==peer:0
+exit_code: 0

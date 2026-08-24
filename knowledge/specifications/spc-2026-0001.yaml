@@ -20,6 +20,13 @@ links:
   targets: [tgt-2026-0001]
 title: FIPS 203 (ML-KEM)
 normative_sections:
+  - section: "3.3"
+    topic: Input checking module-level restatement ("Implementers shall ensure that ML-KEM.Encaps and ML-KEM.Decaps are only executed on inputs that have been checked, as described in Section 7"); load-bearing for the strict-reading dispute recorded in rev-2026-0001.
+    placement_note: >
+      Registered post-review: the strict reading (library must provide a
+      checking surface) vs permissive reading (composition-level duty) is the
+      central compliance ambiguity; s7.2's placement sentence textually
+      dominates but does not eliminate it.
   - section: "7.2"
     topic: Encapsulation key check (type check len==384k+32; modulus check Eq 7.1 round-trip ByteEncode12(ByteDecode12(ek[0:384k]))==ek[0:384k])
     placement_note: >

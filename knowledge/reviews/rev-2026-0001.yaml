@@ -1,0 +1,44 @@
+id: rev-2026-0001
+type: review
+status: complete
+created_at: "2026-08-25T02:15:00Z"
+updated_at: "2026-08-25T02:15:00Z"
+summary: Independent adversarial review of fnd-2026-0001 - verdict supports conditionally; six required changes all applied; two HIGH objections caught (ACVP provenance error, stale link graph).
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-critic
+    model: ox-alpha
+    tool: independent review (non-authoring)
+  sources:
+    - knowledge/findings/fnd-2026-0001.yaml
+    - localdocs/refs/fips203.pdf
+    - https://github.com/C2SP/wycheproof @ dac1dd47 (live re-fetch)
+  parent: msn-2026-0001
+  generation: 0
+links:
+  findings: [fnd-2026-0001]
+  observations: [obs-2026-0009]
+role: adversarial-critic
+verdict: supports
+independent: true
+attempts_disproof: true
+objections:
+  - "HIGH(1): 'NIST ACVP-derived' provenance claim in finding statement was unsupported - zero ACVP-sourced stimuli exist. FIXED: phrase removed."
+  - "HIGH(2): finding narrative/link graph predated the executed OpenSSL/.NET CI legs. FIXED: links reconciled, .NET-CNG folded into import-time class, limitations updated."
+  - "MEDIUM(3): architecture-invariance overgeneralized beyond PQClean C legs. FIXED: scoped in statement and limitations."
+  - "MEDIUM(4): claimed-but-unexecuted controls (valid-key roundtrip; positive pairing). FIXED BY EXECUTION: obs-2026-0009 - controls.c roundtrip 96/96; congruent v2 with corrected decap ABI reproduces pattern."
+  - "MEDIUM(5): compliance sentence needed s3.3 strict-reading scoping. FIXED: statement rewritten; s3.3 registered in spc-2026-0001 normative_sections."
+  - "LOW-MEDIUM(6): pointer-ABI vs fixed-size-struct ABI conflation. FIXED: statement distinguishes the two shapes; RustCrypto cited as expressibility counterexample."
+  - "LOW-MEDIUM(7): self-test-invisibility was asserted as observed. FIXED: relabeled as inference from shipped coverage."
+  - "LOW(8): Wycheproof loader else-branch robustness noted; pinned corpus contains no acceptable-result vectors so mapping correct for this corpus; comment added to gen_vectors.py recommended for follow-up."
+  - "LOW(9): PQClean verdicts collected via derand API (testing-grade per FIPS 203 s3/s6 note); randomized public API not separately executed; static evidence covers it. Recorded in limitations context."
+  - "LOW(10): verifier omitted OpenSSL/.NET legs and manifest-agreement checks. FIXED: verify_differential.py extended, now 10/10 including both CI reports."
+notes: >
+  Reviewer independently verified Wycheproof corpus integrity against live
+  pinned upstream (36/36 exact), audited congruent_diff.c against FIPS 203
+  Algorithms 17/18 verbatim text, confirmed count arithmetic across every raw
+  TSV, and constructed the strongest textual case for a stricter compliance
+  reading before concluding the permissive reading survives. All six required
+  changes were applied by the orchestrator before promotion.
