@@ -1,8 +1,10 @@
 id: hyp-2026-0002
 type: hypothesis
-status: open
+status: inconclusive
 created_at: "2026-08-24T11:45:00Z"
-updated_at: "2026-08-24T11:45:00Z"
+updated_at: "2026-08-25T01:05:00Z"
+summary: Partially exercised - backend/format/provider invariance held wherever tested (liboqs runtime-selected backend logged avx2=1; .NET CNG backing; OpenSSL raw import) but forced-ref rebuilds, DER/SPKI format matrix, FIPS-provider probe, and non-Windows .NET backings were not executed.
+epistemic_status: interpretation
 summary: Check outcomes are invariant across a library's internal paths (liboqs backends, OpenSSL raw-vs-DER import and provider, .NET backing variants).
 epistemic_status: hypothesis
 provenance:
@@ -26,7 +28,17 @@ falsifiable_predictions:
   - All 36 Wycheproof ModulusOverflow vectors return -1 under whichever liboqs backend the build selects, with CPUID/backend logged; forced-ref rebuild agrees.
   - OpenSSL rejects the same modulus-invalid ek identically via EVP_PKEY_new_raw_public_key and via d2i_PUBKEY SPKI for k in {2,3,4}.
   - .NET verdicts may be backing-dependent; agreement across backings collapses it to a single row.
-disproof_attempts: []
+links:
+  implementations: [imp-2026-0002, imp-2026-0003, imp-2026-0006]
+  experiments: [exp-2026-0003, exp-2026-0006, exp-2026-0007]
+  observations: [obs-2026-0003, obs-2026-0007, obs-2026-0008]
+disproof_attempts:
+  - >
+    No divergence OBSERVED in any tested path, but the test matrix covered
+    only one path per library (liboqs: runtime-selected backend under x64
+    emulation with avx2=1 logged; OpenSSL: raw import only; .NET: CNG
+    backing only). Invariance therefore remains unestablished rather than
+    falsified - recorded inconclusive per preservation rules.
 notes: >
   Killing observation: any input accepted by one path while an equivalent path
   rejects it. Wave-1 caveat: liboqs probe ran ref backend only; no CPUID logged;
