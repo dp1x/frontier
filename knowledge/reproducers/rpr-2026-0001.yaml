@@ -1,0 +1,40 @@
+id: rpr-2026-0001
+type: reproducer
+status: reproduced
+created_at: "2026-08-25T01:30:00Z"
+updated_at: "2026-08-25T01:45:00Z"
+summary: Independent reproduction of all four local differential legs succeeded - fresh scratch, pinned sources, row-for-row identical verdict tables.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-reproducer
+    model: ox-alpha
+    tool: frontier.execute.run_command (fresh scratch, committed script only)
+  sources:
+    - crypto/mlkem-input-checks/reproduce.ps1
+    - crypto/mlkem-input-checks/stimuli/stimuli.tsv
+  parent: msn-2026-0001
+  generation: 0
+links:
+  experiments: [exp-2026-0001, exp-2026-0003, exp-2026-0004, exp-2026-0005]
+  observations: [obs-2026-0001, obs-2026-0003, obs-2026-0004, obs-2026-0005]
+path: crypto/mlkem-input-checks/reproduce.ps1
+reproduction_commands:
+  - "powershell -ExecutionPolicy Bypass -File crypto\\mlkem-input-checks\\reproduce.ps1"
+reproduced_on:
+  - environment: windows-arm64 host, PowerShell 5.1, git 2.54, go1.26.4, cargo 1.96.0, MSVC 14.51.36231, SDK 10.0.26100.0
+    date: "2026-08-25"
+    result: |
+      Leg 1 PQClean: SUMMARY|total=199|matched=199|surprises=0 (190 accepted + 9 inexpressible-at-api) - 0 differing rows
+      Leg 2 liboqs: SUMMARY|total=199|matched=199 (82 rejected / 108 accepted / 9 inexpressible) - 0 differing rows
+      Leg 3 Go: SUMMARY|total=135 (72 accepted / 58 modulus / 5 length) - 0 differing rows
+      Leg 4 RustCrypto: SUMMARY|total=199 (108 accepted / 91 import-rejected) - 0 differing rows
+notes: >
+  Reproduction history is part of the evidence: attempt 1 failed (harness
+  sources not committed - fixed by orchestrator commit 05b5ba0); attempt 2
+  failed (orchestrator's fix introduced a nested-quote regression in the
+  capacity gate - fixed by commit d383eab with argv passing); attempt 3
+  reproduced all legs row-for-row. CI legs (OpenSSL/.NET) reproduce via
+  .github/workflows/mlkem-diff.yml workflow_dispatch on branch
+  mission/msn-2026-0001-ci.
