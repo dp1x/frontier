@@ -1,8 +1,8 @@
 id: hyp-2026-0007
 type: hypothesis
-status: open
+status: rejected
 created_at: "2026-08-24T12:30:00Z"
-updated_at: "2026-08-24T12:30:00Z"
+updated_at: "2026-08-24T13:45:00Z"
 summary: Silent interop-breakage channel - accepted non-canonical keys yield correct-decrypting ciphertexts but shared secrets anchored to raw input bytes (G(m||H(ek_raw))), diverging from any honest peer's derivation.
 epistemic_status: hypothesis
 provenance:
@@ -31,7 +31,17 @@ falsifiable_predictions:
   - With synchronized derand coins, acceptor ciphertext on congruent-plant ek is byte-identical to encryption under the canonical key.
   - ss_enc != ss_dec for the honest-peer pairing on every congruent-plant vector; deterministic across repeats and native-vs-emulated builds.
   - Killing observation - ss_enc == ss_dec would mean the acceptor hashes something other than the raw submitted bytes (internal re-canonicalization before hashing), killing the channel claim in current form.
-disproof_attempts: []
+disproof_attempts:
+  - >
+    exp-2026-0002 / obs-2026-0002 (PQClean congruent-plant differential): the
+    ciphertext-equality prediction failed on all 8 rows - (K,r) <- G(m||H(ek))
+    derives encryption randomness from RAW key bytes, so a changed key changes
+    r and hence the whole ciphertext; the honest peer's implicit-rejection
+    check then fires and decapsulation fails closed. The S1 silent-divergence
+    mechanism is impossible under FIPS 203's Encaps structure: preserved as a
+    useful negative result. The pair-failure framing survives in modified form
+    via hyp-2026-0008 (one-sided establishment failure, detectable at
+    application level, not by component self-tests).
 notes: >
   Congruent-plant stimuli are a mission-novel extension beyond Wycheproof's
   absolute-value plants (q, 4095); they isolate hash-input divergence from
