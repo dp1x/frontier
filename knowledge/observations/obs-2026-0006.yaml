@@ -3,7 +3,7 @@ type: observation
 status: recorded
 created_at: "2026-08-24T14:00:00Z"
 updated_at: "2026-08-24T14:00:00Z"
-summary: Control gate passed - decision tables bitwise identical across 3 repeats, native-ARM64 vs x64-emulated builds; valid keys accepted with roundtrip-consistent outputs everywhere.
+summary: Control gate passed - decision tables bitwise identical across repeats, native-ARM64 vs x64-emulated builds; valid keys accepted everywhere.
 epistemic_status: observation
 provenance:
   created_by:
