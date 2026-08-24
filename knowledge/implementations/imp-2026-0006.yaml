@@ -1,0 +1,36 @@
+id: imp-2026-0006
+type: implementation
+status: candidate
+created_at: "2026-08-24T10:45:00Z"
+updated_at: "2026-08-24T10:45:00Z"
+summary: .NET 10 System.Security.Cryptography.MLKem - Microsoft managed/OS-backed lineage; ImportEncapsulationKey + Encapsulate is the injection point; check placement publicly undocumented (genuine epistemic novelty).
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-scout
+    model: ox-alpha
+    tool: web primary-source fetch
+  sources:
+    - https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.mlkem?view=net-10.0
+  parent: msn-2026-0001
+  generation: 0
+links:
+  targets: [tgt-2026-0001]
+title: .NET 10 MLKem
+upstream: https://github.com/dotnet/dotnet (System.Security.Cryptography.MLKem)
+language: C# / .NET
+version:
+  pinned: false
+  note: >
+    Pin exact runtime version at execution time; behavior may differ between
+    managed, CNG-backed (MLKemCng), and OpenSSL-backed derived classes -
+    record which variant is exercised.
+build_profile: >
+  Zero build: install .NET SDK, console app calling
+  MLKem.ImportEncapsulationKey(algorithm, byte[]) then Encapsulate(...).
+admission_rationale: >
+  Fourth ecosystem family (managed/OS-backed) absent from the all-C set;
+  unlike Go/RustCrypto its ek-check placement was NOT found publicly
+  documented during scouting, so it carries real chance of divergent behavior
+  at essentially zero experiment cost.

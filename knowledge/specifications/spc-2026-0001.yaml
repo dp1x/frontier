@@ -33,5 +33,18 @@ normative_sections:
     topic: ByteEncode/ByteDecode d=12 reduces mod q=3329; values in [3329,4095] possible only for non-canonical arrays.
 local_copy: localdocs/refs/fips203.pdf
 errata_watch: >
-  CSRC planning note dated 2025-11-17 flags potential updates/errata for FIPS
-  203; consult the errata spreadsheet before claiming spec-level conclusions.
+  RESOLVED 2026-08-24 by specification-analyst against primary sources: the
+  CSRC "Errata (potential updates)" spreadsheet (fips-203-potential-updates.xlsx)
+  contains exactly two entries - Appendix A zeta-value explanation and Section
+  5.3 Algorithm 15 comment wording - neither touching sections 7.2, 7.3, or
+  4.2.1. No published errata affects this mission's normative basis as of
+  2026-08-24.
+related_guidance:
+  sp_800_227:
+    status: FINAL (published 2025-09-18; draft 2025-01-07), verified against csrc.nist.gov/pubs/sp/800/227/final
+    input_checking_cases: >
+      Section 3.2 (printed pp. 12-13) enumerates three cases where an input need
+      not be re-checked: (1) module generated it internally via a validity-
+      ensuring algorithm and stored it modification-proof; (2) module checked it
+      once and stored it modification-proof (explicit ek/Encaps example); (3)
+      imported from a TTP that assures validity plus modification-proof storage.

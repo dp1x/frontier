@@ -1,0 +1,37 @@
+id: imp-2026-0005
+type: implementation
+status: candidate
+created_at: "2026-08-24T10:45:00Z"
+updated_at: "2026-08-24T10:45:00Z"
+summary: RustCrypto ml-kem crate - independent pure-Rust lineage; source implements both s7.2 checks verbatim at EncapsulationKey::new with a regression test rejecting [0xFF;1184]; version UNVERIFIED until mission pins it.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-scout
+    model: ox-alpha
+    tool: web primary-source fetch
+  sources:
+    - https://github.com/RustCrypto/KEMs
+    - https://github.com/RustCrypto/KEMs/blob/master/ml-kem/src/pke.rs
+  parent: msn-2026-0001
+  generation: 0
+links:
+  targets: [tgt-2026-0001]
+title: RustCrypto ml-kem
+upstream: https://github.com/RustCrypto/KEMs (ml-kem crate)
+language: Rust
+version:
+  pinned: false
+  note: >
+    Must be pinned to a released crate version (crates.io) during
+    msn-2026-0001 before any experiment cites it.
+build_profile: >
+  Near-zero cost on this host: cargo new + ml-kem dependency (MSVC toolchain);
+  EncapsulationKey::new(&bytes)/TryKeyInit returns InvalidKey on bad keys,
+  then encapsulate().
+admission_rationale: >
+  Separate team/language/ecosystem from all other candidates; in-source
+  implementation of both s7.2 checks quoting FIPS 203 verbatim plus a
+  regression test rejecting [0xFF;1184] makes it a high-value confirmation
+  target for import-time checking outside the C family.

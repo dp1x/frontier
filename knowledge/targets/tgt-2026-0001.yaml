@@ -2,7 +2,7 @@ id: tgt-2026-0001
 type: target
 status: active
 created_at: "2026-08-23T12:00:00Z"
-updated_at: "2026-08-23T12:00:00Z"
+updated_at: "2026-08-24T10:50:00Z"
 summary: Public ML-KEM implementations suitable for differential input-checking analysis.
 epistemic_status: hypothesis
 provenance:
@@ -17,13 +17,29 @@ provenance:
   generation: 0
 links:
   specifications: [spc-2026-0001]
-  implementations: [imp-2026-0001, imp-2026-0002, imp-2026-0003]
+  implementations: [imp-2026-0001, imp-2026-0002, imp-2026-0003, imp-2026-0004, imp-2026-0005, imp-2026-0006]
 title: ML-KEM implementation landscape (candidate set)
 selection_rationale: >
   Independent codebases, different languages/lineages, all buildable on commodity
   hardware. Membership is provisional; the mission pins exact versions during
-  execution and may add/drop candidates with justification.
+  execution and may add/drop candidates with justification. Extended 2026-08-24
+  on scout evidence: PQClean and liboqs (>= 0.13.0, mlkem-native) share ONE
+  upstream lineage (pq-crystals/kyber C reference), so Go/Rust/.NET additions
+  raise distinct-lineage coverage from ~2 to ~5.
+lineage_note: >
+  imp-2026-0001 (PQClean) and imp-2026-0002 (liboqs/mlkem-native) both descend
+  from pq-crystals/kyber ref/; independence weighting must not double-count them.
 candidates:
   - implementation: imp-2026-0001
   - implementation: imp-2026-0002
   - implementation: imp-2026-0003
+  - implementation: imp-2026-0004
+  - implementation: imp-2026-0005
+  - implementation: imp-2026-0006
+excluded:
+  - candidate: AWS-LC
+    reason: BoringSSL/OpenSSL fork whose ML-KEM since v1.50.0 is mlkem-native - triple lineage overlap.
+  - candidate: libjade
+    reason: SysV AMD64 ABI only, Windows support a stated future goal; Kyber naming adds spec-version confound.
+  - candidate: mupq/pqm4
+    reason: Cortex-M4 board/emulation target violates lightweight local compute class.

@@ -1,18 +1,20 @@
 id: imp-2026-0001
 type: implementation
-status: candidate
+status: pinned
 created_at: "2026-08-23T12:00:00Z"
-updated_at: "2026-08-23T12:00:00Z"
-summary: PQClean - clean-reference ML-KEM implementations (version UNVERIFIED).
-epistemic_status: assumption
+updated_at: "2026-08-24T10:45:00Z"
+summary: PQClean clean-reference ML-KEM - pinned to final archived master HEAD; NO ek validation anywhere on the encaps path (static analysis).
+epistemic_status: observation
 provenance:
   created_by:
-    kind: human
-    role: maintainer
-    model: null
-    tool: null
-  sources: []
-  parent: null
+    kind: model-agent
+    role: implementation-archaeologist
+    model: ox-alpha
+    tool: frontier.execute (scratch builds)
+  sources:
+    - https://github.com/PQClean/PQClean
+    - R:\frontier-scratch\msn-2026-0001\pqclean\PQClean
+  parent: msn-2026-0001
   generation: 0
 links:
   targets: [tgt-2026-0001]
@@ -20,8 +22,33 @@ title: PQClean (ml-kem)
 upstream: https://github.com/PQClean/PQClean
 language: C
 version:
-  pinned: false
+  pinned: true
+  ref: master HEAD 0586a824fc0d49df0b6b6e9179d8d15d06d0974f (2026-08-04)
   note: >
-    Version/commit intentionally NOT recorded - must be verified and pinned by
-    mission msn-2026-0001 before any experiment cites this implementation.
-build_profile: small C library, trivially buildable locally; lightweight-class per-experiment.
+    Pinned deviation from released tags, justified by evidence: upstream was
+    archived read-only on 2026-08-04 and NO release tag (only round2/round3,
+    both pre-FIPS-203 Kyber round-3) contains crypto_kem/ml-kem-* directories.
+    The archived master is therefore the only analyzable state and is frozen.
+build_profile: >
+  Per-scheme nmake build verified on this host (MSVC 14.51.36231, SDK
+  10.0.26100.0, explicit INCLUDE/LIB env block); link common/fips202.obj with
+  scheme lib. Host is ARM64 Windows running x64 tooling under emulation.
+analysis:
+  encaps_checks:
+    length_check: absent
+    modulus_check: absent
+    location: none
+  evidence:
+    - >
+      poly_frombytes masks each 12-bit chunk with &0xFFF and stores values in
+      [0,4095] with no >= q comparison (crypto_kem/ml-kem-768/clean/poly.c:102-106).
+    - >
+      crypto_kem_enc and enc_derand return 0 unconditionally; API cannot signal
+      an invalid ek (crypto_kem/ml-kem-768/clean/kem.c:97,117; api.h:12).
+    - >
+      No import/validation helper exists anywhere in the tree; unpack_pk decodes
+      without canonicality enforcement (clean/indcpa.c:40-45).
+  test_coverage: >
+    All shipped harnesses (functest/testvectors/nistkat/hqckat) feed only
+    freshly generated keys; negative tests corrupt sk or ciphertext, never pk;
+    no ACVP vectors present in tree.
