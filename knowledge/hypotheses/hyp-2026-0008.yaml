@@ -1,0 +1,40 @@
+id: hyp-2026-0008
+type: hypothesis
+status: open
+created_at: "2026-08-24T12:30:00Z"
+updated_at: "2026-08-24T12:30:00Z"
+summary: Classification grid hypothesis - compliance posture is decided by observable bits (accepts-malformed, post-accept consistency, ingestion-path exposure), with PQClean predicted compliant-plausible AND interoperability-hazardous simultaneously.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: ox-alpha
+    tool: independent generator A
+  sources: [knowledge/specifications/spc-2026-0001.yaml, missions/active/msn-2026-0001.yaml]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  implementations: [imp-2026-0001, imp-2026-0002, imp-2026-0003, imp-2026-0004, imp-2026-0005, imp-2026-0006]
+title: HYP-B1/B2 classification grid and pairwise failure property
+statement: >
+  Define signature Sigma = (encap_accepts_malformed, post_accept_consistency,
+  public_raw_ingestion_path). Predicted landing - C1 compliant-plausible
+  (checks omitted, outputs match reference semantics on accepted inputs):
+  PQClean; simultaneously C2 problematic-for-interoperability (a documented raw
+  ingestion path yields ss_enc != ss_dec against an honest peer): also PQClean.
+  C3 spec-violation-adjacent (accepted-input outputs deviating from FIPS 203
+  evaluation): null prediction - no current candidate lands there; one
+  counterexample row falsifies. The failure is a property of the PAIR, not
+  either party: individually conformant-looking components fail jointly,
+  detectable only by differential harnesses.
+falsifiable_predictions:
+  - PQClean exhibits >= 1 congruent-plant vector with ss_enc != ss_dec (C1+C2 co-hold); if equality held everywhere the silent-breakage narrative dies and PQClean downgrades to laxity-without-consequence.
+  - Any R_raw/R_canon mismatch or undecryptable accepted-input ciphertext flips C2 to C3.
+  - Each candidate's own self-tests/KATs pass while the paired differential reports divergence - single-implementation regimes cannot catch the condition (SP 800-227-style assurance targets exactly this).
+disproof_attempts: []
+notes: >
+  Classification boundaries bind to named observables from the congruent-plant
+  differential; residual softness only in the textual leg of C1 pending
+  synthesis-stage SP 800-227 clause verification.

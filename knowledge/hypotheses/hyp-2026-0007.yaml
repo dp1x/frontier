@@ -1,0 +1,39 @@
+id: hyp-2026-0007
+type: hypothesis
+status: open
+created_at: "2026-08-24T12:30:00Z"
+updated_at: "2026-08-24T12:30:00Z"
+summary: Silent interop-breakage channel - accepted non-canonical keys yield correct-decrypting ciphertexts but shared secrets anchored to raw input bytes (G(m||H(ek_raw))), diverging from any honest peer's derivation.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: ox-alpha
+    tool: independent generator A
+  sources: [localdocs/refs/fips203.pdf#section-7.2]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  implementations: [imp-2026-0001]
+title: HYP-A1 shared-secret anchoring divergence
+statement: >
+  For length-valid non-canonical ek, an implementation that accepts computes
+  ciphertext over the canonical residues (mod-q congruence preserves K-PKE
+  semantics) while deriving the shared secret from G(m || H(raw ek bytes)).
+  With the CONGRUENT-PLANT family (planted = c_i + q, decoding back to the
+  original coefficient), the ciphertext is byte-identical to canonical
+  encryption yet the accepting sender's shared secret differs from the secret
+  an honest peer derives from the same ciphertext via the true dk - a silent,
+  deterministic, pairwise failure invisible to component-level testing.
+falsifiable_predictions:
+  - Acceptors (PQClean) accept every congruent-plant vector; validators reject them like other modulus failures.
+  - With synchronized derand coins, acceptor ciphertext on congruent-plant ek is byte-identical to encryption under the canonical key.
+  - ss_enc != ss_dec for the honest-peer pairing on every congruent-plant vector; deterministic across repeats and native-vs-emulated builds.
+  - Killing observation - ss_enc == ss_dec would mean the acceptor hashes something other than the raw submitted bytes (internal re-canonicalization before hashing), killing the channel claim in current form.
+disproof_attempts: []
+notes: >
+  Congruent-plant stimuli are a mission-novel extension beyond Wycheproof's
+  absolute-value plants (q, 4095); they isolate hash-input divergence from
+  arithmetic divergence. Requires peer-side dk, hence real-keypair-derived
+  stimuli rather than fully synthetic bodies.
