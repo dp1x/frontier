@@ -45,6 +45,14 @@ def test_next_id_increments_per_prefix_and_year():
     assert str(aid) == "hyp-2026-0004"
 
 
+def test_aio_prompt_prefix_is_allocatable():
+    """AGENTS.md charter lists the ai-io prompt artifact with prefix ``aio``."""
+    assert PREFIXES["ai-io prompt"] == "aio"
+    aid = next_id([], "aio", year=2026)
+    assert str(aid) == "aio-2026-0001"
+    assert ArtifactId.parse("aio-2026-0002").matches_type("ai-io prompt")
+
+
 def test_prefix_type_tables_are_inverses():
     for artifact_type, prefix in PREFIXES.items():
         assert prefix_for_type(artifact_type) == prefix

@@ -25,6 +25,7 @@ PREFIXES: dict[str, str] = {
     "proof": "prf",
     "mission": "msn",
     "report": "rpt",
+    "ai-io prompt": "aio",
 }
 
 _PREFIX_TO_TYPE = {prefix: artifact_type for artifact_type, prefix in PREFIXES.items()}
