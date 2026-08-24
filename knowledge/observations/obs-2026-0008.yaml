@@ -1,0 +1,45 @@
+id: obs-2026-0008
+type: observation
+status: recorded
+created_at: "2026-08-25T00:50:00Z"
+updated_at: "2026-08-25T00:50:00Z"
+summary: .NET 10 MLKem (Windows CNG backing) REFUTES the unchecked prior - rejects all non-canonical keys at ImportEncapsulationKey with a CNG-class error and wrong-length keys with a distinct ArgumentException class.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command + GitHub Actions public runner
+  sources: [exp-2026-0007, crypto/mlkem-input-checks/reports/dotnet_windows_report.tsv]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  experiments: [exp-2026-0007]
+  implementations: [imp-2026-0006]
+  hypotheses: [hyp-2026-0005, hyp-2026-0006]
+title: .NET MLKem blind spot resolved - import-time checking with classified errors
+statement: >
+  .NET runtime 10.0.11 on windows-latest (x64, OS 10.0.26100,
+  MLKem.IsSupported=True => OS/CNG backing; recorded per imp-2026-0006's
+  attribution requirement): ImportEncapsulationKey REJECTED all 82
+  non-canonical vectors with CryptographicException carrying CNG status
+  0xc1000001, and all 9 wrong-length vectors via ArgumentException - two
+  distinct error classes mirroring Go's classification. All 108
+  canonical-content vectors imported and encapsulated. hyp-2026-0006's
+  primary prediction (no modulus check on default Windows backing) is
+  refuted by its own stated killing observation; the mission's only true
+  blind spot lands in the import-checked column. Linux/OpenSSL-backed
+  variant of .NET remains untested (artifact name collision in CI matrix).
+environment:
+  where: github-actions
+  isolation: github-runner
+  cwd: runner workspace (ephemeral)
+  versions:
+    dotnet_runtime: 10.0.11
+    os: "Microsoft Windows 10.0.26100 (windows-latest, x64)"
+    backing: OS-level CNG (inferred from error origin; managed variant untested)
+stdout: |
+  META|runtime=10.0.11|os=Microsoft Windows 10.0.26100|arch=X64|mlkemSupported=True
+  SUMMARY|total=199
+exit_code: 0

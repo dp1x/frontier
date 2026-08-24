@@ -1,0 +1,40 @@
+id: exp-2026-0006
+type: experiment
+status: complete
+created_at: "2026-08-25T00:52:00Z"
+updated_at: "2026-08-25T00:52:00Z"
+summary: OpenSSL 3.5.7 differential leg on GitHub Actions ubuntu-latest - pinned-tag build, raw-import + encapsulate placement probes.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command + GitHub Actions public runner
+  sources: [hyp-2026-0004, hyp-2026-0005]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0004, hyp-2026-0005]
+  observations: [obs-2026-0007]
+  implementations: [imp-2026-0003]
+title: OpenSSL CI differential (placement probe A/B)
+design: >
+  .github/workflows/mlkem-diff.yml openssl job: shallow clone of pinned tag,
+  Configure no-shared, make -j4, install_sw; gcc compile of committed
+  openssl_runner.c with runtime-version logging (OpenSSL_version vs compiled
+  macro to catch header/library skew); per vector, EVP_PKEY_new_raw_public_key_ex
+  import verdict then EVP_PKEY_encapsulate liveness on accepted keys.
+commands:
+  - "git clone --depth 1 --branch openssl-3.5.7 https://github.com/openssl/openssl.git"
+  - "./Configure no-shared --prefix=$PWD/../openssl-install && make -j4 && make install_sw"
+  - "gcc -O2 -Wall -o openssl_runner openssl_runner.c -I <install>/include -L <install>/lib64 -lcrypto"
+  - "./openssl_runner stimuli.tsv openssl_report.tsv"
+compute_decision:
+  location: github-actions
+  isolation: github-runner
+  reason: "medium class: substantial pinned-source build; local host lacks perl for OpenSSL configure and R: budget favors runners"
+determinism:
+  deterministic: true
+  seed_policy: import/encapsulate verdicts are input-determined
+  nondeterminism_notes: null

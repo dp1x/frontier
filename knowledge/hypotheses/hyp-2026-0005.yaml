@@ -1,8 +1,9 @@
 id: hyp-2026-0005
 type: hypothesis
-status: open
+status: supported
 created_at: "2026-08-24T11:45:00Z"
-updated_at: "2026-08-24T11:45:00Z"
+updated_at: "2026-08-25T00:58:00Z"
+summary: SUPPORTED - placement taxonomy confirmed by execution across all six candidates (PQClean nowhere/unsignalable; liboqs encaps-time; OpenSSL/Go/RustCrypto/.NET-CNG import-time).
 summary: Every candidate lands in exactly one placement class via the two-probe protocol (Probe-A validation-capable entry point vs Probe-B deepest encaps entry without validation).
 epistemic_status: hypothesis
 provenance:

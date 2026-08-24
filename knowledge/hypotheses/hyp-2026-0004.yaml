@@ -1,8 +1,9 @@
 id: hyp-2026-0004
 type: hypothesis
-status: open
+status: supported
 created_at: "2026-08-24T11:45:00Z"
-updated_at: "2026-08-24T11:45:00Z"
+updated_at: "2026-08-25T01:00:00Z"
+summary: SUPPORTED - check verdicts uniform across k=2/3/4 in every library exposing the sets; no cross-set silent decoding observed; cross-set confusion keys rejected on length where length is expressible.
 summary: Type-check enforcement is uniform across parameter sets k=2/3/4 and no library silently decodes an ek belonging to a different parameter set (FIPS 203 section 7 preamble association).
 epistemic_status: hypothesis
 provenance:

@@ -1,0 +1,309 @@
+META|runtime_libcrypto=OpenSSL 3.5.7 9 Jun 2026|compiled_headers=OpenSSL 3.5.7 9 Jun 2026
+valid-control|ML-KEM-512|pass|seed:20262824|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262824|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262825|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262825|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262826|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262826|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262827|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262827|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262828|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262828|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262829|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262829|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262830|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262830|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262831|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262831|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262832|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262832|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262833|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262833|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262834|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262834|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262835|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262835|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262836|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262836|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262837|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262837|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262838|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262838|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262839|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262839|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262840|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262840|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262841|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262841|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262842|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262842|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262843|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262843|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262844|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262844|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262845|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262845|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262846|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262846|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262847|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262847|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262848|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262848|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262849|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262849|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262850|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262850|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262851|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262851|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262852|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262852|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262853|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262853|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262854|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262854|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262855|import-accepted
+valid-control|ML-KEM-512|pass|seed:20262855|encap-accepted
+noncanon-q3329-first|ML-KEM-512|fail-modulus|seed:779000+coeff[0]:=3329|import-rejected|Provider routines:invalid key:unexpected
+noncanon-v4000-first|ML-KEM-512|fail-modulus|seed:779000+coeff[0]:=4000|import-rejected|Provider routines:invalid key:unexpected
+noncanon-max4095-first|ML-KEM-512|fail-modulus|seed:779000+coeff[0]:=4095|import-rejected|Provider routines:invalid key:unexpected
+noncanon-q3329-middle|ML-KEM-512|fail-modulus|seed:779000+coeff[256]:=3329|import-rejected|Provider routines:invalid key:unexpected
+noncanon-v4000-middle|ML-KEM-512|fail-modulus|seed:779000+coeff[256]:=4000|import-rejected|Provider routines:invalid key:unexpected
+noncanon-max4095-middle|ML-KEM-512|fail-modulus|seed:779000+coeff[256]:=4095|import-rejected|Provider routines:invalid key:unexpected
+noncanon-q3329-last|ML-KEM-512|fail-modulus|seed:779000+coeff[511]:=3329|import-rejected|Provider routines:invalid key:unexpected
+noncanon-v4000-last|ML-KEM-512|fail-modulus|seed:779000+coeff[511]:=4000|import-rejected|Provider routines:invalid key:unexpected
+noncanon-max4095-last|ML-KEM-512|fail-modulus|seed:779000+coeff[511]:=4095|import-rejected|Provider routines:invalid key:unexpected
+len-minus-1|ML-KEM-512|fail-type|derived:len-1|import-rejected|Provider routines:invalid key length:length-or-modulus
+len-plus-1|ML-KEM-512|fail-type|derived:len+1|import-rejected|Provider routines:invalid key length:length-or-modulus
+rho-zero|ML-KEM-512|pass|derived:rho-mutation|import-accepted
+rho-zero|ML-KEM-512|pass|derived:rho-mutation|encap-accepted
+rho-ff|ML-KEM-512|pass|derived:rho-mutation|import-accepted
+rho-ff|ML-KEM-512|pass|derived:rho-mutation|encap-accepted
+rho-prng-a|ML-KEM-512|pass|derived:rho-mutation|import-accepted
+rho-prng-a|ML-KEM-512|pass|derived:rho-mutation|encap-accepted
+rho-prng-b|ML-KEM-512|pass|derived:rho-mutation|import-accepted
+rho-prng-b|ML-KEM-512|pass|derived:rho-mutation|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263824|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263824|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263825|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263825|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263826|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263826|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263827|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263827|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263828|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263828|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263829|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263829|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263830|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263830|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263831|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263831|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263832|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263832|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263833|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263833|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263834|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263834|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263835|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263835|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263836|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263836|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263837|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263837|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263838|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263838|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263839|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263839|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263840|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263840|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263841|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263841|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263842|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263842|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263843|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263843|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263844|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263844|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263845|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263845|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263846|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263846|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263847|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263847|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263848|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263848|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263849|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263849|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263850|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263850|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263851|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263851|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263852|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263852|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263853|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263853|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263854|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263854|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263855|import-accepted
+valid-control|ML-KEM-768|pass|seed:20263855|encap-accepted
+noncanon-q3329-first|ML-KEM-768|fail-modulus|seed:780000+coeff[0]:=3329|import-rejected|Provider routines:invalid key:unexpected
+noncanon-v4000-first|ML-KEM-768|fail-modulus|seed:780000+coeff[0]:=4000|import-rejected|Provider routines:invalid key:unexpected
+noncanon-max4095-first|ML-KEM-768|fail-modulus|seed:780000+coeff[0]:=4095|import-rejected|Provider routines:invalid key:unexpected
+noncanon-q3329-middle|ML-KEM-768|fail-modulus|seed:780000+coeff[384]:=3329|import-rejected|Provider routines:invalid key:unexpected
+noncanon-v4000-middle|ML-KEM-768|fail-modulus|seed:780000+coeff[384]:=4000|import-rejected|Provider routines:invalid key:unexpected
+noncanon-max4095-middle|ML-KEM-768|fail-modulus|seed:780000+coeff[384]:=4095|import-rejected|Provider routines:invalid key:unexpected
+noncanon-q3329-last|ML-KEM-768|fail-modulus|seed:780000+coeff[767]:=3329|import-rejected|Provider routines:invalid key:unexpected
+noncanon-v4000-last|ML-KEM-768|fail-modulus|seed:780000+coeff[767]:=4000|import-rejected|Provider routines:invalid key:unexpected
+noncanon-max4095-last|ML-KEM-768|fail-modulus|seed:780000+coeff[767]:=4095|import-rejected|Provider routines:invalid key:unexpected
+len-minus-1|ML-KEM-768|fail-type|derived:len-1|import-rejected|Provider routines:invalid key length:length-or-modulus
+len-plus-1|ML-KEM-768|fail-type|derived:len+1|import-rejected|Provider routines:invalid key length:length-or-modulus
+rho-zero|ML-KEM-768|pass|derived:rho-mutation|import-accepted
+rho-zero|ML-KEM-768|pass|derived:rho-mutation|encap-accepted
+rho-ff|ML-KEM-768|pass|derived:rho-mutation|import-accepted
+rho-ff|ML-KEM-768|pass|derived:rho-mutation|encap-accepted
+rho-prng-a|ML-KEM-768|pass|derived:rho-mutation|import-accepted
+rho-prng-a|ML-KEM-768|pass|derived:rho-mutation|encap-accepted
+rho-prng-b|ML-KEM-768|pass|derived:rho-mutation|import-accepted
+rho-prng-b|ML-KEM-768|pass|derived:rho-mutation|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264824|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264824|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264825|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264825|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264826|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264826|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264827|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264827|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264828|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264828|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264829|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264829|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264830|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264830|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264831|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264831|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264832|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264832|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264833|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264833|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264834|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264834|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264835|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264835|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264836|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264836|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264837|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264837|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264838|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264838|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264839|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264839|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264840|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264840|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264841|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264841|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264842|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264842|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264843|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264843|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264844|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264844|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264845|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264845|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264846|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264846|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264847|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264847|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264848|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264848|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264849|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264849|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264850|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264850|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264851|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264851|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264852|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264852|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264853|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264853|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264854|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264854|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264855|import-accepted
+valid-control|ML-KEM-1024|pass|seed:20264855|encap-accepted
+noncanon-q3329-first|ML-KEM-1024|fail-modulus|seed:781000+coeff[0]:=3329|import-rejected|Provider routines:invalid key:unexpected
+noncanon-v4000-first|ML-KEM-1024|fail-modulus|seed:781000+coeff[0]:=4000|import-rejected|Provider routines:invalid key:unexpected
+noncanon-max4095-first|ML-KEM-1024|fail-modulus|seed:781000+coeff[0]:=4095|import-rejected|Provider routines:invalid key:unexpected
+noncanon-q3329-middle|ML-KEM-1024|fail-modulus|seed:781000+coeff[512]:=3329|import-rejected|Provider routines:invalid key:unexpected
+noncanon-v4000-middle|ML-KEM-1024|fail-modulus|seed:781000+coeff[512]:=4000|import-rejected|Provider routines:invalid key:unexpected
+noncanon-max4095-middle|ML-KEM-1024|fail-modulus|seed:781000+coeff[512]:=4095|import-rejected|Provider routines:invalid key:unexpected
+noncanon-q3329-last|ML-KEM-1024|fail-modulus|seed:781000+coeff[1023]:=3329|import-rejected|Provider routines:invalid key:unexpected
+noncanon-v4000-last|ML-KEM-1024|fail-modulus|seed:781000+coeff[1023]:=4000|import-rejected|Provider routines:invalid key:unexpected
+noncanon-max4095-last|ML-KEM-1024|fail-modulus|seed:781000+coeff[1023]:=4095|import-rejected|Provider routines:invalid key:unexpected
+len-minus-1|ML-KEM-1024|fail-type|derived:len-1|import-rejected|Provider routines:invalid key length:length-or-modulus
+len-plus-1|ML-KEM-1024|fail-type|derived:len+1|import-rejected|Provider routines:invalid key length:length-or-modulus
+rho-zero|ML-KEM-1024|pass|derived:rho-mutation|import-accepted
+rho-zero|ML-KEM-1024|pass|derived:rho-mutation|encap-accepted
+rho-ff|ML-KEM-1024|pass|derived:rho-mutation|import-accepted
+rho-ff|ML-KEM-1024|pass|derived:rho-mutation|encap-accepted
+rho-prng-a|ML-KEM-1024|pass|derived:rho-mutation|import-accepted
+rho-prng-a|ML-KEM-1024|pass|derived:rho-mutation|encap-accepted
+rho-prng-b|ML-KEM-1024|pass|derived:rho-mutation|import-accepted
+rho-prng-b|ML-KEM-1024|pass|derived:rho-mutation|encap-accepted
+cross-set-1024-as-768|ML-KEM-768|fail-type|seed:555000+4000|import-rejected|Provider routines:invalid key length:length-or-modulus
+cross-set-1024-as-512|ML-KEM-512|fail-type|seed:555000+4000|import-rejected|Provider routines:invalid key length:length-or-modulus
+cross-set-768-as-512|ML-KEM-512|fail-type|seed:555000+3000|import-rejected|Provider routines:invalid key length:length-or-modulus
+congruent-plant|ML-KEM-512|fail-modulus|seed:911001+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-512|fail-modulus|seed:911002+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-512|fail-modulus|seed:911003+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-512|fail-modulus|seed:911004+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-512|fail-modulus|seed:911005+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-512|fail-modulus|seed:911006+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-512|fail-modulus|seed:911007+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-768|fail-modulus|seed:912000+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-768|fail-modulus|seed:912002+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-768|fail-modulus|seed:912004+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-768|fail-modulus|seed:912005+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-768|fail-modulus|seed:912006+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-768|fail-modulus|seed:912007+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913001+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913002+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913003+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913004+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913005+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913007+plant(c+q)@0,mid,last|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId2|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId3|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId4|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId5|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId6|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId7|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId8|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId9|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId2|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId3|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId4|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId5|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId6|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId7|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId8|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId9|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId10|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId11|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId12|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId13|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId2|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId3|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId4|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId5|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId6|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId7|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId8|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId9|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId10|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId11|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId12|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId13|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId14|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId15|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId16|import-rejected|Provider routines:invalid key:unexpected
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId17|import-rejected|Provider routines:invalid key:unexpected
+SUMMARY|total=199

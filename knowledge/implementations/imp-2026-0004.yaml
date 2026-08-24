@@ -1,10 +1,10 @@
 id: imp-2026-0004
 type: implementation
-status: candidate
+status: pinned
 created_at: "2026-08-24T10:45:00Z"
-updated_at: "2026-08-24T10:45:00Z"
-summary: Go standard library crypto/mlkem - independent pure-Go lineage; source comment claims s7.2 modulus check inside parseEK; version UNVERIFIED until mission pins it.
-epistemic_status: hypothesis
+updated_at: "2026-08-25T00:55:00Z"
+summary: Go standard library crypto/mlkem (go1.26.4) - independent pure-Go lineage; both checks enforced at parse/import with distinct error classes; EXECUTED confirmation.
+epistemic_status: observation
 provenance:
   created_by:
     kind: model-agent
@@ -23,10 +23,13 @@ title: Go stdlib crypto/mlkem
 upstream: https://github.com/golang/go (src/crypto/mlkem, stdlib since Go 1.24)
 language: Go
 version:
-  pinned: false
+  pinned: true
+  ref: go1.26.4 windows/arm64 (stdlib crypto/mlkem)
   note: >
-    Must be pinned to a released Go toolchain version during msn-2026-0001
-    before any experiment cites it.
+    Executed differential (ML-KEM-768/1024; 512 absent from API by design):
+    all non-canonical rejected with "mlkem: invalid polynomial encoding",
+    wrong-length with "mlkem: invalid encapsulation key length"; 72
+    canonical-content vectors accepted.
 build_profile: >
   Near-zero cost on this host: install Go toolchain, single-file harness via
   go run; NewEncapsulationKey768([]byte) parses raw 1184-byte ek and errors on

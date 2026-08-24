@@ -1,0 +1,38 @@
+id: exp-2026-0007
+type: experiment
+status: complete
+created_at: "2026-08-25T00:53:00Z"
+updated_at: "2026-08-25T00:53:00Z"
+summary: .NET MLKem differential leg via GitHub Actions dotnet job (windows-latest) - ImportEncapsulationKey + Encapsulate with backing attribution.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command + GitHub Actions public runner
+  sources: [hyp-2026-0005, hyp-2026-0006]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0005, hyp-2026-0006]
+  observations: [obs-2026-0008]
+  implementations: [imp-2026-0006]
+title: .NET MLKem CI differential
+design: >
+  .github/workflows/mlkem-diff.yml dotnet job (matrix windows/ubuntu;
+  windows artifact analyzed here): setup-dotnet 10.0.x, publish console
+  runner, run over committed manifest; exception classes recorded
+  separately (ArgumentException size-class vs CryptographicException
+  validity-class) plus runtime/backing metadata.
+commands:
+  - "dotnet publish crypto/mlkem-input-checks/harnesses/dotnet_runner -c Release -o out"
+  - "out/dotnet_runner stimuli.tsv dotnet_report.tsv"
+compute_decision:
+  location: github-actions
+  isolation: github-runner
+  reason: ".NET SDK absent on mission host (host mutation avoided); free public runner satisfies router at zero local cost"
+determinism:
+  deterministic: true
+  seed_policy: verdicts are input-determined; no randomness recorded
+  nondeterminism_notes: null

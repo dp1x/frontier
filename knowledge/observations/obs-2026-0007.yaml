@@ -1,0 +1,41 @@
+id: obs-2026-0007
+type: observation
+status: recorded
+created_at: "2026-08-25T00:50:00Z"
+updated_at: "2026-08-25T00:50:00Z"
+summary: OpenSSL 3.5.7 CI leg - runtime-verified version match; all 91 malformed keys rejected at raw-key import (both check classes), 108 canonical accepted.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute.run_command + GitHub Actions public runner
+  sources: [exp-2026-0006, crypto/mlkem-input-checks/reports/openssl_report.tsv]
+  parent: msn-2026-0001
+  generation: 0
+links:
+  experiments: [exp-2026-0006]
+  implementations: [imp-2026-0003]
+  hypotheses: [hyp-2026-0004, hyp-2026-0005]
+title: OpenSSL import-time rejection executed and version-clean
+statement: >
+  Built from pinned tag openssl-3.5.7 on ubuntu-latest (gcc, static libcrypto):
+  runner META now logs runtime libcrypto == compiled headers == "OpenSSL 3.5.7
+  9 Jun 2026" (first CI attempt had a header/library skew caught by this very
+  logging and was rerun). Raw-bytestring import rejected all 82 non-canonical
+  vectors AND all 9 wrong-length vectors; encapsulate succeeded for all 108
+  canonical-content vectors on imported keys. Verdicts uniform across
+  k=2/3/4, confirming the static-analysis placement at EVP_PKEY_fromdata /
+  EVP_PKEY_new_raw_public_key_ex.
+environment:
+  where: github-actions
+  isolation: github-runner
+  cwd: runner workspace (ephemeral)
+  versions:
+    openssl: "3.5.7 @ 8cf17aaeb4599f8af87fefd810b5b5fee90fe69e (runtime verified)"
+    runner: ubuntu-latest, gcc
+stdout: |
+  META|runtime_libcrypto=OpenSSL 3.5.7 9 Jun 2026|compiled_headers=OpenSSL 3.5.7 9 Jun 2026
+  SUMMARY|total=199
+exit_code: 0

@@ -1,10 +1,10 @@
 id: imp-2026-0006
 type: implementation
-status: candidate
+status: pinned
 created_at: "2026-08-24T10:45:00Z"
-updated_at: "2026-08-24T10:45:00Z"
-summary: .NET 10 System.Security.Cryptography.MLKem - Microsoft managed/OS-backed lineage; ImportEncapsulationKey + Encapsulate is the injection point; check placement publicly undocumented (genuine epistemic novelty).
-epistemic_status: hypothesis
+updated_at: "2026-08-25T00:56:00Z"
+summary: .NET 10 System.Security.Cryptography.MLKem (runtime 10.0.11, Windows CNG backing) - import-time checking with classified errors; blind spot resolved by executed differential.
+epistemic_status: observation
 provenance:
   created_by:
     kind: model-agent
@@ -21,11 +21,14 @@ title: .NET 10 MLKem
 upstream: https://github.com/dotnet/dotnet (System.Security.Cryptography.MLKem)
 language: C# / .NET
 version:
-  pinned: false
+  pinned: true
+  ref: ".NET runtime 10.0.11, windows-latest x64 (OS build 10.0.26100)"
   note: >
-    Pin exact runtime version at execution time; behavior may differ between
-    managed, CNG-backed (MLKemCng), and OpenSSL-backed derived classes -
-    record which variant is exercised.
+    Backing recorded per admission_rationale: MLKem.IsSupported=True on
+    Windows => OS/CNG-backed path exercised. Executed differential: all 82
+    non-canonical rejected with CryptographicException/CNG status
+    0xc1000001; all 9 wrong-length rejected via ArgumentException; 108
+    canonical-content accepted. Linux/OpenSSL-backed variant NOT tested.
 build_profile: >
   Zero build: install .NET SDK, console app calling
   MLKem.ImportEncapsulationKey(algorithm, byte[]) then Encapsulate(...).
