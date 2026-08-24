@@ -52,4 +52,47 @@ $libs = ("ml-kem-512","ml-kem-768","ml-kem-1024" | ForEach-Object { "`"$ws\PQCle
 & $py -c "from frontier.execute import run_command; r=run_command([r'$ws\pqclean_runner.exe', r'$repo\crypto\mlkem-input-checks\stimuli\stimuli.tsv', r'$ws\pq_report.tsv'], cwd=r'$ws', timeout_s=300); print(r.stdout.strip()); exit(r.exit_code)"
 Get-Content "$ws\pq_report.tsv" | Select-Object -Last 1
 
-Write-Host "Leg 1 complete. Legs 2-4 follow the same pattern; see reproducer.md for the authoritative command list." -ForegroundColor Green
+# --- Leg 2: liboqs 0.16.0 (all ML-KEM variants) ---------------------------
+$liboqsBuild = "$ws\liboqs\build-all-kem"
+$cmakeArgs = "-DOQS_PERMIT_UNSUPPORTED_ARCHITECTURE=ON -DOQS_USE_OPENSSL=OFF " +
+  "-DOQS_DIST_BUILD=ON -DOQS_ENABLE_KEM_ML_KEM=ON -DOQS_BUILD_ONLY_LIB=ON"
+"@echo off`r`n$envBlock`r`ncd /d `"$ws\liboqs`"`r`ncmake -S . -B build-all-kem -G `"Visual Studio 18 2026`" -A x64 $cmakeArgs`r`n" | Set-Content "$ws\oqs_cfg.cmd"
+"@echo off`r`n$envBlock`r`ncd /d `"$ws\liboqs`"`r`ncmake --build build-all-kem --config Release --target oqs`r`n" | Set-Content "$ws\oqs_build.cmd"
+foreach ($step in "oqs_cfg","oqs_build") {
+  & $py -c "from frontier.execute import run_command; r=run_command(['cmd.exe','/d','/c',r'$ws\$step.cmd'], cwd=r'$ws\liboqs', timeout_s=1800); exit(r.exit_code)"
+}
+Copy-Item "$repo\crypto\mlkem-input-checks\harnesses\oqs_runner.c" $ws
+"@echo off`r`n$envBlock`r`ncd /d `"$ws`"`r`ncl /nologo /O2 /W4 /I `"$liboqsBuild\include`" oqs_runner.c `"$liboqsBuild\lib\Release\oqs.lib`" bcrypt.lib advapi32.lib /Fe:oqs_runner.exe`r`n" | Set-Content "$ws\b_oqs.cmd"
+& $py -c "from frontier.execute import run_command; r=run_command(['cmd.exe','/d','/c',r'$ws\b_oqs.cmd'], cwd=r'$ws', timeout_s=600); exit(r.exit_code)"
+& $py -c "from frontier.execute import run_command; r=run_command([r'$ws\oqs_runner.exe', r'$repo\crypto\mlkem-input-checks\stimuli\stimuli.tsv', r'$ws\oqs_report.tsv'], cwd=r'$ws', timeout_s=300); print(r.stdout.strip()); exit(r.exit_code)"
+Get-Content "$ws\oqs_report.tsv" | Select-Object -Last 1
+
+# --- Leg 3: Go stdlib crypto/mlkem ----------------------------------------
+Copy-Item "$repo\crypto\mlkem-input-checks\harnesses\go_runner.go" $ws
+$env:GOCACHE = "$ws\gocache"; $env:GOPATH = "$ws\gopath"; $env:GOTOOLCHAIN = "local"
+go build -o "$ws\go_runner.exe" "$ws\go_runner.go"
+if ($LASTEXITCODE -ne 0) { throw "go build failed" }
+& "$ws\go_runner.exe" "$repo\crypto\mlkem-input-checks\stimuli\stimuli.tsv" "$ws\go_report.tsv"
+Get-Content "$ws\go_report.tsv" | Select-Object -Last 1
+
+# --- Leg 4: RustCrypto ml-kem ----------------------------------------------
+$crate = "$ws\rust-runner"; New-Item -ItemType Directory -Force "$crate\src" | Out-Null
+@"
+[package]
+name = "rust-runner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ml-kem = { version = "=0.3.2", features = ["hazmat"] }
+"@ | Set-Content "$crate\Cargo.toml"
+Copy-Item "$repo\crypto\mlkem-input-checks\harnesses\rust_runner.rs" "$crate\src\main.rs"
+$env:CARGO_TARGET_DIR = "$crate\target"
+Push-Location $crate
+cargo build --release
+if ($LASTEXITCODE -ne 0) { Pop-Location; throw "cargo build failed" }
+Pop-Location
+& "$crate\target\release\rust-runner.exe" "$repo\crypto\mlkem-input-checks\stimuli\stimuli.tsv" "$ws\rust_report.tsv"
+Get-Content "$ws\rust_report.tsv" | Select-Object -Last 1
+
+Write-Host "`nReproduction complete. Compare reports against knowledge/observations/obs-*.yaml counts." -ForegroundColor Green
