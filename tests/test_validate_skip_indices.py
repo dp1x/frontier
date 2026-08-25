@@ -1,7 +1,5 @@
 """Structural validation skips non-artifact directories."""
 
-from pathlib import Path
-
 from frontier.validate import validate_repo
 
 

@@ -22,35 +22,73 @@ jobs:
   openssl-invariance:
     name: OpenSSL 3.5.7 invariance (raw/SPKI x default/FIPS)
     runs-on: ubuntu-latest
+    env:
+      OPENSSL_INSTALL: ${{ github.workspace }}/openssl-install
     steps:
       - uses: actions/checkout@v4
-      - name: Install perl for Configure
-        run: sudo apt-get update && sudo apt-get install -y perl
       - name: Build pinned OpenSSL with FIPS
         run: |
           git clone --depth 1 --branch openssl-3.5.7 https://github.com/openssl/openssl.git openssl-src
           cd openssl-src
-          ./Configure enable-fips no-shared --prefix=$PWD/../openssl-install
+          ./Configure enable-fips --prefix=$OPENSSL_INSTALL
           make -j4 > build.log 2>&1 || (tail -100 build.log && exit 1)
           make install_sw > /dev/null
-          make install_fips > /dev/null || echo "install_fips optional"
-          echo "Running fipsinstall to generate fipsmodule.cnf"
-          ./apps/openssl fipsinstall -out ../openssl-install/ssl/fipsmodule.cnf -module ../openssl-install/lib64/ossl-modules/fips.so || ./apps/openssl fipsinstall -out ../openssl-install/ssl/fipsmodule.cnf -module ../openssl-install/lib/ossl-modules/fips.so || echo "fipsinstall fallback"
-          cat ../openssl-install/ssl/fipsmodule.cnf | head -20
-          echo "OPENSSL_CONF=../openssl-install/ssl/openssl.cnf"
-          cat openssl.cnf 2>/dev/null | head -20 || echo "no openssl.cnf yet"
+          make install_fips > /dev/null
+          # Generate fipsmodule.cnf from the installed module
+          MODULE=$(ls $OPENSSL_INSTALL/lib64/ossl-modules/fips.so 2>/dev/null || ls $OPENSSL_INSTALL/lib/ossl-modules/fips.so)
+          MODDIR=$(dirname $MODULE)
+          $OPENSSL_INSTALL/bin/openssl fipsinstall -out $OPENSSL_INSTALL/ssl/fipsmodule.cnf -module $MODULE
+          # Combined cnf that activates fips + base providers on load
+          cat > $OPENSSL_INSTALL/ssl/openssl-fips.cnf <<'EOF'
+          HOME = .
+          openssl_conf = openssl_init
+
+          [openssl_init]
+          providers = provider_sect
+
+          [provider_sect]
+          default = default_sect
+          fips = fips_sect
+
+          [default_sect]
+          activate = 1
+
+          [fips_sect]
+          activate = 1
+          EOF
+          cat $OPENSSL_INSTALL/ssl/fipsmodule.cnf >> $OPENSSL_INSTALL/ssl/openssl-fips.cnf
+          echo "OPENSSL_CONF=$OPENSSL_INSTALL/ssl/openssl-fips.cnf" >> $GITHUB_ENV
+          echo "OPENSSL_MODULES=$MODDIR" >> $GITHUB_ENV
+          tail -20 $OPENSSL_INSTALL/ssl/openssl-fips.cnf
       - name: Compile invariance runner
         run: |
           gcc -O2 -Wall -o openssl_invar_runner crypto/mlkem-input-checks/harnesses/openssl_invar_runner.c \
-            -I openssl-install/include -L openssl-install/lib64 -L openssl-install/lib -lcrypto \
-            -Wl,-rpath,$PWD/openssl-install/lib64 -Wl,-rpath,$PWD/openssl-install/lib
-          ./openssl_invar_runner --help 2>&1 || true
+            -I $OPENSSL_INSTALL/include -L $OPENSSL_INSTALL/lib64 -L $OPENSSL_INSTALL/lib -lcrypto \
+            -Wl,-rpath,$OPENSSL_INSTALL/lib64 -Wl,-rpath,$OPENSSL_INSTALL/lib
       - name: Run invariance matrix
         run: |
           ./openssl_invar_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv openssl_invar_report.tsv
-          cat openssl_invar_report.tsv | head -20
-          cat openssl_invar_report.tsv | grep META
-          cat openssl_invar_report.tsv | tail -20
+          grep META openssl_invar_report.tsv
+          tail -5 openssl_invar_report.tsv
+          echo "divergence scan:"
+          awk -F'|' '{key=$1"|"$2"|"$4; if ($0 ~ /import-accepted/) acc[key]++; if ($0 ~ /import-rejected/) rej[key]++} END {d=0; for (k in acc) {split(k,p,"|")} }' openssl_invar_report.tsv > /dev/null
+          python3 - <<'EOF'
+          import collections
+          g=collections.defaultdict(set)
+          for l in open('openssl_invar_report.tsv'):
+              if 'import-' not in l or l.startswith(('META','SUMMARY')): continue
+              f=l.rstrip('\n').split('|')
+              key='|'.join(f[0:4])
+              cell=f[5] if len(f)>5 else '?'
+              v='acc' if 'import-accepted' in l else 'rej'
+              g[(key,cell.split('=')[1].strip())].add(v)
+          cells=collections.defaultdict(dict)
+          for (key,prov),vs in g.items():
+              cells[key][prov]=list(vs)[0] if len(vs)==1 else 'MIXED'
+          div=[(k,v) for k,v in cells.items() if len(v)>1]
+          print(f"vectors={len(cells)} provider-divergent={len(div)}")
+          for k,v in div[:10]: print("DIVERGENT", k, v)
+          EOF
       - uses: actions/upload-artifact@v4
         with:
           name: openssl_invar_report
@@ -63,22 +101,25 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install deps
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build
-      - name: Build liboqs auto
+      - name: Build liboqs auto (DIST_BUILD=ON, native where AVX2+BMI2+POPCNT)
         run: |
           git clone --depth 1 --branch 0.16.0 https://github.com/open-quantum-safe/liboqs.git liboqs
-          cmake -S liboqs -B build-auto -DCMAKE_BUILD_TYPE=Release -DOQS_MINIMAL_BUILD="KEM_ml_kem_512;KEM_ml_kem_768;KEM_ml_kem_1024" -DOQS_DIST_BUILD=ON
+          cmake -S liboqs -B build-auto -DCMAKE_BUILD_TYPE=Release \
+            -DOQS_MINIMAL_BUILD="KEM_ml_kem_512;KEM_ml_kem_768;KEM_ml_kem_1024" \
+            -DOQS_DIST_BUILD=ON
           cmake --build build-auto -j4
-          cat build-auto/CMakeCache.txt | grep -i mlkem | head -20
-          cat build-auto/CMakeCache.txt | grep -i DIST | head -20
+          grep -E "ML_KEM|DIST" build-auto/CMakeCache.txt | head -20
+          findl=$(find build-auto -name "liboqs.a" -o -name "liboqs.so*" | head -3); echo "lib: $findl"
+          echo "OQS_LIB_DIR=$(dirname $(find build-auto -name 'liboqs.a' | head -1))" >> $GITHUB_ENV
       - name: Compile runner (auto)
         run: |
-          gcc -O2 -Wall -o oqs_auto_runner crypto/mlkem-input-checks/harnesses/oqs_runner.c \
-            -I build-auto/include -I liboqs/src -L build-auto/lib -loqs -lcrypto
-          echo "compiled auto"
+          gcc -O2 -Wall -DBACKEND_TAG=auto -o oqs_auto_runner crypto/mlkem-input-checks/harnesses/oqs_runner.c \
+            -I build-auto/include $(for d in $(find liboqs/src/common -name "*.h" | xargs -n1 dirname | sort -u); do echo -I$d; done) \
+            $OQS_LIB_DIR/liboqs.a -lm -lpthread -ldl
       - name: Run auto
         run: |
-          ./oqs_auto_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv oqs_auto_report.tsv || LD_LIBRARY_PATH=build-auto/lib ./oqs_auto_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv oqs_auto_report.tsv
-          cat oqs_auto_report.tsv | head -20
+          ./oqs_auto_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv oqs_auto_report.tsv
+          grep META oqs_auto_report.tsv
       - uses: actions/upload-artifact@v4
         with:
           name: oqs_auto_report
@@ -91,22 +132,24 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install deps
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build
-      - name: Build liboqs forced-ref
+      - name: Build liboqs forced-ref (DIST_BUILD=OFF -> C-only glue)
         run: |
           git clone --depth 1 --branch 0.16.0 https://github.com/open-quantum-safe/liboqs.git liboqs
-          cmake -S liboqs -B build-ref -DCMAKE_BUILD_TYPE=Release -DOQS_MINIMAL_BUILD="KEM_ml_kem_512;KEM_ml_kem_768;KEM_ml_kem_1024" -DOQS_DIST_BUILD=OFF
+          cmake -S liboqs -B build-ref -DCMAKE_BUILD_TYPE=Release \
+            -DOQS_MINIMAL_BUILD="KEM_ml_kem_512;KEM_ml_kem_768;KEM_ml_kem_1024" \
+            -DOQS_DIST_BUILD=OFF
           cmake --build build-ref -j4
-          cat build-ref/CMakeCache.txt | grep -i mlkem | head -20
-          cat build-ref/CMakeCache.txt | grep -i DIST | head -20
+          grep -E "ML_KEM|DIST" build-ref/CMakeCache.txt | head -20
+          echo "OQS_LIB_DIR=$(dirname $(find build-ref -name 'liboqs.a' | head -1))" >> $GITHUB_ENV
       - name: Compile runner (ref)
         run: |
-          gcc -O2 -Wall -DBACKEND_NAME=\"ref\" -o oqs_ref_runner crypto/mlkem-input-checks/harnesses/oqs_runner.c \
-            -I build-ref/include -I liboqs/src -L build-ref/lib -loqs -lcrypto
-          echo "compiled ref"
+          gcc -O2 -Wall -DBACKEND_TAG=ref -o oqs_ref_runner crypto/mlkem-input-checks/harnesses/oqs_runner.c \
+            -I build-ref/include $(for d in $(find liboqs/src/common -name "*.h" | xargs -n1 dirname | sort -u); do echo -I$d; done) \
+            $OQS_LIB_DIR/liboqs.a -lm -lpthread -ldl
       - name: Run ref
         run: |
-          ./oqs_ref_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv oqs_ref_report.tsv || LD_LIBRARY_PATH=build-ref/lib ./oqs_ref_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv oqs_ref_report.tsv
-          cat oqs_ref_report.tsv | head -20
+          ./oqs_ref_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv oqs_ref_report.tsv
+          grep META oqs_ref_report.tsv
       - uses: actions/upload-artifact@v4
         with:
           name: oqs_ref_report
@@ -121,30 +164,40 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build OpenSSL 3.5.7 for Linux backing (ubuntu only)
+      - name: Build shared OpenSSL 3.5.7 for Linux backing (ubuntu only)
         if: matrix.os == 'ubuntu-latest'
         run: |
           git clone --depth 1 --branch openssl-3.5.7 https://github.com/openssl/openssl.git openssl-src
           cd openssl-src
-          ./Configure no-shared --prefix=$PWD/../openssl-install
+          # shared (default) so .NET's libcrypto interop can load ML-KEM provider code
+          ./Configure --prefix=$PWD/../openssl-install --libdir=lib
           make -j4 > build.log 2>&1 || (tail -100 build.log && exit 1)
           make install_sw > /dev/null
-          echo "OPENSSL_INSTALL=$PWD/../openssl-install" >> $GITHUB_ENV
-          ls ../openssl-install/lib64/*.so* | head -5
+          echo "OPENSSL_LIBDIR=$PWD/../openssl-install/lib" >> $GITHUB_ENV
+          ls ../openssl-install/lib/libcrypto.so* || true
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
       - name: Build runner
         run: dotnet publish crypto/mlkem-input-checks/harnesses/dotnet_runner -c Release -o out
-      - name: Run
-        run: |
-          if ($IsWindows) { $exe = "out/dotnet_runner.exe"; & $exe crypto/mlkem-input-checks/stimuli/stimuli.tsv dotnet_invar_${{ matrix.os }}_report.tsv }
-          else { LD_LIBRARY_PATH=$PWD/openssl-install/lib64:$PWD/openssl-install/lib:$LD_LIBRARY_PATH LD_DEBUG=libs ./out/dotnet_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv dotnet_invar_${{ matrix.os }}_report.tsv 2>&1 | head -20; LD_LIBRARY_PATH=$PWD/openssl-install/lib64:$PWD/openssl-install/lib:$LD_LIBRARY_PATH ./out/dotnet_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv dotnet_invar_${{ matrix.os }}_report.tsv }
-          Get-Content dotnet_invar_${{ matrix.os }}_report.tsv | Select-Object -First 10
-          Get-Content dotnet_invar_${{ matrix.os }}_report.tsv | Select-Object -Last 10
-          Get-Content dotnet_invar_${{ matrix.os }}_report.tsv | Select-String META
+      - name: Run (windows)
+        if: matrix.os == 'windows-latest'
         shell: pwsh
+        run: |
+          & ./out/dotnet_runner.exe crypto/mlkem-input-checks/stimuli/stimuli.tsv dotnet_invar_windows_report.tsv
+          Get-Content dotnet_invar_windows_report.tsv | Select-String META
+          Get-Content dotnet_invar_windows_report.tsv | Select-Object -Last 3
+      - name: Run (linux with pinned libcrypto)
+        if: matrix.os == 'ubuntu-latest'
+        shell: pwsh
+        run: |
+          $env:LD_LIBRARY_PATH = "$env:OPENSSL_LIBDIR:$env:LD_LIBRARY_PATH"
+          Write-Host "LD_LIBRARY_PATH=$env:LD_LIBRARY_PATH"
+          ldconfig -p | Select-String libcrypto | Select-Object -First 5
+          & ./out/dotnet_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv dotnet_invar_linux_report.tsv
+          Get-Content dotnet_invar_linux_report.tsv | Select-String META
+          Get-Content dotnet_invar_linux_report.tsv | Select-Object -Last 3
       - uses: actions/upload-artifact@v4
         with:
           name: dotnet_invar_${{ matrix.os }}_report
-          path: dotnet_invar_${{ matrix.os }}_report.tsv
+          path: dotnet_invar_*_report.tsv

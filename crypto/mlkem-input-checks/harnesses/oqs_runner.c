@@ -12,7 +12,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+
+#if defined(_MSC_VER)
 #include <intrin.h>
+#endif
 
 #include <oqs/oqs.h>
 #include <oqs/common.h>
@@ -40,12 +43,27 @@ static int unhex(const char *hex, unsigned char *out, int cap) {
 }
 
 static int avx2_available(void) {
+#if defined(_MSC_VER)
     int regs[4];
     __cpuid(regs, 0);
     if (regs[0] < 7) return 0;
     int f1[4], f7[4];
     __cpuid(f1, 1);
     __cpuidex(f7, 7, 0);
+#else
+    /* GCC/Clang portable CPUID */
+    int f1[4] = {0, 0, 0, 0}, f7[4] = {0, 0, 0, 0};
+    __asm__ __volatile__(
+        "cpuid"
+        : "=a"(f1[0]), "=b"(f1[1]), "=c"(f1[2]), "=d"(f1[3])
+        : "a"(1));
+    int max_leaf = f1[0];
+    if (max_leaf < 7) return 0;
+    __asm__ __volatile__(
+        "cpuid"
+        : "=a"(f7[0]), "=b"(f7[1]), "=c"(f7[2]), "=d"(f7[3])
+        : "a"(7), "c"(0));
+#endif
     /* OSXSAVE | AVX | AVX2 */
     return ((f1[2] & (1 << 27)) && (f1[2] & (1 << 28)) && (f7[1] & (1 << 5))) ? 1 : 0;
 }
