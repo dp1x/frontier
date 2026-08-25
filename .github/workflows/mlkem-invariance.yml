@@ -68,28 +68,27 @@ jobs:
           gcc -O2 -Wall -o openssl_invar_runner crypto/mlkem-input-checks/harnesses/openssl_invar_runner.c \
             -I $OPENSSL_INSTALL/include -L $OPENSSL_INSTALL/lib64 -L $OPENSSL_INSTALL/lib -lcrypto \
             -Wl,-rpath,$OPENSSL_INSTALL/lib64 -Wl,-rpath,$OPENSSL_INSTALL/lib
-      - name: Run invariance matrix
+      - name: Compile fips-only runner copy
+        run: cp openssl_invar_runner openssl_fips_runner
+      - name: Run full matrix (default provider only, no second libctx)
+        env:
+          OPENSSL_FIPS_CONF: ""
         run: |
-          # Capture partial report even on crash (upload always runs below)
           ./openssl_invar_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv openssl_invar_report.tsv || echo "RUNNER_EXIT=$?" | tee runner_exit.txt
           grep META openssl_invar_report.tsv || true
-          tail -8 openssl_invar_report.tsv || true
-          wc -l openssl_invar_report.tsv || true
+          tail -4 openssl_invar_report.tsv || true
           python3 - <<'EOF'
           import collections
-          g=collections.defaultdict(set)
+          g=collections.defaultdict(dict)
           for l in open('openssl_invar_report.tsv'):
               if 'import-' not in l or l.startswith(('META','SUMMARY')): continue
               f=l.rstrip('\n').split('|')
-              key='|'.join(f[0:4])
-              cell=f[5] if len(f)>5 else '?'
+              key='|'.join(f[0:4]); cell=f[5] if len(f)>5 else '?'
               v='acc' if 'import-accepted' in l else 'rej'
-              g[(key,cell)].add(v)
-          cells=collections.defaultdict(dict)
-          for (key,cell),vs in g.items():
-              cells[key][cell]=list(vs)[0] if len(vs)==1 else 'MIXED'
-          div=[(k,v) for k,v in cells.items() if len(v)>1]
-          print(f"vectors={len(cells)} cell-divergent={len(div)}")
+              prev=g[key].get(cell)
+              g[key][cell]=v if prev is None or prev==v else 'MIXED'
+          div=[(k,v) for k,v in g.items() if len(v)>1]
+          print(f"vectors={len(g)} format-divergent={len(div)}")
           for k,v in div[:12]: print("DIVERGENT", k, v)
           EOF
       - uses: actions/upload-artifact@v4
@@ -98,6 +97,74 @@ jobs:
           name: openssl_invar_report
           path: |
             openssl_invar_report.tsv
+            runner_exit.txt
+
+  openssl-fips-raw:
+    name: OpenSSL 3.5.7 FIPS raw-import comparison
+    runs-on: ubuntu-latest
+    env:
+      OPENSSL_INSTALL: ${{ github.workspace }}/openssl-install
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned OpenSSL with FIPS + combined cnf
+        run: |
+          git clone --depth 1 --branch openssl-3.5.7 https://github.com/openssl/openssl.git openssl-src
+          cd openssl-src
+          ./Configure enable-fips --prefix=$OPENSSL_INSTALL
+          make -j4 > build.log 2>&1 || (tail -100 build.log && exit 1)
+          make install_sw > /dev/null
+          make install_fips > /dev/null
+          export LD_LIBRARY_PATH="$OPENSSL_INSTALL/lib64:$OPENSSL_INSTALL/lib:${LD_LIBRARY_PATH:-}"
+          MODULE=$(ls $OPENSSL_INSTALL/lib64/ossl-modules/fips.so 2>/dev/null || ls $OPENSSL_INSTALL/lib/ossl-modules/fips.so)
+          MODDIR=$(dirname $MODULE)
+          $OPENSSL_INSTALL/bin/openssl fipsinstall -out $OPENSSL_INSTALL/ssl/fipsmodule.cnf -module $MODULE
+          cat > $OPENSSL_INSTALL/ssl/openssl-fips.cnf <<'EOF'
+          openssl_conf = openssl_init
+
+          [openssl_init]
+          providers = provider_sect
+
+          [provider_sect]
+          default = default_sect
+          fips = fips_sect
+
+          [default_sect]
+          activate = 1
+
+          .include fipsmodule.cnf
+          EOF
+          echo "OPENSSL_FIPS_CONF=$OPENSSL_INSTALL/ssl/openssl-fips.cnf" >> $GITHUB_ENV
+          echo "OPENSSL_MODULES=$MODDIR" >> $GITHUB_ENV
+      - name: Compile runner
+        run: |
+          gcc -O2 -Wall -o openssl_fips_runner crypto/mlkem-input-checks/harnesses/openssl_invar_runner.c \
+            -I $OPENSSL_INSTALL/include -L $OPENSSL_INSTALL/lib64 -L $OPENSSL_INSTALL/lib -lcrypto \
+            -Wl,-rpath,$OPENSSL_INSTALL/lib64 -Wl,-rpath,$OPENSSL_INSTALL/lib
+      - name: Run fips-only comparison
+        run: |
+          ./openssl_fips_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv openssl_fips_report.tsv fips-only || echo "RUNNER_EXIT=$?" | tee runner_exit.txt
+          grep META openssl_fips_report.tsv || true
+          tail -4 openssl_fips_report.tsv || true
+          python3 - <<'EOF'
+          import collections
+          d=collections.defaultdict(dict)
+          for l in open('openssl_fips_report.tsv'):
+              if 'import-' not in l or l.startswith(('META','SUMMARY')): continue
+              f=l.rstrip('\n').split('|')
+              key='|'.join(f[0:4]); cell=f[5]
+              v='acc' if 'import-accepted' in l else 'rej'
+              prev=d[key].get(cell)
+              d[key][cell]=v if prev is None or prev==v else 'MIXED'
+          div=[(k,v) for k,v in d.items() if len(v)>1]
+          print(f"vectors={len(d)} provider-divergent={len(div)}")
+          for k,v in div[:12]: print("DIVERGENT", k, v)
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: openssl_fips_report
+          path: |
+            openssl_fips_report.tsv
             runner_exit.txt
 
   liboqs-auto:
@@ -197,9 +264,9 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: pwsh
         run: |
-          $env:LD_LIBRARY_PATH = "$env:OPENSSL_LIBDIR:$env:LD_LIBRARY_PATH"
+          $lib = Join-Path (Get-Location) "openssl-install/lib"
+          $env:LD_LIBRARY_PATH = "$lib:" + $env:LD_LIBRARY_PATH
           Write-Host "LD_LIBRARY_PATH=$env:LD_LIBRARY_PATH"
-          ldconfig -p | Select-String libcrypto | Select-Object -First 5
           & ./out/dotnet_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv dotnet_invar_linux_report.tsv
           Get-Content dotnet_invar_linux_report.tsv | Select-String META
           Get-Content dotnet_invar_linux_report.tsv | Select-Object -Last 3

@@ -109,15 +109,17 @@ static void emit_encap(FILE *out, const char *family, const char *params,
 }
 
 int main(int argc, char **argv) {
-    if (argc != 3) { fprintf(stderr, "usage: %s stimuli.tsv report.out\n", argv[0]); return 2; }
+    if (argc < 3) { fprintf(stderr, "usage: %s stimuli.tsv report.out [fips-only]\n", argv[0]); return 2; }
+    const char *mode = argc > 3 ? argv[3] : "full";
+    int fips_only = strcmp(mode, "fips-only") == 0;
     FILE *in = fopen(argv[1], "r"), *out = fopen(argv[2], "w");
     if (!in || !out) { perror("open"); return 2; }
     /* Unbuffered so partial evidence survives any crash */
     setvbuf(out, NULL, _IONBF, 0);
 
     fprintf(stderr, "stage: meta\n");
-    fprintf(out, "META|runtime_libcrypto=%s|compiled_headers=%s\n",
-            OpenSSL_version(OPENSSL_VERSION), OPENSSL_VERSION_TEXT);
+    fprintf(out, "META|runtime_libcrypto=%s|compiled_headers=%s|mode=%s\n",
+            OpenSSL_version(OPENSSL_VERSION), OPENSSL_VERSION_TEXT, mode);
 
     fprintf(stderr, "stage: provider-load-fips\n");
     /* Isolate FIPS in its own libctx: global co-activation of fips+default
@@ -127,7 +129,7 @@ int main(int argc, char **argv) {
     OSSL_PROVIDER *fips_prov = NULL;
     int fips_available = 0;
     const char *fconf = getenv("OPENSSL_FIPS_CONF");
-    if (fips_ctx && fconf && OSSL_LIB_CTX_load_config(fips_ctx, fconf)) {
+    if (fips_ctx && fconf && *fconf && OSSL_LIB_CTX_load_config(fips_ctx, fconf)) {
         fips_prov = OSSL_PROVIDER_load(fips_ctx, "fips");
         fips_available = (fips_prov != NULL);
     }
@@ -179,8 +181,25 @@ int main(int argc, char **argv) {
         ERR_clear_error();
         EVP_PKEY *k = EVP_PKEY_new_raw_public_key_ex(NULL, alg, "provider=default", ek, (size_t)ek_len);
         k = emit_import(out, family, params, expected, source, "raw", "default", k);
-        if (k) emit_encap(out, family, params, expected, source, "raw", "default", k);
+        if (k && !fips_only) emit_encap(out, family, params, expected, source, "raw", "default", k);
         EVP_PKEY_free(k);
+
+        if (fips_only) {
+            /* fips-only mode: raw/fips comparison cell only - no DER decoding
+             * in this process (d2i+encap on decoder keys crashed when any
+             * second libctx existed; see runs 5-9). */
+            fprintf(stderr, "stage: v%d raw/fips\n", total);
+            if (fips_available) {
+                ERR_clear_error();
+                EVP_PKEY *kf = EVP_PKEY_new_raw_public_key_ex(fips_ctx, alg, "provider=fips", ek, (size_t)ek_len);
+                kf = emit_import(out, family, params, expected, source, "raw", "fips", kf);
+                EVP_PKEY_free(kf);
+            } else {
+                fprintf(out, "%s|%s|%s|%s|format=raw|provider=fips|blocked|reason=fips-unavailable\n",
+                        family, params, expected, source);
+            }
+            continue;
+        }
 
         /* ---- Cell 2: spki/default ---- */
         fprintf(stderr, "stage: v%d spki/default\n", total);
