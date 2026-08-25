@@ -60,7 +60,7 @@ private theorem div_shift {M : Nat} (hM : 0 < M) (m r : Nat) :
     Nat.div_add_mod (M * m + r) M
   rw [mod_shift M m r] at hx
   have key : M * ((M * m + r) / M) = M * m + M * (r / M) := by omega
-  have hrd : M * (m + r / M) = M * m + M * (r / M) := Nat.right_distrib M m (r / M)
+  have hrd : M * (m + r / M) = M * m + M * (r / M) := Nat.mul_add M m (r / M)
   refine Nat.eq_of_mul_eq_mul_left hM ?_
   rw [hrd]
   exact key
@@ -87,7 +87,7 @@ theorem wsum_bound {G : Nat → Nat} (hG : ∀ t, G t ≤ 1) :
       have hpow : (2 : Nat) ^ (N + 1) = 2 ^ N + 2 ^ N := by rw [Nat.pow_succ]; ring
       rcases Nat.lt_or_ge (G N) 1 with h0 | h1
       · have hz : G N = 0 := by omega
-        rw [hz, Nat.zero_mul, Nat.zero_add]
+        rw [hz, Nat.zero_mul, Nat.add_zero]
         omega
       · have ho : G N = 1 := by omega
         rw [ho, Nat.one_mul]
@@ -108,17 +108,17 @@ theorem bit_mod_succ (z S : Nat) : bit z S = bit (z % 2 ^ (S + 1)) S := by
   have hbrack : 2 ^ S * (z / 2 ^ S % 2) + z % 2 ^ S < 2 ^ (S + 1) := by
     rcases Nat.lt_or_ge (z / 2 ^ S % 2) 1 with h0 | h1
     · have hze : z / 2 ^ S % 2 = 0 := by omega
-      rw [hze, Nat.zero_mul]
+      rw [hze, Nat.mul_zero, Nat.zero_add]
       have hp : (2 : Nat) ^ (S + 1) = 2 ^ S + 2 ^ S := by rw [Nat.pow_succ]; ring
       omega
     · have hon : z / 2 ^ S % 2 = 1 := by omega
-      rw [hon, Nat.one_mul]
+      rw [hon, Nat.mul_one]
       have hp : (2 : Nat) ^ (S + 1) = 2 ^ S + 2 ^ S := by rw [Nat.pow_succ]; ring
       omega
   have hgen : ∀ K L r : Nat,
       2 ^ S * (2 * K + L) + r = 2 ^ (S + 1) * K + (2 ^ S * L + r) := by
     intro K L r
-    rw [Nat.right_distrib, ← Nat.pow_succ, Nat.add_assoc]
+    rw [Nat.mul_add, ← Nat.pow_succ, Nat.add_assoc]
   have hmodE : z % 2 ^ (S + 1)
       = 2 ^ S * (z / 2 ^ S % 2) + z % 2 ^ S := by
     have hz := Nat.div_add_mod z (2 ^ S)
@@ -129,6 +129,7 @@ theorem bit_mod_succ (z S : Nat) : bit z S = bit (z % 2 ^ (S + 1)) S := by
     rw [mod_shift]
     exact Nat.mod_eq_of_lt hbrack
   rw [hmodE, div_shift hM, hr0, Nat.add_zero]
+  exact (Nat.mod_eq_of_lt (by omega)).symm
 
 /-- Extracting bit `S` from a positional sum with binary digits yields digit `S`. -/
 theorem extract_wsum {G : Nat → Nat} (hG : ∀ t, G t ≤ 1) :
@@ -147,10 +148,9 @@ theorem extract_wsum {G : Nat → Nat} (hG : ∀ t, G t ≤ 1) :
             Nat.add_mul_mod_self_left]
         rw [wsum_succ, bit_mod_succ, hcong, ← bit_mod_succ, ih]
       · have hseq : S = N := by omega
-        subst hseq
         have hGN : G N ≤ 1 := hG N
         unfold bit
-        rw [wsum_succ, Nat.mul_comm (G N) (2 ^ N),
+        rw [hseq, wsum_succ, Nat.mul_comm (G N) (2 ^ N),
           Nat.add_mul_div_left _ _ (two_pow_pos N),
           Nat.div_eq_of_lt (wsum_bound hG N), Nat.zero_add]
         exact Nat.mod_eq_of_lt (by omega)
@@ -179,7 +179,23 @@ theorem eqOfBits_gen (u v : Nat) (N : Nat) (hu : u < 2 ^ N) (hv : v < 2 ^ N)
       have hshift : ∀ (w s : Nat), bit (w / 2) s = bit w (s + 1) := by
         intro w s
         show ((w / 2) / 2 ^ s) % 2 = (w / 2 ^ (s + 1)) % 2
-        rw [Nat.div_div_eq_div_mul_div, Nat.mul_comm 2 (2 ^ s), ← Nat.pow_succ]
+        have hq := Nat.div_add_mod w (2 ^ (s + 1))
+        have hgen2 : ∀ (Q r : Nat),
+            (2 ^ (s + 1) * Q + r) / 2 = 2 ^ s * Q + r / 2 := by
+          intro Q r
+          have hre : 2 ^ (s + 1) * Q = 2 * (2 ^ s * Q) := by ring
+          rw [hre, div_shift (by omega)]
+        have hstep : w / 2
+            = 2 ^ s * (w / 2 ^ (s + 1)) + w % 2 ^ (s + 1) / 2 := by
+          conv_lhs => rw [hq, hgen2 (w / 2 ^ (s + 1)) (w % 2 ^ (s + 1))]
+        have hquo : (w / 2) / 2 ^ s = w / 2 ^ (s + 1) := by
+          rw [hstep, div_shift (two_pow_pos s)]
+          have hr2 : w % 2 ^ (s + 1) / 2 / 2 ^ s = 0 := by
+            refine Nat.div_eq_of_lt ?_
+            have hb := Nat.mod_lt w (two_pow_pos (s + 1))
+            omega
+          rw [hr2, Nat.add_zero]
+        rw [hquo]
       have hhigh : ∀ s, s < n → bit (u / 2) s = bit (v / 2) s := by
         intro s hs
         rw [hshift u s, hshift v s]
@@ -212,18 +228,18 @@ theorem eqOfBits {u v : Nat} (hu : u < 256) (hv : v < 256)
 theorem mul_add_div {c : Nat} (hc : 0 < c) {a b : Nat} (hab : a < c) :
     (b * c + a) / c = b := by
   have h : b * c + a = a + c * b := by ring
-  rw [h, Nat.add_mul_div_left _ _ hc, Nat.div_eq_of_lt hab]
+  rw [h, Nat.add_mul_div_left _ _ hc, Nat.div_eq_of_lt hab, Nat.zero_add]
 
 theorem mul_add_mod {c a b : Nat} (hab : a < c) :
     (b * c + a) % c = a := by
   have h : b * c + a = a + c * b := by ring
   rw [h, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hab]
 
-theorem coeff_div (i j : Nat) (hj : j < 12) : (12 * i + j) / 12 = i :=
-  mul_add_div (by omega) hj
+theorem coeff_div (i j : Nat) (hj : j < 12) : (12 * i + j) / 12 = i := by
+  exact mul_add_div (by omega) hj
 
-theorem coeff_mod (i j : Nat) (hj : j < 12) : (12 * i + j) % 12 = j :=
-  mul_add_mod hj
+theorem coeff_mod (i j : Nat) (hj : j < 12) : (12 * i + j) % 12 = j := by
+  exact mul_add_mod hj
 
 /-! ## FIPS 203 model -/
 
