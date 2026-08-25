@@ -34,7 +34,11 @@ jobs:
           make -j4 > build.log 2>&1 || (tail -100 build.log && exit 1)
           make install_sw > /dev/null
           make install_fips > /dev/null
-          # Generate fipsmodule.cnf from the installed module
+          # Ensure our freshly built libcrypto/libssl resolve before system ones.
+          # NOTE: GITHUB_ENV only affects LATER steps, so also export shell-level now.
+          MODDIR_CAND=$(ls "$OPENSSL_INSTALL/lib64" >/dev/null 2>&1 && echo lib64 || echo lib)
+          echo "LD_LIBRARY_PATH=$OPENSSL_INSTALL/$MODDIR_CAND" >> $GITHUB_ENV
+          export LD_LIBRARY_PATH="$OPENSSL_INSTALL/lib64:$OPENSSL_INSTALL/lib:${LD_LIBRARY_PATH:-}"
           MODULE=$(ls $OPENSSL_INSTALL/lib64/ossl-modules/fips.so 2>/dev/null || ls $OPENSSL_INSTALL/lib/ossl-modules/fips.so)
           MODDIR=$(dirname $MODULE)
           $OPENSSL_INSTALL/bin/openssl fipsinstall -out $OPENSSL_INSTALL/ssl/fipsmodule.cnf -module $MODULE
@@ -115,7 +119,7 @@ jobs:
         run: |
           gcc -O2 -Wall -DBACKEND_TAG=auto -o oqs_auto_runner crypto/mlkem-input-checks/harnesses/oqs_runner.c \
             -I build-auto/include $(for d in $(find liboqs/src/common -name "*.h" | xargs -n1 dirname | sort -u); do echo -I$d; done) \
-            $OQS_LIB_DIR/liboqs.a -lm -lpthread -ldl
+            $OQS_LIB_DIR/liboqs.a -lcrypto -lm -lpthread -ldl
       - name: Run auto
         run: |
           ./oqs_auto_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv oqs_auto_report.tsv
@@ -145,7 +149,7 @@ jobs:
         run: |
           gcc -O2 -Wall -DBACKEND_TAG=ref -o oqs_ref_runner crypto/mlkem-input-checks/harnesses/oqs_runner.c \
             -I build-ref/include $(for d in $(find liboqs/src/common -name "*.h" | xargs -n1 dirname | sort -u); do echo -I$d; done) \
-            $OQS_LIB_DIR/liboqs.a -lm -lpthread -ldl
+            $OQS_LIB_DIR/liboqs.a -lcrypto -lm -lpthread -ldl
       - name: Run ref
         run: |
           ./oqs_ref_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv oqs_ref_report.tsv

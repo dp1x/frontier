@@ -1,0 +1,53 @@
+id: obs-2026-0010
+type: observation
+status: recorded
+created_at: "2026-08-25T23:59:00Z"
+updated_at: "2026-08-25T23:59:00Z"
+summary: OpenSSL 3.5.7 raw-vs-SPKI DIVERGES on 6/199 wrong-length vectors - SPKI accepts via DER declared-length trailing-byte truncation what raw rejects; all 82 modulus-invalid and 108 canonical agree.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-executor
+    model: ox-alpha
+    tool: frontier.execute + GitHub Actions public runner (run 32869017243, job openssl-invariance)
+  sources:
+    - exp-2026-0008
+    - R:\frontier-scratch\msn-2026-0002\artifacts\openssl_invar_report\openssl_invar_report.tsv
+  parent: msn-2026-0002
+  generation: 1
+links:
+  experiments: [exp-2026-0008]
+  implementations: [imp-2026-0003]
+  hypotheses: [hyp-2026-0002, hyp-2026-0009]
+title: Raw/SPKI divergence - SPKI silently truncates trailing bytes to declared DER length
+statement: >
+  Executed cell matrix raw/default x spki/default over all 199 stimuli on
+  ubuntu-latest with runtime libcrypto == compiled headers == OpenSSL 3.5.7.
+  Arithmetic closes exactly: 176 import-rejected (raw 91 = 82 modulus +
+  9 length; spki 85 = 82 modulus + 3 len-minus-1 asn1 too-long), 222
+  import-accepted (raw 108; spki 114 = 108 canonical + 6 UNEXPECTED),
+  zero spki-build-failures. The 6 divergent rows are exactly the wrong-length
+  class where the submitted buffer is LONGER than 384k+32: len-plus-1 for
+  k=2/3/4 and all three cross-set confusions (1024-as-768, 1024-as-512,
+  768-as-512). Mechanism: d2i_PUBKEY honors DECLARED DER lengths - the BIT
+  STRING consumes exactly 384k bytes after the pad byte and TRAILS the
+  remaining buffer bytes unexamined, so the codec's strict length check at
+  ml_kem_codecs.c:247 sees only the truncated key. All 82 modulus-invalid
+  vectors still rejected on BOTH paths (no modulus-check bypass); FIPS cells
+  were blocked this run (fips_provider=not-loaded, reason=no-fips-module -
+  OPENSSL_CONF was not pointed at a cnf activating fips; infrastructure,
+  fixed in commit 59e3325 for rerun).
+environment:
+  where: github-actions
+  isolation: github-runner
+  cwd: runner workspace (ephemeral)
+  versions:
+    openssl: "3.5.7 @ tag (runtime verified)"
+    runner: ubuntu-latest, gcc
+stdout: |
+  META|runtime_libcrypto=OpenSSL 3.5.7 9 Jun 2026|compiled_headers=OpenSSL 3.5.7 9 Jun 2026
+  META|fips_provider=not-loaded|status=unavailable|reason=no-fips-module
+  SUMMARY|total=199|matrix_cells=4
+  rejected: raw=91 spki=85 (3 asn1:too-long len-minus-1) | accepted: raw=108 spki=114 (+6 UNEXPECTED wrong-length truncation)
+exit_code: 0

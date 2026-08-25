@@ -1,0 +1,46 @@
+id: hyp-2026-0009
+type: hypothesis
+status: open
+created_at: "2026-08-26T00:05:00Z"
+updated_at: "2026-08-26T00:05:00Z"
+summary: DER-framed ingestion surfaces define the key by declared length, so wrong-length type checks are structurally unenforceable at SPKI import - divergence is a framing-semantics property, not a missing check.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: ox-alpha
+    tool: independent generator (post-observation analysis of obs-2026-0010)
+  sources:
+    - knowledge/observations/obs-2026-0010.yaml
+    - knowledge/implementations/imp-2026-0003.yaml
+  parent: msn-2026-0002
+  generation: 1
+links:
+  implementations: [imp-2026-0003]
+  observations: [obs-2026-0010]
+title: H-D1 declared-length truncation semantics
+statement: >
+  The raw and SPKI ingestion paths answer DIFFERENT questions: raw asks "is
+  this byte buffer exactly an ML-KEM ek of this parameter set" while SPKI
+  asks "does this DER document contain an ML-KEM SPKI whose BIT STRING is
+  exactly 384k bytes". Under ASN.1 declared-length semantics any bytes after
+  the framed structure are outside the question entirely. Therefore OpenSSL's
+  behavior on the 6 divergent vectors is not a skipped validation but a
+  framing boundary - and ANY library with both a raw and a DER API will show
+  the same class of divergence for over-long inputs unless it explicitly
+  rejects trailing data.
+falsifiable_predictions:
+  - Go crypto/x509 ParsePKIXPublicKey on an ML-KEM SPKI with one extra trailing byte inside the buffer accepts and yields the truncated key (same class), while mlkem.NewEncapsulationKey768 on 1185 bytes rejects.
+  - RustCrypto der-encoded SPKI decoding via sec1/spki crates likewise consumes only declared bytes; acceptance depends solely on whether the crate checks for trailing input (Mode::Der vs Ber).
+  - BoringSSL/EVP d2i_PUBKEY behaves identically to OpenSSL (shared BER parser lineage).
+  - Killing observation - any library whose DER path rejects over-long buffers with a trailing-data error (d2i strict mode or explicit leftover check) splits the taxonomy into truncating vs strict-DER classes.
+disproof_attempts: []
+notes: >
+  If supported, the correct finding classification is format-dependent length
+  handling (interoperability/API-consistency gap), NOT spec violation: FIPS
+  203 s7.2's type check applies to the encapsulation key actually submitted
+  to Encaps, which in the SPKI case is the truncated key by definition of
+  the interface. Practical exposure requires an application that ingests
+  untrusted DER blobs directly (certificates, PKCS structures) rather than
+  protocol wire formats (TLS carries raw concatenation).
