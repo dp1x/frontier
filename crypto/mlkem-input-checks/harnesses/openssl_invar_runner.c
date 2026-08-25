@@ -112,10 +112,14 @@ int main(int argc, char **argv) {
     if (argc != 3) { fprintf(stderr, "usage: %s stimuli.tsv report.out\n", argv[0]); return 2; }
     FILE *in = fopen(argv[1], "r"), *out = fopen(argv[2], "w");
     if (!in || !out) { perror("open"); return 2; }
+    /* Unbuffered so partial evidence survives any crash */
+    setvbuf(out, NULL, _IONBF, 0);
 
+    fprintf(stderr, "stage: meta\n");
     fprintf(out, "META|runtime_libcrypto=%s|compiled_headers=%s\n",
             OpenSSL_version(OPENSSL_VERSION), OPENSSL_VERSION_TEXT);
 
+    fprintf(stderr, "stage: provider-load-fips\n");
     OSSL_PROVIDER *fips_prov = OSSL_PROVIDER_load(NULL, "fips");
     int fips_available = (fips_prov != NULL);
     if (fips_available) {
@@ -127,9 +131,12 @@ int main(int argc, char **argv) {
                 ERR_reason_error_string(e) ? ERR_reason_error_string(e) : "no-fips-module");
         ERR_clear_error();
     }
+    fprintf(stderr, "stage: provider-load-default\n");
     OSSL_PROVIDER *default_prov = OSSL_PROVIDER_load(NULL, "default");
     if (default_prov)
         fprintf(out, "META|default_provider=loaded\n");
+    else
+        ERR_clear_error();
 
     char line[MAX_LINE];
     static unsigned char ek[MAX_EK];
@@ -155,7 +162,11 @@ int main(int argc, char **argv) {
         int ek_len = unhex(ek_hex, ek, sizeof ek);
         if (ek_len < 0) continue;
 
+        if (total % 40 == 0)
+            fprintf(stderr, "progress: vector %d (%s)\n", total, params);
+
         /* ---- Cell 1: raw/default ---- */
+        fprintf(stderr, "stage: v%d raw/default\n", total);
         ERR_clear_error();
         EVP_PKEY *k = EVP_PKEY_new_raw_public_key_ex(NULL, alg, "provider=default", ek, (size_t)ek_len);
         k = emit_import(out, family, params, expected, source, "raw", "default", k);
@@ -163,6 +174,7 @@ int main(int argc, char **argv) {
         EVP_PKEY_free(k);
 
         /* ---- Cell 2: spki/default ---- */
+        fprintf(stderr, "stage: v%d spki/default\n", total);
         ERR_clear_error();
         int der_len = 0;
         if (build_spki_der(ek, ek_len, alg, der, &der_len)) {
@@ -198,6 +210,7 @@ int main(int argc, char **argv) {
         }
 
         /* ---- Cell 3: raw/fips ---- */
+        fprintf(stderr, "stage: v%d raw/fips\n", total);
         if (fips_available) {
             ERR_clear_error();
             EVP_PKEY *kf = EVP_PKEY_new_raw_public_key_ex(NULL, alg, "provider=fips", ek, (size_t)ek_len);

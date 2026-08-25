@@ -67,3 +67,6 @@ missions/embargoed/*.yaml
 
 # Worktrees
 .worktrees/
+
+# ALIAS-DIFF generated programs (derivable from gen_programs.py)
+compilers/alias-diff/generated/

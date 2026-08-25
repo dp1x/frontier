@@ -1,0 +1,45 @@
+name: compiler-alias-diff
+
+# msn-2026-0004 ALIAS-DIFF: strict-aliasing / effective-type differential matrix
+# across gcc/clang optimizations over generated C families probing C11 6.5p6-7.
+# Public runners, no secrets, contents:read only.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - compilers/alias-diff/**
+      - .github/workflows/compiler-alias.yml
+
+permissions:
+  contents: read
+
+jobs:
+  alias-matrix:
+    name: gcc/clang strict-aliasing differential
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install + verify toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc clang
+          gcc --version | head -1
+          clang --version | head -1
+      - name: Generate programs
+        run: python3 compilers/alias-diff/gen_programs.py compilers/alias-diff/generated
+      - name: Run differential matrix
+        run: bash compilers/alias-diff/run_matrix.sh alias_report.tsv
+      - name: Show summary + divergences
+        run: |
+          grep '^META' alias_report.tsv
+          grep '^BYFAMILY' alias_report.tsv
+          grep '^SUMMARY' alias_report.tsv
+          echo "divergent rows:"
+          grep 'DIVERGENT' alias_report.tsv || echo '(none)'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alias_report
+          path: alias_report.tsv
