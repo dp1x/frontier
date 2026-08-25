@@ -60,7 +60,7 @@ jobs:
 
           .include fipsmodule.cnf
           EOF
-          echo "OPENSSL_CONF=$OPENSSL_INSTALL/ssl/openssl-fips.cnf" >> $GITHUB_ENV
+          echo "OPENSSL_FIPS_CONF=$OPENSSL_INSTALL/ssl/openssl-fips.cnf" >> $GITHUB_ENV
           echo "OPENSSL_MODULES=$MODDIR" >> $GITHUB_ENV
           tail -20 $OPENSSL_INSTALL/ssl/openssl-fips.cnf
       - name: Compile invariance runner
