@@ -193,15 +193,23 @@ int main(int argc, char **argv) {
              * combined cnf both providers are active; validation still
              * flows through the shared parse path regardless of which
              * keymgmt instance serves the fetch. */
+            fprintf(stderr, "stage: v%d d2i-begin len=%d b0=%02x%02x\n", total, der_len, der[0], der[1]);
             k = d2i_PUBKEY(NULL, &p, der_len);
+            fprintf(stderr, "stage: v%d d2i-done k=%d\n", total, k != NULL);
             k = emit_import(out, family, params, expected, source, "spki", "default", k);
-            if (k) emit_encap(out, family, params, expected, source, "spki", "default", k);
+            if (k) {
+                fprintf(stderr, "stage: v%d encap-begin\n", total);
+                emit_encap(out, family, params, expected, source, "spki", "default", k);
+                fprintf(stderr, "stage: v%d encap-done\n", total);
+            }
             /* ---- Cell 4: spki->raw/fips (chain through default decoder) ---- */
             if (fips_available) {
                 size_t raw_len = 0;
+                fprintf(stderr, "stage: v%d chain-extract-begin\n", total);
                 int got = k ? EVP_PKEY_get_octet_string_param(
                                   k, OSSL_PKEY_PARAM_PUB_KEY,
                                   raw_back, sizeof raw_back, &raw_len) : 0;
+                fprintf(stderr, "stage: v%d chain-extract-done got=%d raw_len=%zu\n", total, got, raw_len);
                 EVP_PKEY_free(k); k = NULL;
                 ERR_clear_error();
                 if (!got) {

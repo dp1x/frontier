@@ -70,11 +70,11 @@ jobs:
             -Wl,-rpath,$OPENSSL_INSTALL/lib64 -Wl,-rpath,$OPENSSL_INSTALL/lib
       - name: Run invariance matrix
         run: |
-          ./openssl_invar_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv openssl_invar_report.tsv
-          grep META openssl_invar_report.tsv
-          tail -5 openssl_invar_report.tsv
-          echo "divergence scan:"
-          awk -F'|' '{key=$1"|"$2"|"$4; if ($0 ~ /import-accepted/) acc[key]++; if ($0 ~ /import-rejected/) rej[key]++} END {d=0; for (k in acc) {split(k,p,"|")} }' openssl_invar_report.tsv > /dev/null
+          # Capture partial report even on crash (upload always runs below)
+          ./openssl_invar_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv openssl_invar_report.tsv || echo "RUNNER_EXIT=$?" | tee runner_exit.txt
+          grep META openssl_invar_report.tsv || true
+          tail -8 openssl_invar_report.tsv || true
+          wc -l openssl_invar_report.tsv || true
           python3 - <<'EOF'
           import collections
           g=collections.defaultdict(set)
@@ -84,18 +84,21 @@ jobs:
               key='|'.join(f[0:4])
               cell=f[5] if len(f)>5 else '?'
               v='acc' if 'import-accepted' in l else 'rej'
-              g[(key,cell.split('=')[1].strip())].add(v)
+              g[(key,cell)].add(v)
           cells=collections.defaultdict(dict)
-          for (key,prov),vs in g.items():
-              cells[key][prov]=list(vs)[0] if len(vs)==1 else 'MIXED'
+          for (key,cell),vs in g.items():
+              cells[key][cell]=list(vs)[0] if len(vs)==1 else 'MIXED'
           div=[(k,v) for k,v in cells.items() if len(v)>1]
-          print(f"vectors={len(cells)} provider-divergent={len(div)}")
-          for k,v in div[:10]: print("DIVERGENT", k, v)
+          print(f"vectors={len(cells)} cell-divergent={len(div)}")
+          for k,v in div[:12]: print("DIVERGENT", k, v)
           EOF
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: openssl_invar_report
-          path: openssl_invar_report.tsv
+          path: |
+            openssl_invar_report.tsv
+            runner_exit.txt
 
   liboqs-auto:
     name: liboqs auto backend (ubuntu-x64)
