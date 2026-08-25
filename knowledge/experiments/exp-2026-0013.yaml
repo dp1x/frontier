@@ -1,0 +1,44 @@
+id: exp-2026-0013
+type: experiment
+status: complete
+created_at: "2026-08-26T01:35:00Z"
+updated_at: "2026-08-26T01:35:00Z"
+summary: ALIAS-DIFF differential executed - 50 generated C11 programs x 7 compile configs (gcc/clang, O0/O2/O3, strict-aliasing on/off) over five effective-type families; zero divergences.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer + executor (compiler track)
+    model: ox-alpha
+    tool: GitHub Actions ubuntu-latest (public runner)
+  sources:
+    - https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf
+    - compilers/alias-diff/gen_programs.py
+    - compilers/alias-diff/run_matrix.sh
+  parent: msn-2026-0004
+  generation: 1
+links:
+  observations: [obs-2026-0012]
+title: Strict-aliasing effective-type differential matrix (ALIAS-DIFF round 1)
+design: >
+  Five families x 10 variants = 50 deterministic programs probing C11 6.5p6-7:
+  (a) memcpy type-punning [defined]; (b) union member punning [allowed];
+  (c) unsigned-char access [explicitly allowed]; (d) incompatible-pointer
+  cast dereference [UB - documentation-of-assumptions class];
+  (ctl) same-type control. Programs use inline-asm value+memory barriers to
+  block constant folding, seeded structural variation (array sizes, loop
+  shapes), integer checksum output. Oracle: gcc -O0 stdout sha256 per program;
+  every other config must match byte-for-byte. Escalation round added gcc/clang
+  -O3 plus a scalar-probe litmus variant for family (d) after the first green
+  round showed zero divergences everywhere.
+commands:
+  - "python3 compilers/alias-diff/gen_programs.py generated"
+  - "./compilers/alias-diff/run_matrix.sh generated alias_report.tsv"
+compute_decision:
+  location: github-actions
+  isolation: github-runner
+  reason: "medium: multi-version cross-compiler matrix; public runner, no secrets"
+determinism:
+  deterministic: true
+  seed_policy: fixed variant seeds embedded in generator
+  nondeterminism_notes: null
