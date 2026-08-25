@@ -46,6 +46,25 @@ theorem two_pow_8 : (2 : Nat) ^ 8 = 256 := by norm_num
 
 theorem two_pow_12 : (2 : Nat) ^ 12 = 4096 := by norm_num
 
+/-! ## Aligned division / modulo shifts -/
+
+/-- Multiples of `M` vanish under `% M`. -/
+private theorem mod_shift (M m r : Nat) : (M * m + r) % M = r % M := by
+  rw [Nat.add_comm, Nat.add_mul_mod_self_left]
+
+/-- Aligned division: the multiple of `M` contributes its coefficient. -/
+private theorem div_shift {M : Nat} (hM : 0 < M) (m r : Nat) :
+    (M * m + r) / M = m + r / M := by
+  have hr := Nat.div_add_mod r M
+  have hx : M * ((M * m + r) / M) + (M * m + r) % M = M * m + r :=
+    Nat.div_add_mod (M * m + r) M
+  rw [mod_shift M m r] at hx
+  have key : M * ((M * m + r) / M) = M * m + M * (r / M) := by omega
+  have hrd : M * (m + r / M) = M * m + M * (r / M) := Nat.right_distrib M m (r / M)
+  refine Nat.eq_of_mul_eq_mul_left hM ?_
+  rw [hrd]
+  exact key
+
 /-! ## Positional sums of binary digits -/
 
 /-- `G t * 2^t` summed over `t ∈ range N`. -/
@@ -65,43 +84,51 @@ theorem wsum_bound {G : Nat → Nat} (hG : ∀ t, G t ≤ 1) :
   | N + 1 => by
       rw [wsum_succ]
       have hprev := wsum_bound hG N
-      have hb : G N * 2 ^ N ≤ 2 ^ N := by
-        rcases Nat.lt_or_ge (G N) 1 with h0 | h1
-        · have hz : G N = 0 := by omega
-          simp [hz]
-        · have ho : G N = 1 := by omega
-          simp [ho]
-      have hpow : (2 : Nat) ^ (N + 1) = 2 ^ N + 2 ^ N := by rw [Nat.pow_succ]; omega
-      omega
+      have hpow : (2 : Nat) ^ (N + 1) = 2 ^ N + 2 ^ N := by rw [Nat.pow_succ]; ring
+      rcases Nat.lt_or_ge (G N) 1 with h0 | h1
+      · have hz : G N = 0 := by omega
+        rw [hz, Nat.zero_mul, Nat.zero_add]
+        omega
+      · have ho : G N = 1 := by omega
+        rw [ho, Nat.one_mul]
+        omega
 
 theorem wsum_congr {N : Nat} {f g : Nat → Nat} (h : ∀ t, t < N → f t = g t) :
     wsum f N = wsum g N := by
   unfold wsum
   refine Finset.sum_congr rfl fun t ht => ?_
-  exact h t (Finset.mem_range.mp ht)
+  exact congrArg (fun v => v * 2 ^ t) (h t (Finset.mem_range.mp ht))
 
 /-- A bit only sees the value modulo `2^(S+1)`. -/
 theorem bit_mod_succ (z S : Nat) : bit z S = bit (z % 2 ^ (S + 1)) S := by
-  obtain ⟨Q, R, hQR⟩ : ∃ Q R, z = 2 ^ (S + 1) * Q + R :=
-    ⟨z / 2 ^ (S + 1), z % 2 ^ (S + 1), (Nat.div_add_mod z (2 ^ (S + 1))).symm⟩
-  obtain ⟨P, R', hP⟩ : ∃ P R', R = 2 ^ S * P + R' :=
-    ⟨R / 2 ^ S, R % 2 ^ S, (Nat.div_add_mod R (2 ^ S)).symm⟩
-  have hR : R < 2 ^ (S + 1) := Nat.mod_lt z (two_pow_pos (S + 1))
-  have hR' : R' < 2 ^ S := Nat.mod_lt R (two_pow_pos S)
-  have dR : R' / 2 ^ S = 0 := Nat.div_eq_of_lt hR'
-  have e1 : z = R' + (2 * Q + P) * 2 ^ S := by rw [hQR, hP, Nat.pow_succ]; ring
-  have e2 : R = R' + P * 2 ^ S := by rw [hP]; ring
-  have hm : z % 2 ^ (S + 1) = R := by
-    rw [hQR, Nat.mul_comm (2 ^ (S + 1)) Q, Nat.add_comm,
-      Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hR]
-  have hq : z / 2 ^ S = 2 * Q + P := by
-    rw [e1, Nat.add_mul_div_left _ _ (two_pow_pos S), dR]
-  have hqq : R / 2 ^ S = P := by
-    rw [e2, Nat.add_mul_div_left _ _ (two_pow_pos S), dR]
   unfold bit
-  rw [hq, hm, hqq]
-  have hfin : (2 : Nat) * Q + P = P + Q * 2 := by ring
-  rw [hfin, Nat.add_mul_mod_self_left]
+  have hM : 0 < 2 ^ S := two_pow_pos S
+  have hrl : z % 2 ^ S < 2 ^ S := Nat.mod_lt _ hM
+  have hr0 : z % 2 ^ S / 2 ^ S = 0 := Nat.div_eq_of_lt hrl
+  have hbrack : 2 ^ S * (z / 2 ^ S % 2) + z % 2 ^ S < 2 ^ (S + 1) := by
+    rcases Nat.lt_or_ge (z / 2 ^ S % 2) 1 with h0 | h1
+    · have hze : z / 2 ^ S % 2 = 0 := by omega
+      rw [hze, Nat.zero_mul]
+      have hp : (2 : Nat) ^ (S + 1) = 2 ^ S + 2 ^ S := by rw [Nat.pow_succ]; ring
+      omega
+    · have hon : z / 2 ^ S % 2 = 1 := by omega
+      rw [hon, Nat.one_mul]
+      have hp : (2 : Nat) ^ (S + 1) = 2 ^ S + 2 ^ S := by rw [Nat.pow_succ]; ring
+      omega
+  have hgen : ∀ K L r : Nat,
+      2 ^ S * (2 * K + L) + r = 2 ^ (S + 1) * K + (2 ^ S * L + r) := by
+    intro K L r
+    rw [Nat.right_distrib, ← Nat.pow_succ, Nat.add_assoc]
+  have hmodE : z % 2 ^ (S + 1)
+      = 2 ^ S * (z / 2 ^ S % 2) + z % 2 ^ S := by
+    have hz := Nat.div_add_mod z (2 ^ S)
+    have hq := Nat.div_add_mod (z / 2 ^ S) 2
+    rw [← hq] at hz
+    rw [hgen] at hz
+    conv_lhs => rw [← hz]
+    rw [mod_shift]
+    exact Nat.mod_eq_of_lt hbrack
+  rw [hmodE, div_shift hM, hr0, Nat.add_zero]
 
 /-- Extracting bit `S` from a positional sum with binary digits yields digit `S`. -/
 theorem extract_wsum {G : Nat → Nat} (hG : ∀ t, G t ≤ 1) :
@@ -110,21 +137,21 @@ theorem extract_wsum {G : Nat → Nat} (hG : ∀ t, G t ≤ 1) :
   | N + 1, S, hS => by
       rcases Nat.lt_or_ge S N with hSN | hSN
       · have ih := extract_wsum hG N S hSN
-        have hshift : G N * 2 ^ N = G N * 2 ^ (N - (S + 1)) * 2 ^ (S + 1) := by
-          have h1 : 2 ^ (N - (S + 1)) * 2 ^ (S + 1)
-              = 2 ^ (N - (S + 1) + (S + 1)) :=
-            (Nat.pow_add 2 (N - (S + 1)) (S + 1)).symm
-          have hexp : N - (S + 1) + (S + 1) = N := by omega
-          rw [h1, hexp]
+        have hexp : N - (S + 1) + (S + 1) = N := by omega
+        have hshift : G N * 2 ^ N
+            = (G N * 2 ^ (N - (S + 1))) * 2 ^ (S + 1) := by
+          rw [Nat.mul_assoc, ← Nat.pow_add, hexp]
         have hcong : (wsum G N + G N * 2 ^ N) % 2 ^ (S + 1)
             = wsum G N % 2 ^ (S + 1) := by
-          rw [hshift, Nat.add_mul_mod_self_left]
+          rw [hshift, Nat.mul_comm (G N * 2 ^ (N - (S + 1))) (2 ^ (S + 1)),
+            Nat.add_mul_mod_self_left]
         rw [wsum_succ, bit_mod_succ, hcong, ← bit_mod_succ, ih]
       · have hseq : S = N := by omega
         subst hseq
         have hGN : G N ≤ 1 := hG N
         unfold bit
-        rw [wsum_succ, Nat.add_mul_div_left _ _ (two_pow_pos N),
+        rw [wsum_succ, Nat.mul_comm (G N) (2 ^ N),
+          Nat.add_mul_div_left _ _ (two_pow_pos N),
           Nat.div_eq_of_lt (wsum_bound hG N), Nat.zero_add]
         exact Nat.mod_eq_of_lt (by omega)
 
@@ -140,7 +167,7 @@ theorem eqOfBits_gen (u v : Nat) (N : Nat) (hu : u < 2 ^ N) (hv : v < 2 ^ N)
       have hv0 : v = 0 := by omega
       rw [hu0, hv0]
   | succ n ih =>
-      have hpow : (2 : Nat) ^ (n + 1) = 2 * 2 ^ n := by rw [Nat.pow_succ]
+      have hpow : (2 : Nat) ^ (n + 1) = 2 ^ n * 2 := by rw [Nat.pow_succ]
       have hbit0 : ∀ w, bit w 0 = w % 2 := by
         intro w
         show (w / 2 ^ 0) % 2 = w % 2
@@ -152,7 +179,7 @@ theorem eqOfBits_gen (u v : Nat) (N : Nat) (hu : u < 2 ^ N) (hv : v < 2 ^ N)
       have hshift : ∀ (w s : Nat), bit (w / 2) s = bit w (s + 1) := by
         intro w s
         show ((w / 2) / 2 ^ s) % 2 = (w / 2 ^ (s + 1)) % 2
-        rw [Nat.div_div_eq_div, Nat.mul_comm 2 (2 ^ s), ← Nat.pow_succ]
+        rw [Nat.div_div_eq_div_mul_div, Nat.mul_comm 2 (2 ^ s), ← Nat.pow_succ]
       have hhigh : ∀ s, s < n → bit (u / 2) s = bit (v / 2) s := by
         intro s hs
         rw [hshift u s, hshift v s]
@@ -180,16 +207,17 @@ theorem eqOfBits {u v : Nat} (hu : u < 256) (hv : v < 256)
     (h : ∀ s, s < 8 → bit u s = bit v s) : u = v :=
   eqOfBits_gen u v 8 hu hv h
 
-/-! ## Aligned division / modulo helpers -/
+/-! ## Coefficient-aligned division / modulo -/
 
 theorem mul_add_div {c : Nat} (hc : 0 < c) {a b : Nat} (hab : a < c) :
     (b * c + a) / c = b := by
-  have h : b * c + a = a + b * c := by ring
+  have h : b * c + a = a + c * b := by ring
   rw [h, Nat.add_mul_div_left _ _ hc, Nat.div_eq_of_lt hab]
 
 theorem mul_add_mod {c a b : Nat} (hab : a < c) :
     (b * c + a) % c = a := by
-  rw [Nat.add_comm, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hab]
+  have h : b * c + a = a + c * b := by ring
+  rw [h, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hab]
 
 theorem coeff_div (i j : Nat) (hj : j < 12) : (12 * i + j) / 12 = i :=
   mul_add_div (by omega) hj
@@ -202,14 +230,16 @@ theorem coeff_mod (i j : Nat) (hj : j < 12) : (12 * i + j) % 12 = j :=
 /-- Global bit position `p` of byte array `B` (Algorithm 4, little-endian). -/
 def gbit (B : Nat → Nat) (p : Nat) : Nat := bit (B (p / 8)) (p % 8)
 
+theorem gbit_le_one (B : Nat → Nat) (p : Nat) : gbit B p ≤ 1 := by
+  unfold gbit
+  exact bit_le_one _ _
+
 theorem gbit_byte (B : Nat → Nat) (y s : Nat) (hs : s < 8) :
     gbit B (8 * y + s) = bit (B y) s := by
   unfold gbit
-  have h1 : 8 * y + s = s + y * 8 := by ring
-  have hd : (s + y * 8) / 8 = y := by
-    rw [Nat.add_mul_div_left _ _ (by omega), Nat.div_eq_of_lt hs]
-  have hmd : (s + y * 8) % 8 = s := by
-    rw [Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hs]
+  have h1 : 8 * y + s = y * 8 + s := by ring
+  have hd : (y * 8 + s) / 8 = y := mul_add_div (by omega) hs
+  have hmd : (y * 8 + s) % 8 = s := mul_add_mod hs
   rw [h1, hd, hmd]
 
 /-- Unreduced value of coefficient `i` (Algorithm 6, d = 12): the 12-bit
@@ -220,7 +250,7 @@ def seg (B : Nat → Nat) (i : Nat) : Nat :=
 theorem seg_bit (B : Nat → Nat) (i j : Nat) (hj : j < 12) :
     bit (seg B i) j = gbit B (12 * i + j) := by
   have h := extract_wsum (G := fun t => gbit B (12 * i + t))
-    (fun t => bit_le_one (gbit B (12 * i + t)) t) 12 j hj
+    (fun t => gbit_le_one B (12 * i + t)) 12 j hj
   exact h
 
 /-- Decoded coefficient: `seg` reduced mod q = 3329 (Algorithm 6 line 3). -/
@@ -229,6 +259,10 @@ def dec (B : Nat → Nat) (i : Nat) : Nat := seg B i % 3329
 /-- Bit `p%12` of coefficient `p/12` in the encoded domain (Algorithm 5). -/
 def ebit (F : Nat → Nat) (p : Nat) : Nat := bit (F (p / 12)) (p % 12)
 
+theorem ebit_le_one (F : Nat → Nat) (p : Nat) : ebit F p ≤ 1 := by
+  unfold ebit
+  exact bit_le_one _ _
+
 /-- Byte `y` of the d = 12 encoding: positions `[8*y, 8*y+8)`, little-endian. -/
 def encByte (F : Nat → Nat) (y : Nat) : Nat :=
   wsum (fun t => ebit F (8 * y + t)) 8
@@ -236,7 +270,7 @@ def encByte (F : Nat → Nat) (y : Nat) : Nat :=
 theorem enc_bit (F : Nat → Nat) (y s : Nat) (hs : s < 8) :
     bit (encByte F y) s = ebit F (8 * y + s) := by
   have h := extract_wsum (G := fun t => ebit F (8 * y + t))
-    (fun t => bit_le_one (ebit F (8 * y + t)) t) 8 s hs
+    (fun t => ebit_le_one F (8 * y + t)) 8 s hs
   exact h
 
 /-! ## T1: canonical values survive Decode ∘ Encode -/
@@ -280,7 +314,9 @@ theorem canonicalRoundtrip :
       = wsum (fun j => gbit (fun y => encByte F y) (12 * i + j)) 12 % 3329 := rfl
   have hsum : wsum (fun j => bit (F i) j) 12
       = ∑ t ∈ Finset.range 12, bit (F i) t * 2 ^ t := rfl
-  have hb12 : F i < 2 ^ 12 := by rw [two_pow_12]; omega
+  have hb12 : F i < 2 ^ 12 := by
+    rw [two_pow_12]
+    exact Nat.lt_trans (hF i) (by norm_num : (3329 : Nat) < 4096)
   rw [hd, hconv, hsum, bitsum_id (F i) 12 hb12]
   exact Nat.mod_eq_of_lt (hF i)
 
@@ -301,7 +337,7 @@ theorem enc_dec_eq (B : Nat → Nat) (hB : ∀ y, B y < 256)
     encByte (fun i => dec B i) y = B y := by
   have hlt : encByte (fun i => dec B i) y < 256 := by
     have hw := wsum_bound (G := fun t => ebit (fun i => dec B i) (8 * y + t))
-      (fun t => bit_le_one (ebit (fun i => dec B i) (8 * y + t)) t) 8
+      (fun t => ebit_le_one (fun i => dec B i) (8 * y + t)) 8
     rw [← two_pow_8]
     exact hw
   refine eqOfBits hlt (hB y) (fun s hs => ?_)
@@ -319,7 +355,7 @@ theorem reject_on_overflow (B : Nat → Nat) (hB : ∀ y, B y < 256)
   obtain ⟨i, hi⟩ := h
   have hslt : seg B i < 2 ^ 12 :=
     wsum_bound (G := fun t => gbit B (12 * i + t))
-      (fun t => bit_le_one (gbit B (12 * i + t)) t) 12
+      (fun t => gbit_le_one B (12 * i + t)) 12
   have hdlt : dec B i < 3329 := by
     unfold dec
     exact Nat.mod_lt _ (by omega)
@@ -344,7 +380,7 @@ theorem reject_on_overflow (B : Nat → Nat) (hB : ∀ y, B y < 256)
   have hR : bit (B ((12 * i + j) / 8)) ((12 * i + j) % 8) = bit (seg B i) j := by
     have hg : gbit B (12 * i + j)
         = bit (B ((12 * i + j) / 8)) ((12 * i + j) % 8) := rfl
-    rw [hg, ← seg_bit B i j hj]
+    rw [← hg, ← seg_bit B i j hj]
   intro hcon
   apply hbj
   calc bit (dec B i) j
@@ -378,6 +414,11 @@ theorem minimalCounterexample :
       ∧ dec B0 0 = 0
       ∧ encByte (fun i => dec B0 i) 0 = 0 ∧ (0 : Nat) ≠ 1
       ∧ encByte (fun i => dec B0 i) 1 = 0 ∧ (0 : Nat) ≠ 13 := by
-  decide
+  have h1 : B0 0 = 1 := by decide
+  have h2 : B0 1 = 13 := by decide
+  have h3 : dec B0 0 = 0 := by decide
+  have h4 : encByte (fun i => dec B0 i) 0 = 0 := by decide
+  have h5 : encByte (fun i => dec B0 i) 1 = 0 := by decide
+  exact ⟨h1, h2, h3, h4, by decide, h5, by decide⟩
 
 end Fips203
