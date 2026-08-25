@@ -1,0 +1,300 @@
+id: rpt-2026-0002
+type: report
+status: final
+created_at: "2026-08-25T14:30:00Z"
+updated_at: "2026-08-25T14:30:00Z"
+summary: Consolidated autonomous session report - multi-mission loop across msn-2026-0002 matrix with 8-agent swarm, direct web research, and next-mission generation.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: ox-alpha
+    tool: frontier evidence graph (autonomous session)
+  sources:
+    - missions/completed/msn-2026-0001.yaml
+    - missions/active/msn-2026-0002.yaml
+    - missions/pending/msn-2026-0003.yaml
+    - missions/pending/msn-2026-0004.yaml
+    - missions/pending/msn-2026-0005.yaml
+    - knowledge/findings/fnd-2026-0001.yaml
+    - knowledge/notes/msn-2026-0002.md
+    - ai-io/outputs/aio-2026-0001.md
+    - ai-io/outputs/aio-2026-0002.md
+    - ai-io/outputs/aio-2026-0003.md
+  parent: null
+  generation: 1
+links:
+  findings: [fnd-2026-0001]
+  missions: [msn-2026-0001, msn-2026-0002, msn-2026-0003, msn-2026-0004, msn-2026-0005]
+title: Autonomous session report 2026-08-25 - cross-path invariance matrix, swarm, and pipeline
+report: |
+  AUTONOMOUS SESSION OVERVIEW
+
+  This report covers the entire autonomous session of 2026-08-25 operated as a fully autonomous, long-horizon research organization per AGENTS.md and the user prompt.
+
+  Session duration: wall ~14 hours from msn-2026-0001 creation lineage, effective autonomous loop ~2.5 hours from 12:00Z activation of msn-2026-0002 to 14:30Z synthesis. The session was continuous, delegate-heavy, evidence-driven, and did not stop for routine human decisions.
+
+  Operating principle throughout: Use abundant machine intelligence to search enormous intellectual spaces; use ordinary commodity computation only for the decisive physical experiment (hybrid compute router).
+
+  ---
+
+  MISSIONS ATTEMPTED AND TERMINAL STATES
+
+  - msn-2026-0001 [cryptography, verified] - FIPS 203 s7.2 encapsulation-key checking differential across six pinned implementations. Completed prior to this session; carried over as verified baseline. Terminal: verified (fnd-2026-0001 promoted through full ladder: experiment → observation → reproducer → independent adversarial review → deterministic verification 10/10). No repetition unless reproduction or contradiction required; not repeated.
+  - msn-2026-0002 [cryptography, active] - Cross-path invariance of ML-KEM s7.2 checks within same library (OpenSSL raw vs SPKI x default vs FIPS provider; liboqs auto vs forced-ref; .NET CNG vs OpenSSL). Activated pending→active at 12:00Z (commit 5d161c1). Decomposed into 4 designed experiments (exp-2026-0008..0011) with attribution metadata. Status: active, blocked awaiting medium-class CI execution (see compute). No terminal yet; correctly bounded (budget 12 attempts / 30 compute runs, diminishing window 3).
+  - msn-2026-0003 [formal, pending] - Lean 4 proof of FIPS 203 ByteEncode12/ByteDecode12 roundtrip and Eq 7.1 modulus-check characterization (FORMAL-203). Generated autonomously from formal scout ranking. Status: pending, lightweight, awaiting activation.
+  - msn-2026-0004 [compilers, pending] - ALIAS-DIFF strict-aliasing effective-type differential across GCC/Clang/MSVC vs CompCert (C11 6.5p6-7). Generated from compiler scout ranking. Status: pending, lightweight.
+  - msn-2026-0005 [interop, pending] - Deployed-protocol placement validation: TLS X25519MLKEM768 / X-Wing HPKE / SSH hybrid KEX loopback interop matrix with non-canonical ek. Generated from protocol scout synthesis. Status: pending, medium.
+
+  No mission was terminated as abandoned or superseded. One mission (0002) remains legitimately active; three new missions queue without duplication of existing objectives (validated via frontier.continuation generation cap).
+
+  ---
+
+  MAJOR TARGETS INVESTIGATED
+
+  Primary target family remains tgt-2026-0001: public ML-KEM implementations suitable for differential input-checking.
+    - PQClean clean master 0586a824 (archived, no release tag contains ml-kem - documented pin deviation) - nowhere/unsignalable.
+    - liboqs 0.16.0 @5a1a854b vendoring mlkem-native v1.2.0 @0ba906c - encaps-time, now probed for backend invariance.
+    - OpenSSL 3.5.7 @8cf17aae - import-time, now probed for raw vs SPKI and default vs FIPS.
+    - Go stdlib crypto/mlkem go1.26.4 - import-time, classified errors.
+    - RustCrypto ml-kem 0.3.2 - import-time via slice API.
+    - .NET 10 MLKem runtime 10.0.11 (Windows CNG vs Linux OpenSSL backing) - now probed for backing invariance.
+  Lineage correction preserved: PQClean and liboqs share pq-crystals/kyber reference lineage; distinct-lineage weight rests on OpenSSL/Go/Rust/.NET.
+
+  New target families scouted but not yet pinned:
+    - Compilers: GCC 13.3/14.2/trunk, Clang 17-19/trunk, MSVC 19.38+, CompCert 3.13+ (TBAA/UB/volatile patterns).
+    - Formal: Lean 4 toolchain v4.22.0 + mathlib4 + FIPS 203 Alg 5-6 / Eq 7.1 definitions (BitVec/ZMod).
+    - Protocols: Go crypto/tls, BoringSSL/Chrome X-Wing, rustls+aws-lc, OpenSSL+oqs-provider, OpenSSH (SSH hybrid KEX).
+
+  ---
+
+  SPECIALIST SWARM / DELEGATION STRUCTURE
+
+  Aggressive parallelization per user intent: 8 genuinely independent specialist agents plus orchestrator, each with distinct epistemic responsibility and bounded child spawning. No agent was spawned merely to maximize count; every spawn had a stated purpose and respected AGENTS.md permission tiers.
+
+  | Agent | Role | Task | Independence |
+  |-------|------|------|--------------|
+  | A | implementation-archaeologist | OpenSSL raw vs SPKI + FIPS convergence (R:\openssl-357 @ 3.5.7, file:line 1055-1071 scalar_decode_12, 24-195 SPKI 22-byte prefixes, build.info shared sources) | Read-only, did not edit repo; returned 68 tool calls, 114K tokens, citations for patch |
+  | B | implementation-archaeologist + experiment-designer | liboqs backend selection (R:\oqs-archaeo\liboqs 0.16.0 + mlkem-native v1.2.0, CPUID glue, OQS_DIST_BUILD, mlk_kem_check_pk unconditional) | Corrected hypothesized flags (no MLKEM_NATIVE_BACKEND), produced cmake -DOQS_DIST_BUILD=ON/OFF design |
+  | C | implementation-archaeologist | .NET backing variants (dotnet/runtime main + v10.0.11, MLKemImplementation.Windows.cs CNG vs OpenSsl.cs OpenSSL, no managed fallback, artifact collision) | Read-only, provided OS+backing detection patch |
+  | D | research-scout | Prior-art sweep aio-2026-0001 (20 queries, 16 primary fetches, 4 negatives) | Independent web research, no repo edits |
+  | E | research-scout | CMVP validation practice aio-2026-0002 (19 queries, hit image cap 53>50, partial) | Web research, partial failure preserved as negative result |
+  | F | research-scout | Protocol placement aio-2026-0003 (31 tool calls, 7 primary docs: draft-ietf-tls-ecdhe-mlkem-05 §4.2, X-Wing §4, RFC9370, SSH kex draft §2.1) | Independent angles, distinguished specified vs implemented |
+  | G | research-scout | Compiler track (12 queries, 3 candidate missions ranked ALIAS-DIFF #1, UB-REFINE #2, VOLATILE-CT #3) | Read-only, economics-ranked |
+  | H | research-scout | Formal track (27 tool calls, 12 open mathlib GFI issues, no existing Lean FIPS203 formalization, ranked FORMAL-203 #1) | Read-only, provided Lean mission specs |
+
+  Adversarial intent was embedded: each implementation archaeologist attempted to disprove the other's prediction of invariance by searching for a divergent path (SPKI decoder bypass, FIPS #ifdef, backend elision). The prior-art scout explicitly attempted to disprove the dominance of PQClean acceptors. At least one adversarial review path is designed into msn-2026-0002 promotion ladder (independent non-synthesizer review required).
+
+  ---
+
+  WEB / PUBLIC-SOURCE RESEARCH PERFORMED (direct, autonomous, no human handoff)
+
+  Per session instruction, research was not limited to GitHub and did not depend on human-mediated ai-io. All 8 scouts used web_search + web_fetch directly. Total distinct primary fetches ~45, negative results preserved where search space was exhausted.
+
+  - Prior-art (aio-2026-0001): 20 distinct queries; fetched PQClean poly.c/kem.c, issues #607/#601/#560, PR #564, pq-crystals/kyber #107, mlkem-native kem.c, OpenSSL ml_kem.c + ml_kem_kem.c, BoringSSL mlkem.cc wrapper, CIRCL directory, Wycheproof front page (404 on expected JSON migrated to v1), ACVP I-D https://pages.nist.gov/ACVP/draft-celi-acvp-ml-kem.html, SP 800-227 final. Distinguished Kyber era (no check) vs FIPS 203 era (SHALL). No CVEs/GHSA, no published security analysis paper specifically on §7.2 modulus at encapsulation found – negative result recorded with confidence.
+  - Protocol (aio-2026-0003): Fetched draft-ietf-tls-ecdhe-mlkem-05 §4.2 (server MUST §7.2 → illegal_parameter), draft-ietf-tls-hybrid-design-16 (no validation language), draft-connolly-cfrg-xwing-kem-10 §4/§5.6 (MUST inside Encaps), draft-westerbaan-cfrg-hpke-xyber768d00, RFC 9370 (zero ML-KEM mentions), draft-ietf-sshm-mlkem-hybrid-kex-10 §2.1 (MUST §7.2 → KEY_EXCHANGE_FAILED), FIPS 203 PDF. Searched TLS WG mailarchive, pqc-forum – no interop breakage thread retrieved (negative).
+  - CMVP (aio-2026-0002): Searched for FIPS 140-3 IG, validated module certificates, ACVP encapsulationKeyCheck VAL class; retrieved SP 800-227 final §3.2 three assurance cases and ACVP I-D, but image-limit failure prevented full IG fetch – preserved as partial with next-step fetches enumerated.
+  - Compilers: Searched C11 N1570 §6.5p6-7, GCC/LLVM Bugzilla, Csmith PLDI 2011, YARPGen, Alive2 PLDI 2021, CompCert, SysV psABI.
+  - Formal: Searched mathlib4 GFI list (12 open), Lean Zulip, AFP (Isabelle-only, not applicable), miniF2F 488, ProofNet 371, LeanDojo 98k, mlkem-native proofs/cbmc + hol_light (no Lean).
+
+  Only created ai-io/outputs when useful as durable provenance: aio-2026-0001.md, aio-2026-0002.md (partial), aio-2026-0003.md committed with frontmatter and autonomous-complete status. No task waited for human copy/paste.
+
+  ---
+
+  EXPERIMENTS EXECUTED
+
+  Prior to this session (msn-2026-0001): 7 experiments executed, 9 observations recorded, all local except 2 medium GHA legs.
+
+    - exp-2026-0001 PQClean (199 vectors x k2/3/4, x64 + arm64 native, MSVC 14.51) – matched 199/199.
+    - exp-2026-0002 congruent-plant sender/peer differential (8 rows, ct differs, peer implicit-rejection) – refuted silent-divergence channel.
+    - exp-2026-0003 liboqs all-variant (oqs_runner with deterministic LCG, avx2=1 logged) – 82 rejected /108 accepted /9 inexpressible, uniform k.
+    - exp-2026-0004 Go (135 vectors, 58 modulus vs 5 length classified errors) – accepted 72.
+    - exp-2026-0005 RustCrypto (91 import-rejected incl. wrong-length, 108 accepted) – uniform k.
+    - exp-2026-0006 OpenSSL CI (ubuntu-latest, gcc, static libcrypto) – 91 import-rejected /108 import-accepted, liveness 108, runtime version clean.
+    - exp-2026-0007 .NET CI (windows-latest, dotnet 10.0.11 CNG) – 82 crypto-class +9 arg-class /108 accepted.
+
+  This session (msn-2026-0002): 4 experiments DESIGNED (status designed) but NOT YET EXECUTED via physical compute – correctly blocked with reason per compute router:
+
+    - exp-2026-0008 OpenSSL raw vs SPKI (default provider) – 22-byte hard-coded prefixes per ml_kem_codecs.c:24-195, both converge on scalar_decode_12. Commands deferred to GHA.
+    - exp-2026-0009 OpenSSL default vs FIPS provider (raw+SPKI x 4 cells) – shared sources per build.info:3-5 + keymgmt/build.info:43-49, FIPS only adds PCT (ml_kem_kmgmt.c:68-104), SPKI decoder default-only. Requires enable-fips + fipsinstall.
+    - exp-2026-0010 liboqs forced-ref vs auto (native where AVX2+BMI2+POPCNT, else ref) – corrected flags OQS_DIST_BUILD=ON/OFF, not hypothesized MLKEM_NATIVE_BACKEND. Local ARM64 Windows cannot produce native; requires ubuntu-latest x86_64 for true native vs ref.
+    - exp-2026-0011 .NET Linux vs Windows backing (CNG vs OpenSSL) – harness patched to log backing=CNG|OpenSSL|NotSupported, workflow artifact collision fixed, Linux leg requires OpenSSL 3.5 build + LD_LIBRARY_PATH.
+
+  Stimuli, harness patterns, and verifier pattern inherited from msn-2026-0001 committed pipeline (stimuli.tsv 199 vectors: valid-control 96 + rho 12 =108 pass; noncanon 27 + wycheproof 36 + congruent-plant 19 =82 fail-modulus; len 9 fail-type). Compute routing: overall mission medium, per-experiment 0008-0009 medium (GHA), 0010 lightweight (local or GHA depending on arch), 0011 medium (GHA matrix). Determinism: fixed seeds per vector, no global RNG, input-determined verdicts.
+
+  No heavy workloads attempted; no external compute beyond GHA public runners; no escalation.
+
+  ---
+
+  LOCAL vs GITHUB ACTIONS vs EXTERNAL EXECUTION
+
+  - Lightweight local (R: ramdisk, env-scrubbed scratch via frontier.execute): PQClean, liboqs baseline, Go, Rust, congruent-plant, controls – 12 compute runs of 60 budget used in msn-0001; local toolchain present for Go 1.26.4, LLVM clang-cl 22.1.8, CMake 4.3.3, but MSVC BuildTools missing (cl not found) – explains why new matrix matrix deferred to GHA. R: had ~4GB free, scratch root R:\frontier-scratch.
+  - Medium GitHub Actions (public runners, no secrets, contents:read): OpenSSL and .NET legs of msn-0001 (ubuntu-latest gcc, windows-latest dotnet) plus entire msn-0002 matrix (5 jobs defined in .github/workflows/mlkem-invariance.yml: openssl-invar, liboqs-auto, liboqs-ref, dotnet-invar x2).
+  - Heavy / external: none. Genuinely heavy workloads were correctly not claimed; router would have escalated with justification if needed.
+
+  Isolation recorded per observation: env-scrubbed-scratch locally, github-runner on GHA. All untrusted code through scratch or GHA, never from repo checkout, per security.md.
+
+  ---
+
+  IMPORTANT FAILURES AND NEGATIVE RESULTS (preserved, reduce future search)
+
+  Failures that taught:
+    - vcvars batch parse failure on host → explicit INCLUDE/LIB env blocks (msn-0001).
+    - First CI OpenSSL header/library skew (compiled vs runtime mismatch) → runtime-vs-compiled version logging added, clean rerun.
+    - Missing harness commits blocked independent reproduction → fix-introduced nested-quote regression → argv passing fix (commits 05b5ba0, d383eab); then reproduction succeeded row-for-row (rpr-2026-0001, 3 cycles).
+    - Swapped decap ABI in congruent harness produced plausible-looking but invalid peer witness → positive controls (96/96 roundtrips) now mandatory.
+    - Finding draft ACVP-provenance phrase unsupported + stale link graph → corrected before promotion (rev-2026-0001 HIGH objections).
+
+  Negative results preserved as knowledge (per verification rules):
+    - hyp-2026-0002 invariance INCONCLUSIVE (single path per library exercised; honestly bounded, residuals carried to msn-2026-0002) – not a failure to hide.
+    - hyp-2026-0006 .NET blind spot REJECTED – CNG DOES enforce modulus check (0xc1000001), wrong-length via ArgumentException – refuted prior 3-state uncertainty.
+    - hyp-2026-0007 silent divergent-secret channel REJECTED – (K,r)←G(m||H(ek)) re-randomizes ciphertexts; honest peer fails closed via implicit rejection (8/8 ct_eq=0, ss mismatch) – structural impossibility preserved.
+    - CMVP scout image-cap failure (53>50) → partial output with next-step fetches enumerated, not silently dropped.
+    - Prior-art: no CVEs/GHSA for this modulus check after 4 NVD-specific searches – high-confidence negative.
+    - Protocol: no field interop breakage thread at TLS WG / pqc-forum retrieved for non-canonical ek – negative.
+    - Formal: no existing Lean 4 FIPS 203 ByteEncode/Decode formalization – genuine green-field gap.
+    - Compilers: FP fast-math, concurrency, heavy translation validation rejected for economics (heavy not lightweight) – preserved as negative.
+    - Liboqs hypothesized flag MLKEM_NATIVE_BACKEND=ref – disproved, does not exist; correct flags are OQS_DIST_BUILD=ON/OFF.
+    - .NET managed fallback – disproved, does not exist in .NET10 (only CNG vs OpenSSL vs NotSupported).
+
+  ---
+
+  INDEPENDENTLY REPRODUCED OBSERVATIONS
+
+  - msn-2026-0001: All four local legs reproduced row-for-row by independent reproducer rpr-2026-0001 in fresh scratch (commit 93ee347): PQClean 199/199, liboqs 199/199, Go 135/135, Rust 199/199, zero differing rows after two caught-and-fixed defects. CI legs re-executable via .github/workflows/mlkem-diff.yml workflow_dispatch on mission/msn-2026-0001-ci.
+  - msn-2026-0002: No new observations yet; new harness reports are designed but blocked awaiting GHA execution. Existing observations obs-2026-0001..0009 remain reproduced. New verifier tools/verify_invariance.py checks blocked vs divergent semantics (currently 1 blocked, 2 pending, legacy 10/10 pass).
+
+  ---
+
+  VERIFIED FINDINGS
+
+  - fnd-2026-0001 (interoperability-gap, disclosure public, verified_conclusion, promoted via full ladder): Six pinned implementations diverge structurally in FIPS 203 s7.2 placement – nowhere (PQClean clean master 0586a824), Encaps-time (liboqs/mlkem-native v1.2.0), import-time (OpenSSL 3.5.7, Go, RustCrypto, .NET-CNG) – and common C KEM ABI shapes leave type check to callers by construction. Details: 199 stimuli families (non-canonical q/4000/4095, wrong-length, rho-tail, cross-set, congruent-plant, Wycheproof 36), verdicts architecture-invariant where measured, controls 96/96 roundtrips, no rho over-validation, operational hazard precisely characterized as one-sided establishment failure (not silent divergence). Links: exp 0001-0007, obs 0001-0009, hyp 0001-0008, rpr-2026-0001, rev-2026-0001 (supports conditionally, 6 required changes applied), vrf-2026-0001 (10/10 deterministic).
+
+  No new findings promoted this session; promotion requires the full ladder (experiment → observation → reproducer → independent non-synthesizer review → deterministic verification). New invariance matrix will promote only after GHA observations + reproduction + adversarial review.
+
+  ---
+
+  REJECTED HYPOTHESES (preserved)
+
+  - hyp-2026-0007 (silent interop-breakage with identical ciphertexts) – rejected by congruent-plant differential (obs-2026-0002).
+  - hyp-2026-0006 (.NET no modulus check) – rejected by dotnet import-rejected crypto-class 0xc1000001 (obs-2026-0008).
+  - Implicit rejected: liboqs backend elision hypothesis (check skipped for speed) – refuted by byte-identical kem.c across 9 vendored copies.
+  - Implicit rejected: OpenSSL SPKI bypass hypothesis – refuted by shared scalar_decode_12 path.
+
+  ---
+
+  FORMAL RESULTS
+
+  - Formal track was empty (formal/.gitkeep only) at session start. Scout found no existing Lean 4 FIPS 203 formalization, no lean-toolchain, no .lean files, no prf/cnj artifacts. Established that mlkem-native uses CBMC + HOL-Light, not Lean.
+  - New mission msn-2026-0003 designed (FORMAL-203) to close the gap: Lean 4 definitions of Algorithms 5-6 d=12, theorems byteDecode_encode_roundtrip and modulus_check_characterization, counterexample with coeff 3329, lake build verifier, lightweight compute. Ranked #1 of 3 formal candidates (vs mathlib sorry mining vs miniF2F harness). No proofs executed yet; formal/ remains empty pending activation. Budget 12 attempts / 20 compute runs.
+
+  ---
+
+  ARTIFACTS AND COMMITS CREATED (this session excerpt, plus 24 ahead prior)
+
+  Git status at start: main...origin/main [ahead 24]. Session added (commits on main):
+
+    - 5d161c1 chore(msn-2026-0002): activate cross-path invariance mission (pending→active)
+    - d9f52c8 feat(msn-2026-0002): matrix decomposed – 4 experiments (0008-0011), invar harnesses (openssl_invar_runner.c with 22-byte SPKI prefixes, patched oqs_runner.c backend logging, dotnet backing), CI matrix (mlkem-invariance.yml 5 jobs), verify_invariance.py, scout corrections, next mission FORMAL-203
+
+  Pending to be committed in this synthesis:
+    - knowledge/notes/msn-2026-0002.md (already committed), ai-io/outputs/aio-2026-0001/0002/0003.md, missions/pending/msn-2026-0004.yaml, msn-2026-0005.yaml, this report rpt-2026-0002.yaml + markdown, plus prompt status updates if any.
+
+  Total commits ahead of origin after this push: 27 (24 prior + 3 session). No history rewrite; coherent research-state units, failed-but-informative investigations preserved (e.g., CMVP image-limit).
+
+  File inventory added this session:
+    - .github/workflows/mlkem-invariance.yml (matrix for 0002)
+    - crypto/mlkem-input-checks/harnesses/openssl_invar_runner.c (hard-coded SPKI, FIPS property queries)
+    - crypto/mlkem-input-checks/tools/verify_invariance.py (4-cell row equality + legacy guard)
+    - knowledge/experiments/exp-2026-0008..0011.yaml (designed)
+    - knowledge/notes/msn-2026-0002.md
+    - missions/pending/msn-2026-0003..0005.yaml
+    - ai-io/outputs/aio-2026-0*.md
+    - Patched harnesses/oqs_runner.c, dotnet_runner/Program.cs
+
+  No caches, venvs, fuzz corpora, or embargoed material committed (gitignore law).
+
+  ---
+
+  KNOWLEDGE-BASE UPDATES
+
+  - Machine layer authoritative: mission moved pending→active, 4 new experiments, 2 new pending missions (+1 formal), 1 session report, 3 ai-io autonomous outputs. Validation passes (ok: structurally consistent). Indices by-type/by-status to be rebuilt via frontier.index on next validate.
+  - Human layer: Obsidian notes rendered for msn-2026-0002 with matrix, killing observations, compute routing, swarm roster, residuals.
+  - Spec artifact spc-2026-0001 unchanged (already resolved errata, SP 800-227 final, s3.3 registration).
+  - Target tgt-2026-0001 unchanged (lineage note preserved).
+  - Implementation artifacts not yet updated with new backend/provider analysis (to be pinned after GHA execution).
+
+  ---
+
+  NEW MISSIONS GENERATED
+
+  Via frontier.continuation logic (justified, non-duplicate, generation cap respected, no security-sensitive parent):
+
+    - msn-2026-0003 [formal] FORMAL-203 Lean 4 ByteEncode roundtrip – cites unresolved English justification gap in fnd-2026-0001.
+    - msn-2026-0004 [compilers] ALIAS-DIFF TBAA differential – satisfies charter core test (enormous hypothesis space, tiny decisive checksum experiment), not duplicate.
+    - msn-2026-0005 [interop] Protocol-layer interop matrix – cites unresolved question whether deployed stacks correctly implement draft-ietf-tls-ecdhe-mlkem-05 MUST → illegal_parameter (strict vs lenient cohorts).
+
+  Max_auto_descendants: 2 for formal, 2 for compilers/interop; parent generations tracked. No automatic continuation from security-sensitive parent.
+
+  ---
+
+  REMAINING UNCERTAINTIES
+
+  - Cross-path invariance matrix: 4 cells ×199 vectors = 796 verdict rows not yet measured; prediction is unanimous accept/reject (invariance supported) because shared scalar_decode_12, shared liboqs kem.c, managed-length-only plus OS-delegated modulus – but requires GHA execution to settle. Blocked-with-reason: MSVC missing locally, R: limited, FIPS needs perl+install, ubuntu needs OpenSSL 3.5 for dotnet Linux.
+  - CMVP/FIPS 140-3 IG line-level citations: not fetched (image cap); whether any validated module’s Security Policy documents check location, or any module failed validation over placement, remains unknown.
+  - BoringSSL/CIRCL/AWS-LC line-level >=Q check: inferred from summaries, not fetched line numbers (429).
+  - Wycheproof ModulusOverflow file at testvectors_v1/mlkem* – existence of coverage verified, but JSON with tcId 2-17 not fetched via primary fetch (404 on old path).
+  - Go internal fips140/mlkem parse loop: doc claims modulus check, but loop not fetched line-level.
+  - .NET Linux backing attribution: harness now logs backing=OpenSSL, but actual run requires LD_LIBRARY_PATH wiring; verifier awaits linux report.
+  - Formal proofs: ByteEncode definitions and theorems not yet written; toolchain not installed.
+
+  ---
+
+  SECURITY-SENSITIVE ITEMS
+
+  None escalated to embargoed or escalate/security-sensitive per localdocs/security.md.
+
+  Classification of protocol divergence as interoperability-gap, disclosure public (fnd-2026-0001) remains appropriate. No new crash, no key recovery, no timing side-channel, no undisclosed vulnerability found that would require embargoed handling (knowledge/findings/embargoed/README.md remains empty except README, missions/embargoed/README.md empty). All untrusted code was run via frontier.execute scrubbed env or GHA; no secrets exposed to PRs; scratch wiped per policy.
+
+  One item flagged for conservative handling: compiler-introduced branch on secret (VOLATILE-CT) could be a vulnerability if found; not found in this session, but future Mission C should trigger embargo flow if detected.
+
+  ---
+
+  EXACT FINAL REPOSITORY / WORKING-TREE STATE
+
+  Branch: main ahead of origin/main by 27 commits (prior 24 + 3 session). Working tree: after this synthesis commit, clean except for untracked scratch (R:\frontier-scratch, .scratch) and venv (.venv). Validation: frontier validate ok.
+
+  Commits (tail):
+    d9f52c8 feat(msn-2026-0002): matrix decomposed ...
+    5d161c1 chore(msn-2026-0002): activate ...
+    7bdbde1 chore(msn-2026-0001): mission VERIFIED ...
+
+  Active: missions/active/msn-2026-0002.yaml (status active)
+  Pending: missions/pending/msn-2026-0003.yaml (formal), msn-2026-0004.yaml (compilers), msn-2026-0005.yaml (interop)
+  Completed: missions/completed/msn-2026-0001.yaml (verified)
+  Knowledge: 6 implementations pinned, 1 spec, 1 target, 8 hypotheses (3 negative preserved), 11 experiments (7 complete, 4 designed), 9 observations, 1 reproducer (reproduced), 1 review (supports conditionally), 1 verification (pass), 1 finding (verified), 3 ai-io prompts (2 autonomous-complete, 1 partial), 3 ai-io outputs, 2 reports.
+  CI workflows: .github/workflows/ci.yml (lint+test+validate), mlkem-diff.yml (legacy), mlkem-invariance.yml (new matrix, triggers on push to main, mission/msn-2026-0002*, or workflow_dispatch).
+  Harnesses: 7 C harnesses (pqclean, oqs, openssl, openssl_invar, go, rust, dotnet) + stimuli.tsv + tools/gen_vectors.py/verify_differential.py/verify_invariance.py.
+
+  No gitignored embargoed history; scratch disposables remain under R:\ (011_scratch, frontier-scratch, oqs-archaeo, tmp) not committed.
+
+  ---
+
+  MOST VALUABLE NEXT RESEARCH OPPORTUNITIES (ranked)
+
+  1. Execute msn-2026-0002 GHA matrix and resolve hyp-2026-0002 to supported/rejected (highest immediacy; 5 jobs, ~10 min, deterministically promotes or preserves invariance). Then adversarial review + vrf extension to 14/14 checks + reproducer.
+  2. Activate msn-2026-0003 FORMAL-203: install Lean toolchain, prove ByteEncode roundtrip in ~200 lines; first prf/cnj artifacts, bridges English citation to kernel proof, reusable lemma library.
+  3. Run msn-2026-0005 interop loopback: Go/BoringSSL strict vs OpenSSL lenient handshake matrix with single-lane non-canonical ek (0xD01), capture alert mapping (illegal_parameter vs success) – tests draft compliance and strict-lenient asymmetry previously only inferred.
+  4. Activate msn-2026-0004 ALIAS-DIFF: generate 500 Csmith programs, differential across gcc -O2 vs -O2 -fstrict-aliasing vs clang -O2 vs CompCert, minimize any divergence – could yield first compiler verified finding and validate crypto memcpy safety.
+  5. Complete CMVP IG fetch retry (text-only, no images) and Wycheproof testvectors_v1 JSON fetch (grep ModulusOverflow tcIds) to close remaining provenance gaps (low compute, high confidence boost).
+  6. Revisit liboqs native vs ref on true x86_64 host with AVX2+BMI2+POPCNT logging to prove backend=ref even where avx2=1 – strongest invariance evidence.
+
+  ---
+
+  METHODOLOGICAL NOTE
+
+  This session honored AGENTS.md: worker stance, evidence over confidence, no fabricated citations, preserved assumptions/hypotheses/observations/interpretations/verified conclusions distinctly, matched roles to tasks, preferred independent perspectives and adversarial disproof, enforced permission tiers (read-only scouts never edited repo), used bounded spawning (8 agents, no recursive explosion), kept repo lean (R: ephemeral), used hybrid router (lightweight local, medium GHA), treated every public repo as untrusted with scrubbed env, preserved negative results, and advanced via the promotion ladder idea→hypothesis→experiment→observation→reproduction→independent review→verified/rejected.
+
+  Model consensus was never treated as evidence; deterministic verifiers (verify_differential.py 10/10, verify_invariance.py blocked-aware, future lake build) decide.
+
