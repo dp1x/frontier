@@ -1,8 +1,8 @@
 id: msn-2026-0002
 type: mission
-status: pending
+status: active
 created_at: "2026-08-25T02:30:00Z"
-updated_at: "2026-08-25T02:30:00Z"
+updated_at: "2026-08-25T12:00:00Z"
 summary: Execute the cross-path invariance matrix left open by hyp-2026-0002 - same-library divergence in ML-KEM s7.2 checking across import formats, providers, backends, and .NET OS backings.
 epistemic_status: hypothesis
 provenance:
