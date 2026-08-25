@@ -72,15 +72,17 @@ def derive_params(fam: str, var: int) -> dict:
         "J": str(1 + var % 3),
         "MULT": mults[(fam_idx + var) % len(mults)],
         "ROT": rots[(fam_idx * 2 + var) % len(rots)],
-        "SEEDX": f"0x{rng.next() & 0xFFFFFFFF:08x}u",
-        "K0": f"0x{rng.next() & 0xFFFFFFFF:08x}u",
-        "C1": f"0x{(rng.next() | 1) & 0x00FFFFFF:06x}u",
-        "C2": f"0x{(rng.next() % 61) + 1:02x}u",
+        # NOTE: constants feed UINT32_C(), which pastes its own suffix (glibc
+        # `c ## U`); a trailing 'u' here would form an invalid literal.
+        "SEEDX": f"0x{rng.next() & 0xFFFFFFFF:08x}",
+        "K0": f"0x{rng.next() & 0xFFFFFFFF:08x}",
+        "C1": f"0x{(rng.next() | 1) & 0x00FFFFFF:06x}",
+        "C2": f"0x{(rng.next() % 61) + 1:02x}",
         "AF": f"{af:g}",
         "BF": f"{bf:g}",
-        "KD": f"0x{rng.next() & 0xFFFFFFFF:08x}u",
-        "KC": f"0x{rng.next() & 0xFFFFFFFF:08x}u",
-        "KM": f"0x{rng.next() & 0xFFFFFFFF:08x}u",
+        "KD": f"0x{rng.next() & 0xFFFFFFFF:08x}",
+        "KC": f"0x{rng.next() & 0xFFFFFFFF:08x}",
+        "KM": f"0x{rng.next() & 0xFFFFFFFF:08x}",
     }
 
 

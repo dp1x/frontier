@@ -59,6 +59,7 @@ for SRC in "$GEN_DIR"/*.c; do
     BIN="$TMPBIN/${NAME}_${cfg}"
     if ! ${CCS[$ci]} ${FLAGS[$ci]} -o "$BIN" "$SRC" >"$TMPBIN/cc.log" 2>&1; then
       echo "$FAM|$VAR|$cfg|CFERR|-|CFERR" >> "$REPORT"
+      { echo "--- compile failure $NAME/$cfg ---"; head -15 "$TMPBIN/cc.log"; } >&2
       cferr=$((cferr + 1))
       continue
     fi
