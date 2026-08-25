@@ -1,0 +1,67 @@
+id: msn-2026-0003
+type: mission
+status: pending
+created_at: "2026-08-25T13:00:00Z"
+updated_at: "2026-08-25T13:00:00Z"
+summary: Formal verification of FIPS 203 ByteEncode12/ByteDecode12 roundtrip and Eq 7.1 modulus-check characterization in Lean 4 (FORMAL-203).
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-scout
+    model: ox-alpha
+    tool: web-search scouting (formal track)
+  sources:
+    - localdocs/refs/fips203.pdf#section-4.2.1
+    - localdocs/refs/fips203.pdf#section-7.2
+    - knowledge/specifications/spc-2026-0001.yaml
+    - knowledge/findings/fnd-2026-0001.yaml
+    - https://github.com/pq-code-package/mlkem-native
+  parent: msn-2026-0001
+  generation: 2
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+title: Lean 4 proof of ML-KEM ByteEncode12 roundtrip and modulus-check equivalence
+objective: >
+  Machine-check in Lean 4 the load-bearing lemma underpinning fnd-2026-0001:
+  ByteEncode12(ByteDecode12(b)) == b iff every 12-bit coefficient of b is in
+  [0,q-1] with q=3329 (FIPS 203 Alg 5-6, Eq 7.1), and ByteDecode12∘ByteEncode12
+  = id on Fin q^(256k). Deliver lean-toolchain-pinned Formal/ project with
+  ByteEncode.lean, Eq71.lean, Counterexample.lean, all checking via `lake build`.
+domain: formal
+scope: >
+  Formal definitions of Algorithms 5-6 (d=12, little-endian 12-bit chunking),
+  roundtrip theorems, modulus-test characterization, and an explicit
+  counterexample coefficient 3329 that fails Eq 7.1. Out of scope: CBMC/HOL-Light
+  assembly proofs, performance, NTT correctness; no Isabelle/AFP port.
+constraints:
+  - Pinned Lean toolchain (leanprover/lean4:v4.22.0 etc.) via formal/lean-toolchain and formal/lakefile.lean.
+  - Deterministic verifier is Lean kernel via `lake build`; no sorry/axiom/admitted.
+  - All proof attempts in scrubbed scratch; record seeds and versions.
+  - No secrets; public repos only.
+desired_evidence_level: independently-reviewed
+candidate_targets: [tgt-2026-0001]
+dependencies: []
+compute:
+  expected_class: lightweight
+  notes: "One-time elan toolchain install ~400MB; thereafter lake build is seconds on R: ramdisk. Route via frontier.compute.route local."
+budget:
+  max_attempts: 12
+  max_independent_reviews: 2
+  max_compute_runs: 20
+  diminishing_returns_window: 2
+  max_auto_descendants: 2
+acceptance_criteria:
+  - formal/lean-toolchain and formal/lakefile.lean pinned and committed.
+  - Formal/ByteEncode.lean and Formal/Eq71.lean contain the two theorems above and kernel-check with `lake build` exit 0.
+  - Formal/Counterexample.lean exhibits b with coefficient q that fails roundtrip.
+  - Finding/conjecture artifacts linked to spc-2026-0001 and reviewed adversarially.
+stopping_conditions:
+  - Lake build passes and adversarial review supports.
+  - Budget exhausted without kernel-accepted proof (inconclusive-after-budget with preserved negative results).
+artifacts: []
+follow_ups: []
+notes_path: knowledge/notes/msn-2026-0003.md
+blocked_reason: null
+terminal_reason: null

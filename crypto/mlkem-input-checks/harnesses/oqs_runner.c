@@ -15,6 +15,7 @@
 #include <intrin.h>
 
 #include <oqs/oqs.h>
+#include <oqs/common.h>
 
 #define MAX_LINE 8192
 #define MAX_EK   4096
@@ -55,7 +56,17 @@ int main(int argc, char **argv) {
     if (!in || !out) { perror("open"); return 2; }
 
     OQS_randombytes_custom_algorithm(&det_random);
-    fprintf(out, "META|avx2=%d|liboqs=%s\n", avx2_available(), OQS_version());
+    int oqs_avx2 = OQS_CPU_has_extension(OQS_CPU_EXT_AVX2);
+    int oqs_bmi2 = OQS_CPU_has_extension(OQS_CPU_EXT_BMI2);
+    int oqs_popcnt = OQS_CPU_has_extension(OQS_CPU_EXT_POPCNT);
+    const char *backend =
+#if defined(OQS_DIST_BUILD) && (defined(OQS_ENABLE_KEM_ml_kem_512_x86_64) || defined(OQS_ENABLE_KEM_ml_kem_768_x86_64) || defined(OQS_ENABLE_KEM_ml_kem_1024_x86_64) || defined(OQS_ENABLE_KEM_ml_kem_512_aarch64))
+        (oqs_avx2 && oqs_bmi2 && oqs_popcnt) ? "native" : "ref";
+#else
+        "ref";
+#endif
+    fprintf(out, "META|avx2=%d|oqs_avx2=%d|oqs_bmi2=%d|oqs_popcnt=%d|backend=%s|liboqs=%s|mlkem_native=0ba906c\n",
+            avx2_available(), oqs_avx2, oqs_bmi2, oqs_popcnt, backend, OQS_version());
 
     char line[MAX_LINE];
     static unsigned char ek[MAX_EK], ct[MAX_EK], ss[32];

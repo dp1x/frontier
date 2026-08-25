@@ -1,0 +1,54 @@
+id: exp-2026-0009
+type: experiment
+status: designed
+created_at: "2026-08-25T12:15:00Z"
+updated_at: "2026-08-25T12:15:00Z"
+summary: OpenSSL 3.5.7 FIPS provider invariance - raw and SPKI import through provider=fips vs provider=default, same vectors, same validation sources.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: ox-alpha
+    tool: frontier.compute.route
+  sources: [knowledge/hypotheses/hyp-2026-0002.yaml, knowledge/implementations/imp-2026-0003.yaml]
+  parent: msn-2026-0002
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0002]
+  implementations: [imp-2026-0003]
+title: OpenSSL FIPS-provider invariance (raw + SPKI)
+design: >
+  Build pinned OpenSSL 3.5.7 with FIPS module (./Configure enable-fips,
+  then make && make install && openssl fipsinstall -out
+  ssl/fipsmodule.cnf -module lib64/ossl-modules/fips.so per README-FIPS.md,
+  INSTALL.md:834). Validation sources are literally shared per
+  build.info: crypto/ml_kem/ml_kem.c and
+  providers/implementations/keymgmt/ml_kem_kmgmt.c compile into BOTH
+  libcrypto and providers/libfips.a (crypto/ml_kem/build.info:3-5,
+  keymgmt/build.info:43-49), with FIPS only adding PCT handling
+  (ml_kem_kmgmt.c:68-104,478-483, public-key import include_private==0 skips PCT).
+  providers/implementations/encode_decode/ml_kem_codecs.c is default-only
+  (build.info:26), so SPKI decode via FIPS alone fails to find decoder -
+  hybrid setup (both providers loaded) still shares validation. Load FIPS via
+  OSSL_PROVIDER_load(NULL,"fips") and exercise four cells per vector via
+  harnesses/openssl_invar_runner.c: raw/default, raw/fips (propq
+  "provider=fips"), spki/default, spki/fips (d2i_PUBKEY_ex with propq).
+  Log attribution: provider=fips|default, format=raw|spki, fips_available,
+  import verdict (+err lib:reason), encap liveness. Prediction: unanimous
+  verdicts across providers (FIPS does not weaken modulus check). Killing
+  observation: FIPS accepts a malformed ek that default rejects (or covers
+  different error reason).
+commands:
+  - "git clone --depth 1 --branch openssl-3.5.7 https://github.com/openssl/openssl.git openssl-src"
+  - "./Configure enable-fips no-shared --prefix=$PWD/../openssl-install && make -j4 && make install_sw && make install_fips"
+  - "gcc -O2 -Wall -o openssl_fips_runner harnesses/openssl_fips_runner.c -I openssl-install/include -L openssl-install/lib64 -lcrypto -Wl,-rpath,$PWD/openssl-install/lib64"
+  - "./openssl_fips_runner ../crypto/mlkem-input-checks/stimuli/stimuli.tsv reports/openssl_fips_report.tsv"
+compute_decision:
+  location: github-actions
+  isolation: github-runner
+  reason: "medium: FIPS module build is substantial; route to public runner"
+determinism:
+  deterministic: true
+  seed_policy: provider selection deterministic; import verdicts input-determined
+  nondeterminism_notes: null

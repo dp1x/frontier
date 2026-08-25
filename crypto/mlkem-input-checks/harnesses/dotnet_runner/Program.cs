@@ -24,8 +24,11 @@ static (int ct, int ss) Sizes(string p) => p switch
 using var inStream = new StreamReader(cliArgs[1]);
 using var outWriter = new StreamWriter(cliArgs[2]);
 
+string backing = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "CNG"
+                : RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "OpenSSL"
+                : "managed";
 outWriter.WriteLine($"META|runtime={Environment.Version}|os={RuntimeInformation.OSDescription}" +
-                    $"|arch={RuntimeInformation.ProcessArchitecture}|mlkemSupported={MLKem.IsSupported}");
+                    $"|arch={RuntimeInformation.ProcessArchitecture}|mlkemSupported={MLKem.IsSupported}|backing={backing}");
 
 string? line;
 int total = 0;

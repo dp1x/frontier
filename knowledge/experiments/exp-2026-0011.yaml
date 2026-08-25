@@ -1,0 +1,47 @@
+id: exp-2026-0011
+type: experiment
+status: designed
+created_at: "2026-08-25T12:15:00Z"
+updated_at: "2026-08-25T12:15:00Z"
+summary: .NET 10 Linux OpenSSL backing invariance - same 199 vectors on ubuntu-latest vs windows-latest (CNG), attributed reports.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: ox-alpha
+    tool: frontier.compute.route
+  sources: [knowledge/hypotheses/hyp-2026-0002.yaml, knowledge/implementations/imp-2026-0006.yaml]
+  parent: msn-2026-0002
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0002]
+  implementations: [imp-2026-0006]
+title: .NET Linux vs Windows backing invariance
+design: >
+  Reuse committed dotnet_runner (MLKem.ImportEncapsulationKey + Encapsulate)
+  with extended META logging: runtime, OSDescription, ProcessArchitecture,
+  backing detection (CNG on Windows where MLKem.IsSupported uses ncrypt,
+  OpenSSL on Linux where runtime links libcrypto). Run on both
+  windows-latest and ubuntu-latest via existing mlkem-diff.yml matrix, but
+  capture separate artifacts dotnet_windows_report.tsv and
+  dotnet_linux_report.tsv with backing attribution per row
+  (backing=cng|openssl|managed). Feed same stimuli.tsv (199 vectors).
+  Prediction: identical verdicts across OSes (82 validity-class
+  CryptographicException + 9 size-class ArgumentException, 108 accepted)
+  because modulus check is performed in managed layer before OS dispatch,
+  not delegated. Killing observation: any vector where Linux accepts what
+  Windows rejects (or different error class).
+commands:
+  - "dotnet publish crypto/mlkem-input-checks/harnesses/dotnet_runner -c Release -o out-windows"
+  - "out-windows/dotnet_runner stimuli.tsv reports/dotnet_windows_report.tsv"
+  - "dotnet publish crypto/mlkem-input-checks/harnesses/dotnet_runner -c Release -o out-linux"
+  - "out-linux/dotnet_runner stimuli.tsv reports/dotnet_linux_report.tsv"
+compute_decision:
+  location: github-actions
+  isolation: github-runner
+  reason: "medium: requires both Windows and Linux runners for backing divergence; local Windows alone insufficient"
+determinism:
+  deterministic: true
+  seed_policy: import verdicts input-determined
+  nondeterminism_notes: null

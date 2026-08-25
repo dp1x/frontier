@@ -1,0 +1,52 @@
+id: exp-2026-0010
+type: experiment
+status: designed
+created_at: "2026-08-25T12:15:00Z"
+updated_at: "2026-08-25T12:15:00Z"
+summary: liboqs forced-ref backend invariance - rebuild 0.16.0 with MLKEM_NATIVE_BACKEND=ref vs runtime-selected native/avx2, same 199 vectors.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: ox-alpha
+    tool: frontier.compute.route
+  sources: [knowledge/hypotheses/hyp-2026-0002.yaml, knowledge/implementations/imp-2026-0002.yaml]
+  parent: msn-2026-0002
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0002]
+  implementations: [imp-2026-0002]
+title: liboqs forced-ref vs auto backend invariance
+design: >
+  Two builds of pinned liboqs 0.16.0 (vendored mlkem-native v1.2.0):
+  (A) default cmake with OQS_DIST_BUILD=ON (auto-select, logs avx2=1,
+  backend=native where AVX2+BMI2+POPCNT present, else ref) and (B) forced
+  reference with OQS_DIST_BUILD=OFF or per-arch
+  -DOQS_ENABLE_KEM_ml_kem_512_x86_64=OFF etc. (all three levels) - the
+  hypothesized -DMLKEM_NATIVE_BACKEND=ref does NOT exist, per archaeology
+  of CMakeLists.txt:23, .CMake/alg_support.cmake:562, src/kem/ml_kem/CMakeLists.txt.
+  On Windows ARM64 host, build A is already ref-only (no OQS_DIST_X86_64_BUILD);
+  true native vs ref comparison requires ubuntu-latest x86_64 runner. Each
+  links the same oqs_runner.c harness (patched to log oqs_avx2/bmi2/popcnt +
+  backend=ref|native) against oqs, iterating the 199-vector manifest through
+  OQS_KEM_encaps with deterministic LCG and logging META
+  backend. Prediction: identical tables (82 rejected non-canonical incl.
+  Wycheproof+congruent-plant, 108 accepted, 9 inexpressible) because
+  mlk_kem_check_pk at kem.c:39-71, called at 306-311 unconditionally across
+  all nine vendored ref/x86_64/aarch64 copies (SHA256 identical for kem.c).
+  Killing observation: any vector where ref and auto disagree, or per-k
+  divergence across k=512/768/1024.
+commands:
+  - "cmake -S liboqs -B build-auto -DOQS_MINIMAL_BUILD=\"KEM_ml_kem_512;KEM_ml_kem_768;KEM_ml_kem_1024\" -DOQS_DIST_BUILD=ON -DOQS_ENABLE_KEM_ml_kem_512_x86_64=ON -DOQS_ENABLE_KEM_ml_kem_768_x86_64=ON -DOQS_ENABLE_KEM_ml_kem_1024_x86_64=ON && cmake --build build-auto -j4"
+  - "cmake -S liboqs -B build-ref -DOQS_MINIMAL_BUILD=\"KEM_ml_kem_512;KEM_ml_kem_768;KEM_ml_kem_1024\" -DOQS_DIST_BUILD=OFF -DOQS_ENABLE_KEM_ml_kem_512_x86_64=OFF -DOQS_ENABLE_KEM_ml_kem_768_x86_64=OFF -DOQS_ENABLE_KEM_ml_kem_1024_x86_64=OFF -DOQS_ENABLE_KEM_ml_kem_512_aarch64=OFF -DOQS_ENABLE_KEM_ml_kem_768_aarch64=OFF -DOQS_ENABLE_KEM_ml_kem_1024_aarch64=OFF && cmake --build build-ref -j4"
+  - "gcc -O2 -Wall -I build-auto/include harnesses/oqs_runner.c build-auto/lib/liboqs.a -lcrypto -o oqs_auto_runner && ./oqs_auto_runner stimuli.tsv reports/oqs_auto_report.tsv"
+  - "gcc -O2 -Wall -DBACKEND_NAME=\"ref\" -I build-ref/include harnesses/oqs_runner.c build-ref/lib/liboqs.a -lcrypto -o oqs_ref_runner && ./oqs_ref_runner stimuli.tsv reports/oqs_ref_report.tsv"
+compute_decision:
+  location: github-actions
+  isolation: github-runner
+  reason: "lightweight builds (~30s) but matrix needs Windows+Linux and we lack local MSVC; public runner cheaper than local emulation"
+determinism:
+  deterministic: true
+  seed_policy: LCG fixed state; backend selection is only non-determinism source, logged
+  nondeterminism_notes: "auto backend depends on CPUID; logged as avx2= attribution"

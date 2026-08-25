@@ -1,0 +1,51 @@
+id: exp-2026-0008
+type: experiment
+status: designed
+created_at: "2026-08-25T12:15:00Z"
+updated_at: "2026-08-25T12:15:00Z"
+summary: OpenSSL 3.5.7 SPKI/DER import divergence probe - same 199 vectors through d2i_PUBKEY path vs raw import, default provider.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: ox-alpha
+    tool: frontier.compute.route
+  sources: [knowledge/hypotheses/hyp-2026-0002.yaml, knowledge/implementations/imp-2026-0003.yaml]
+  parent: msn-2026-0002
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0002]
+  implementations: [imp-2026-0003]
+title: OpenSSL raw-vs-SPKI invariance (default provider)
+design: >
+  Build pinned OpenSSL 3.5.7 as in exp-2026-0006 (Configure no-shared,
+  default provider). Exercise both import paths per vector via
+  harnesses/openssl_invar_runner.c: (A) EVP_PKEY_new_raw_public_key_ex
+  ("raw") and (B) d2i_PUBKEY of a DER-encoded SPKI wrapping the same raw
+  ek bytes. SPKI is 22-byte ASN.1 prefix (0x30 0x82 ...) hard-coded per
+  ML-KEM variant from providers/implementations/encode_decode/ml_kem_codecs.c:24-195
+  (ML_COMMON_SPKI_OVERHEAD 22, ml_common_codecs.h:29) plus raw ek as BIT
+  STRING payload; header checked at ml_kem_codecs.c:247 before the shared
+  ossl_ml_kem_parse_public_key → vector_decode_12 → scalar_decode_12
+  (ml_kem.c:1055-1071, reject if coeff >=3329). Log per-vector attribution:
+  format=raw|spki, provider=default, runtime_libcrypto version, import
+  verdict (import-accepted/ import-rejected with err:lib:reason), and on
+  success EVP_PKEY_encapsulate liveness. Prediction: verdicts identical
+  for every vector (both reject 91/91 malformed, both accept 108/108
+  canonical) because both paths converge on the same validator. Killing
+  observation: any cell where raw and SPKI disagree (e.g., SPKI accepts a
+  non-canonical ek that raw rejects).
+commands:
+  - "git clone --depth 1 --branch openssl-3.5.7 https://github.com/openssl/openssl.git openssl-src"
+  - "./Configure no-shared --prefix=$PWD/../openssl-install && make -j4 && make install_sw"
+  - "gcc -O2 -Wall -o openssl_spki_runner harnesses/openssl_spki_runner.c -I openssl-install/include -L openssl-install/lib64 -lcrypto -Wl,-rpath,$PWD/openssl-install/lib64"
+  - "./openssl_spki_runner ../crypto/mlkem-input-checks/stimuli/stimuli.tsv reports/openssl_spki_report.tsv"
+compute_decision:
+  location: github-actions
+  isolation: github-runner
+  reason: "medium: pinned OpenSSL build exceeds lightweight; reuse public runner, no secrets"
+determinism:
+  deterministic: true
+  seed_policy: import verdicts input-determined; no RNG
+  nondeterminism_notes: null
