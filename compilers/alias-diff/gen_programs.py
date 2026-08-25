@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 import sys
 from pathlib import Path
 from string import Template
@@ -33,6 +34,12 @@ VARIANTS_PER_FAMILY = 10
 MAX_LINES = 80
 
 MASK64 = (1 << 64) - 1
+
+# C float literals must carry a decimal point; ":g" would render 2.0 as "2"
+# and produce the invalid token "2f".
+def flit(x: float) -> str:
+    s = f"{x:g}"
+    return s if ("." in s or "e" in s) else s + ".0"
 
 
 def splitmix64(state: int) -> tuple[int, int]:
@@ -78,8 +85,8 @@ def derive_params(fam: str, var: int) -> dict:
         "K0": f"0x{rng.next() & 0xFFFFFFFF:08x}",
         "C1": f"0x{(rng.next() | 1) & 0x00FFFFFF:06x}",
         "C2": f"0x{(rng.next() % 61) + 1:02x}",
-        "AF": f"{af:g}",
-        "BF": f"{bf:g}",
+        "AF": flit(af),
+        "BF": flit(bf),
         "KD": f"0x{rng.next() & 0xFFFFFFFF:08x}",
         "KC": f"0x{rng.next() & 0xFFFFFFFF:08x}",
         "KM": f"0x{rng.next() & 0xFFFFFFFF:08x}",
@@ -237,6 +244,10 @@ def emit(outdir: Path) -> list[Path]:
             if digest in seen_hashes:
                 raise SystemExit(f"duplicate program content for {fam}-{var:02d}")
             seen_hashes.add(digest)
+            # A digit run starting a token and followed by 'f' means an
+            # integer constant got an FP suffix (e.g. "2f"); reject loudly.
+            if re.search(r"(?<![.\w])\d+f\b", text):
+                raise SystemExit(f"invalid float literal in {fam}-{var:02d}")
             path = outdir / f"{fam}-{var:02d}.c"
             path.write_text(text, encoding="ascii")
             written.append(path)
