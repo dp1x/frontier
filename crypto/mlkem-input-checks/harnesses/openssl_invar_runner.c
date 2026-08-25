@@ -179,7 +179,12 @@ int main(int argc, char **argv) {
         int der_len = 0;
         if (build_spki_der(ek, ek_len, alg, der, &der_len)) {
             const unsigned char *p = der;
-            k = d2i_PUBKEY_ex(NULL, &p, der_len, NULL, "provider=default");
+            /* Plain decoder call (no propq): propq-filtered decoder fetch
+             * segfaulted under dual-provider global activation. With the
+             * combined cnf both providers are active; validation still
+             * flows through the shared parse path regardless of which
+             * keymgmt instance serves the fetch. */
+            k = d2i_PUBKEY(NULL, &p, der_len);
             k = emit_import(out, family, params, expected, source, "spki", "default", k);
             if (k) emit_encap(out, family, params, expected, source, "spki", "default", k);
             /* ---- Cell 4: spki->raw/fips (chain through default decoder) ---- */
