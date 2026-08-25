@@ -239,9 +239,13 @@ theorem mul_add_mod {c a b : Nat} (hab : a < c) :
   rw [h, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hab]
 
 theorem coeff_div (i j : Nat) (hj : j < 12) : (12 * i + j) / 12 = i := by
+  have h : 12 * i + j = i * 12 + j := by ring
+  rw [h]
   exact mul_add_div (a := j) (b := i) (by omega) hj
 
 theorem coeff_mod (i j : Nat) (hj : j < 12) : (12 * i + j) % 12 = j := by
+  have h : 12 * i + j = i * 12 + j := by ring
+  rw [h]
   exact mul_add_mod (a := j) (b := i) hj
 
 /-! ## FIPS 203 model -/
