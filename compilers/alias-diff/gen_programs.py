@@ -90,6 +90,7 @@ def derive_params(fam: str, var: int) -> dict:
         "KD": f"0x{rng.next() & 0xFFFFFFFF:08x}",
         "KC": f"0x{rng.next() & 0xFFFFFFFF:08x}",
         "KM": f"0x{rng.next() & 0xFFFFFFFF:08x}",
+        "KE": f"0x{(rng.next() | 1) & 0xFFFFFFFF:08x}",
     }
 
 
@@ -137,7 +138,7 @@ $DECLS
         acc = mix(acc, opaque(UINT32_C($K0)) + i);
 $FILL
     }
-""")
+$INIT""")
 
 IDX_LINE = Template("        idx = opaque(UINT32_C($C1) * (nops + 1u)) % N;\n")
 
@@ -166,9 +167,11 @@ LOOP_BODY = {
         g_sink ^= cp[4u * idx + byt];
         acc = mix(acc, arr[idx] ^ UINT32_C($KM));"""),
     "d": Template("""\
-        *(uint32_t *)&fa[idx] = acc ^ UINT32_C($KD);
+        uint32_t *pp = (uint32_t *)&probe;
         touch(&fa[idx]);
-        g_sink ^= (uint32_t)(fa[idx] > 0.0f);
+        *(uint32_t *)&fa[idx] = acc ^ UINT32_C($KD);
+        *pp = acc ^ UINT32_C($KE);
+        acc = mix(acc, fbits(probe));
         acc = mix(acc, fbits(fa[idx] * ${AF}f + ${BF}f));"""),
     "ctl": Template("""\
         uint32_t nb = (idx + 1u) % N, t;
@@ -185,15 +188,25 @@ LOOP_BODY = {
 
 DECLS_FILL = {
     "a": ("    uint32_t bits[N];\n",
-          "        bits[i] = acc;\n"),
+          "        bits[i] = acc;\n",
+          ""),
     "b": ("    uint32_t bits[N];\n    union uf { uint32_t u; float f; };\n",
-          "        bits[i] = acc;\n"),
+          "        bits[i] = acc;\n",
+          ""),
     "c": ("    uint32_t arr[N];\n    unsigned char *cp = (unsigned char *)arr;\n",
-          "        arr[i] = acc;\n"),
-    "d": ("    float fa[N];\n",
-          "        uint32_t t = acc | UINT32_C(1);\n        memcpy(&fa[i], &t, sizeof t);\n"),
+          "        arr[i] = acc;\n",
+          ""),
+    # Scalar probe exists so the optimizer KNOWS *(uint32_t*)&probe and probe
+    # denote the same storage - the precondition for TBAA value forwarding.
+    "d": ("    float fa[N], probe;\n",
+          "        uint32_t t = acc | UINT32_C(1);\n        memcpy(&fa[i], &t, sizeof t);\n",
+          "    {\n"
+          "        uint32_t t0 = acc | UINT32_C(1);\n"
+          "        memcpy(&probe, &t0, sizeof t0);\n"
+          "    }\n"),
     "ctl": ("    uint32_t arr[N];\n    float fa[N];\n",
-            "        arr[i] = acc;\n        fa[i] = 0.0f;\n"),
+            "        arr[i] = acc;\n        fa[i] = 0.0f;\n",
+            ""),
 }
 
 FLAT_OPEN = "    for (k = 0; k < M; k++) {\n"
@@ -208,8 +221,9 @@ NESTED_CLOSE = "        }\n    }\n"
 def render(fam: str, var: int) -> str:
     p = derive_params(fam, var)
     parts = [PROLOGUE.substitute(p)]
-    decls, fill = DECLS_FILL[fam]
-    parts.append(MAIN_OPEN.substitute(dict(p, DECLS=decls.rstrip("\n"), FILL=fill.rstrip("\n"))))
+    decls, fill, init = DECLS_FILL[fam]
+    parts.append(MAIN_OPEN.substitute(dict(
+        p, DECLS=decls.rstrip("\n"), FILL=fill.rstrip("\n"), INIT=init)))
     body = IDX_LINE.substitute(p) + LOOP_BODY[fam].substitute(p) + "\n        nops++;\n"
     if p["SHAPE"] == "nested":
         parts.append(NESTED_OPEN.substitute(p))

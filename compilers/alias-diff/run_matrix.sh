@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ALIAS-DIFF execution matrix for msn-2026-0004 (strict-aliasing / effective type).
 #
-# For every generated program: compile under five configs
-#   gcc-O0  gcc-O2  gcc-O2-nostrict  clang-O2  clang-O2-nostrict
+# For every generated program: compile under seven configs
+#   gcc-O0  gcc-O2  gcc-O3  gcc-O2-nostrict  clang-O2  clang-O3  clang-O2-nostrict
 # run each binary with timeout 10s, sha256 its stdout, and classify against the
 # gcc -O0 baseline for the same program:
 #   BASELINE   first config (gcc -O0), defines expected exit|sha
@@ -26,13 +26,15 @@ command -v clang >/dev/null 2>&1 || { echo "FATAL|clang unavailable"; exit 1; }
 
 python3 "$SCRIPT_DIR/gen_programs.py" "$GEN_DIR" || exit 1
 
-CFG_IDS=(gcc-O0 gcc-O2 gcc-O2-nostrict clang-O2 clang-O2-nostrict)
-CCS=(gcc gcc gcc clang clang)
+CFG_IDS=(gcc-O0 gcc-O2 gcc-O3 gcc-O2-nostrict clang-O2 clang-O3 clang-O2-nostrict)
+CCS=(gcc gcc gcc gcc clang clang clang)
 # -ffp-contract=off everywhere so FMA contraction cannot fake divergences.
 FLAGS=("-std=c11 -O0 -ffp-contract=off"
        "-std=c11 -O2 -ffp-contract=off"
+       "-std=c11 -O3 -ffp-contract=off"
        "-std=c11 -O2 -fno-strict-aliasing -ffp-contract=off"
        "-std=c11 -O2 -ffp-contract=off"
+       "-std=c11 -O3 -ffp-contract=off"
        "-std=c11 -O2 -fno-strict-aliasing -ffp-contract=off")
 
 TMPBIN="$(mktemp -d)"
@@ -54,7 +56,7 @@ for SRC in "$GEN_DIR"/*.c; do
   VAR="${NAME##*-}"
   base_sha=""
   base_exit=""
-  for ci in 0 1 2 3 4; do
+  for ci in 0 1 2 3 4 5 6; do
     cfg="${CFG_IDS[$ci]}"
     BIN="$TMPBIN/${NAME}_${cfg}"
     if ! ${CCS[$ci]} ${FLAGS[$ci]} -o "$BIN" "$SRC" >"$TMPBIN/cc.log" 2>&1; then
