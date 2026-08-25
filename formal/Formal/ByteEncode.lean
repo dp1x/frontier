@@ -85,6 +85,7 @@ theorem wsum_bound {G : Nat → Nat} (hG : ∀ t, G t ≤ 1) :
       rw [wsum_succ]
       have hprev := wsum_bound hG N
       have hpow : (2 : Nat) ^ (N + 1) = 2 ^ N + 2 ^ N := by rw [Nat.pow_succ]; ring
+      have hGN : G N ≤ 1 := hG N
       rcases Nat.lt_or_ge (G N) 1 with h0 | h1
       · have hz : G N = 0 := by omega
         rw [hz, Nat.zero_mul, Nat.add_zero]
@@ -118,7 +119,9 @@ theorem bit_mod_succ (z S : Nat) : bit z S = bit (z % 2 ^ (S + 1)) S := by
   have hgen : ∀ K L r : Nat,
       2 ^ S * (2 * K + L) + r = 2 ^ (S + 1) * K + (2 ^ S * L + r) := by
     intro K L r
-    rw [Nat.mul_add, ← Nat.pow_succ, Nat.add_assoc]
+    have hpp : 2 ^ S * (2 * K) = 2 ^ (S + 1) * K := by
+      rw [Nat.pow_succ]; ring
+    rw [Nat.mul_add, hpp, Nat.add_assoc]
   have hmodE : z % 2 ^ (S + 1)
       = 2 ^ S * (z / 2 ^ S % 2) + z % 2 ^ S := by
     have hz := Nat.div_add_mod z (2 ^ S)
@@ -187,7 +190,7 @@ theorem eqOfBits_gen (u v : Nat) (N : Nat) (hu : u < 2 ^ N) (hv : v < 2 ^ N)
           rw [hre, div_shift (by omega)]
         have hstep : w / 2
             = 2 ^ s * (w / 2 ^ (s + 1)) + w % 2 ^ (s + 1) / 2 := by
-          conv_lhs => rw [hq, hgen2 (w / 2 ^ (s + 1)) (w % 2 ^ (s + 1))]
+          conv_lhs => rw [← hq, hgen2 (w / 2 ^ (s + 1)) (w % 2 ^ (s + 1))]
         have hquo : (w / 2) / 2 ^ s = w / 2 ^ (s + 1) := by
           rw [hstep, div_shift (two_pow_pos s)]
           have hr2 : w % 2 ^ (s + 1) / 2 / 2 ^ s = 0 := by
@@ -236,10 +239,10 @@ theorem mul_add_mod {c a b : Nat} (hab : a < c) :
   rw [h, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hab]
 
 theorem coeff_div (i j : Nat) (hj : j < 12) : (12 * i + j) / 12 = i := by
-  exact mul_add_div (by omega) hj
+  exact mul_add_div (a := j) (b := i) (by omega) hj
 
 theorem coeff_mod (i j : Nat) (hj : j < 12) : (12 * i + j) % 12 = j := by
-  exact mul_add_mod hj
+  exact mul_add_mod (a := j) (b := i) hj
 
 /-! ## FIPS 203 model -/
 
