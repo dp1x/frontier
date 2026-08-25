@@ -120,11 +120,20 @@ int main(int argc, char **argv) {
             OpenSSL_version(OPENSSL_VERSION), OPENSSL_VERSION_TEXT);
 
     fprintf(stderr, "stage: provider-load-fips\n");
-    OSSL_PROVIDER *fips_prov = OSSL_PROVIDER_load(NULL, "fips");
-    int fips_available = (fips_prov != NULL);
+    /* Isolate FIPS in its own libctx: global co-activation of fips+default
+     * segfaulted the SPKI decoder path (runs 5-7). The default context then
+     * behaves identically to the validated msn-2026-0001 configuration. */
+    OSSL_LIB_CTX *fips_ctx = OSSL_LIB_CTX_new();
+    OSSL_PROVIDER *fips_prov = NULL;
+    int fips_available = 0;
+    const char *fconf = getenv("OPENSSL_FIPS_CONF");
+    if (fips_ctx && fconf && OSSL_LIB_CTX_load_config(fips_ctx, fconf)) {
+        fips_prov = OSSL_PROVIDER_load(fips_ctx, "fips");
+        fips_available = (fips_prov != NULL);
+    }
+    ERR_clear_error();
     if (fips_available) {
-        fprintf(out, "META|fips_provider=loaded|status=available|name=%s\n",
-                OSSL_PROVIDER_get0_name(fips_prov));
+        fprintf(out, "META|fips_provider=loaded|status=available|mode=isolated-libctx\n");
     } else {
         unsigned long e = ERR_peek_error();
         fprintf(out, "META|fips_provider=not-loaded|status=unavailable|reason=%s\n",
@@ -199,7 +208,8 @@ int main(int argc, char **argv) {
                     fprintf(out, "%s|%s|%s|%s|format=spki|provider=fips|chain-extract-failed\n",
                             family, params, expected, source);
                 } else {
-                    EVP_PKEY *kf = EVP_PKEY_new_raw_public_key_ex(NULL, alg, "provider=fips", raw_back, raw_len);
+                    ERR_clear_error();
+                    EVP_PKEY *kf = EVP_PKEY_new_raw_public_key_ex(fips_ctx, alg, "provider=fips", raw_back, raw_len);
                     kf = emit_import(out, family, params, expected, source, "spki->raw", "fips", kf);
                     if (kf) emit_encap(out, family, params, expected, source, "spki->raw", "fips", kf);
                     EVP_PKEY_free(kf);
@@ -218,7 +228,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "stage: v%d raw/fips\n", total);
         if (fips_available) {
             ERR_clear_error();
-            EVP_PKEY *kf = EVP_PKEY_new_raw_public_key_ex(NULL, alg, "provider=fips", ek, (size_t)ek_len);
+            EVP_PKEY *kf = EVP_PKEY_new_raw_public_key_ex(fips_ctx, alg, "provider=fips", ek, (size_t)ek_len);
             kf = emit_import(out, family, params, expected, source, "raw", "fips", kf);
             if (kf) emit_encap(out, family, params, expected, source, "raw", "fips", kf);
             EVP_PKEY_free(kf);
