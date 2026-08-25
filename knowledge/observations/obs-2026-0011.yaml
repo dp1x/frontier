@@ -1,0 +1,53 @@
+id: obs-2026-0011
+type: observation
+status: recorded
+created_at: "2026-08-26T01:00:00Z"
+updated_at: "2026-08-26T01:00:00Z"
+summary: Go X25519MLKEM768 server aborts modulus-invalid client ek with illegal_parameter exactly as draft mandates; length truncation kills connection pre-alert; clean control succeeds.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer (completing rate-limited protocol agent)
+    model: ox-alpha
+    tool: exp-2026-0012 executed evidence + Go source citation
+  sources:
+    - exp-2026-0012
+    - interop/protocol-placement/go_loopback/reports/go_loopback_report.tsv
+    - https://raw.githubusercontent.com/golang/go/master/src/crypto/internal/fips140/mlkem/field.go
+  parent: msn-2026-0005
+  generation: 1
+links:
+  experiments: [exp-2026-0012]
+  implementations: [imp-2026-0004]
+title: Go TLS enforces s7.2 at handshake with illegal_parameter - SPECIFIED=IMPLEMENTED=EXECUTED
+statement: >
+  TLS-WIRE cell: planting a coefficient overflow (value q or 4095) into the
+  on-wire ML-KEM portion of the client X25519MLKEM768 key_share makes the
+  standard crypto/tls server abort with 'tls: invalid client key share' and
+  the client observe remote error 'tls: illegal parameter' - precisely the
+  alert mapping draft-ietf-tls-ecdhe-mlkem-05 s4.2 requires. Truncating the
+  ek by one byte fails the share-length check with 'unexpected EOF'
+  (connection torn down before any ML-KEM processing). Untouched control
+  completes. LIBRARY-PARSE cell shows the underlying boundary:
+  NewEncapsulationKey768 rejects the same overflow variants with the
+  distinct modulus-class error, length variants with length-class error,
+  and accepts seed-byte mutation (no rho over-validation) - matching
+  msn-2026-0001's Go row. Cited chain (not directly observed frame-by-frame):
+  crypto/tls -> NewEncapsulationKey768 -> parseEK -> polyByteDecode with
+  a >= q rejection (go/src/crypto/internal/fips140/mlkem/field.go:18).
+  Net assessment for msn-2026-0005's first stack: SPECIFIED (server MUST,
+  illegal_parameter), IMPLEMENTED (parse-time reject surfaced as that exact
+  alert), EXECUTED (wire tamper reproduced both). Single-bit-flip variant is
+  base-key-dependent: flips cross q only when the original coefficient's high
+  bits allow, recorded mixed rather than forced.
+environment:
+  where: local
+  isolation: env-scrubbed-scratch
+  cwd: interop/protocol-placement/go_loopback
+  versions:
+    go: "go1.26.4 windows/arm64"
+stdout: |
+  library-parse: canonical accepted | coeff0_eq_q / coeff0_eq_4095 / coeff255_4095 rejected(modulus) | truncate+append rejected(length) | seed_byte_set accepted
+  tls-wire: control success | coeff0_eq_q -> illegal_parameter | coeff0_eq_4095 -> illegal_parameter | coeff255_eq_4095 -> illegal_parameter | truncate -> EOF | bitflip_b0_xor80 -> base-key-dependent
+exit_code: 0

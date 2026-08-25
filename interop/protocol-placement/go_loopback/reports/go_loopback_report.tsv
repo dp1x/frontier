@@ -1,0 +1,14 @@
+library-parse|canonical|1184|accepted|-|-
+library-parse|coeff0_eq_q|1184|rejected|modulus|mlkem: invalid polynomial encoding
+library-parse|coeff0_eq_4095|1184|rejected|modulus|mlkem: invalid polynomial encoding
+library-parse|coeff255_4095|1184|rejected|modulus|mlkem: invalid polynomial encoding
+library-parse|seed_byte_set|1184|accepted|-|-
+library-parse|truncate_last_byte|1183|rejected|length|mlkem: invalid encapsulation key length
+library-parse|append_extra_byte|1185|rejected|length|mlkem: invalid encapsulation key length
+library-parse|bitflip_b0_xor80_n64|1184|mixed_accepted=64_rejected=0|base-key-dependent|single-bit flip crosses q only when original coeff0 high bits allow
+tls-wire|control|true;found=true;fragmented=false|success|none(handshake-succeeded)|cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=success;expectation=MET
+tls-wire|wire_coeff0_eq_q|true;found=true;fragmented=false|failure(server_err='tls: invalid client key share' client_err='remote error: tls: illegal parameter')|other: illegal parameter|cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=abort:illegal_parameter;expectation=UNMET
+tls-wire|wire_coeff0_eq_4095|true;found=true;fragmented=false|failure(server_err='tls: invalid client key share' client_err='remote error: tls: illegal parameter')|other: illegal parameter|cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=abort:illegal_parameter;expectation=UNMET
+tls-wire|wire_coeff255_eq_4095|true;found=true;fragmented=false|failure(server_err='tls: invalid client key share' client_err='remote error: tls: illegal parameter')|other: illegal parameter|cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=abort:illegal_parameter;expectation=UNMET
+tls-wire|truncate_last_byte|true;found=true;fragmented=false|failure(server_err='unexpected EOF' client_err='EOF')|no-alert-seen:EOF|cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=abort:illegal_parameter;expectation=UNMET
+tls-wire|wire_bitflip_b0_xor80|true;found=true;fragmented=false|failure(server_err='local error: tls: bad record MAC' client_err='local error: tls: bad record MAC')|no-alert-seen:local error: tls: bad record MAC|cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=indeterminate(base-key-dependent);expectation=?

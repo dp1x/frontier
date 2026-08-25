@@ -1,0 +1,45 @@
+id: exp-2026-0012
+type: experiment
+status: complete
+created_at: "2026-08-26T00:55:00Z"
+updated_at: "2026-08-26T00:55:00Z"
+summary: Go TLS loopback with on-wire key_share mutation - library-parse and tls-wire cells for canonical/modulus-overflow/length tamper variants of the client ML-KEM ek.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-agent (protocol placement)
+    model: ox-alpha
+    tool: go run (local, env-scrubbed scratch)
+  sources:
+    - https://datatracker.ietf.org/doc/html/draft-ietf-tls-ecdhe-mlkem
+    - interop/protocol-placement/go_loopback/main.go
+    - interop/protocol-placement/go_loopback/reports/go_loopback_report.tsv
+  parent: msn-2026-0005
+  generation: 1
+links:
+  implementations: [imp-2026-0004]
+  observations: [obs-2026-0011]
+title: Go X25519MLKEM768 wire-tamper loopback
+design: >
+  Two cells per tamper variant. Cell LIBRARY-PARSE: mlkem.NewEncapsulationKey768
+  on tampered ek bytes, recording accept/reject + error class. Cell TLS-WIRE:
+  full TLS 1.3 loopback over a mutating pipe - the mutator parses the
+  ClientHello key_share list, locates the 1216-byte X25519MLKEM768 entry,
+  rewrites the trailing 1184-byte ML-KEM ek portion in-place per variant
+  (coefficient overflow planted at byte offsets corresponding to decoded
+  coefficients 0/255 at values q and 4095; truncate; append; single-bit flip),
+  forwards to a standard crypto/tls server configured for X25519MLKEM768;
+  records handshake outcome and observed alert. Control = untouched share.
+  Oracle: draft-ietf-tls-ecdhe-mlkem-05 s4.2 requires the server to abort
+  with illegal_parameter when the s7.2 check fails.
+commands:
+  - "cd interop/protocol-placement/go_loopback && go run . reports/go_loopback_report.tsv"
+compute_decision:
+  location: local
+  isolation: env-scrubbed-scratch
+  reason: "lightweight deterministic loopback; no compilation matrix needed"
+determinism:
+  deterministic: true
+  seed_policy: fixed base key from Go crypto/mlkem generate + deterministic tamper map; single-bit-flip variant recorded as base-key-dependent
+  nondeterminism_notes: "bitflip_b0_xor80 outcome depends on whether original coeff0 high bits allow crossing q; recorded as mixed"
