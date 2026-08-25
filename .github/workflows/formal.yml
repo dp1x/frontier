@@ -1,0 +1,40 @@
+name: formal-verify
+
+# msn-2026-0003 FORMAL-203: Lean 4 kernel check of ByteEncode12 roundtrip.
+# Lightweight class: toolchain install + lake build on ubuntu-latest.
+# No secrets; contents: read.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "formal/**"
+      - .github/workflows/formal.yml
+
+permissions:
+  contents: read
+
+jobs:
+  lean-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install elan
+        run: |
+          curl -sSfL https://elan.lean-lang.org/elan-init.sh -o elan-init.sh
+          sh elan-init.sh -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+      - name: Build (kernel check)
+        working-directory: formal
+        run: |
+          elan toolchain install $(cat lean-toolchain)
+          lake build 2>&1 | tee build.log
+          echo "BUILD_EXIT=${PIPESTATUS[0]}"
+          test ${PIPESTATUS[0]} -eq 0
+          ! grep -q "declaration uses 'sorry'" build.log
+          ! grep -qi "error" build.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lean_build_log
+          path: formal/build.log
