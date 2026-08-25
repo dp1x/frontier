@@ -29,6 +29,10 @@ jobs:
         working-directory: formal
         run: |
           elan toolchain install $(cat lean-toolchain)
+          # no lake-manifest.json is committed: resolve deps, then fetch mathlib
+          # olean cache (building mathlib from source would exceed runner limits)
+          lake update
+          lake exe cache get!
           lake build 2>&1 | tee build.log
           echo "BUILD_EXIT=${PIPESTATUS[0]}"
           test ${PIPESTATUS[0]} -eq 0
