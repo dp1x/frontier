@@ -139,7 +139,10 @@ jobs:
             -I $OPENSSL_INSTALL/include -L $OPENSSL_INSTALL/lib64 -L $OPENSSL_INSTALL/lib -lcrypto \
             -Wl,-rpath,$OPENSSL_INSTALL/lib64 -Wl,-rpath,$OPENSSL_INSTALL/lib
       - name: Run fips-only comparison
+        env:
+          OPENSSL_FIPS_CONF: ${{ github.workspace }}/openssl-install/ssl/openssl-fips.cnf
         run: |
+          echo "FIPS conf: $OPENSSL_FIPS_CONF"; ls -la $OPENSSL_FIPS_CONF || true
           ./openssl_fips_runner crypto/mlkem-input-checks/stimuli/stimuli.tsv openssl_fips_report.tsv fips-only || echo "RUNNER_EXIT=$?" | tee runner_exit.txt
           grep META openssl_fips_report.tsv || true
           tail -4 openssl_fips_report.tsv || true
