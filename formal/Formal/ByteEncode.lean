@@ -4,9 +4,14 @@ modulus check (Eq. 7.1), machine-checked in Lean 4 + Mathlib.
 
 Mission msn-2026-0003 (FORMAL-203).  Normative source:
 `localdocs/refs/fips203.pdf` - Algorithm 5 (ByteEncode_d) and Algorithm 6
-(ByteDecode_d), printed p.22; BitsToBytes / BytesToBits p.20; the d = 12
-semantics paragraph pp.21-22; Section 7.2 encapsulation key check Eq (7.1),
-printed p.36.
+(ByteDecode_d), printed p.22 (PDF p.31); BitsToBytes / BytesToBits p.20; the
+d = 12 semantics paragraph pp.21-22; Section 7.2 encapsulation key check
+Eq (7.1), printed p.36 (PDF p.45).
+
+Scope disclosure: this model covers the MODULUS half of the Section 7.2
+check (Eq 7.1) only.  The LENGTH half of the type check (len(ek) = 384k+32,
+PDF p.45 step 1) is NOT formalized here; real implementations enforce it
+structurally via byte-array typing before Decode is reachable.
 
 Model.  A byte array is a function `Nat → Nat` (byte value by index).  Bytes
 are little-endian bit strings (Algorithm 4): global bit position `p` carries
