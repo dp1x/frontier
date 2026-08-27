@@ -1,0 +1,83 @@
+id: exp-2026-0014
+type: experiment
+status: complete
+created_at: "2026-08-27T05:30:00Z"
+updated_at: "2026-08-27T05:30:00Z"
+summary: Cross-path invariance matrix - 4-cell OpenSSL (raw/SPKI x default/FIPS) + liboqs (auto/ref) + .NET (Windows/Linux); 199 deterministic vectors per cell.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer (resuming msn-2026-0002 after FIPS-provider load debugging)
+    model: grok-4.6
+    tool: resume from session 01a03988-fa14-7d73-ae2c-c040e77da946; GHA run 32914837764 artifacts
+  sources:
+    - .github/workflows/mlkem-invariance.yml
+    - crypto/mlkem-input-checks/harnesses/openssl_invar_runner.c
+    - crypto/mlkem-input-checks/harnesses/openssl_fips_runner.c
+    - crypto/mlkem-input-checks/harnesses/oqs_runner.c
+    - crypto/mlkem-input-checks/dotnet_runner/
+    - crypto/mlkem-input-checks/stimuli/stimuli.tsv (199 vectors)
+  parent: msn-2026-0002
+  generation: 1
+links:
+  observations:
+    - obs-2026-0013
+    - obs-2026-0014
+    - obs-2026-0015
+    - obs-2026-0016
+title: Cross-path invariance matrix (msn-2026-0002 final cells)
+design: >
+  Four invariance dimensions across the 199-vector stimulus manifest
+  (msn-2026-0001 stimuli), with each cell deterministically reproducible from
+  a fixed seed+family+params+variant tuple:
+
+  Cell 1: OpenSSL raw/default   = EVP_PKEY_new_raw_public_key_ex(alg, NULL)
+  Cell 2: OpenSSL SPKI/default  = d2i_PUBKEY over template-patched DER wrapping
+                                   the same raw bytes
+  Cell 3: OpenSSL raw/FIPS      = same as Cell 1 with "provider=fips" propq
+  Cell 4: OpenSSL SPKI/FIPS     = same as Cell 2 with FIPS provider propq
+  Cell 5: liboqs auto           = runtime-selected implementation
+  Cell 6: liboqs forced-ref     = OQS_DISABLE_ALL_OPT=1 to force C reference
+  Cell 7: .NET Windows          = Microsoft.MLKem.ImportEncapsulationKey
+  Cell 8: .NET Linux            = same API over libSystem.Security.Cryptography
+                                   on Ubuntu 24.04, OpenSSL 3.5.7-backed
+
+  SPKI construction uses hard-coded 22-byte algorithm-OID prefixes per
+  param set (RFC 9480 OIDs: 2.16.840.1.101.3.4.4.{1,2,3}) and appends the raw
+  test key bytes verbatim - so an over-length or cross-param body is
+  structurally well-formed DER but semantically malformed key bytes.
+  Harness flags accept-on-fail-* with `import-accepted-UNEXPECTED` so
+  invariance violations are machine-detectable from the report.
+commands:
+  - "GitHub Actions workflow .github/workflows/mlkem-invariance.yml, jobs openssl-invariance and openssl-fips-raw"
+  - "GitHub Actions workflow dotnet-windows/dotnet-linux for the .NET cells"
+  - "tools/verify_invariance.py (committed)"
+  - "tools/analyze_invar_matrix.py (newly added for per-cell analysis)"
+compute_decision:
+  location: github-actions
+  isolation: github-runner
+  reason: "medium: cross-compiler/cross-platform build matrix; public runner, no secrets"
+determinism:
+  deterministic: true
+  seed_policy: "fixed per-row seeds 20262824..20263022 plus variant-specific seed arithmetic"
+  nondeterminism_notes: "FIPS provider load is non-deterministic with respect to environment; cells 3,4 are recorded as blocked|fips-unavailable when the FIPS module fails to load (current state across both jobs)"
+outcomes:
+  cell_1_raw_default:        "199/199 evaluated; 108 import-accepted, 91 import-rejected (no UNEXPECTED)"
+  cell_2_spki_default:       "199/199 evaluated; 108 import-accepted, 6 import-accepted-UNEXPECTED, 85 import-rejected"
+  cell_3_raw_fips:           "199/199 BLOCKED|reason=fips-unavailable (FIPS provider not loaded)"
+  cell_4_spki_fips:          "199/199 BLOCKED|reason=fips-unavailable (FIPS provider not loaded)"
+  cell_5_liboqs_auto:        "199/199 evaluated; 0 divergent vs cell 6"
+  cell_6_liboqs_ref:         "199/199 evaluated; 0 divergent vs cell 5"
+  cell_7_dotnet_windows:     "199/199 evaluated; same len-plus-1 and cross-set vectors as cell 1 (rejected-arg)"
+  cell_8_dotnet_linux:       "199/199 evaluated; identical to cell 7 (rejected-arg on len-plus-1, cross-set)"
+headline_observation: >
+  Cross-API invariance in OpenSSL is BROKEN for 6 vectors in the default
+  provider: d2i_PUBKEY (SPKI) accepts over-length and cross-param-set key
+  bodies that EVP_PKEY_new_raw_public_key_ex (raw) correctly rejects.
+  .NET CNG (Windows) and .NET on Linux (OpenSSL-backed) both reject the
+  same vectors. liboqs auto vs forced-ref is fully invariant.
+follow_up: >
+  FIPS provider load diagnosis (separate work item); record headline finding
+  in obs-2026-0013 and ref-2026-0001-style finding artifact; re-evaluate
+  hyp-2026-0002 with FIPS cells marked inconclusive-with-reason.

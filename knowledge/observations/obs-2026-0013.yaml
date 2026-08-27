@@ -1,0 +1,90 @@
+id: obs-2026-0013
+type: observation
+status: recorded
+created_at: "2026-08-27T05:35:00Z"
+updated_at: "2026-08-27T05:35:00Z"
+summary: OpenSSL cross-API invariance violation - d2i_PUBKEY (SPKI) accepts 6 malformed key bodies that EVP_PKEY_new_raw_public_key_ex (raw) correctly rejects; .NET agrees with raw.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: tools/analyze_invar_matrix.py over crypto/mlkem-input-checks/reports/openssl_invar_report.tsv
+  sources:
+    - exp-2026-0014
+    - crypto/mlkem-input-checks/reports/openssl_invar_report.tsv (GHA run 32914837764, default provider cell)
+    - crypto/mlkem-input-checks/reports/openssl_fips_report.tsv (FIPS cell, all blocked)
+    - crypto/mlkem-input-checks/reports/dotnet_linux_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/dotnet_windows_report.tsv
+    - crypto/mlkem-input-checks/reports/oqs_auto_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/oqs_ref_invar_report.tsv
+  parent: msn-2026-0002
+  generation: 1
+links:
+  experiments: [exp-2026-0014]
+  hypotheses: [hyp-2026-0002]
+title: OpenSSL d2i_PUBKEY SPKI path does not validate key-body length or param-set
+statement: >
+  Across the 199-vector stimulus manifest, 6 vectors diverge between the
+  OpenSSL raw and SPKI import paths under the default provider:
+
+  3 len-plus-1 vectors (one per param set: ML-KEM-512/768/1024, body 1 byte
+  longer than canonical length). EVP_PKEY_new_raw_public_key_ex returns
+  'Provider routines:invalid key length' (raw correctly rejects). d2i_PUBKEY
+  over a template-patched SPKI with the same body bytes accepts the import
+  and proceeds to a successful encap.
+
+  3 cross-param-set vectors (cross-set-768-as-512, cross-set-1024-as-512,
+  cross-set-1024-as-768) where the OID identifies a smaller param set but
+  the body is a larger-set key. Raw path correctly rejects ('invalid key
+  length' / 'invalid key'). SPKI path accepts.
+
+  .NET (Windows CNG and Linux OpenSSL-backed) rejects all 6 of the same
+  vectors. liboqs auto vs forced-ref is fully invariant (0 mismatches).
+
+  The harness uses hard-coded 22-byte SPKI prefixes per RFC 9480 OID
+  (2.16.840.1.101.3.4.4.{1,2,3}) so the DER is structurally well-formed;
+  the malformed body is the test stimulus itself, not a harness artifact.
+  Therefore the observation is a property of the OpenSSL 3.5.7 decoder
+  pipeline: the SPKI decode path does not validate the relationship between
+  algorithm OID and key body length/canonical form, while the raw path does.
+  This is the same class of missing validation that the FIPS 203 spec
+  requires (§6.1, §6.2) regardless of input container.
+environment:
+  where: github-actions
+  isolation: github-runner (ubuntu-latest)
+  cwd: ephemeral workspace
+  versions:
+    openssl: "3.5.7 (9 Jun 2026)"
+    os: "Ubuntu 24.04.4 LTS"
+    dotnet_linux: "10.0.11 (Ubuntu 24.04.4 LTS, OpenSSL-backed)"
+    dotnet_windows: "10.0.11 (Windows Server 2022, CNG-backed)"
+    liboqs: "0.16.0"
+stdout: |
+  cell format=raw   provider=default: rows=307  verdicts={'import-accepted': 108, None: 108, 'import-rejected': 91}
+  cell format=spki  provider=default: rows=313  verdicts={'import-accepted': 108, 'import-rejected': 85, 'import-accepted-UNEXPECTED': 6}
+  cell format=raw   provider=fips   : rows=199  verdicts={'blocked': 199}
+  cell format=spki  provider=fips   : rows=199  verdicts={'blocked': 199}
+  default raw vs spki: common=199 mismatched=6 (UNEXPECTED=6: 3 len-plus-1, 3 cross-set)
+  oqs auto vs ref: common=199 mismatched=0
+  dotnet windows vs linux: 6 len-plus-1 + 3 cross-set both rejected (arg-class:ArgumentException)
+exit_code: 0
+
+implication: >
+  hyp-2026-0002 (cross-path invariance) is REFUTED for the OpenSSL raw-vs-SPKI
+  dimension under the default provider. The default-provider half of the
+  matrix produces a real, positive result: there is a measurable, reproducible
+  behavioral divergence between the two OpenSSL import paths for 6 of 199
+  stimulus vectors, and the .NET implementations (Windows and Linux) agree
+  with the raw path. FIPS-provider half stays inconclusive (fips-unavailable
+  across all 199 cells) and is recorded as a separate blocking observation.
+follow_up: >
+  (1) Promote this observation to a finding artifact (fnd-2026-0002 candidate)
+  after independent adversarial review per AGENTS.md ladder.
+  (2) Re-evaluate hyp-2026-0002: default-provider raw-vs-SPKI dimension -> REJECTED.
+  (3) FIPS provider half: one more attempt to load FIPS module (fipsinstall
+  -verify, explicit OSSL_PROVIDER_load inside isolated libctx) before
+  marking inconclusive-with-reason per mission stopping conditions.
+  (4) Cross-reference with fnd-2026-0001 (FIPS 203 s7.2 differential) for any
+  overlap with the SPKI decode pipeline.

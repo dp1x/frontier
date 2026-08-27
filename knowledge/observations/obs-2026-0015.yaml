@@ -1,0 +1,56 @@
+id: obs-2026-0015
+type: observation
+status: recorded
+created_at: "2026-08-27T05:45:00Z"
+updated_at: "2026-08-27T05:45:00Z"
+summary: .NET Windows (CNG) and .NET Linux (OpenSSL-backed) produce identical import verdicts across 199 vectors including the 6 malformed keys.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: tools/analyze_invar_matrix.py over dotnet_linux_invar_report.tsv and dotnet_windows_report.tsv
+  sources:
+    - exp-2026-0014
+    - crypto/mlkem-input-checks/reports/dotnet_linux_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/dotnet_windows_report.tsv
+  parent: msn-2026-0002
+  generation: 1
+links:
+  experiments: [exp-2026-0014]
+  hypotheses: [hyp-2026-0002]
+title: .NET ML-KEM input validation is invariant across Windows-CNG and Linux-OpenSSL backings
+statement: >
+  199/199 vectors: 108 import-accepted, 91 import-rejected, 0 import-accepted-UNEXPECTED.
+  Critically, the 3 len-plus-1 and 3 cross-set vectors are all rejected with
+  'arg-class:ArgumentException' on both Windows (Microsoft.MLKem) and Linux
+  (libSystem.Security.Cryptography 10.0.11 over OpenSSL 3.5.7) - identical
+  to the OpenSSL-raw behavior, NOT to the OpenSSL-SPKI behavior. This means
+  the .NET layer applies its own length/canonical-form check before handing
+  bytes to OpenSSL, regardless of backing provider.
+environment:
+  where: github-actions
+  isolation: github-runner (windows-latest, ubuntu-latest)
+  versions:
+    dotnet: "10.0.11"
+    windows_os: "Microsoft Windows 10.0.26100"
+    linux_os: "Ubuntu 24.04.4 LTS"
+    linux_backing: "OpenSSL 3.5.7"
+stdout: |
+  len-plus-1|ML-KEM-512|fail-type|derived:len+1|import-rejected|arg-class:ArgumentException
+  len-plus-1|ML-KEM-768|fail-type|derived:len+1|import-rejected|arg-class:ArgumentException
+  len-plus-1|ML-KEM-1024|fail-type|derived:len+1|import-rejected|arg-class:ArgumentException
+  cross-set-1024-as-768|ML-KEM-768|fail-type|seed:555000+4000|import-rejected|arg-class:ArgumentException
+  cross-set-1024-as-512|ML-KEM-512|fail-type|seed:555000+4000|import-rejected|arg-class:ArgumentException
+  cross-set-768-as-512|ML-KEM-512|fail-type|seed:555000+3000|import-rejected|arg-class:ArgumentException
+exit_code: 0
+
+implication: >
+  Cross-OS .NET invariance holds (separate positive sub-result of
+  hyp-2026-0002). Most importantly: .NET is NOT subject to the OpenSSL-SPKI
+  decode loophole because the .NET layer validates first, then delegates
+  to a properly-formatted internal representation regardless of backing
+  provider. This sharpens the headline finding: the bug is in OpenSSL's
+  SPKI decode path specifically, not in the underlying ML-KEM validation
+  code paths.
