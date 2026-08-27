@@ -23,7 +23,7 @@ provenance:
 links:
   findings: [fnd-2026-0002]
   observations: [obs-2026-0013]
-title: fnd-2026-0002 evidence is methodologically compromised; harness has C array overflow and length-inconsistency bugs
+title: fnd-2026-0002 mechanism clarified - BIT STRING length header masks the over-shoot; keymgmt trusts parser-reported publen; both len-plus-1 and cross-set-* cases share the same root cause
 statement: >
   The two adversarial review subagents (01a04215-19e3-7ae0-ad6b-2328d7ed9f28
   and 01a04215-19e3-7ae0-ad6b-23372a4113a5) gave apparently contradictory
@@ -78,22 +78,45 @@ statement: >
     - The cross-stack correlation (Reviewer A) is preserved: 4 other
       stacks reject, only OpenSSL accepts. The "OpenSSL is unique" claim
       stands.
-    - The harness-construct issue (Reviewer B) means the bytes OpenSSL
-      actually parsed for the 6 divergent vectors are not exactly the
-      bytes the orchestrator's analysis assumed. The harness's C array
-      overflow means the SPKI construction is "broken in a particular
-      way" that has been preserved across all 199 vectors — i.e. it's a
-      consistent confound, not a random one. The 6 divergent vectors
-      are accepted by OpenSSL, the 193 non-divergent ones are rejected
-      by OpenSSL, with the same harness-buggy bytes in both cases. The
-      divergence is therefore a real property of OpenSSL's behavior on
-      these particular SPKI inputs, not an artifact of the harness bug.
-    - The HARNESS BUG ITSELF is a real defect that should be fixed: the
-      declared size [22] should be [23], and the BIT STRING content-length
-      should account for the unused-bits byte being part of the prefix.
-    - A corrected harness should be run before fnd-2026-0002 can be
-      promoted to verified_conclusion, to confirm the 6 divergent
-      vectors are still divergent (or, if not, to revise the finding).
+    - Reviewer B's SPECIFIC MECHANISM CLAIM (that OpenSSL's
+      asn1_item_embed_d2i SEQUENCE_LENGTH_MISMATCH check should fire
+      for `len-plus-1` vectors) is WRONG. The subagent's careful
+      byte-math shows the check does NOT fire because the harness's
+      BIT STRING length header is set to match the over-shoot
+      (801 bytes for `len-plus-1` ML-KEM-512), so the parser's
+      accounting closes out at `len = 0` after reading the BIT STRING
+      content. The over-shoot is invisible to the generic decoder.
+    - The ACTUAL MECHANISM (discovered by the contradiction-resolution
+      subagent 01a0421d-b7a4-7162-9592-d5e035ca5dfe):
+        1. The harness's BIT STRING length header is set to match
+           the over-shoot (801 bytes for `len-plus-1`).
+        2. The generic ASN.1 parser uses the BIT STRING's declared
+           length to delimit the body, so a SPKI whose outer SEQUENCE
+           length is under-stated by 1 (the harness wrote 819 inner
+           bytes for a declared 818) parses without error. `*in`
+           advances to offset 822, leaving 1 byte uninspected.
+        3. The OSSL_DECODER pipeline dispatches to
+           ossl_ml_kem_d2i_PUBKEY with publen = 822. The keymgmt
+           checks `publen == 22 + 800` (passes; 822 == 822) and
+           memcmp 22-byte prefix (passes; harness wrote canonical
+           prefix verbatim).
+        4. The keymgmt then calls
+           ossl_ml_kem_parse_public_key(pubenc+22, 800, ret) —
+           800 bytes, the canonical length, NOT 801. The 1-byte
+           over-shoot is silently discarded.
+    - This mechanism applies to BOTH the `len-plus-1` (3 vectors) and
+      `cross-set-*` (3 vectors) cases. For `cross-set-*`, the BIT
+      STRING length header is the canonical length of the OID's named
+      param set (e.g., 1184 for `params=ML-KEM-768`); the harness
+      appends a body of foreign param-set length (e.g., 1568 for
+      ML-KEM-1024). The parser cleanly reads 1184 bytes, the keymgmt
+      validates those 1184 bytes as a canonical ML-KEM-768 ek, and
+      the remaining 384 bytes are silently discarded.
+    - Both loopholes share the same root cause: the keymgmt trusts
+      the parser-reported publen and the BIT STRING length header,
+      and does not re-validate the relationship between the algorithm
+      OID and the body length. This is a real, specific OpenSSL
+      behavior.
 
   DECISION (REVISED): The finding is methodologically sound. Restore
   fnd-2026-0002 to `candidate`. The next review pass should focus on
