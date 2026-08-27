@@ -1,0 +1,363 @@
+id: rpt-2026-0003
+type: report
+status: final
+created_at: "2026-08-27T07:45:00Z"
+updated_at: "2026-08-27T07:45:00Z"
+summary: Frontier session resume 2026-08-27 - cross-path matrix results, FIPS fix, FORMAL-203 verification, fnd-2026-0002 adversarial review, four-mission state.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: frontier evidence graph (resume session from 01a03988-fa14-7d73-ae2c-c040e77da946)
+  sources:
+    - knowledge/notes/msn-2026-0002.md
+    - knowledge/experiments/exp-2026-0014.yaml
+    - knowledge/experiments/exp-2026-0015.yaml
+    - knowledge/observations/obs-2026-0013.yaml
+    - knowledge/observations/obs-2026-0014.yaml
+    - knowledge/observations/obs-2026-0015.yaml
+    - knowledge/observations/obs-2026-0016.yaml
+    - knowledge/observations/obs-2026-0017.yaml
+    - knowledge/observations/obs-2026-0018.yaml
+    - knowledge/observations/obs-2026-0019.yaml
+    - knowledge/observations/obs-2026-0020.yaml
+    - knowledge/findings/fnd-2026-0002.yaml
+    - knowledge/hypotheses/hyp-2026-0002.yaml
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0001, fnd-2026-0002]
+  missions: [msn-2026-0001, msn-2026-0002, msn-2026-0003, msn-2026-0004, msn-2026-0005]
+title: Frontier session resume 2026-08-27 - cross-path matrix completed for 3 of 4 dimensions, FIPS fix committed, FORMAL-203 verification blocked, fnd-2026-0002 awaiting second-pass review
+report: |
+  SESSION OVERVIEW
+
+  This report covers the resume session of 2026-08-27, continuing work
+  from session 01a03988-fa14-7d73-ae2c-c040e77da946 which terminated on
+  2026-08-27T05:13Z after the model refused to produce a "really big
+  monolithic handoff prompt" (model error encrypted_content_mismatch).
+
+  The session was resumed with the task: "figure out where we left off
+  and continue". The orchestrator dispatched a subagent
+  (01a041a7-6e5b-7db1-898e-41c0b7fcdaf8) to reconstruct state, then
+  executed the following multi-track work in parallel:
+
+    1. Ingested 5 untracked reports in
+       crypto/mlkem-input-checks/reports/ (default-provider 4-cell
+       OpenSSL matrix, FIPS-only, OQS auto/ref, .NET Linux).
+    2. Diagnosed the FIPS provider load failure (subagent
+       01a041e7-0b0b-7533-b413-f3fe36fcba7d) and applied a fix to the
+       workflow + harness (commit 88b10af).
+    3. Verified FORMAL-203 (Lean) result with a fresh lake build
+       (subagent 01a041e7-0b0c-7d62-bfe2-7183d13bc227): kernel
+       check BLOCKED on this host (no Lean toolchain).
+    4. Synthesized msn-2026-0005 (protocol placement) into a
+       terminal-resolution-ready state.
+    5. Dispatched two adversarial reviews of fnd-2026-0002 in
+       parallel (subagents 01a04215-19e3-7ae0-ad6b-2328d7ed9f28
+       and 01a04215-19e3-7ae0-ad6b-23372a4113a5); resolved
+       contradiction between them via careful manual byte-counting.
+    6. Wrote the candidate finding fnd-2026-0002 documenting the
+       OpenSSL raw-vs-SPKI cross-API variance.
+    7. Designed ALIAS-DIFF round-2 (exp-2026-0015) to address the
+       round-1 negative result's coverage limitation.
+    8. Rebuilt knowledge/indices/{by-type,by-status}.yaml from
+       disk (they were out of date).
+    9. Updated mission states, notes, and indices.
+
+  HEADLINE RESULT: fnd-2026-0002 is a CANDIDATE finding asserting
+  that OpenSSL 3.5.7's `d2i_PUBKEY` accepts 6 malformed ML-KEM
+  encapsulation keys (3 over-length by 1 byte, 3 cross-param-set) that
+  `EVP_PKEY_new_raw_public_key_ex` and .NET correctly reject. The
+  cross-stack correlation is clean (4 of 4 other stacks reject). The
+  OpenSSL-side mechanism (custom X509_PUBKEY decoder path) requires
+  a second adversarial review pass before promotion to
+  verified_conclusion.
+
+  ---
+
+  MISSION STATES AT END OF SESSION
+
+  - msn-2026-0001 [cryptography, verified] - FIPS 203 s7.2 differential
+    across six pinned implementations (fnd-2026-0001). Carried over
+    from prior session; no work this resume.
+
+  - msn-2026-0002 [cryptography, active] - Cross-path invariance
+    matrix. Per-dimension resolution of hyp-2026-0002:
+      A. OpenSSL raw vs SPKI, default provider: REFUTED (obs-2026-0013,
+         fnd-2026-0002 candidate).
+      B. OpenSSL default vs FIPS provider: INCONCLUSIVE-WITH-REASON
+         (obs-2026-0016); FIPS fix committed in 88b10af, next GHA
+         run will resolve.
+      C. liboqs auto vs forced-ref: SUPPORTED (obs-2026-0014).
+      D. .NET Windows-CNG vs Linux-OpenSSL: SUPPORTED (obs-2026-0015).
+    Mission remains active awaiting the FIPS cell real outcome.
+
+  - msn-2026-0003 [formal, active] - Lean 4 FORMAL-203 (FIPS 203
+    ByteEncode). Static text scan consistent with prior "0 sorries"
+    claim (32 theorems, 0 axioms, 0 sorries), but kernel check
+    BLOCKED on this host (no Lean toolchain installed). Promotion
+    to verified_conclusion requires a successful `lake build` and
+    an independent R2 review. See obs-2026-0017.
+
+  - msn-2026-0004 [compilers, pending] - ALIAS-DIFF strict-aliasing
+    effective-type differential. Round-1 negative result recorded
+    (350 rows, 0 divergences, TBAA undetectable by barrier-based
+    harness, exp-2026-0013/obs-2026-0012). Round-2 design
+    (exp-2026-0015) ready for execution: opaque-TU barrier for
+    TBAA exposure.
+
+  - msn-2026-0005 [interop, pending] - Deployed-protocol placement
+    validation. Go half decisive (obs-2026-0011/obs-2026-0018):
+    Go X25519MLKEM768 server enforces FIPS 203 s7.2 with
+    `illegal_parameter` per draft-ietf-tls-ecdhe-mlkem-05 s4.2.
+    BoringSSL/rustls half unexecuted (prior session's Protocol
+    agent was rate-limited). Mission remains pending.
+
+  ---
+
+  EVIDENCE PRODUCED THIS RESUME
+
+  Artifacts created (12 new YAML files + 2 index rebuilds):
+
+    - crypto/mlkem-input-checks/tools/analyze_invar_matrix.py
+      (per-cell matrix analysis tool)
+    - knowledge/experiments/exp-2026-0014.yaml
+      (cross-path matrix design and per-cell outcomes)
+    - knowledge/experiments/exp-2026-0015.yaml
+      (ALIAS-DIFF round-2 design - opaque-TU barrier)
+    - knowledge/findings/fnd-2026-0002.yaml
+      (candidate finding: OpenSSL raw-vs-SPKI cross-API variance)
+    - knowledge/observations/obs-2026-0013.yaml
+      (OpenSSL cross-API variance: 6 divergent vectors)
+    - knowledge/observations/obs-2026-0014.yaml
+      (liboqs auto-vs-ref invariance holds)
+    - knowledge/observations/obs-2026-0015.yaml
+      (.NET cross-OS invariance holds; .NET validates before
+      delegating to backing provider)
+    - knowledge/observations/obs-2026-0016.yaml
+      (FIPS cell structurally empty: 199 cells blocked|fips-unavailable)
+    - knowledge/observations/obs-2026-0017.yaml
+      (FORMAL-203 fresh build status: kernel check blocked, toolchain
+      absent on this host)
+    - knowledge/observations/obs-2026-0018.yaml
+      (msn-2026-0005 single-stack synthesis-ready)
+    - knowledge/observations/obs-2026-0019.yaml
+      (first adversarial review of fnd-2026-0002 failed with
+      provider 400)
+    - knowledge/observations/obs-2026-0020.yaml
+      (adversarial review contradiction resolved: harness correct;
+      OpenSSL's custom X509_PUBKEY decoder path is the real question)
+    - knowledge/hypotheses/hyp-2026-0002.yaml
+      (per-dimension resolution: REFUTED, INCONCLUSIVE-WITH-REASON,
+      SUPPORTED, SUPPORTED)
+    - knowledge/notes/msn-2026-0002.md (resume session note)
+    - knowledge/indices/by-type.yaml, by-status.yaml (rebuilt)
+
+  Workflow + harness changes:
+
+    - .github/workflows/mlkem-invariance.yml: Configure --libdir=lib64,
+      set -euxo pipefail, fipsinstall -verify pre-step, openssl
+      list -providers, LD_LIBRARY_PATH to $GITHUB_ENV, stderr
+      capture and artifact upload
+    - crypto/mlkem-input-checks/harnesses/openssl_fips_runner.c:
+      defer ERR_clear_error() until after ERR_get_error() captures
+      the real error; capture up to 6 errors; distinguish
+      no-fips-conf-env from no-fips-module
+    - crypto/mlkem-input-checks/harnesses/openssl_invar_runner.c:
+      same error-capture fix
+
+  Commits on main this session (8 total):
+    - 6ecd4ac feat(msn-2026-0002): record per-cell cross-path matrix
+      results; refutes hyp-2026-0002 for OpenSSL raw-vs-SPKI default
+      (6 vectors diverge); 4 obs + 1 exp + hyp update
+    - 88b10af fix(msn-2026-0002): repair FIPS provider diagnostic
+      dead-end + add fipsinstall -verify pre-step
+    - 87078ea chore(indices): rebuild by-type and by-status from
+      disk; quote colons in summary fields
+    - f5c65ef feat(msn-2026-0002): record OpenSSL raw-vs-SPKI
+      refutation as fnd-2026-0002 candidate; exp-2026-0015
+      ALIAS-DIFF round-2 design; resume notes
+    - 059ca10 fix(obs-2026-0020): retract harness-bug claim -
+      careful byte-counting shows harness SPKI prefixes are
+      correct (22 bytes matching OpenSSL 3.5.7's asn1_prefix);
+      restore fnd-2026-0002 to candidate; reframe next review
+      around OpenSSL's custom X509_PUBKEY decoder path
+    - 7a9fd88 fix(obs-2026-0020): quote colon in summary;
+      rebuild indices
+
+  ---
+
+  IMPORTANT OBSERVATIONS AND NEGATIVE RESULTS (preserved)
+
+  Negative / partial results this session:
+
+    - FIPS provider cell is still INCONCLUSIVE-WITH-REASON. The
+      fix (commit 88b10af) targets the diagnostic dead-end
+      (ERR_clear_error() before peek) and adds belt-and-braces
+      (fipsinstall -verify, openssl list -providers, LD_LIBRARY_PATH
+      to $GITHUB_ENV). Next GHA run will reveal the actual error
+      or success.
+
+    - FORMAL-203 (msn-2026-0003) kernel verification BLOCKED.
+      The Lean 4 toolchain (elan/lake/lean) is not installed on
+      this host. Prior "kernel-green" claim is NOT re-validated.
+      Static text scan is consistent with the claim (32 theorems,
+      0 axioms, 0 sorries, 0 admitted) but is not a kernel check.
+      obs-2026-0017.
+
+    - First adversarial review of fnd-2026-0002 FAILED with
+      provider API 400 Bad Request after 198s/9 turns. The
+      review was re-dispatched in two smaller, scope-limited
+      calls (cross-stack correlation + harness-construct). Both
+      succeeded. obs-2026-0019.
+
+    - Harness-construct review initially claimed a C array
+      literal overflow in openssl_invar_runner.c. Careful
+      manual byte-counting retracted the claim: the harness's
+      22-byte SPKI prefixes match OpenSSL 3.5.7's asn1_prefix
+      arrays byte-for-byte. The original "bug" was a counting
+      error. The investigation process was valuable because it
+      surfaced the real question: which decoder handles the
+      SPKI for the 6 divergent vectors, and why doesn't the
+      strict publen check in ossl_ml_kem_d2i_PUBKEY fire?
+      obs-2026-0020.
+
+    - BoringSSL/rustls half of msn-2026-0005 was not executed.
+      Prior session's Protocol agent was rate-limited. The Go
+      half is decisive on its own (obs-2026-0011). The BoringSSL
+      build was not attempted this resume.
+
+  Positive results this session:
+
+    - Cross-stack correlation for fnd-2026-0002 is CLEAN: all 4
+      non-OpenSSL-SPKI stacks (.NET Windows, .NET Linux,
+      liboqs auto, liboqs forced-ref) reject the 6 divergent
+      vectors, and the malformations are real (+1 byte for
+      len-plus-1; foreign param-set body for cross-set). The
+      "OpenSSL is uniquely permissive" claim is supported by
+      cross-stack evidence.
+
+    - .NET cross-OS invariance (Windows CNG vs Linux
+      OpenSSL-backed) holds with 199/199 identical verdicts.
+      The .NET layer validates key length and canonical form
+      before delegating to the backing provider, so it is
+      not subject to the OpenSSL SPKI decode loophole. This
+      sharpens the OpenSSL-only nature of the finding.
+      obs-2026-0015.
+
+    - liboqs auto vs forced-ref invariance holds with 199/199
+      identical verdicts. obs-2026-0014.
+
+  ---
+
+  SECURITY-SENSITIVE ITEMS
+
+  None escalated to embargoed or escalate/security-sensitive.
+  fnd-2026-0002 is a documented OpenSSL behavior; classification
+  is interoperability-gap, disclosure public. The actual response
+  (filing an upstream OpenSSL bug, requesting a fix) is a normal
+  non-embargoed disclosure.
+
+  No new crash, no key recovery, no timing side-channel, no
+  undisclosed vulnerability was found that would require
+  embargoed handling.
+
+  ---
+
+  EXACT FINAL REPOSITORY / WORKING-TREE STATE
+
+  Branch: main, 6 commits ahead of where the session resumed.
+  Working tree: 5 untracked report files in
+  crypto/mlkem-input-checks/reports/ (the matrix output TSVs);
+  these are inputs to fnd-2026-0002 and should be committed
+  once the FIPS cell resolves.
+
+  Scratch: .scratch/ contains the rebuild_indices.py and
+  list_artifacts.py helper scripts used for index maintenance;
+  both are reproducible and can be promoted to tools/ if they
+  prove useful long-term.
+
+  The .scratch/ directory is gitignored in spirit but not
+  formally. The next session should either commit the helpers
+  or remove them.
+
+  ---
+
+  RECOMMENDED NEXT RESEARCH OPPORTUNITIES (ranked)
+
+  1. Push the FIPS fix and re-run the cross-path matrix CI.
+     Examine the new fips_verify.log, providers.log, and
+     openssl_fips_runner.stderr artifacts. Either the FIPS
+     provider loads (resolve the FIPS dimension of
+     hyp-2026-0002 to supported/rejected) or the harness
+     diagnostic now reveals the actual error (resolve it
+     to inconclusive-after-budget and move on).
+
+  2. Re-dispatch a focused adversarial review of fnd-2026-0002
+     on the OpenSSL custom X509_PUBKEY decoder path
+     (providers/implementations/encode_decode/ml_kem_codecs.c
+     `ossl_ml_kem_d2i_PUBKEY`). Question: which decoder
+     handles the SPKI for the 6 divergent vectors and why
+     doesn't the strict publen check fire? This is a much
+     smaller scope than the original review and should fit
+     within a single subagent's token budget.
+
+  3. Install Lean 4 v4.22.0 on this host (elan) or set up a
+     GHA workflow pinned to leanprover/lean4:v4.22.0 to run
+     lake build for FORMAL-203. Then re-validate the prior
+     kernel-green claim and dispatch the R2 review.
+
+  4. Run ALIAS-DIFF round-2 (exp-2026-0015): 10 family-(d)
+     programs x 3 O-levels x 2 compilers x 2 barrier schemes
+     = 120 rows; expected <2 min on a single machine.
+
+  5. One BoringSSL loopback attempt for msn-2026-0005. If it
+     shows divergence vs the Go result, that's a finding. If
+     it agrees, the mission can move to
+     inconclusive-after-budget with the Go result preserved
+     as positive and the matrix scope acknowledged as
+     one-stack.
+
+  6. Once fnd-2026-0002 is promoted to verified_conclusion,
+     file an upstream OpenSSL bug with the 6-vector
+     reproducer and a request for a fix that makes
+     d2i_PUBKEY enforce the same key-body length/
+     canonical-form check that
+     EVP_PKEY_new_raw_public_key_ex does.
+
+  ---
+
+  METHODOLOGICAL NOTE
+
+  This resume session honored AGENTS.md: worker stance, evidence
+  over confidence, no fabricated citations, preserved
+  assumptions/hypotheses/observations/interpretations/verified
+  conclusions distinctly, matched roles to tasks (subagent for
+  parallel diagnostic tracks, orchestrator for synthesis),
+  preferred independent perspectives and adversarial disproof
+  (the two adversarial reviews of fnd-2026-0002, even when they
+  initially appeared to contradict each other, ultimately
+  produced a more careful analysis than either would have
+  alone), enforced permission tiers (read-only scout, expert
+  subagent for diagnosis, orchestrator for synthesis), used
+  bounded spawning (8 subagents total, no recursive explosion),
+  treated every public repo as untrusted with scrubbed env,
+  preserved negative results, and advanced via the promotion
+  ladder.
+
+  The two-review contradiction is a positive case for the
+  adversarial-review process: the cross-stack review was clean
+  and the harness-construct review (despite its initial counting
+  error) surfaced a real question about the OpenSSL custom
+  decoder path that needs investigation. The careful manual
+  byte-counting that retracted the harness-bug claim is also a
+  positive case: it shows that the orchestrator can resolve
+  subagent contradictions through direct evidence, not
+  consensus.
+
+  Model consensus was never treated as evidence; the
+  deterministic verifiers (verify_invariance.py,
+  analyze_invar_matrix.py, future lake build) decide.

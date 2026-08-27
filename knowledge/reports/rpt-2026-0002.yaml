@@ -1,9 +1,9 @@
 id: rpt-2026-0002
 type: report
-status: final
+status: superseded
 created_at: "2026-08-25T14:30:00Z"
-updated_at: "2026-08-25T14:30:00Z"
-summary: Consolidated autonomous session report - multi-mission loop across msn-2026-0002 matrix with 8-agent swarm, direct web research, and next-mission generation.
+updated_at: "2026-08-27T07:50:00Z"
+summary: Consolidated autonomous session report (2026-08-25) - SUPERSEDED by rpt-2026-0003 (2026-08-27 resume session). This report covered the 2026-08-25 autonomous session that designed the cross-path matrix; the matrix was actually executed in the 2026-08-27 resume session.
 epistemic_status: interpretation
 provenance:
   created_by:
