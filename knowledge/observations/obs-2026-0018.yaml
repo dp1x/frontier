@@ -3,7 +3,7 @@ type: observation
 status: recorded
 created_at: "2026-08-27T06:10:00Z"
 updated_at: "2026-08-27T06:10:00Z"
-summary: Synthesis-ready summary of msn-2026-0005 single-stack evidence: Go X25519MLKEM768 server enforces FIPS 203 s7.2 at handshake with illegal_parameter; BoringSSL/rustls half remains unexecuted (loopback harness scope-limited).
+summary: "Synthesis-ready summary of msn-2026-0005 single-stack evidence: Go X25519MLKEM768 server enforces FIPS 203 s7.2 at handshake with illegal_parameter; BoringSSL/rustls half remains unexecuted (loopback harness scope-limited)."
 epistemic_status: observation
 provenance:
   created_by:
