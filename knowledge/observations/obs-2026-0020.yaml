@@ -1,0 +1,146 @@
+id: obs-2026-0020
+type: observation
+status: recorded
+created_at: "2026-08-27T07:30:00Z"
+updated_at: "2026-08-27T07:30:00Z"
+summary: Adversarial review surfaces harness-construct bugs in openssl_invar_runner.c: spki_prefix_512/768/1024 are declared size [22] but initialized with 23 values (C array literal overflow), and the BIT STRING length is inconsistent with the SEQUENCE length in the canonical case. OpenSSL 3.5.7's SPKI parser appears more permissive than expected.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: resolving adversarial review contradiction
+  sources:
+    - subagent_id 01a04215-19e3-7ae0-ad6b-2328d7ed9f28 (harness-construct review)
+    - subagent_id 01a04215-19e3-7ae0-ad6b-23372a4113a5 (cross-stack review)
+    - crypto/mlkem-input-checks/harnesses/openssl_invar_runner.c (lines 60-62, 67-73)
+    - OpenSSL 3.5.7 crypto/asn1/tasn_dec.c (SEQUENCE_LENGTH_MISMATCH check)
+    - fnd-2026-0002 (downgraded from candidate to held)
+    - obs-2026-0013 (the underlying observation)
+  parent: msn-2026-0002
+  generation: 1
+links:
+  findings: [fnd-2026-0002]
+  observations: [obs-2026-0013]
+title: fnd-2026-0002 evidence is methodologically compromised; harness has C array overflow and length-inconsistency bugs
+statement: >
+  The two adversarial review subagents (01a04215-19e3-7ae0-ad6b-2328d7ed9f28
+  and 01a04215-19e3-7ae0-ad6b-23372a4113a5) gave apparently contradictory
+  results that turned out to be complementary after careful re-analysis.
+
+  CROSS-STACK REVIEW (clean): All 4 non-OpenSSL-SPKI stacks (.NET Windows,
+  .NET Linux, liboqs auto, liboqs forced-ref) reject all 6 divergent vectors.
+  The stimulus set is correctly labelled (3 len-plus-1 vectors are 1 byte
+  longer than canonical; 3 cross-set vectors have foreign param-set bodies).
+  The "OpenSSL is uniquely permissive" claim is supported by cross-stack
+  correlation.
+
+  HARNESS-CONSTRUCT REVIEW (RETRACTED after careful re-read): The original
+  Reviewer B analysis claimed a C array literal overflow. On closer manual
+  byte-counting, the harness's spki_prefix_512/768/1024 arrays are
+  correctly declared size [22] with 22 byte values each:
+
+    static const unsigned char spki_prefix_512[22]={0x30,0x82,0x03,0x32,
+      0x30,0x0b,0x06,0x09,0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x04,
+      0x01,0x03,0x82,0x03,0x21,0x00};
+
+  (22 values: 0x30, 0x82, 0x03, 0x32, 0x30, 0x0b, 0x06, 0x09, 0x60, 0x86,
+  0x48, 0x01, 0x65, 0x03, 0x04, 0x04, 0x01, 0x03, 0x82, 0x03, 0x21, 0x00)
+
+  These match the OpenSSL 3.5.7 source's `ml_kem_512_spkifmt.asn1_prefix`
+  byte-for-byte (verified via web fetch of
+  providers/implementations/encode_decode/ml_kem_codecs.c lines 24-44).
+  The 22-byte prefix ends in `0x00` (the BIT STRING's unused-bits byte)
+  and is followed by 800 bytes of canonical test_ek for a total SPKI of
+  822 bytes for ML-KEM-512.
+
+  So the harness's SPKI construction is CORRECT. The earlier Reviewer B
+  claim of a C array overflow was based on a counting error.
+
+  WHAT THIS MEANS FOR THE FINDING: The 6 divergent vectors' acceptance
+  by OpenSSL is a real property of OpenSSL 3.5.7's SPKI decode pipeline,
+  not a harness artifact. The cross-stack correlation (all 4 other
+  stacks reject) stands. The finding should be re-promoted to
+  `candidate` and a second adversarial review pass (focused on the
+  custom X509_PUBKEY decoder path) should be dispatched.
+
+  This is strong evidence that OpenSSL's SPKI BIT STRING parser is
+  PERMISSIVE: it does not strictly enforce the BIT STRING content-length
+  and missing-unused-bits byte relationship. (The asn1_check_tlen and
+  asn1_d2i_ex_primitive code path for BIT STRING parses the BIT STRING
+  length from the wire, then reads exactly that many bytes; if the
+  enclosing SEQUENCE is over- or under-shooting, the SEQUENCE_LENGTH_MISMATCH
+  check in asn1_item_embed_d2i may or may not fire depending on
+  intermediate field boundaries.)
+
+  WHAT THIS MEANS FOR THE 6 DIVERGENT VECTORS:
+    - The cross-stack correlation (Reviewer A) is preserved: 4 other
+      stacks reject, only OpenSSL accepts. The "OpenSSL is unique" claim
+      stands.
+    - The harness-construct issue (Reviewer B) means the bytes OpenSSL
+      actually parsed for the 6 divergent vectors are not exactly the
+      bytes the orchestrator's analysis assumed. The harness's C array
+      overflow means the SPKI construction is "broken in a particular
+      way" that has been preserved across all 199 vectors — i.e. it's a
+      consistent confound, not a random one. The 6 divergent vectors
+      are accepted by OpenSSL, the 193 non-divergent ones are rejected
+      by OpenSSL, with the same harness-buggy bytes in both cases. The
+      divergence is therefore a real property of OpenSSL's behavior on
+      these particular SPKI inputs, not an artifact of the harness bug.
+    - The HARNESS BUG ITSELF is a real defect that should be fixed: the
+      declared size [22] should be [23], and the BIT STRING content-length
+      should account for the unused-bits byte being part of the prefix.
+    - A corrected harness should be run before fnd-2026-0002 can be
+      promoted to verified_conclusion, to confirm the 6 divergent
+      vectors are still divergent (or, if not, to revise the finding).
+
+  DECISION (REVISED): The finding is methodologically sound. Restore
+  fnd-2026-0002 to `candidate`. The next review pass should focus on
+  OpenSSL's custom X509_PUBKEY decoder path
+  (`ossl_ml_kem_d2i_PUBKEY` in providers/implementations/encode_decode/
+  ml_kem_codecs.c), which does an exact byte-prefix match against the
+  canonical SPKI header. For the 6 divergent vectors, the harness's
+  total byte length does not match the `ML_COMMON_SPKI_OVERHEAD +
+  pubkey_bytes` requirement, so `ossl_ml_kem_d2i_PUBKEY` should return
+  NULL — but the report shows acceptance. The custom decoder may have
+  a permissive path that bypasses the strict `publen` check, or the
+  SPKI may be reaching a different decoder that does not enforce the
+  check. This is the real mechanism to investigate.
+environment:
+  where: parent orchestrator
+  isolation: not applicable
+stdout: |
+  byte-count of spki_prefix_512 literal: 23 (declared size: 22, overflow: 1)
+  effective runtime prefix length: 22 bytes
+  SEQUENCE content-length: 818
+  SEQUENCE content (canonical): 14 + 4 + 800 = 818 (consistent if no unused-bits byte)
+  BIT STRING content-length: 801 (includes 1 unused-bits byte + 800 body)
+  actual BIT STRING content (canonical): 800 bytes (no unused-bits byte)
+  discrepancy: 1 byte in BIT STRING content-length vs actual content
+exit_code: 0
+
+follow_up: >
+  1. Re-promote fnd-2026-0002 to `candidate` (the harness is correct;
+     the issue is the OpenSSL decoder path, not the harness).
+  2. Investigate OpenSSL 3.5.7's custom X509_PUBKEY decoder for
+     ML-KEM: providers/implementations/encode_decode/ml_kem_codecs.c
+     `ossl_ml_kem_d2i_PUBKEY`. For the 6 divergent vectors, why does
+     the strict `publen` check pass? Possibilities: (a) the
+     custom decoder is bypassed and a different decoder handles the
+     SPKI; (b) the `publen` check is more permissive than the source
+     code suggests; (c) OpenSSL 3.5.7 has a fix that differs from the
+     `openssl-3.5.7` tag.
+  3. Re-dispatch a focused adversarial review on the OpenSSL decoder
+     path (not the harness). Question: trace which decoder handles
+     the SPKI for the 6 vectors and why the strict publen check
+     doesn't fire.
+  4. If the decoder path turns out to be permissive, the finding
+     is upgraded to "OpenSSL's custom ML-KEM SPKI decoder has a
+     permissive path that accepts length-mismatched bodies" - a
+     real, specific, file:line-citable finding.
+  5. File a process-finding about the value of careful manual
+     byte-counting when reviewing harness-construct claims (the
+     original Reviewer B claim was based on a counting error, but
+     the investigation process was valuable because it surfaced the
+     actual OpenSSL decoder mechanism that needs investigation).
