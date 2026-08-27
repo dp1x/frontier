@@ -1,0 +1,48 @@
+id: obs-2026-0014
+type: observation
+status: recorded
+created_at: "2026-08-27T05:40:00Z"
+updated_at: "2026-08-27T05:40:00Z"
+summary: liboqs auto vs forced-ref is fully invariant across 199 vectors; backend selection does not change import or encap verdict.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: tools/analyze_invar_matrix.py over oqs_auto_invar_report.tsv and oqs_ref_invar_report.tsv
+  sources:
+    - exp-2026-0014
+    - crypto/mlkem-input-checks/reports/oqs_auto_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/oqs_ref_invar_report.tsv
+  parent: msn-2026-0002
+  generation: 1
+links:
+  experiments: [exp-2026-0014]
+  hypotheses: [hyp-2026-0002]
+title: liboqs backend invariance holds (auto vs forced-ref)
+statement: >
+  199/199 vectors have identical import verdicts between the runtime-selected
+  (AVX2/BMI2/POPCNT native) backend and the C reference backend. Both produce
+  accepted/import-rejected decisions consistent with the raw OpenSSL cell for
+  shared vectors; cross-set and len-plus-1 vectors that OpenSSL raw rejects
+  are also rejected by liboqs both backends. Backend selection does not
+  observably change input validation, contrary to a possible hypothesis that
+  the optimized backend might skip a redundant canonical-form check.
+environment:
+  where: github-actions
+  isolation: github-runner (ubuntu-latest)
+  versions:
+    liboqs: "0.16.0"
+    mlkem_native: "0ba906c"
+  backends:
+    auto: "avx2=1, bmi2=1, popcnt=1, backend=native"
+    ref:  "avx2=1, bmi2=0, popcnt=0, backend=ref (forced via OQS_DISABLE_ALL_OPT=1)"
+stdout: |
+  auto rows=199; ref rows=199; common=199 mismatched=0
+exit_code: 0
+
+implication: >
+  Provides positive evidence for the backend-selection sub-dimension of
+  hyp-2026-0002 - this is one of the four invariance dimensions the matrix
+  is designed to probe, and it holds.

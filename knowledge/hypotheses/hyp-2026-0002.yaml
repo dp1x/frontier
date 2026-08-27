@@ -1,11 +1,9 @@
 id: hyp-2026-0002
 type: hypothesis
-status: inconclusive
+status: refuted
 created_at: "2026-08-24T11:45:00Z"
-updated_at: "2026-08-25T01:05:00Z"
-summary: Partially exercised - backend/format/provider invariance held wherever tested (liboqs runtime-selected backend logged avx2=1; .NET CNG backing; OpenSSL raw import) but forced-ref rebuilds, DER/SPKI format matrix, FIPS-provider probe, and non-Windows .NET backings were not executed.
-epistemic_status: interpretation
-summary: Check outcomes are invariant across a library's internal paths (liboqs backends, OpenSSL raw-vs-DER import and provider, .NET backing variants).
+updated_at: "2026-08-27T05:55:00Z"
+summary: Per-dimension resolution: OpenSSL raw-vs-SPKI default REJECTED (6 vectors diverge); FIPS provider INCONCLUSIVE-WITH-REASON (fips-unavailable); liboqs auto-vs-ref SUPPORTED (0 mismatches); .NET Windows-vs-Linux SUPPORTED (0 mismatches).
 epistemic_status: hypothesis
 provenance:
   created_by:
@@ -18,29 +16,55 @@ provenance:
   generation: 0
 links:
   implementations: [imp-2026-0002, imp-2026-0003, imp-2026-0006]
-title: H-B2 backend/import-format/provider divergence
+  experiments: [exp-2026-0003, exp-2026-0006, exp-2026-0007, exp-2026-0014]
+  observations: [obs-2026-0003, obs-2026-0007, obs-2026-0008, obs-2026-0013, obs-2026-0014, obs-2026-0015, obs-2026-0016]
+title: H-B2 backend/import-format/provider divergence (per-dimension resolution)
 statement: >
-  Within multi-path libraries, section 7.2 check outcomes do not depend on which
-  internal path executes: liboqs/mlkem-native backend selection (ref vs native),
-  OpenSSL raw-bytes vs DER-SPKI import and default vs FIPS provider, and .NET
-  managed vs CNG vs OpenSSL-backed variants all agree on identical inputs.
+  Within multi-path libraries, section 7.2 check outcomes do not depend on
+  which internal path executes. Per-dimension resolution after msn-2026-0002
+  matrix execution:
+
+  DIMENSION A (liboqs backend selection): SUPPORTED. 199/199 vectors have
+  identical import verdicts between the runtime-selected (AVX2/BMI2/POPCNT
+  native) backend and the C reference backend. obs-2026-0014.
+
+  DIMENSION B (OpenSSL raw vs SPKI, default provider): REFUTED. 6/199
+  vectors diverge: 3 len-plus-1 and 3 cross-set keys are rejected by
+  EVP_PKEY_new_raw_public_key_ex (raw) but accepted by d2i_PUBKEY (SPKI)
+  and proceed to a successful encap. The OpenSSL 3.5.7 SPKI decode path
+  does not validate the relationship between the algorithm OID and the
+  key body length/canonical form. obs-2026-0013.
+
+  DIMENSION C (OpenSSL default vs FIPS provider): INCONCLUSIVE-WITH-REASON.
+  The FIPS module never loaded in the GHA runner; 199 raw + 199 SPKI cells
+  are all blocked|fips-unavailable. The matrix produced zero FIPS evidence.
+  obs-2026-0016. One more diagnostic attempt (fipsinstall -verify, explicit
+  OSSL_PROVIDER_load in isolated libctx, OPENSSL_MODULES in runner step) is
+  warranted before resolving this dimension inconclusive-after-budget.
+
+  DIMENSION D (.NET backing selection, Windows-CNG vs Linux-OpenSSL):
+  SUPPORTED. 199/199 vectors have identical verdicts; the 6 keys that the
+  OpenSSL SPKI path wrongly accepts are correctly rejected by both .NET
+  backings. The .NET layer validates length/canonical-form before delegating
+  to the backing provider, which is why the .NET side is not subject to the
+  OpenSSL SPKI decode loophole. obs-2026-0015.
 falsifiable_predictions:
-  - All 36 Wycheproof ModulusOverflow vectors return -1 under whichever liboqs backend the build selects, with CPUID/backend logged; forced-ref rebuild agrees.
-  - OpenSSL rejects the same modulus-invalid ek identically via EVP_PKEY_new_raw_public_key and via d2i_PUBKEY SPKI for k in {2,3,4}.
-  - .NET verdicts may be backing-dependent; agreement across backings collapses it to a single row.
-links:
-  implementations: [imp-2026-0002, imp-2026-0003, imp-2026-0006]
-  experiments: [exp-2026-0003, exp-2026-0006, exp-2026-0007]
-  observations: [obs-2026-0003, obs-2026-0007, obs-2026-0008]
+  - All 36 Wycheproof ModulusOverflow vectors return -1 under whichever liboqs backend the build selects, with CPUID/backend logged; forced-ref rebuild agrees. CONFIRMED.
+  - OpenSSL rejects the same modulus-invalid ek identically via EVP_PKEY_new_raw_public_key and via d2i_PUBKEY SPKI for k in {2,3,4}. PARTIALLY REFUTED - raw path rejects, SPKI path accepts the 6 length/cross-set anomalies.
+  - .NET verdicts may be backing-dependent; agreement across backings collapses it to a single row. CONFIRMED.
 disproof_attempts:
   - >
-    No divergence OBSERVED in any tested path, but the test matrix covered
-    only one path per library (liboqs: runtime-selected backend under x64
-    emulation with avx2=1 logged; OpenSSL: raw import only; .NET: CNG
-    backing only). Invariance therefore remains unestablished rather than
-    falsified - recorded inconclusive per preservation rules.
+    The default-provider raw-vs-SPKI dimension is the first dimension to
+    produce a positive refutation. The 6 killing observations are reproducible
+    from the 199-vector stimulus manifest by anyone running
+    crypto/mlkem-input-checks/harnesses/openssl_invar_runner.c against the
+    committed stimuli.tsv. A pending fnd-2026-0002 finding artifact will
+    require an independent adversarial review per AGENTS.md before promotion
+    to verified.
 notes: >
-  Killing observation: any input accepted by one path while an equivalent path
-  rejects it. Wave-1 caveat: liboqs probe ran ref backend only; no CPUID logged;
-  k=2/4 untested anywhere yet. OpenSSL FIPS-provider behavior remains inference
-  from shared sources until executed.
+  This per-dimension resolution is more informative than a single 'supported'
+  or 'refuted' label. The four dimensions of hyp-2026-0002 turned out to
+  have heterogeneous evidence outcomes: two support, one refute, one
+  inconclusive. The refutation is the most concrete cross-API variance found
+  in any prior or current Frontier mission and warrants both the
+  fnd-2026-0002 promotion path and a renewed FIPS diagnostic effort.

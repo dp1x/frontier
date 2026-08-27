@@ -1,0 +1,75 @@
+id: obs-2026-0016
+type: observation
+status: recorded
+created_at: "2026-08-27T05:50:00Z"
+updated_at: "2026-08-27T05:50:00Z"
+summary: FIPS provider cells (raw and SPKI) are entirely blocked|fips-unavailable across 199 vectors; the FIPS module never loaded in the GHA runner despite fix commits 9ca030b..070115f.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: tools/analyze_invar_matrix.py over openssl_fips_report.tsv and openssl_invar_report.tsv
+  sources:
+    - exp-2026-0014
+    - crypto/mlkem-input-checks/reports/openssl_fips_report.tsv (fips-only raw cell, GHA run 32914837764)
+    - crypto/mlkem-input-checks/reports/openssl_invar_report.tsv (in-job fips cell, same run)
+  parent: msn-2026-0002
+  generation: 1
+links:
+  experiments: [exp-2026-0014]
+  hypotheses: [hyp-2026-0002]
+title: FIPS provider cell is structurally empty - all 199 vectors blocked
+statement: >
+  META lines for both fips-containing jobs (run 32914837764):
+    META|fips_provider=not-loaded|status=unavailable|reason=no-fips-module
+  Across 199 vectors x 2 cells (raw/fips, spki/fips) = 398 rows, every row
+  is 'blocked|reason=fips-unavailable'. The default-provider cells
+  (raw/default, spki/default) ran to completion in the same job.
+
+  Root cause hypotheses from prior session debugging (commits 9ca030b,
+  c70c9c9, e6a0b42, 6619689, 3d656de, d4a5780, 8ab427c, 070115f) that
+  the agent had not yet resolved:
+    1. fipsinstall produced no integrity values (or wrote them to a path
+       not resolvable at runtime)
+    2. OPENSSL_MODULES path not exported in the runner step (only in build)
+    3. .include fipsmodule.cnf chain not resolvable under the runner cwd
+    4. FIPS provider loader wants [fips_sect] activate=1 only (not also
+       [default_sect]) per FIPS module 3.x guidance
+  The GHA workflow reports 'success' because no step crashed - the runner
+  silently degrades to a 0-cell FIPS comparison.
+environment:
+  where: github-actions
+  isolation: github-runner (ubuntu-latest)
+  versions:
+    openssl: "3.5.7 (9 Jun 2026) built with --enable-fips"
+    fips_provider: "NOT LOADED"
+    workflows_commit: "070115f"
+stdout: |
+  META|fips_provider=not-loaded|status=unavailable|reason=no-fips-module
+  META|default_provider=loaded
+  fips-cell rows: 199 raw + 199 spki = 398, all blocked|fips-unavailable
+exit_code: 0
+
+implication: >
+  FIPS-provider half of msn-2026-0002 matrix has produced ZERO evidence.
+  Per the mission's stopping conditions (12 attempts / 30 compute runs /
+  diminishing-returns window 3), one more attempt with the following
+  diagnostic stack should be made before resolving hyp-2026-0002's
+  FIPS dimension inconclusive-with-reason:
+
+    a. Add a pre-step to the fips-only job that runs
+       fipsinstall -verify -module /path/to/fips.so -in fipsmodule.cnf
+       and uploads the output - confirms integrity values were actually
+       generated and match the .so build.
+    b. Set OPENSSL_MODULES explicitly in the runner step (same value as
+       build, not just in $GITHUB_ENV).
+    c. Try OSSL_PROVIDER_load(fips_ctx, "fips", NULL) directly inside
+       the harness's isolated libctx instead of relying on
+       OPENSSL_FIPS_CONF env propagation.
+    d. Verify that the combined openssl-fips.cnf has activate=1 only on
+       [fips_sect], not also on [default_sect].
+  If after this attempt the FIPS cell is still empty, mark it
+  inconclusive-with-reason, record here, and move to drafting the final
+  consolidated session report.
