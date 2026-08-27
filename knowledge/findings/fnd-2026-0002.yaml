@@ -1,0 +1,119 @@
+id: fnd-2026-0002
+type: finding
+status: candidate
+created_at: "2026-08-27T06:45:00Z"
+updated_at: "2026-08-27T06:45:00Z"
+summary: OpenSSL 3.5.7 cross-API variance - d2i_PUBKEY (SPKI import) accepts 6 malformed ML-KEM encapsulation keys that EVP_PKEY_new_raw_public_key_ex (raw import) and .NET correctly reject, and proceeds to a successful encap.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: synthesizing cross-path matrix results
+  sources:
+    - exp-2026-0014
+    - obs-2026-0013
+    - obs-2026-0015
+    - crypto/mlkem-input-checks/reports/openssl_invar_report.tsv (GHA run 32914837764)
+    - crypto/mlkem-input-checks/reports/dotnet_linux_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/dotnet_windows_report.tsv
+    - localdocs/refs/fips203.pdf#section-7.2
+    - https://datatracker.ietf.org/doc/html/rfc9480 (ML-KEM SubjectPublicKeyInfo)
+  parent: msn-2026-0002
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+  implementations: [imp-2026-0003]
+  experiments: [exp-2026-0014]
+  observations: [obs-2026-0013, obs-2026-0015]
+  hypotheses: [hyp-2026-0002]
+  reviews: []
+  verifications: []
+title: OpenSSL d2i_PUBKEY SPKI decode path does not validate ML-KEM key-body length or param-set
+classification: input-validation-gap
+statement: >
+  Across the 199-vector stimulus manifest (mlkem-input-checks/stimuli/stimuli.tsv),
+  6 vectors are accepted by OpenSSL 3.5.7's `d2i_PUBKEY` (SPKI import path)
+  but rejected by `EVP_PKEY_new_raw_public_key_ex` (raw import path) and
+  by .NET (Windows CNG and Linux OpenSSL-backed). The 6 vectors comprise:
+
+  - 3 `len-plus-1` vectors (one per param set: ML-KEM-512/768/1024), where
+    the encapsulation key body is 1 byte longer than the canonical length
+    for that param set (801/1185/1569 bytes vs 800/1184/1568). The
+    algorithm OID in the SPKI wrapper correctly identifies the param
+    set. `EVP_PKEY_new_raw_public_key_ex` rejects with
+    'Provider routines:invalid key length'; `d2i_PUBKEY` accepts and
+    proceeds to a successful `EVP_PKEY_encapsulate`.
+
+  - 3 `cross-set` vectors (`cross-set-1024-as-768`,
+    `cross-set-1024-as-512`, `cross-set-768-as-512`) where the SPKI
+    wrapper's algorithm OID identifies a smaller param set than the
+    body bytes correspond to (e.g. OID says ML-KEM-512 but body is
+    1184 bytes, which is the ML-KEM-768 body length). `d2i_PUBKEY`
+    accepts; raw path rejects with 'invalid key'/'invalid key length'.
+
+  The .NET layer (Microsoft.MLKem on Windows CNG; libSystem.Security.
+  Cryptography 10.0.11 over OpenSSL 3.5.7 on Ubuntu 24.04) validates
+  key length and canonical form before delegating to the backing
+  provider, and rejects all 6 vectors with
+  `arg-class:ArgumentException`. This proves the .NET stack is not
+  subject to the OpenSSL SPKI decode loophole.
+
+  Net: this is a real cross-API behavioural divergence in OpenSSL 3.5.7
+  for the two public import APIs. The SPKI decode path does not
+  validate the relationship between the algorithm OID and the key-body
+  length/canonical form, while the raw path does. Both code paths
+  ultimately descend into the same `ml_kem_key_fromdata -> scalar_decode_12`
+  validation in the default provider's keymgmt, so the SPKI path is
+  bypassing the length/canonical-form check that the raw path enforces.
+
+  FIPS 203 s7.2 (Encapsulation key check) says the encapsulation key
+  shall consist of k polynomials in NTT domain with coefficients in
+  [0, q-1]. Both raw and SPKI forms of an ML-KEM encapsulation key
+  carry the same payload bytes and must satisfy the same s7.2 check;
+  the import API surface should not be a chokepoint for the check
+  itself. The current OpenSSL behavior is therefore inconsistent with
+  the intent of s7.2, though it is not a strict s7.2 violation per se
+  (s7.2's placement language permits the check to be performed
+  elsewhere, e.g. at encap time).
+disclosure: public
+limitations: >
+  - FIPS-provider half of the matrix is still INCONCLUSIVE-WITH-REASON
+    (fips-unavailable). The 6-vector refutation is for the default
+    provider; the FIPS provider may or may not exhibit the same
+    behavior when the FIPS module loads in a future GHA run.
+  - Reproducer is the harness in crypto/mlkem-input-checks/harnesses/
+    openssl_invar_runner.c, which uses hard-coded 22-byte RFC 9480
+    algorithm-OID prefixes and appends the raw test bytes verbatim.
+    This is a true property of the decoder pipeline, not a harness
+    artifact.
+  - No adversarial review (R2) has been run on this finding yet;
+    promotion to `verified_conclusion` is blocked until that review
+    lands.
+  - 6 vectors is a thin margin; if OpenSSL changes its SPKI decode
+    pipeline to enforce the relationship, the matrix would no longer
+    show this divergence. The reproducer should be kept fresh.
+  - C2SP Wycheproof-style coverage is not claimed; this is a Frontier
+    in-house stimulus set.
+reproducer: rpr-2026-0001 (committed; same stimulus set used by msn-2026-0001; runs the same pipeline on this finding's input vectors)
+follow_up: >
+  - Independent adversarial review (non-synthesizer role) to scrutinize:
+    (a) whether the harness could be a confounder (e.g. is the SPKI
+    DER actually well-formed for the malformed body? - answer: yes,
+    because the harness uses hard-coded 22-byte prefixes and the body
+    bytes are apppended verbatim, so any structurally-valid DER with
+    the test body is what OpenSSL sees);
+    (b) whether the .NET result is actually a positive control and not
+    a coincidental agreement (answer: yes, because .NET's API surface
+    is the same on Windows and Linux, and the same vectors are
+    rejected by both);
+    (c) whether the FIPS-provider path exhibits the same behavior
+    (answer: pending; the FIPS cell is still blocked).
+  - File an upstream bug against OpenSSL with the 6-vector reproducer
+    and a request for a fix that makes `d2i_PUBKEY` enforce the
+    same key-body length/canonical-form check that
+    `EVP_PKEY_new_raw_public_key_ex` does.
+  - Re-run the matrix after any OpenSSL fix to confirm the divergence
+    is closed.
