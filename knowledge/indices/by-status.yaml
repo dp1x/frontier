@@ -1,6 +1,9 @@
 active:
 - tgt-2026-0001
 
+candidate:
+- fnd-2026-0002
+
 complete:
 - exp-2026-0001
 - exp-2026-0002
@@ -22,6 +25,7 @@ designed:
 - exp-2026-0009
 - exp-2026-0010
 - exp-2026-0011
+- exp-2026-0015
 
 final:
 - rpt-2026-0001
@@ -61,6 +65,8 @@ recorded:
 - obs-2026-0016
 - obs-2026-0017
 - obs-2026-0018
+- obs-2026-0019
+- obs-2026-0020
 
 refuted:
 - hyp-2026-0002

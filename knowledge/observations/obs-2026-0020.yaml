@@ -3,7 +3,7 @@ type: observation
 status: recorded
 created_at: "2026-08-27T07:30:00Z"
 updated_at: "2026-08-27T07:30:00Z"
-summary: Adversarial review surfaces harness-construct bugs in openssl_invar_runner.c: spki_prefix_512/768/1024 are declared size [22] but initialized with 23 values (C array literal overflow), and the BIT STRING length is inconsistent with the SEQUENCE length in the canonical case. OpenSSL 3.5.7's SPKI parser appears more permissive than expected.
+summary: "Adversarial review retraction + reframing - harness's spki_prefix_* arrays are correctly 22 bytes (matching OpenSSL 3.5.7's asn1_prefix); the apparent harness-bug claim was based on a counting error. The real question: why does OpenSSL's custom X509_PUBKEY decoder accept the 6 divergent vectors when its strict publen check should reject them."
 epistemic_status: observation
 provenance:
   created_by:
