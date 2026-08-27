@@ -2,7 +2,7 @@ id: fnd-2026-0002
 type: finding
 status: candidate
 created_at: "2026-08-27T06:45:00Z"
-updated_at: "2026-08-27T06:45:00Z"
+updated_at: "2026-08-27T07:30:00Z"
 summary: OpenSSL 3.5.7 cross-API variance - d2i_PUBKEY (SPKI import) accepts 6 malformed ML-KEM encapsulation keys that EVP_PKEY_new_raw_public_key_ex (raw import) and .NET correctly reject, and proceeds to a successful encap.
 epistemic_status: interpretation
 provenance:
@@ -99,21 +99,48 @@ limitations: >
     in-house stimulus set.
 reproducer: rpr-2026-0001 (committed; same stimulus set used by msn-2026-0001; runs the same pipeline on this finding's input vectors)
 follow_up: >
-  - Independent adversarial review (non-synthesizer role) to scrutinize:
-    (a) whether the harness could be a confounder (e.g. is the SPKI
-    DER actually well-formed for the malformed body? - answer: yes,
-    because the harness uses hard-coded 22-byte prefixes and the body
-    bytes are apppended verbatim, so any structurally-valid DER with
-    the test body is what OpenSSL sees);
-    (b) whether the .NET result is actually a positive control and not
-    a coincidental agreement (answer: yes, because .NET's API surface
-    is the same on Windows and Linux, and the same vectors are
-    rejected by both);
-    (c) whether the FIPS-provider path exhibits the same behavior
-    (answer: pending; the FIPS cell is still blocked).
-  - File an upstream bug against OpenSSL with the 6-vector reproducer
-    and a request for a fix that makes `d2i_PUBKEY` enforce the
-    same key-body length/canonical-form check that
-    `EVP_PKEY_new_raw_public_key_ex` does.
-  - Re-run the matrix after any OpenSSL fix to confirm the divergence
-    is closed.
+  - HARNESS-CONSTRUCT REVIEW CONTRADICTION RESOLVED (obs-2026-0020):
+    The two adversarial review subagents gave apparently conflicting
+    verdicts. After careful manual byte-counting, the harness's
+    spki_prefix_* arrays are CORRECT (22 bytes each, matching
+    OpenSSL 3.5.7's ml_kem_codecs.c `asn1_prefix` arrays
+    byte-for-byte). The original Reviewer B claim of a C array
+    overflow was based on a counting error. The harness is
+    methodologically sound.
+
+  - THE REAL QUESTION: For the 6 divergent vectors, why does OpenSSL
+    accept the SPKI when the harness's total byte length (22 + 801 = 823
+    for ML-KEM-512) does not match the strict `ML_COMMON_SPKI_OVERHEAD +
+    pubkey_bytes` check (22 + 800 = 822) in
+    `ossl_ml_kem_d2i_PUBKEY`? The check should return NULL. Three
+    possibilities to investigate:
+    (a) The custom decoder is bypassed; a different decoder handles
+        the SPKI for the 6 vectors.
+    (b) The strict `publen` check is more permissive than the source
+        suggests (e.g. it allows ±1 byte).
+    (c) OpenSSL 3.5.7 has a fix that differs from the openssl-3.5.7
+        tag in the local clone.
+    The next adversarial review should focus on this question, not on
+    the harness.
+
+  - Cross-stack correlation is preserved (obs-2026-0019, obs-2026-0020):
+    all 4 non-OpenSSL-SPKI stacks (.NET Windows, .NET Linux, liboqs auto,
+    liboqs forced-ref) reject the 6 vectors. The "OpenSSL is unique"
+    claim stands.
+
+  - FIPS-provider path is still blocked|fips-unavailable (obs-2026-0016);
+    the FIPS fix (commit 88b10af) is in flight and will run on the
+    next CI push.
+
+  - Required next steps:
+    (1) Re-dispatch a focused adversarial review on the OpenSSL
+        custom X509_PUBKEY decoder path
+        (providers/implementations/encode_decode/ml_kem_codecs.c
+        `ossl_ml_kem_d2i_PUBKEY`). Question: which decoder handles
+        the SPKI for the 6 vectors and why does the strict publen
+        check not fire?
+    (2) If the decoder path is permissive, upgrade the finding to
+        a specific file:line-citable claim about the ML-KEM SPKI
+        decoder's length-check bypass.
+    (3) File a process-finding about the value of careful manual
+        byte-counting when reviewing harness-construct claims.
