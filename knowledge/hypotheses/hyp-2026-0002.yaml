@@ -3,7 +3,7 @@ type: hypothesis
 status: refuted
 created_at: "2026-08-24T11:45:00Z"
 updated_at: "2026-08-27T05:55:00Z"
-summary: Per-dimension resolution: OpenSSL raw-vs-SPKI default REJECTED (6 vectors diverge); FIPS provider INCONCLUSIVE-WITH-REASON (fips-unavailable); liboqs auto-vs-ref SUPPORTED (0 mismatches); .NET Windows-vs-Linux SUPPORTED (0 mismatches).
+summary: "Per-dimension resolution: OpenSSL raw-vs-SPKI default REJECTED (6 vectors diverge); FIPS provider INCONCLUSIVE-WITH-REASON (fips-unavailable); liboqs auto-vs-ref SUPPORTED (0 mismatches); .NET Windows-vs-Linux SUPPORTED (0 mismatches)."
 epistemic_status: hypothesis
 provenance:
   created_by:
