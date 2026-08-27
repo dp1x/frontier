@@ -1,0 +1,60 @@
+id: obs-2026-0019
+type: observation
+status: recorded
+created_at: "2026-08-27T07:00:00Z"
+updated_at: "2026-08-27T07:00:00Z"
+summary: First adversarial review attempt on fnd-2026-0002 FAILED with provider API 400 error after 198s/9 turns; review must be re-dispatched with a smaller scope or different model before the finding can be promoted to verified_conclusion.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: recording transient infrastructure failure of review subagent
+  sources:
+    - subagent_id 01a04210-767e-7572-b17f-215640d99fdd output
+    - fnd-2026-0002.yaml
+  parent: msn-2026-0002
+  generation: 1
+links:
+  findings: [fnd-2026-0002]
+title: First adversarial review of fnd-2026-0002 failed (provider 400)
+statement: >
+  The first attempt to dispatch an adversarial review of fnd-2026-0002 to
+  a subagent (subagent_id 01a04210-767e-7572-b17f-215640d99fdd, model
+  default for this session) failed with a Provider API 400 Bad Request
+  after 198.6 seconds and 9 turns. The subagent did 20 tool calls
+  (mostly reads of finding/obs/harness/report files) and consumed 403k
+  input tokens before the upstream API returned the 400. The 400 was
+  thrown from the model's own provider, not from this orchestrator.
+
+  Implication: the review is BLOCKED pending re-dispatch. The
+  fnd-2026-0002 candidate finding remains at status `candidate` and
+  cannot be promoted to `verified_conclusion` until a non-synthesizer
+  review pass completes. The infrastructure failure is unrelated to
+  the claim itself, so the claim is not falsified; the review must
+  simply be re-attempted.
+
+  Recommended re-dispatch: split the 8-step adversarial checklist
+  into two smaller, scope-limited subagent invocations to keep
+  input-token counts under the provider ceiling. Each subagent
+  should focus on a single class of confounder (e.g. one on
+  harness-construct check, one on cross-stack correlation), so each
+  fits in a single conversation without hitting 400k input tokens.
+environment:
+  where: parent orchestrator
+  isolation: subagent framework
+stdout: |
+  API error (status 400 Bad Request): Provider returned error
+  inputTokens=403317 outputTokens=1692 totalTokens=405009
+  modelCalls=9 apiDurationMs=113123
+exit_code: 1
+
+follow_up: >
+  Re-dispatch the adversarial review in two smaller scope-limited
+  subagent calls. Each call should consume << 200k input tokens.
+  The two calls should cover (a) harness-construct / DER-parse
+  check, and (b) cross-stack correlation + reproducibility check.
+  After both return, the orchestrator synthesizes the verdict and
+  either promotes the finding to verified_conclusion, holds for
+  additional evidence, or revises the finding.

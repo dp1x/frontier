@@ -1,0 +1,73 @@
+id: exp-2026-0015
+type: experiment
+status: designed
+created_at: "2026-08-27T06:30:00Z"
+updated_at: "2026-08-27T06:30:00Z"
+summary: ALIAS-DIFF round-2 design - opaque-function barrier across TU boundary + scalar probe litmus targeting family (d) incompatible-cast UB.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer (compiler track)
+    model: grok-4.6
+    tool: follow-up to obs-2026-0012 (round-1 negative result)
+  sources:
+    - obs-2026-0012
+    - compilers/alias-diff/gen_programs.py (round-1 generator)
+    - compilers/alias-diff/run_matrix.sh (round-1 runner)
+    - https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf#section-6.5
+  parent: msn-2026-0004
+  generation: 1
+links:
+  observations: [obs-2026-0012]
+title: ALIAS-DIFF round-2 design - opaque-TU barrier for TBAA exposure
+design: >
+  Round-1's negative result (obs-2026-0012) recorded 0 divergences across
+  350 program-config rows. The harness's inline-asm value+memory barriers
+  prevent the optimizer from caching typed loads across the store->read edge,
+  which is exactly the optimization path that TBAA can produce. Therefore
+  round-1 cannot detect family (d) incompatible-cast TBAA violations by
+  construction - a coverage limitation, not a negative result.
+
+  Round-2 design rationale (per obs-2026-0012 follow_up):
+    1. Replace inline-asm barriers with opaque function calls into a separate
+       translation unit (TU) compiled without LTO. The opaque call forces
+       the optimizer to assume the called function may modify any global
+       and any pointer-aliased memory, while preventing inlining/LTO-based
+       constant folding that would otherwise strip the aliasing edge.
+    2. Add a scalar-probe litmus variant: a single struct-typed store
+       followed by a scalar-typed load via pointer cast, with the load
+       preceded by a call into the opaque TU. The scalar probe isolates
+       the TBAA class effect from other code paths.
+    3. Target family (d) (incompatible-cast UB) only first; if any
+       divergence appears, expand to (a) memcpy punning as positive
+       control, then (c) unsigned-char access as negative control.
+    4. Reuse the same gcc -O0 oracle as round-1; add gcc -O3 and
+       clang -O3 to the matrix (round-1 ran O0/O2; O3 is more aggressive
+       inlining and constant propagation, more likely to expose TBAA
+       effects).
+    5. Reduce the program set: 10 family-(d) programs x 3 O-levels x
+       2 compilers x 2 barrier schemes (asm vs opaque-TU) = 120 rows,
+       in addition to 5 control programs of each family = 30 rows
+       positive control. Total: 150 rows for round-2.
+    6. If any divergence appears, follow C-Reduce/cvise minimization
+       and Alive2 TBAA validation per the mission acceptance criteria.
+
+  Compute class: lightweight (single-machine gcc/clang builds; no
+  Csmith/YARPGen at this scale). Suitable for local scratch.
+
+  What round-2 does NOT claim: it does not claim there is a TBAA
+  miscompilation lurking in any of these compilers. It claims only that
+  the round-1 negative result is a coverage limitation, and round-2
+  tests whether the limitation can be removed by an opaque-TU barrier.
+commands:
+  - "python3 compilers/alias-diff/gen_programs.py --round 2 --target-family d --barrier opaque-tu generated"
+  - "./compilers/alias-diff/run_matrix.sh --configs O0/O2/O3 x gcc/clang generated alias_report_r2.tsv"
+compute_decision:
+  location: github-actions (preferred) or local scratch
+  isolation: github-runner (public, no secrets) or env-scrubbed local scratch
+  reason: "lightweight: ~150 rows x <1s = <2min; fits local scratch"
+determinism:
+  deterministic: true
+  seed_policy: fixed seeds from gen_programs.py
+  nondeterminism_notes: "compiler intrinsic non-determinism (e.g. address randomization) is removed by checksum output and gcc/clang -O0 oracle"
