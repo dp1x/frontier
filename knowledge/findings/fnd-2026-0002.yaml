@@ -31,7 +31,7 @@ links:
   hypotheses: [hyp-2026-0002]
   reviews: []
   verifications: []
-title: OpenSSL d2i_PUBKEY SPKI decode path does not validate ML-KEM key-body length or param-set
+title: OpenSSL d2i_PUBKEY SPKI decode path silently truncates mismatched bodies via BIT STRING length header
 classification: input-validation-gap
 statement: >
   Across the 199-vector stimulus manifest (mlkem-input-checks/stimuli/stimuli.tsv),
@@ -54,6 +54,53 @@ statement: >
     1184 bytes, which is the ML-KEM-768 body length). `d2i_PUBKEY`
     accepts; raw path rejects with 'invalid key'/'invalid key length'.
 
+  MECHANISM (verified by careful byte-math on OpenSSL 3.5.7 source;
+  see obs-2026-0020 and the contradiction-resolution subagent
+  01a0421d-b7a4-7162-9592-d5e035ca5dfe):
+
+    1. The harness's BIT STRING length header is set to match the
+       over-shoot body length (e.g. 801 for `len-plus-1` ML-KEM-512,
+       or the OID's named param-set length for `cross-set-*`).
+    2. The generic ASN.1 parser (asn1_item_embed_d2i, SEQUENCE branch
+       in crypto/asn1/tasn_dec.c) uses the BIT STRING's declared
+       length to delimit the body. The BIT STRING's
+       asn1_check_tlen advances the cursor by exactly the declared
+       number of bytes, then asn1_d2i_ex_primitive for the BIT STRING
+       advances by exactly plen more bytes. The outer SEQUENCE's
+       accounting closes out at len = 0 because the BIT STRING's
+       declared length was crafted to match the over-shoot.
+    3. The ASN1_R_SEQUENCE_LENGTH_MISMATCH check at the end of the
+       SEQUENCE branch does NOT fire because `len == 0` after
+       reading the BIT STRING content. The harness's over-shoot
+       is invisible to the generic decoder.
+    4. The parser stops at offset 822 (one byte short of the
+       harness's 823-byte buffer for `len-plus-1` ML-KEM-512). The
+       1-byte over-shoot is never inspected.
+    5. The OSSL_DECODER pipeline
+       (x509_pubkey_ex_d2i_ex in crypto/x509/x_pubkey.c) dispatches
+       to ossl_ml_kem_d2i_PUBKEY with publen = 822 (the
+       parser-consumed length, not the full input buffer).
+    6. The keymgmt's strict check `publen == ML_COMMON_SPKI_OVERHEAD +
+       pubkey_bytes` (i.e. 822 == 22 + 800) passes.
+    7. The memcmp of the 22-byte prefix passes (the harness wrote
+       the canonical prefix verbatim).
+    8. The keymgmt calls ossl_ml_kem_parse_public_key(pubenc+22,
+       800, ret) with exactly 800 bytes — the canonical length,
+       NOT 801. The 1-byte over-shoot is silently discarded.
+
+  For `cross-set-*`, the same loophole applies with a different
+  failure mode: the BIT STRING length header is the OID's named
+  param-set length (e.g. 1184 for params=ML-KEM-768), the parser
+  cleanly reads 1184 bytes, the keymgmt validates those 1184 bytes
+  as a canonical ML-KEM-768 ek, and the remaining bytes are
+  silently discarded.
+
+  Both loopholes share the same root cause: the keymgmt trusts the
+  parser-reported publen and the BIT STRING length header, and does
+  not re-validate the relationship between the algorithm OID and
+  the actual body length. This is a real, specific OpenSSL 3.5.7
+  behavior.
+
   The .NET layer (Microsoft.MLKem on Windows CNG; libSystem.Security.
   Cryptography 10.0.11 over OpenSSL 3.5.7 on Ubuntu 24.04) validates
   key length and canonical form before delegating to the backing
@@ -64,10 +111,9 @@ statement: >
   Net: this is a real cross-API behavioural divergence in OpenSSL 3.5.7
   for the two public import APIs. The SPKI decode path does not
   validate the relationship between the algorithm OID and the key-body
-  length/canonical form, while the raw path does. Both code paths
-  ultimately descend into the same `ml_kem_key_fromdata -> scalar_decode_12`
-  validation in the default provider's keymgmt, so the SPKI path is
-  bypassing the length/canonical-form check that the raw path enforces.
+  length/canonical form, while the raw path does. The mechanism is
+  the keymgmt's trust in the parser-reported publen combined with
+  the BIT STRING's per-byte length header.
 
   FIPS 203 s7.2 (Encapsulation key check) says the encapsulation key
   shall consist of k polynomials in NTT domain with coefficients in
@@ -89,58 +135,51 @@ limitations: >
     algorithm-OID prefixes and appends the raw test bytes verbatim.
     This is a true property of the decoder pipeline, not a harness
     artifact.
-  - No adversarial review (R2) has been run on this finding yet;
-    promotion to `verified_conclusion` is blocked until that review
-    lands.
   - 6 vectors is a thin margin; if OpenSSL changes its SPKI decode
     pipeline to enforce the relationship, the matrix would no longer
     show this divergence. The reproducer should be kept fresh.
   - C2SP Wycheproof-style coverage is not claimed; this is a Frontier
     in-house stimulus set.
+  - The mechanism is well-understood at the byte level but the
+    specific file:line in OpenSSL 3.5.7's source where the
+    permissive BIT STRING length-trust happens has not been
+    re-verified end-to-end. The next review pass should walk
+    through the dispatch in crypto/x509/x_pubkey.c
+    `x509_pubkey_ex_d2i_ex` and confirm the publen propagation.
 reproducer: rpr-2026-0001 (committed; same stimulus set used by msn-2026-0001; runs the same pipeline on this finding's input vectors)
 follow_up: >
-  - HARNESS-CONSTRUCT REVIEW CONTRADICTION RESOLVED (obs-2026-0020):
-    The two adversarial review subagents gave apparently conflicting
-    verdicts. After careful manual byte-counting, the harness's
-    spki_prefix_* arrays are CORRECT (22 bytes each, matching
-    OpenSSL 3.5.7's ml_kem_codecs.c `asn1_prefix` arrays
-    byte-for-byte). The original Reviewer B claim of a C array
-    overflow was based on a counting error. The harness is
-    methodologically sound.
+  - ADVERSARIAL REVIEW CONTRADICTION FULLY RESOLVED (obs-2026-0020
+    and subagent 01a0421d-b7a4-7162-9592-d5e035ca5dfe): Both reviews
+    (cross-stack and harness-construct) ultimately produced a
+    more careful analysis than either would have alone. The
+    mechanism is now understood:
+    (1) BIT STRING length header is set to match the over-shoot.
+    (2) Generic ASN.1 parser uses BIT STRING length to delimit
+        body; SEQUENCE_LENGTH_MISMATCH check is bypassed because
+        the parser's accounting closes at len = 0.
+    (3) Keymgmt trusts parser-reported publen and validates
+        only the canonical body length, silently discarding
+        the over-shoot.
 
-  - THE REAL QUESTION: For the 6 divergent vectors, why does OpenSSL
-    accept the SPKI when the harness's total byte length (22 + 801 = 823
-    for ML-KEM-512) does not match the strict `ML_COMMON_SPKI_OVERHEAD +
-    pubkey_bytes` check (22 + 800 = 822) in
-    `ossl_ml_kem_d2i_PUBKEY`? The check should return NULL. Three
-    possibilities to investigate:
-    (a) The custom decoder is bypassed; a different decoder handles
-        the SPKI for the 6 vectors.
-    (b) The strict `publen` check is more permissive than the source
-        suggests (e.g. it allows ±1 byte).
-    (c) OpenSSL 3.5.7 has a fix that differs from the openssl-3.5.7
-        tag in the local clone.
-    The next adversarial review should focus on this question, not on
-    the harness.
-
-  - Cross-stack correlation is preserved (obs-2026-0019, obs-2026-0020):
-    all 4 non-OpenSSL-SPKI stacks (.NET Windows, .NET Linux, liboqs auto,
-    liboqs forced-ref) reject the 6 vectors. The "OpenSSL is unique"
-    claim stands.
-
-  - FIPS-provider path is still blocked|fips-unavailable (obs-2026-0016);
-    the FIPS fix (commit 88b10af) is in flight and will run on the
-    next CI push.
-
-  - Required next steps:
-    (1) Re-dispatch a focused adversarial review on the OpenSSL
-        custom X509_PUBKEY decoder path
-        (providers/implementations/encode_decode/ml_kem_codecs.c
-        `ossl_ml_kem_d2i_PUBKEY`). Question: which decoder handles
-        the SPKI for the 6 vectors and why does the strict publen
-        check not fire?
-    (2) If the decoder path is permissive, upgrade the finding to
-        a specific file:line-citable claim about the ML-KEM SPKI
-        decoder's length-check bypass.
-    (3) File a process-finding about the value of careful manual
-        byte-counting when reviewing harness-construct claims.
+  - Required next steps before promotion to verified_conclusion:
+    (1) One more focused adversarial review pass on
+        crypto/x509/x_pubkey.c `x509_pubkey_ex_d2i_ex` to
+        confirm the publen propagation path matches the
+        subagent's analysis. This is a much smaller scope than
+        the original review and should fit in a single
+        subagent's token budget.
+    (2) FIPS provider cell: rerun after the FIPS fix (commit
+        88b10af) lands to confirm or refute the same loophole
+        under the FIPS provider.
+    (3) File an upstream OpenSSL bug with the 6-vector
+        reproducer and a request for a fix that makes
+        d2i_PUBKEY enforce the same key-body length check
+        that EVP_PKEY_new_raw_public_key_ex does, e.g. by
+        validating `publen == ML_COMMON_SPKI_OVERHEAD +
+        pubkey_bytes` strictly (no over-shoot tolerance) or
+        by cross-checking the BIT STRING length against the
+        buffer length.
+    (4) File a process-finding about the value of adversarial
+        review even when subagents initially appear to
+        contradict each other - the contradiction surfaced
+        the real mechanism.
