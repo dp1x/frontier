@@ -29,7 +29,7 @@ designed:
 
 final:
 - rpt-2026-0001
-- rpt-2026-0002
+- rpt-2026-0003
 
 open:
 - hyp-2026-0008
@@ -77,6 +77,9 @@ rejected:
 
 reproduced:
 - rpr-2026-0001
+
+superseded:
+- rpt-2026-0002
 
 supported:
 - hyp-2026-0001

@@ -63,6 +63,7 @@ observation:
 report:
 - rpt-2026-0001
 - rpt-2026-0002
+- rpt-2026-0003
 
 reproducer:
 - rpr-2026-0001
