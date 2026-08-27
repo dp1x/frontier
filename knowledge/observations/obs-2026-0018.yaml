@@ -1,0 +1,79 @@
+id: obs-2026-0018
+type: observation
+status: recorded
+created_at: "2026-08-27T06:10:00Z"
+updated_at: "2026-08-27T06:10:00Z"
+summary: Synthesis-ready summary of msn-2026-0005 single-stack evidence: Go X25519MLKEM768 server enforces FIPS 203 s7.2 at handshake with illegal_parameter; BoringSSL/rustls half remains unexecuted (loopback harness scope-limited).
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: synthesizing msn-2026-0005 from existing exp/obs into terminal-resolution-ready state
+  sources:
+    - exp-2026-0012
+    - obs-2026-0011
+    - interop/protocol-placement/go_loopback/reports/go_loopback_report.tsv
+    - missions/pending/msn-2026-0005.yaml
+  parent: msn-2026-0005
+  generation: 2
+links:
+  experiments: [exp-2026-0012]
+  observations: [obs-2026-0011]
+title: msn-2026-0005 single-stack (Go) synthesis-ready; BoringSSL/rustls half unexecuted
+statement: >
+  msn-2026-0005's loopback matrix was scoped to "at least Go and one
+  BoringSSL/rustls server" (acceptance criteria). The Go half ran to
+  completion (exp-2026-0012 / obs-2026-0011) and produced a clean,
+  wire-tamper-decisive result:
+
+    - Canonical ek: TLS handshake succeeds
+    - coeff0=q, coeff0=4095, coeff255=4095 (modulus overflow):
+        Server aborts with 'tls: invalid client key share';
+        Client observes 'remote error: tls: illegal parameter'
+        - this is EXACTLY the alert mapping that
+          draft-ietf-tls-ecdhe-mlkem-05 s4.2 mandates for s7.2 failure.
+    - truncate_last_byte: connection torn down with 'unexpected EOF' (length
+        check fails pre-ML-KEM processing); consistent with the spec.
+    - bitflip_b0_xor80: base-key-dependent (single bit flip crosses q only
+        when original coefficient's high bits allow).
+
+  The BoringSSL/rustls half was NOT executed. The previous session's
+  Protocol agent was rate-limited mid-flight before it could spin up a
+  second loopback stack. The harness template (Go's mutating-pipe model)
+  is reusable but the BoringSSL/rustls builds would need to be set up
+  with their own FIPS-aware key_share accept logic. Per AGENTS.md
+  anti-slop rules, this is a real gap, not a "synthesizer can imply" gap.
+
+  net: msn-2026-0005 has a positive single-stack result (Go) and an
+  unexecuted second-stack half. Acceptable terminal state:
+    - If budget allows one more compute run, build the BoringSSL loopback
+      and complete the matrix.
+    - If not, mark the mission `inconclusive-after-budget` with the Go
+      evidence as preserved positive and the BoringSSL/rustls gap as
+      preserved negative.
+environment:
+  where: local
+  isolation: env-scrubbed-scratch
+  versions:
+    go: "go1.26.4 windows/arm64"
+stdout: |
+  library-parse: canonical accepted | coeff0=q/4095, coeff255=4095 rejected (modulus)
+                 | truncate+append rejected (length) | seed_byte_set accepted
+                 | bitflip_b0_xor80 mixed (base-key-dependent)
+  tls-wire:      control success
+                 | coeff0=q -> illegal_parameter
+                 | coeff0=4095 -> illegal_parameter
+                 | coeff255=4095 -> illegal_parameter
+                 | truncate -> unexpected EOF
+                 | bitflip_b0_xor80 -> bad record MAC (base-key-dependent)
+exit_code: 0
+
+follow_up: >
+  (1) Decision: keep msn-2026-0005 pending and run one BoringSSL loopback
+      attempt, OR mark inconclusive-after-budget and move on. Either is
+      defensible; per AGENTS.md, BoringSSL build time + the conservative
+      "preserve the negative" guidance pushes toward the latter.
+  (2) If terminal: write a final report (rpt-2026-0003 candidate) covering
+      the Go result and the BoringSSL/rustls gap as preserved negative.
