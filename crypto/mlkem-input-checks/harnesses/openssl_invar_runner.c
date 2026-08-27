@@ -92,10 +92,29 @@ int main(int argc, char **argv) {
     if (fips_prov) {
         fips_available = 1;
         fprintf(out, "META|fips_provider=loaded|status=available\n");
-    } else {
         ERR_clear_error();
-        fprintf(out, "META|fips_provider=not-loaded|status=unavailable|reason=%s\n",
-                ERR_reason_error_string(ERR_peek_error()) ? ERR_reason_error_string(ERR_peek_error()) : "no-fips-module");
+    } else {
+        /* Defer ERR_clear_error so the diagnostic carries the real error.
+         * Capture up to 6 errors; distinguish silent no-module case. */
+        char errbuf[1024] = {0};
+        size_t off = 0;
+        unsigned long e;
+        int n = 0;
+        while ((e = ERR_get_error()) != 0 && off + 64 < sizeof errbuf && n < 6) {
+            const char *lib = ERR_lib_error_string(e);
+            const char *reason = ERR_reason_error_string(e);
+            int w = snprintf(errbuf + off, sizeof errbuf - off,
+                             "%s%s%s%s",
+                             n ? "|" : "",
+                             lib ? lib : "?",
+                             reason ? ": " : "",
+                             reason ? reason : "");
+            if (w <= 0 || (size_t)w >= sizeof errbuf - off) break;
+            off += (size_t)w;
+            n++;
+        }
+        if (n == 0) snprintf(errbuf, sizeof errbuf, "no-fips-module");
+        fprintf(out, "META|fips_provider=not-loaded|status=unavailable|reason=%s\n", errbuf);
         ERR_clear_error();
     }
     /* Also ensure default provider loaded */

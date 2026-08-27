@@ -129,17 +129,47 @@ int main(int argc, char **argv) {
     OSSL_PROVIDER *fips_prov = NULL;
     int fips_available = 0;
     const char *fconf = getenv("OPENSSL_FIPS_CONF");
-    if (fips_ctx && fconf && *fconf && OSSL_LIB_CTX_load_config(fips_ctx, fconf)) {
-        fips_prov = OSSL_PROVIDER_load(fips_ctx, "fips");
+    if (fips_ctx && fconf && *fconf) {
+        if (OSSL_LIB_CTX_load_config(fips_ctx, fconf)) {
+            fips_prov = OSSL_PROVIDER_load(fips_ctx, "fips");
+        }
         fips_available = (fips_prov != NULL);
     }
-    ERR_clear_error();
     if (fips_available) {
         fprintf(out, "META|fips_provider=loaded|status=available|mode=isolated-libctx\n");
+        ERR_clear_error();
     } else {
-        unsigned long e = ERR_peek_error();
-        fprintf(out, "META|fips_provider=not-loaded|status=unavailable|reason=%s\n",
-                ERR_reason_error_string(e) ? ERR_reason_error_string(e) : "no-fips-module");
+        /* Defer ERR_clear_error so the diagnostic carries the real error.
+         * The pre-fix harness cleared the error queue before peeking it,
+         * producing the literal "no-fips-module" string for every failure
+         * mode (env-var missing, load_config failure, provider not found).
+         * Capture up to 6 errors and distinguish the silent no-env case. */
+        char errbuf[1024] = {0};
+        size_t off = 0;
+        unsigned long e;
+        int n = 0;
+        while ((e = ERR_get_error()) != 0 && off + 64 < sizeof errbuf && n < 6) {
+            const char *lib = ERR_lib_error_string(e);
+            const char *reason = ERR_reason_error_string(e);
+            int w = snprintf(errbuf + off, sizeof errbuf - off,
+                             "%s%s%s%s",
+                             n ? "|" : "",
+                             lib ? lib : "?",
+                             reason ? ": " : "",
+                             reason ? reason : "");
+            if (w <= 0 || (size_t)w >= sizeof errbuf - off) break;
+            off += (size_t)w;
+            n++;
+        }
+        if (n == 0) {
+            if (!fconf || !*fconf)
+                snprintf(errbuf, sizeof errbuf, "no-fips-conf-env");
+            else
+                snprintf(errbuf, sizeof errbuf, "no-fips-module");
+        }
+        fprintf(stderr, "stage: fips-load-failed fconf=%s err=%s\n",
+                fconf ? fconf : "(null)", errbuf);
+        fprintf(out, "META|fips_provider=not-loaded|status=unavailable|reason=%s\n", errbuf);
         ERR_clear_error();
     }
     fprintf(stderr, "stage: provider-load-default\n");

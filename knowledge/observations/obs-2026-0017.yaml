@@ -1,0 +1,152 @@
+id: obs-2026-0017
+type: observation
+status: recorded
+created_at: "2026-08-27T06:00:00Z"
+updated_at: "2026-08-27T06:00:00Z"
+summary: >
+  FORMAL-203 ByteEncode fresh build status - kernel check BLOCKED on this
+  host. lake/lean toolchain is not installed (no elan, no standalone
+  binaries on PATH or in C:\, C:\Program Files, C:\Users\Dhane; no .lake
+  build dir, no lake-manifest.json). Static text scan of the source is
+  consistent with the prior "0 sorries" claim (0 axiom, 0 sorry, 0
+  admitted, 0 #check / #print axioms) but this is not a verifier pass.
+  Prior "kernel-green" status is NOT re-validated by this run.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: formal-verifier
+    model: grok-4.6
+    tool: shell probes (Get-Command, Get-ChildItem) + Select-String on
+      formal/Formal/ByteEncode.lean
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal.lean
+    - formal/Formal/ByteEncode.lean
+  parent: msn-2026-0003
+  generation: 1
+links:
+  hypotheses: []
+  experiments: []
+  reviews: []
+  findings: []
+title: FORMAL-203 ByteEncode fresh build status - BLOCKED (toolchain absent)
+statement: >
+  Re-verification of the FORMAL-203 (msn-2026-0003) FIPS 203 ByteEncode
+  result. The prior session committed claims T1=canonicalRoundtrip,
+  T2=roundtrip_iff_canonical, minimalCounterexample are kernel-proven
+  with zero sorries, after c49e667 R1+O1 review (scope disclosure + PDF
+  page cites) on top of fix commits 29ea835, 02279c0, f97ab38.
+
+  Static scan of formal/Formal/ByteEncode.lean (455 lines):
+    - 32 theorem declarations (30 public + 2 private, including the
+      2 private lemmas mod_shift and div_shift used by the main proofs)
+    -  8 def declarations (bit, wsum, gbit, seg, dec, ebit, encByte, B0)
+    -  0 axiom, 0 sorry, 0 admitted, 0 #check / #print axioms
+    -  The three claimed T1/T2/T3 theorems are all declared as `theorem`
+       and contain no `:= by sorry` body - they are written with full
+       tactic-mode proofs ending in `omega` / `rfl` / `decide` (see
+       canonicalRoundtrip L332-349, roundtrip_iff_canonical L420-432,
+       minimalCounterexample L440-451). The file header documents the
+       scope disclosure mandated by c49e667 (LENGTH half of s7.2 not
+       formalized; MODULUS half covered).
+
+  This static scan is *consistent* with the prior "0 sorries" claim, but
+  it is not a kernel check - a Lean compiler pass is required to confirm
+  that the tactic proofs actually close. The prior session's "kernel-green"
+  label is therefore NOT carried forward by this run.
+
+  Kernel check BLOCKED: this Windows host has no Lean toolchain.
+    - `lake --version`  -> 'lake' is not recognized as the name of a cmdlet
+    - `lean --version`  -> 'lean' is not recognized as the name of a cmdlet
+    - C:\Users\Dhane\.elan                 -> does not exist
+    - C:\Users\Dhane\.elan\bin             -> does not exist
+    - C:\Users\Dhane\elan*                 -> no entries
+    - C:\Users\Dhane\lake* / lean*         -> no entries
+    - C:\Program Files\lean|elan           -> no entries
+    - C:\lean|elan                         -> no entries
+    - Get-Command elan / lake / lean       -> null
+    - $env:LEAN_PATH / $env:LEAN_HOME /
+      $env:ELAN_HOME                       -> empty
+    - formal/.lake/                        -> does not exist
+    - formal/lake-manifest.json            -> does not exist
+    - formal/build_output.log              -> does not exist (not produced)
+  Pinned toolchain in formal/lean-toolchain: leanprover/lean4:v4.22.0.
+  Per AGENTS.md compute routing, Lean checks are local/scratch-class and
+  SHOULD be runnable here, but the prerequisite toolchain install has not
+  happened. No remote (CI) build was attempted in this pass.
+
+  Implication: until `lake build` actually runs and produces a clean
+  result, the FORMAL-203 result remains at "static-source-review-pass"
+  not "kernel-verified". Promotion to verified_conclusion is gated on
+  this kernel pass plus an independent non-synthesizer review (R2).
+environment:
+  where: local
+  isolation: env-scrubbed scratch (probes only; no build attempted)
+  cwd: C:\Users\Dhane\frontier
+  versions:
+    pinned_lean: "leanprover/lean4:v4.22.0"
+    actual_lean: "NOT INSTALLED"
+    actual_lake: "NOT INSTALLED"
+    actual_elan: "NOT INSTALLED"
+    os: "Windows (PowerShell)"
+stdout: |
+  PS> lake --version
+  lake : The term 'lake' is not recognized as the name of a cmdlet,
+  function, script file, or operable program.
+  PS> lean --version
+  lean : The term 'lean' is not recognized as the name of a cmdlet,
+  function, script file, or operable program.
+  PS> Test-Path C:\Users\Dhane\.elan
+  False
+  --- formal/Formal/ByteEncode.lean counts ---
+  theorems (incl. 2 private): 32
+  defs: 8
+  axiom: 0
+  sorry: 0
+  admitted: 0
+  #check / #print axioms: 0
+  T1 canonicalRoundtrip present at line 332
+  T2 roundtrip_iff_canonical present at line 420
+  T3 minimalCounterexample present at line 440
+exit_code: "build not attempted - toolchain absent"
+
+follow_up: >
+  BLOCKED work; resolve in this order before re-attempting the kernel
+  check:
+
+  1. Install the Lean 4 v4.22.0 toolchain on this host. Preferred path:
+     install elan (https://github.com/leanprover/elan/releases), then
+     `cd formal && elan toolchain leanprover/lean4:v4.22.0`. This writes
+     to %USERPROFILE%\.elan\bin which must be on PATH. A elan override
+     may be acceptable in AGENTS.md terms since it is local-scratch
+     (no secrets, no network outbound beyond the initial Mathlib clone).
+
+  2. Once elan is on PATH, run:
+       cd C:\Users\Dhane\frontier\formal
+       lake env lean --version   # expect 4.22.0
+       lake update               # fetches Mathlib4 at v4.22.0 (large, may
+                                 # take minutes; record duration)
+       lake build 2>&1 | tee build_output.log
+     The first Mathlib fetch is the dominant cost. If compute routing
+     flags it as medium/heavy, defer to a GHA run with a public runner
+     (Mathlib is public, no secrets involved).
+
+  3. After a clean build, re-grep the .olean output / source for
+     'sorry' (must be 0), and inspect Lake's output for "declaration
+     uses 'sorry'" warnings. A #print axioms canonicalRoundtrip etc.
+     in a scratch .lean file may be added to record dependency axioms
+     (propext, Classical.choice, Quot.sound, etc.) - these are normal
+     and not failures, but should be enumerated so a follow-up R2
+     review can audit them.
+
+  4. Do NOT promote to verified_conclusion on the strength of step 3
+     alone. Per AGENTS.md evidence ladder, an independent non-
+     synthesizer review pass is also required before promotion.
+
+  5. If toolchain install is rejected (policy / environment), the
+     alternative is a GHA workflow pinned to leanprover/lean4:v4.22.0
+     that runs `lake build` on the FORMAL-203 commit and uploads the
+     log. That is a medium-class compute job per the routing table and
+     is the right place for a formal kernel check anyway.
