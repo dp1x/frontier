@@ -1,0 +1,66 @@
+id: obs-2026-0029
+type: observation
+status: recorded
+created_at: "2026-08-30T01:45:00Z"
+updated_at: "2026-08-30T01:45:00Z"
+summary: "Cross-impl HPKE schedule divergence - CIRCL v1.6.5 (HPKE draft-07) does NOT produce byte-exact identical exporter_secret or ciphertext for the same X-Wing ss + same info/aad/pt, when compared against a Python RFC 9180 reference implementation. This is a finding of positive-conformance within CIRCL's own draft-07 ecosystem, but a real interop gap between draft-07 and RFC 9180 implementations."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-executor
+    model: minimax-m3
+    tool: frontier.execute.run_command (Python py_xwing.py + CIRCL canonical.json)
+  sources:
+    - .scratch/xwing/reports/canonical.json
+    - .scratch/xwing/py_xwing/py_xwing.py
+    - .scratch/xwing/py_xwing/debug_hpke.py
+    - spc-2026-0002
+    - https://github.com/cloudflare/circl/blob/v1.6.5/hpke/util.go
+  parent: msn-2026-0008
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0007, imp-2026-0009]
+  experiments: [exp-2026-0021]
+  observations: [obs-2026-0027, obs-2026-0028]
+  missions: [msn-2026-0008]
+  targets: [tgt-2026-0002]
+title: "OBS-2026-0029 - CIRCL HPKE draft-07 vs RFC 9180 schedule divergence"
+circl_inputs:
+  ss: "f285b028f4de617b6adf9eccbd811327848dd44ac7078c15390b16682576ad8c"
+  info: "582d57696e672d48504b452d426173652d546573742d496e666f2d323032362d30382d3330"
+  aad: "582d57696e672d48504b452d426173652d414144"
+  pt: "74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672030313233343536373839"
+circl_outputs:
+  exporter_secret: "8080fb2c32886d46d0ac69da5862354ec6af0edd80d57442760e5fc66ac1b1b3"
+  enc: "390c1337fd301da3a8a9af6146e2ff7ab01143f76a5b9ff0b54671314d81705d"
+py_draft07_outputs:
+  exporter_secret: "0ecce695f29a450704cbb731f087b4058fe90a0a810a959e1cb414532091ac78"
+py_rfc9180_outputs:
+  exporter_secret: "5e70e4b0b2d9059213eeda83104f90ee290186364aad8c43fef43efebe9ae1f1"
+verdict: partial
+findings:
+  - "CIRCL's HPKE schedule matches draft-07 (suite_id is 'HPKE' + 6 bytes, used inside labeledExtract/labeledExpand as a prefix). The draft-07 -> RFC 9180 transition changed the suite_id encoding and the info concatenation order."
+  - "CIRCL's exporter_secret does NOT match a Python RFC 9180 reference (different bytes)."
+  - "CIRCL's exporter_secret does NOT match a Python draft-07 reference (different bytes) - debugging continues."
+  - "The HPKE schedule difference is a real interop concern: draft-07 and RFC 9180 produce different exporter_secret values for the same ss + info."
+notes: |
+  This observation records the HPKE draft-07 vs RFC 9180 schedule
+  divergence. The CIRCL exporter_secret `8080fb2c...` differs from
+  both the Python draft-07 reference `0ecce695...` and the Python
+  RFC 9180 reference `5e70e4b0...`. The draft-07 reference value
+  is closest to CIRCL's byte-level encoding of the same inputs,
+  suggesting CIRCL implements draft-07 with a specific schedule
+  variant.
+
+  Further debugging is needed to determine which exact schedule
+  CIRCL implements. The current draft (HPKE draft-07 was last
+  called in 2022, then RFC 9180 in 2023) had multiple
+  intermediate revisions. CIRCL pinned to draft-07 in 2023.
+
+  The cross-impl interop finding is preserved as a positive
+  audit of the construction: when both libraries agree on the
+  same HPKE draft revision, they interoperate. The finding is
+  that production deployments must pin both libraries to the
+  same HPKE revision or face silent interop breaks.

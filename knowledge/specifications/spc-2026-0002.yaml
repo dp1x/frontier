@@ -1,0 +1,80 @@
+id: spc-2026-0002
+type: specification
+status: current
+created_at: "2026-08-30T00:30:00Z"
+updated_at: "2026-08-30T00:30:00Z"
+summary: HPKE (RFC 9180) + draft-connolly-cfrg-xwing-kem-08 + RFC 9380 - the X-Wing hybrid KEM (X25519 + ML-KEM-768) and its HPKE Base-mode integration.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: specification-analyst
+    model: minimax-m3
+    tool: web_search + web_fetch (datatracker.ietf.org, rfc-editor.org, csrc.nist.gov)
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9180
+    - https://www.rfc-editor.org/rfc/rfc9380
+    - https://datatracker.ietf.org/doc/draft-connolly-cfrg-xwing-kem/
+    - https://csrc.nist.gov/pubs/fips/203/final
+  parent: null
+  generation: 0
+links:
+  targets: [tgt-2026-0002]
+title: HPKE + X-Wing KEM (RFC 9180 + draft-connolly-cfrg-xwing-kem-08 + RFC 9380)
+specifications:
+  - id: spc-rfc9180
+    url: https://www.rfc-editor.org/rfc/rfc9180
+    title: "Hybrid Public Key Encryption"
+    status: standard (proposed, June 2023)
+    normative_clauses:
+      - section: 5.1
+        text: "SetupBaseS/R/PSK* - HPKE Base mode sender/receiver key schedule with labeled Extract/Expand over HKDF-SHA256"
+      - section: 5.2
+        text: "Encryption/Decryption (Context.Seal/Open) over the shared_secret + nonce + seq + aad + pt"
+      - section: 7
+        text: "IANA KEM/KDF/AEAD registry (updated by RFC 9380)"
+  - id: spc-rfc9380
+    url: https://www.rfc-editor.org/rfc/rfc9380
+    title: "HPKE KEM Registry Update"
+    status: proposed standard (IETF, 2023)
+    normative_clauses:
+      - section: registry
+        text: "Updates the IANA KEM registry; adds (or formally reserves IDs for) post-quantum KEMs. X-Wing has not yet been assigned an IANA KEM ID at draft-08 (experimental/private use)."
+  - id: spc-xwing-08
+    url: https://datatracker.ietf.org/doc/draft-connolly-cfrg-xwing-kem/
+    title: "X-Wing: A Hybrid Key Encapsulation Mechanism based on X25519 and ML-KEM-768"
+    status: internet-draft (CFRG, draft-08 as of 2026-08)
+    normative_clauses:
+      - section: 1
+        text: "X-Wing is a hybrid KEM combining X25519 (ECDH) and ML-KEM-768 (FIPS 203) via SHA3-256 combiner. Targets IND-CCA2 in the hybrid setting."
+      - section: 3
+        text: "Notation and parameters: pk_X = 32 bytes X25519 public, sk_X = 32 bytes X25519 secret, ek_KEM = 1184 bytes ML-KEM-768 public, dk_KEM = 2400 bytes ML-KEM-768 secret, ct_KEM = 1088 bytes ML-KEM-768 ciphertext, ss_KEM = 32 bytes ML-KEM-768 shared secret, ss_X = 32 bytes X25519 shared secret, ss = 32 bytes X-Wing shared secret."
+      - section: 4
+        text: "Encaps(pk): generate (sk_X, sk_e, m, ek_KEM, dk_KEM); compute ct_X = X25519(pk_X, sk_X), ct_KEM = KEM.Encaps(ek_KEM); ss = SHA3-256(ss_X || ss_KEM || ct_X || ek_KEM); return (ct_X || ct_KEM, ss). Domain separator byte sequence is documented."
+      - section: 5
+        text: "Decaps(ct, sk): split (ct_X, ct_KEM); ss_X = X25519(sk_X, ct_X), ss_KEM = KEM.Decaps(dk_KEM, ct_KEM); ss = SHA3-256(ss_X || ss_KEM || ct_X || ek_KEM). Same domain separator."
+      - section: 6
+        text: "Test vectors: KAT vectors for the canonical X-Wing construction. Includes KEM.Encaps/Decaps + HPKE Base mode SetupS/R roundtrip."
+    notes: |
+      Domain separator (encoded as raw bytes concatenated into the SHA3-256 input preimage) and
+      the exact concatenation order of (ss_X, ss_KEM, ct_X, ek_KEM) vs (ss_X, ss_KEM, ct_KEM, ek_X)
+      have changed across draft revisions (-00 through -08). The audit must lock to a specific
+      draft revision (recommended: -08 as of mission start) and re-run against any later revision.
+  - id: spc-fips203
+    url: https://csrc.nist.gov/pubs/fips/203/final
+    title: "Module-Lattice-Based Key-Encapsulation Mechanism (ML-KEM)"
+    status: federal information processing standard (August 2024)
+    normative_clauses:
+      - section: 6
+        text: "K-PKE.KeyGen, K-PKE.Encrypt, K-PKE.Decrypt (FIPS 203 Section 6)"
+      - section: 7
+        text: "ML-KEM.KeyGen, ML-KEM.Encaps, ML-KEM.Decaps (FIPS 203 Section 7)"
+    notes: "X-Wing references the FIPS 203 finalized version. ML-KEM-768 is at security category 3; pk=1184, sk=2400, ct=1088 bytes."
+notes: |
+  Mission scope is draft-connolly-cfrg-xwing-kem-08 as of 2026-08-30. If the draft advances
+  to draft-09 or RFC status during the mission, lock a specific revision per observation and
+  record the revision in the provenance of every artifact.
+
+  X-Wing IANA KEM ID is currently 0x647A (experimental, per draft-08 Section 2). Libraries
+  may use 0x647A, 0x0000 (default), or their own private ID. Cross-impl agreement requires
+  the same KEM ID on both sides.

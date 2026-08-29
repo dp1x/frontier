@@ -1,0 +1,46 @@
+id: hyp-2026-0012
+type: hypothesis
+status: open
+created_at: "2026-08-30T00:30:00Z"
+updated_at: "2026-08-30T00:30:00Z"
+summary: HPKE Base mode wrapping over X-Wing KEM produces byte-exact identical (shared_secret, key, base_nonce, exporter_secret, ciphertext) across libraries, modulo a possible suite-ID encoding mismatch.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator-C
+    model: minimax-m3
+    tool: independent generator
+  sources:
+    - RFC 9180 §5.1
+    - draft-connolly-cfrg-xwing-kem-08 §3
+    - knowledge/implementations/imp-2026-0007.yaml
+  parent: msn-2026-0008
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0007, imp-2026-0008, imp-2026-0009, imp-2026-0010, imp-2026-0011]
+  targets: [tgt-2026-0002]
+title: HYP-C - HPKE wrapping byte-agrees across implementations
+statement: >
+  Once the KEM (X-Wing) produces a 32-byte shared secret, the HPKE
+  Base mode wrapping is:
+    shared_secret = Extract(salt=psk, ikm=ss)  // psk=zero for Base mode
+    key, base_nonce = Expand(shared_secret, info="HPKE-v1" || suite_id || psk_id_hash || info, L=key_len + nonce_len)
+    exporter_secret = Extract(salt=psk, ikm=Expand(shared_secret, info="HPKE-Exporter-v1" || ..., ex))
+    ciphertext = Seal(key, nonce=base_nonce XOR seq=0, aad, pt)
+  This is precisely defined by RFC 9180 §5.1 and tested in the HPKE
+  RFC's Appendix A. The audit verifies that all five libraries produce
+  byte-exact identical (key, nonce, exporter_secret, ciphertext) for
+  the same X-Wing ss + same info + same aad + same pt.
+falsifiable_predictions:
+  - HPKE-wrapped (key, nonce, exporter_secret, ciphertext) byte-agrees between CIRCL and the four hand-rolled combiners for 100 random inputs.
+  - No library exhibits silent acceptance of a 1-byte flipped info or aad (each should produce a different ciphertext or fail authentication).
+  - A library whose suite_id encoding differs (e.g., uses 0x0000 default vs draft-08 experimental 0x647A) produces a different exporter_secret for the same KEM ss.
+disproof_attempts: []
+notes: |
+  Most likely positive. Any finding here is likely either:
+  (a) "all HPKE-wrappings byte-agree" = positive conformance evidence.
+  (b) "suite-ID encoding differs" = spec-conformance finding, with the
+      deviating library's HPKE suite table identified.
+  (c) "library X produces wrong exporter_secret" = implementation bug.

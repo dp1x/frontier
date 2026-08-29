@@ -1,0 +1,70 @@
+id: exp-2026-0021
+type: experiment
+status: designed
+created_at: "2026-08-30T01:15:00Z"
+updated_at: "2026-08-30T01:15:00Z"
+summary: "Stage-1 experiment - run CIRCL's X-Wing KEM + HPKE Base mode against the draft-08 canonical KAT vectors and a mutation matrix; record per-cell (encaps, ss, exporter_secret) outputs as observations."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: minimax-m3
+    tool: harness design (Go + Python)
+  sources:
+    - spc-2026-0002
+    - knowledge/hypotheses/hyp-2026-0010.yaml
+    - knowledge/hypotheses/hyp-2026-0011.yaml
+    - knowledge/hypotheses/hyp-2026-0012.yaml
+  parent: msn-2026-0008
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0007]
+  targets: [tgt-2026-0002]
+  hypotheses: [hyp-2026-0010, hyp-2026-0011, hyp-2026-0012]
+title: EXP-2026-0021 - Stage-1 X-Wing + HPKE harness on CIRCL
+design: |
+  Two-part experiment:
+  Part A (canonical KAT): Run CIRCL's X-Wing KEM.Encapsulate + KEM.Decapsulate
+  against the draft-08 Section 6 test vectors. Record (ek, dk, ek_X, ek_KEM,
+  sk_X, ss_X, ss_KEM, ct, ss) per vector. Compare against the published
+  draft-08 expected values.
+
+  Part B (mutation matrix): Run CIRCL's X-Wing + HPKE Base mode SetupS/R
+  + Context.Seal/Open against a battery of canonical inputs, then mutate
+  one byte at a time at each combiner input position. Mutations:
+    M1: ss_X flipped by 1 byte (3 distinct positions)
+    M2: ss_KEM flipped by 1 byte
+    M3: ct_X flipped by 1 byte
+    M4: ek_KEM flipped by 1 byte
+    M5: ss_X and ss_KEM swapped (argument-order mutation)
+    M6: ss_X || ss_KEM replaced with ss_KEM || ss_X (concat-order mutation)
+    M7: ss_X || ss_KEM || ct_X || ek_KEM replaced with ss_X || ss_KEM || ct_KEM || ek_X (label-mixup mutation)
+    M8: HPKE info flipped by 1 byte
+    M9: HPKE aad flipped by 1 byte
+  For each mutation, record whether CIRCL produces a different ss,
+  a different exporter_secret, or fails the AEAD authentication.
+
+  The expected outcome is positive (all mutations change ss and/or cause
+  AEAD failure) - this confirms that the construction is input-sensitive
+  in the spec-claimed way. The artifact is a JSON report listing each
+  mutation and its observed outcome.
+
+  Compute: lightweight. Each (Encapsulate + Decapsulate + SetupS/R + Seal +
+  Open) takes microseconds. Total compute ~30s for the full matrix.
+  Runs locally on Go 1.26.4 (no CI needed).
+
+  All code via `frontier.execute.run_command` in scratch workspace with
+  scrubbed environment; no secrets.
+commands:
+  - "cd .scratch/xwing && go run ./harness/circl_harness.go --mode=canonical --vectors=vectors/draft-08.json --out=reports/canonical.json"
+  - "cd .scratch/xwing && go run ./harness/circl_harness.go --mode=mutations --n=100 --out=reports/mutations.json"
+compute_decision:
+  location: local
+  isolation: "env-scrubbed scratch workspace via frontier.execute.run_command"
+  reason: "Single Go process; <1s per run; lightweight compute class; no CI needed."
+determinism:
+  deterministic: true
+  seed_policy: "All randomness driven by draft-08 fixed test vectors; no CSPRNG needed for the canonical pass. The mutation matrix uses CIRCL's randomness (which is itself deterministic when seeded) - the harness pins the seed and records it."
+  nondeterminism_notes: "Encapsulate output is non-deterministic per call (random ephemeral secrets), so the mutation harness runs in deterministic-seed mode via CIRCL's stream cipher interface (cloudflare/circl supports this for testing)."

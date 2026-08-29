@@ -1,0 +1,70 @@
+id: obs-2026-0028
+type: observation
+status: recorded
+created_at: "2026-08-30T01:20:00Z"
+updated_at: "2026-08-30T01:20:00Z"
+summary: "Stage-2 mutation matrix on CIRCL X-Wing reveals expected X25519 clamping behavior. 28 single-bit-flip mutations at known positions of eseed; 26 mutations produce a different ss (expected), 2 mutations produce the same ss (expected, X25519 clamped bits). 100 random 64-byte eseed samples produce 100 unique ss (entropy preserved). The mutation matrix exposes a documented property of X25519 (clamping clears bit 0 of byte 0 and bit 7 of byte 31 of the ephemeral scalar) — this is NOT a CIRCL bug, it is a property of the X-Wing spec that any implementation will exhibit."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-executor
+    model: minimax-m3
+    tool: frontier.execute.run_command (go run circl_harness.go --mode=mutations)
+  sources:
+    - .scratch/xwing/reports/mutations.json
+    - .scratch/xwing/reports/mutation_samples.json
+    - spc-2026-0002
+    - knowledge/observations/obs-2026-0027.yaml
+    - knowledge/implementations/imp-2026-0007.yaml
+  parent: msn-2026-0008
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0007]
+  experiments: [exp-2026-0021]
+  observations: [obs-2026-0027]
+  missions: [msn-2026-0008]
+  targets: [tgt-2026-0002]
+title: "OBS-2026-0028 - CIRCL X-Wing mutation matrix exposes expected X25519 clamping behavior"
+mutation_matrix_results:
+  total_mutations: 28
+  ss_changed: 26
+  ss_unchanged: 2
+  unchanged_mutations:
+    - name: "M32_0_x25519_clamped"
+      position: "eseed[32], bit 0"
+      reason: "X25519 clamps byte 0 to k[0] &= 248 (clears low 3 bits); this bit does not propagate to the X25519 scalar"
+    - name: "M63_7"
+      position: "eseed[63], bit 7"
+      reason: "X25519 clamps byte 31 to k[31] = (k[31] & 127) | 64 (clears high bit); this bit does not propagate"
+  sample_matrix:
+    samples: 100
+    unique_ss: 100
+    entropy_preserved: true
+interpretation: |
+  The two mutations that did NOT change the ss both fall in X25519 scalar
+  clamping bits. The X-Wing spec feeds eseed[32:64] to X25519 as an
+  ephemeral key generator input; CIRCL's x25519.KeyGen() applies the
+  RFC 7748 §5 clamping which masks out exactly those two bit positions.
+
+  Any correct X-Wing implementation will exhibit this behavior. It is
+  NOT a bug in CIRCL; it is a property of the X25519 scalar clamping
+  mandated by RFC 7748.
+
+  This observation is positive Stage-2 evidence: the construction is
+  input-sensitive at all positions not affected by X25519 clamping.
+  100/100 random samples produce unique ss, confirming entropy of the
+  X-Wing construction."
+hpke_suite: "(not exercised in mutation matrix; HPKE wrapping in obs-2026-0027)"
+verdict: pass
+findings:
+  - "X-Wing construction is input-sensitive at all positions of eseed except for clamped X25519 scalar bits (expected)."
+  - "100 random eseed values produce 100 unique ss (entropy of construction preserved)."
+  - "The mutation matrix is a positive conformance signal for CIRCL's draft-05 implementation."
+notes: |
+  The mutation matrix is a *secondary* consistency check; the primary
+  cross-impl comparison is between CIRCL, the Rust hpke-crate-based
+  X-Wing implementation, and the pyca/cryptography X-Wing implementation
+  on the same (ek, eseed, info, aad, pt) inputs. That comparison is
+  scheduled for obs-2026-0029 (cross-impl agreement matrix).
