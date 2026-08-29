@@ -1,0 +1,82 @@
+id: obs-2026-0024
+type: observation
+status: recorded
+created_at: "2026-08-29T18:21:00Z"
+updated_at: "2026-08-29T18:21:00Z"
+summary: rustls 0.23.43 + aws-lc-rs 1.18 server aborts modulus-invalid and length-truncated client ek with illegal_parameter exactly as draft mandates; clean control succeeds.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-agent (protocol placement)
+    model: grok-4.6
+    tool: exp-2026-0018 GHA run 33267918229 (rustls-loopback workflow)
+  sources:
+    - exp-2026-0018
+    - interop/protocol-placement/rustls_loopback/main.go
+    - interop/protocol-placement/rustls_loopback/rustls_server/src/main.rs
+    - interop/protocol-placement/rustls_loopback/reports/rustls_loopback_report.tsv
+    - interop/protocol-placement/rustls_loopback/reports/rustls_loopback_console.log
+    - https://github.com/rustls/rustls/releases/tag/v0.23.43
+    - https://github.com/aws/aws-lc-rs
+    - https://datatracker.ietf.org/doc/html/draft-ietf-tls-ecdhe-mlkem-05
+  parent: msn-2026-0005
+  generation: 1
+links:
+  experiments: [exp-2026-0018]
+  observations: [obs-2026-0011]
+  implementations: [imp-2026-0004]
+title: rustls+aws-lc-rs TLS enforces s7.2 at handshake with illegal_parameter - SPECIFIED=IMPLEMENTED=EXECUTED
+statement: >
+  TLS-WIRE cell against the rustls 0.23.43 server (aws-lc-rs 1.18.0 as the
+  default CryptoProvider, prefer-post-quantum feature ON so X25519MLKEM768
+  is the first entry in DEFAULT_KX_GROUPS): planting a coefficient
+  overflow (value 3329 = q, or value 4095 = 12-bit max) into the on-wire
+  ML-KEM portion of the client X25519MLKEM768 key_share, or shrinking the
+  ek by one byte and repairing the six TLS length fields, makes the
+  rustls server's ServerConnection surface
+  rustls::Error::PeerMisbehaved(PeerMisbehaved::InvalidKeyShare) -- and
+  sends a TLS 1.3 fatal alert illegal_parameter that the Go client
+  observes as "remote error: tls: illegal parameter". Untouched control
+  completes cleanly. Server-side error mapping is coarser than Go's
+  (the BoringSSL-derived code does not distinguish length-class from
+  modulus-class at the rustls API surface; both collapse to the single
+  InvalidKeyShare PeerMisbehaved variant), but the on-the-wire alert
+  matches draft-ietf-tls-ecdhe-mlkem-05 s4.2 exactly in all four tamper
+  cases. This is positive evidence that the BoringSSL-derived ML-KEM
+  implementation (aws-lc-rs derives from the BoringSSL upstream, same code
+  path Chrome/Cloudflare/Android rely on) enforces the §7.2 check at
+  the protocol layer with the mandatory alert mapping. Combined with
+  obs-2026-0011 (Go stdlib enforces §7.2), the FIPS 203 s7.2 boundary
+  is now independently observed in two distinct deployed code paths.
+environment:
+  where: github-actions
+  isolation: github-runner (public ubuntu-24.04, no secrets)
+  workflow: .github/workflows/rustls-loopback.yml
+  workflow_run: 33267918229
+  workflow_run_url: https://github.com/dp1x/frontier/actions/runs/33267918229
+  job_id: 99141179652
+  cwd: interop/protocol-placement/rustls_loopback
+  versions:
+    rustls: "0.23.43 (29 July 2026)"
+    aws-lc-rs: "1.18.0 (resolved from ^1.14 constraint at Cargo.toml)"
+    rcgen: "0.14"
+    go: "go1.26.4 linux/amd64"
+    ubuntu: "24.04 LTS"
+  install_class: "medium - cmake + nasm + rust stable + aws-lc-rs C build"
+stdout: |
+  library-parse: N/A (this cohort tests tls-wire only; library-parse boundary
+                   belongs to msn-2026-0001's rustls row)
+  tls-wire: control success | coeff0_eq_q -> illegal_parameter |
+            coeff0_eq_4095 -> illegal_parameter |
+            coeff255_eq_4095 -> illegal_parameter |
+            truncate -> illegal_parameter
+  rustls-server-side: every tamper variant surfaces
+    Error::PeerMisbehaved(PeerMisbehaved::InvalidKeyShare)
+  control variant: handshake completes, no error.
+exit_code: 0
+matrix_complete: true
+divergences_from_go_cohort: none
+follow_up_recommended: false
+notes_path: knowledge/notes/msn-2026-0005.md
+disclosure: public
