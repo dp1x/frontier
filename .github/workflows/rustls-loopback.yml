@@ -1,0 +1,72 @@
+name: rustls-loopback
+
+# msn-2026-0005 / exp-2026-0018 rustls+aws-lc-rs server cohort.
+# Builds the rustls_server Rust binary on ubuntu-latest (cmake + stable
+# rust + aws-lc-rs ML-KEM provider), spawns one process per tamper variant,
+# runs the Go mutator harness, uploads the resulting TSV.
+# Public runners only; no secrets; permissions read-only.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - mission/msn-2026-0005-ci
+  schedule:
+    # weekly regen of the artifact
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  rustls_cohort:
+    name: rustls 0.23.43 + aws-lc-rs ML-KEM ek wire tamper matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps (cmake, nasm for aws-lc-rs)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake nasm pkg-config > apt.log 2>&1 || (tail -50 apt.log && exit 1)
+          cmake --version
+          nasm --version
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build rustls_server (release)
+        working-directory: interop/protocol-placement/rustls_loopback/rustls_server
+        run: |
+          cargo build --release 2>&1 | tee build.log
+          if [ ! -x target/release/rustls_server ]; then
+            echo "rustls_server binary missing after build"
+            tail -50 build.log
+            exit 1
+          fi
+          ls -la target/release/rustls_server
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.4"
+
+      - name: Run rustls_loopback harness
+        working-directory: interop/protocol-placement/rustls_loopback
+        env:
+          RUSTLS_SERVER_BIN: ${{ github.workspace }}/interop/protocol-placement/rustls_loopback/rustls_server/target/release/rustls_server
+        run: |
+          go version
+          go run . reports/rustls_loopback_report.tsv reports/rustls_loopback_console.log
+          echo "----- TSV preview -----"
+          cat reports/rustls_loopback_report.tsv
+
+      - name: Upload TSV artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustls-loopback-report
+          path: interop/protocol-placement/rustls_loopback/reports/rustls_loopback_report.tsv
+
+      - name: Upload console log artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustls-loopback-console
+          path: interop/protocol-placement/rustls_loopback/reports/rustls_loopback_console.log
