@@ -1,0 +1,24 @@
+[package]
+name = "rustls_server"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Pinned versions per msn-2026-0005 / exp-2026-0018.
+# rustls 0.23.43 (29 July 2026) with aws-lc-rs as the default crypto provider.
+# aws-lc-rs exposes the FIPS 203 ML-KEM implementation that chrome/cloudflare
+# production traffic also exercises; if rustls+aws-lc-rs correctly enforces
+# the §7.2 check, that is positive evidence for the broader BoringSSL-derived
+# cohort that msn-2026-0005 cares about.
+
+[dependencies]
+rustls = { version = "=0.23.43", default-features = false, features = ["std", "aws_lc_rs", "logging", "prefer-post-quantum"] }
+rustls-pki-types = "1.12"
+aws-lc-rs = "1.14"
+rcgen = "0.14"
+log = "0.4"
+env_logger = "0.11"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
