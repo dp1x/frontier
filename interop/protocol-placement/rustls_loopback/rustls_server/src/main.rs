@@ -77,7 +77,7 @@ mode={mode}|variant_num={variant_num}|port={port}",
     );
 
     // Build a self-signed cert for localhost.
-    let CertifiedKey { cert, key_pair } = match generate_simple_self_signed(vec![
+    let CertifiedKey { cert, signing_key } = match generate_simple_self_signed(vec![
         "localhost".to_string(),
         "127.0.0.1".to_string(),
     ]) {
@@ -87,8 +87,8 @@ mode={mode}|variant_num={variant_num}|port={port}",
             return ExitCode::from(2);
         }
     };
-    let cert_der = CertificateDer::from(cert.der().to_vec());
-    let key_der = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(key_pair.serialize_der()));
+    let cert_der = cert.der().clone();
+    let key_der = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(signing_key.serialize_der()));
 
     let cfg = match ServerConfig::builder_with_protocol_versions(&[&rustls::version::TLS13])
         .with_no_client_auth()
