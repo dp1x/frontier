@@ -1,0 +1,145 @@
+id: rev-2026-0002
+type: review
+status: completed
+created_at: "2026-08-29T04:35:00Z"
+updated_at: "2026-08-29T04:35:00Z"
+summary: "Independent source-level review of fnd-2026-0002 mechanism - verdict SUPPORTS with magnitude correction (1-byte -> 33-byte / up-to-800-byte over-shoot). All 9 claim steps audited against OpenSSL 3.5.7 source with file:line citations."
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-reviewer
+    model: grok-4.6
+    tool: focused source-level adversarial review (subagent 01a04aeb-8994)
+  sources:
+    - fnd-2026-0002 (the finding under review)
+    - OpenSSL 3.5.7 source: crypto/asn1/tasn_dec.c, crypto/x509/x_pubkey.c, providers/implementations/encode_decode/ml_kem_codecs.c, providers/implementations/keymgmt/ml_kem_kmgmt.c
+    - obs-2026-0020 (prior review contradiction resolution)
+    - obs-2026-0022 (this review's verdict record)
+    - .scratch/spki_repro/REPORT.md (independent reproducer)
+  parent: fnd-2026-0002
+  generation: 1
+links:
+  findings: [fnd-2026-0002]
+  observations: [obs-2026-0020, obs-2026-0022]
+  reproductions: [rpr-2026-0001]
+title: Independent source-level review of fnd-2026-0002 - mechanism SUPPORTED, magnitude CORRECTED
+review: >
+  This is the third adversarial review pass on fnd-2026-0002 (the
+  first two are documented in obs-2026-0019 and obs-2026-0020; the
+  second was retracted after manual byte-counting showed the
+  harness's SPKI prefixes are correct 22 bytes matching OpenSSL
+  3.5.7's `asn1_prefix`). This pass focuses narrowly on the
+  OpenSSL 3.5.7 SPKI decoder path and the BIT STRING length-header
+  mechanism claimed in fnd-2026-0002.
+
+  Subagent: 01a04aeb-8994-7143-b18d-1c5964288895
+  Duration: 474 seconds, 27 tool calls
+  Model: general-purpose
+  Scope: source-level trace of d2i_PUBKEY -> x509_pubkey_ex_d2i_ex
+         -> OSSL_DECODER -> ossl_ml_kem_d2i_PUBKEY path
+
+  Per-step verdict (full table in obs-2026-0022):
+
+    1. d2i_PUBKEY accepts the 6 divergent vectors and proceeds to
+       a successful EVP_PKEY_encapsulate.  SUPPORTED by GHA run
+       33223536290 openssl_invar_report.tsv.
+
+    2. The generic ASN.1 parser's BIT STRING c2i uses the BIT
+       STRING's own declared body length (via ASN1_get_object
+       plen), not the SEQUENCE's. SUPPORTED at tasn_dec.c:528-532.
+
+    3. The SEQUENCE_LENGTH_MISMATCH check at the end of the
+       SEQUENCE branch (tasn_dec.c:411-414) does NOT fire because
+       the BIT STRING c2i consumes exactly 5+800=805 bytes (for
+       ML-KEM-512 canonical), matching the SEQUENCE's remaining
+       818 - 13 (algor) = 805 content, leaving len=0. SUPPORTED.
+
+    4. The parser stops at offset 822 (= 4 SEQUENCE header + 818
+       SEQUENCE content) for ML-KEM-512; the harness buffer is
+       22+801=823 bytes. The 1 trailing byte is un-inspected.
+       SUPPORTED IN MECHANISM but the original claim said
+       "1-byte over-shoot" which conflates the trailing byte
+       with the BIT STRING's 1 unused-bits byte. CORRECTED
+       per obs-2026-0022: the over-shoot is 33 bytes per
+       len-plus-1 vector (because the harness uses test_ek
+       length 833 not 801), not 1 byte.
+
+    5. The OSSL_DECODER pipeline (x509_pubkey_ex_d2i_ex at
+       x_pubkey.c:175-196) computes publen = *in - in_saved
+       AFTER asn1_item_embed_d2i returns, so publen is the
+       parser-consumed length (822/1206/1590), not the harness
+       buffer length. SUPPORTED.
+
+    6. The keymgmt's strict check publen == 22 + 800/1184/1568
+       (in ossl_ml_kem_d2i_PUBKEY at ml_kem_codecs.c:213-218)
+       passes for the parser-consumed length. SUPPORTED.
+
+    7. The keymgmt then reads pubenc+22, publen-22 bytes (the
+       canonical 800/1184/1568 body bytes). SUPPORTED.
+
+    8. The over-shoot (33 bytes for len-plus-1, up to 800 bytes
+       for cross-set) is silently discarded. SUPPORTED IN
+       MECHANISM; magnitude CORRECTED from "1 byte" to "33 bytes
+       (len-plus-1) / 800 bytes (cross-set-1024-as-512)".
+
+    9. Both len-plus-1 and cross-set-* share the same root cause
+       (keymgmt trusts parser-reported publen + BIT STRING length
+       header). SUPPORTED.
+
+  INDEPENDENT REPRODUCER (separate subagent 01a04aeb-8996-7841):
+  OpenSSL 3.6.3 MSYS2 local; 4 fresh, self-contained C reproducers
+  (no code imported from openssl_invar_runner.c); 5th bonus alg_check
+  reproducer. Direct observations:
+    - Test A (len-plus-1 512): parser-consumed=822 of 823; keymgmt
+      publen=800; encap succeeds with ML-KEM-512 dims (768 ct, 32 ss)
+    - Test B (cross-set-1024-as-768 per task spec): parser-consumed=1206
+      of 1590; encap succeeds with ML-KEM-768 dims (1088 ct, 32 ss)
+    - Test C (canonical 512): accepted; positive control passes
+    - Test D (cross-set-1024-as-768 harness layout): agrees with
+      existing GHA openssl_invar_report.tsv result
+    - Test E (alg_check): re-encoded SPKI is 822 bytes (canonical),
+      OID matches prefix's param set, keymgmt params (bits=512,
+      security_bits=128, size=768) match OID not raw body length
+
+  Cross-version confirmation: OpenSSL 3.5.7 (GHA) + 3.6.3 (local)
+  both exhibit the same mechanism with the same over-shoot pattern.
+
+  VERDICT: SUPPORT the mechanism claim. CORRECT the magnitude from
+  "1-byte over-shoot" to "33-byte / up-to-800-byte over-shoot"
+  depending on vector shape. The 6 divergent vectors are
+  reproducible end-to-end on both OpenSSL 3.5.7 and 3.6.3.
+
+  RECOMMENDATION: Promote fnd-2026-0002 to verified_conclusion with
+  the magnitude correction applied. File the upstream OpenSSL bug
+  per the draft at .scratch/upstream-openssl/ISSUE.md.
+environment:
+  where: parent orchestrator + subagent
+  isolation: not applicable (analysis only)
+  versions:
+    subagent_id: "01a04aeb-8994-7143-b18d-1c5964288895"
+    subagent_duration_s: 474
+    subagent_tool_calls: 27
+    independent_reproducer_subagent_id: "01a04aeb-8996-7841-945d-d51c83058955"
+    openssl_local_version: "3.6.3 9 Jun 2026 (MSYS2 mingw-w64-x86_64-openssl 3.6.3-1)"
+    openssl_gha_version: "3.5.7 (9 Jun 2026) built with --enable-fips"
+exit_code: 0
+verdict: SUPPORT_WITH_MAGNITUDE_CORRECTION
+corrections:
+  - "Magnitude of un-inspected trailing data: 1 byte (len-plus-1) -> 33 bytes (len-plus-1) / 384 bytes (cross-set-768-as-512) / 800 bytes (cross-set-1024-as-512, cross-set-1024-as-768)"
+  - "Confusion in the original statement between '1 unused-bits byte' (part of the BIT STRING TLV) and '1 over-shoot byte' (past the BIT STRING TLV). The over-shoot is 33 bytes per len-plus-1 vector because the harness uses test_ek of length 833 (= 800 canonical + 33)."
+strengthens:
+  - "The mechanism is now end-to-end source-verified with file:line citations (tasn_dec.c, x_pubkey.c, ml_kem_codecs.c)"
+  - "Cross-version confirmation: OpenSSL 3.5.7 (GHA) and 3.6.3 (local) both exhibit the same behavior"
+  - "Independent reproducer set: 5 self-contained C programs (no code shared with openssl_invar_runner.c) with full per-case output and verdict"
+
+follow_up: >
+  1. fnd-2026-0002 promoted to verified_conclusion with the
+     magnitude correction applied.
+  2. Upstream OpenSSL bug draft ready at .scratch/upstream-openssl/ISSUE.md
+     awaiting human review before posting.
+  3. Process-finding about the value of manual byte-counting in
+     harness-construct reviews: the original Reviewer B's
+     counting error led to a more thorough analysis (the
+     magnitude correction) than either review alone would have
+     produced.

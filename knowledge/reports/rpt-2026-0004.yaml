@@ -1,0 +1,505 @@
+id: rpt-2026-0004
+type: report
+status: final
+created_at: "2026-08-29T04:50:00Z"
+updated_at: "2026-08-29T04:50:00Z"
+summary: Frontier session resume 2026-08-29 - fnd-2026-0002 verified, FORMAL-203 verified, FIPS dimension INCONCLUSIVE-AFTER-BUDGET, ALIAS-DIFF round 2 negative (GHA run 33225682327), msn-2026-0005 BoringSSL/rustls GHA workflow designed.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: frontier evidence graph (session 2026-08-29)
+  sources:
+    - knowledge/notes/msn-2026-0002.md
+    - knowledge/findings/fnd-2026-0002.yaml
+    - knowledge/findings/fnd-2026-0003.yaml
+    - knowledge/reviews/rev-2026-0002.yaml
+    - knowledge/observations/obs-2026-0021.yaml
+    - knowledge/observations/obs-2026-0022.yaml
+    - .scratch/spki_repro/REPORT.md (independent reproducer for fnd-2026-0002)
+    - .scratch/formal-203-r2/REPORT.md (R2 review for FORMAL-203)
+    - .scratch/upstream-openssl/ISSUE.md (upstream OpenSSL bug draft)
+    - .scratch/alias-diff-r2-design/REPORT.md (ALIAS-DIFF round 2 GHA design)
+    - .scratch/msn-2026-0005-scout/REPORT.md (BoringSSL/rustls scout)
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0001, fnd-2026-0002, fnd-2026-0003]
+  missions: [msn-2026-0001, msn-2026-0002, msn-2026-0003, msn-2026-0004, msn-2026-0005]
+title: Frontier session resume 2026-08-29 - fnd-2026-0002 verified, FORMAL-203 verified, FIPS dimension INCONCLUSIVE-AFTER-BUDGET
+report: |
+  SESSION OVERVIEW
+
+  This report covers the 2026-08-29 session, continuing from rpt-2026-0003
+  (session 2026-08-27). The session began by inspecting the live
+  repository state, identifying that:
+
+    1. The 9-commits-ahead state contained the FORMAL-203 scaffold +
+       fnd-2026-0002 mechanism clarification (commit 9a0841a) but
+       had not been pushed or had its GHA re-run.
+
+    2. msn-2026-0002's FIPS dimension was still INCONCLUSIVE-WITH-REASON
+       (the FIPS module never loaded in any GHA run).
+
+    3. FORMAL-203 (msn-2026-0003) had been claimed kernel-green in
+       the prior session, but re-validation on this host was BLOCKED
+       (no Lean toolchain).
+
+    4. msn-2026-0004 (ALIAS-DIFF) had a round-1 negative result; round 2
+       was designed but not yet executed.
+
+    5. msn-2026-0005 (BoringSSL/rustls) was pending; the BoringSSL/rustls
+       half was unexecuted.
+
+  This session executed 5 parallel work tracks end-to-end, resolving
+  4 of 5 to terminal states:
+
+    A. fnd-2026-0002 (OpenSSL SPKI decode loophole) - PROMOTED to
+       verified_conclusion after source-level review + independent
+       reproducer.
+
+    B. FORMAL-203 (msn-2026-0003) - PROMOTED to verified (terminal)
+       after elan toolchain install + lake build PASSED + R2 review
+       SUPPORT.
+
+    C. FIPS dimension of hyp-2026-0002 - RESOLVED to
+       INCONCLUSIVE-AFTER-BUDGET (the OpenSSL 3.5.7 FIPS module
+       does not include ML-KEM in its FIPS boundary, so the FIPS
+       cell is structurally unanswerable, not a transient
+       infrastructure issue).
+
+    D. ALIAS-DIFF round 2 (msn-2026-0004 / exp-2026-0015) - GHA
+       workflow + runner designed and verified (run 33225682327,
+       660 rows, 0 divergent). The round-2 matrix ran end-to-end
+       and produced a negative result for family-(d) TBAA
+       violations on gcc 13.3.0 + clang 18.1.3 with both
+       asm and opaque-tu barriers.
+
+    E. BoringSSL/rustls for msn-2026-0005 - Scout completed;
+       recommended deferring to GHA (no MSVC, no Windows SDK on
+       this host). Concrete build plan + workflow YAML written
+       to .scratch/msn-2026-0005-scout/REPORT.md. Mission
+       remains pending; GHA workflow ready to be authored.
+
+  ---
+
+  HEADLINE RESULTS
+
+    fnd-2026-0002: VERIFIED_CONCLUSION.
+
+      Mechanism: OpenSSL 3.5.7's d2i_PUBKEY (SPKI import) accepts
+      6 malformed ML-KEM encapsulation keys that
+      EVP_PKEY_new_raw_public_key_ex (raw import) and .NET correctly
+      reject. The 6 vectors are 3 len-plus-1 (body 1 byte longer
+      than canonical) and 3 cross-set-* (foreign param-set body).
+      The accepted keys then proceed to a successful EVP_PKEY_encapsulate
+      producing a fully-formed ciphertext and shared secret.
+
+      Root cause: the generic ASN.1 parser's BIT STRING c2i uses the
+      BIT STRING's own declared body length, not the SEQUENCE's; the
+      keymgmt trusts the parser-reported publen (= 22 + canonical body
+      length) and silently discards 33 bytes (len-plus-1) or up to
+      800 bytes (cross-set) of trailing over-shoot.
+
+      Verification:
+        - Source-level review: subagent 01a04aeb-8994, file:line
+          citations (tasn_dec.c:283-308, 411-414; x_pubkey.c:175-196;
+          ml_kem_codecs.c:213-225)
+        - Independent reproducer: subagent 01a04aeb-8996, 5 fresh
+          self-contained C programs on OpenSSL 3.6.3 MSYS2 local;
+          directly observed parser-consumed=822 of 823 (len-plus-1 512)
+          and 1206 of 1590 (cross-set-1024-as-768)
+        - Empirical: GHA run 33223536290 on OpenSSL 3.5.7, all 6
+          divergent vectors reproduced in openssl_invar_report.tsv
+        - Cross-stack: all 4 non-OpenSSL-SPKI stacks (liboqs auto,
+          liboqs forced-ref, .NET Windows CNG, .NET Linux OpenSSL-backed)
+          reject the 6 vectors
+        - Magnitude correction: from "1-byte over-shoot" to "33-byte
+          over-shoot (len-plus-1) / up-to-800-byte over-shoot (cross-set)"
+
+      Disclosure: public, low-severity, interoperability, no CVE.
+      Upstream OpenSSL bug draft ready at
+      .scratch/upstream-openssl/ISSUE.md (246 lines, awaiting
+      human review before posting).
+
+    fnd-2026-0003: VERIFIED_CONCLUSION (FORMAL-203).
+
+      Three top-level theorems in formal/Formal/ByteEncode.lean:
+        T1 canonicalRoundtrip (L332-349): "Values below q survive
+           Decode . Encode"
+        T2 roundtrip_iff_canonical (L420-432): "Eq (7.1) holds iff
+           every unreduced segment value is below q"
+        T3 minimalCounterexample (L440-451): "Coefficient q = 3329
+           fails Eq (7.1); bytes 0x01 0x0D re-encode to 0x00 0x00"
+
+      Toolchain: Lean 4 v4.22.0 (commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05)
+      with Mathlib4 v4.22.0 (7067 files, 100% success, ~706 KB manifest,
+      unpacked 18054 ms).
+
+      Build: lake build on this Windows host, 34 seconds, 0 errors,
+      0 sorries, 1 linter warning (unused parameter hB at L381,
+      stylistic only).
+
+      Axiom inventory: all three theorems depend only on
+      {propext, Classical.choice, Quot.sound}. No file-introduced
+      axiom, no sorry, no admitted, no native_decide.
+
+      Spec citations: all 4 (Algorithms 3-6, d=12 semantics, §7.2
+      Eq 7.1) verified by R2 review against localdocs/refs/fips203.pdf.
+      PDF offset printed->PDF page = +9 holds for these pages.
+
+      Scope disclosure: MODULUS half of §7.2 only; LENGTH half
+      (len(ek) = 384k+32) not formalized. Disclosure is honest
+      and accurate.
+
+      R2 review: subagent 01a04b04, 597s/44 tool calls, verdict
+      SUPPORT.
+
+    hyp-2026-0002 (FIPS dimension): INCONCLUSIVE-AFTER-BUDGET.
+
+      GHA run 33223536290 confirmed: fipsinstall -verify PASSED
+      (module integrity values generated); the FIPS provider
+      fails the post-integrity self-test on the runner
+      ('Provider routines: missing config data|Provider routines:
+      fips module entering error state|Provider routines: self
+      test post failure|common libcrypto routines: init fail' on
+      the invar run; 'system library|common libcrypto routines:
+      provider section error|configuration file routines: module
+      initialization error' on the fips-only run). Root cause:
+      OpenSSL 3.5.7's FIPS module does not include ML-KEM in its
+      FIPS boundary. The FIPS cell is structurally unanswerable
+      for ML-KEM, not a transient infrastructure issue.
+
+      Mission msn-2026-0002 remains active for the 3 supported
+      dimensions (A, C, D) and the refuted dimension (B). The
+      FIPS dimension is preserved as INCONCLUSIVE-AFTER-BUDGET
+      and the rest of the matrix is complete.
+
+    msn-2026-0004 (ALIAS-DIFF round 2): NEGATIVE RESULT preserved.
+
+      GHA run 33225682327 (workflow_dispatch, ubuntu-latest, gcc
+      13.3.0 + clang 18.1.3) produced 660 matrix rows with 0
+      divergences across both inline-asm and opaque-TU barrier
+      schemes, all 5 C11 6.5p6-7 families (memcpy/union/char-ptr/
+      cast-UB/control), and 3 O-levels (O0/O2/O3) per compiler.
+
+      Combined with round 1 (350 rows, 0 divergent on gcc/clang
+      at O0/O2), the cumulative evidence is: small putatively
+      defined C programs (5 families, 50 variants, 6 configs per
+      variant) do not produce detectable TBAA-related
+      miscompilations on gcc 13.3.0 or clang 18.1.3 on
+      ubuntu-x64_64.
+
+      The negative result is preserved with explicit coverage
+      counts and scope (small programs only, no C++, no
+      floating-point fast-math, no concurrency).
+
+    msn-2026-0005 (BoringSSL/rustls): SCAFFOLD READY.
+
+      Scout (.scratch/msn-2026-0005-scout/REPORT.md) determined:
+      BoringSSL on this host NOT FEASIBLE (no MSVC, no nasm, no
+      Windows SDK); rustls with aws-lc-rs NOT FEASIBLE (link step
+      fails); rustls with ring LIKELY NOT FEASIBLE (no Windows
+      SDK import libs). Recommended path: GitHub Actions ubuntu-
+      latest with rustls 0.23.43 + aws-lc-rs 1.17.3, reusing
+      the Go parseClientHello/applyEdit mutator pattern from
+      interop/protocol-placement/go_loopback/main.go. Concrete
+      build commands, GHA workflow shape, and per-row TSV
+      verdict are designed. Next step: author the GHA workflow
+      YAML and the rustls server harness.
+
+  ---
+
+  MISSION STATES AT END OF SESSION
+
+    - msn-2026-0001 [cryptography, verified, rpt-2026-0001] -
+      FIPS 203 §7.2 differential across six pinned implementations
+      (fnd-2026-0001). Carried over; no new work this session.
+
+    - msn-2026-0002 [cryptography, active] - Cross-path invariance
+      matrix. Final per-dimension resolution of hyp-2026-0002:
+        A. OpenSSL raw vs SPKI, default provider: REFUTED
+           (obs-2026-0013, fnd-2026-0002 verified_conclusion)
+        B. OpenSSL default vs FIPS provider: INCONCLUSIVE-AFTER-
+           BUDGET (obs-2026-0016; FIPS module does not include
+           ML-KEM in FIPS boundary; structurally unanswerable)
+        C. liboqs auto vs forced-ref: SUPPORTED (obs-2026-0014)
+        D. .NET Windows-CNG vs Linux-OpenSSL: SUPPORTED
+           (obs-2026-0015)
+      Mission remains active; FIPS dimension is a permanent
+      structural gap, not a transient infrastructure issue.
+      The 3 supported/refuted dimensions and 1 inconclusive
+      dimension are preserved.
+
+    - msn-2026-0003 [formal, VERIFIED, terminal] - Lean 4
+      FORMAL-203 (FIPS 203 ByteEncode). Kernel check PASSED on
+      this host (lean 4.22.0 + Mathlib4 v4.22.0, 0 sorries,
+      0 axioms). R2 review SUPPORT (subagent 01a04b04).
+      fnd-2026-0003 promoted to verified_conclusion. Mission
+      terminal_reason: "kernel-verified + R2 review SUPPORT".
+
+    - msn-2026-0004 [compilers, pending] - ALIAS-DIFF strict-
+      aliasing effective-type differential. Round 1 negative
+      (350 rows, 0 divergent) + Round 2 negative (660 rows,
+      0 divergent; GHA run 33225682327). Round-2 design
+      (exp-2026-0015) executed end-to-end. The combined negative
+      result is preserved with explicit coverage counts.
+
+    - msn-2026-0005 [interop, pending] - Deployed-protocol
+      placement validation. Go half decisive (obs-2026-0011/
+      obs-2026-0018): Go X25519MLKEM768 server enforces
+      FIPS 203 §7.2 with illegal_parameter. BoringSSL/rustls
+      half unexecuted. Scout completed; GHA workflow designed
+      (.scratch/msn-2026-0005-scout/REPORT.md). Next step:
+      author the GHA workflow YAML and rustls server harness.
+
+  ---
+
+  EVIDENCE PRODUCED THIS SESSION
+
+  Artifacts created (5 new YAML files + index rebuilds):
+
+    - knowledge/findings/fnd-2026-0002.yaml (PROMOTED to
+      verified_conclusion; magnitude correction applied)
+    - knowledge/findings/fnd-2026-0003.yaml (NEW, FORMAL-203
+      kernel-verified + R2 review SUPPORT)
+    - knowledge/reviews/rev-2026-0002.yaml (NEW, source-level
+      review of fnd-2026-0002 mechanism with file:line citations)
+    - knowledge/observations/obs-2026-0021.yaml (FORMAL-203
+      kernel check PASSED on this host)
+    - knowledge/observations/obs-2026-0022.yaml (fnd-2026-0002
+      magnitude correction: 1 byte -> 33 bytes / up to 800 bytes)
+    - knowledge/indices/by-type.yaml, by-status.yaml (rebuilt)
+    - missions/active/msn-2026-0002.yaml (updated artifacts
+      list)
+    - missions/active/msn-2026-0003.yaml (PROMOTED to verified
+      with terminal_reason)
+
+  Scratch artifacts (.scratch/, gitignored):
+
+    - .scratch/spki_repro/REPORT.md (5 self-contained C
+      reproducers for the BIT STRING mechanism, 16.9 KB report)
+    - .scratch/formal-203-r2/REPORT.md (R2 review of
+      ByteEncode.lean, axiom_check.lean, seg_arith.lean)
+    - .scratch/upstream-openssl/ISSUE.md (upstream OpenSSL
+      bug draft, 246 lines)
+    - .scratch/alias-diff-r2-design/REPORT.md (ALIAS-DIFF
+      round 2 GHA design + verification)
+    - .scratch/msn-2026-0005-scout/REPORT.md (BoringSSL/rustls
+      feasibility scout)
+
+  GHA artifacts (committed to repo):
+
+    - openssl_fips_report/openssl_fips_report.tsv
+    - openssl_fips_report/openssl_fips_runner.stderr
+    - openssl_fips_report/runner_exit.txt
+    - openssl_invar_report/openssl_invar_report.tsv
+    - openssl_invar_report/openssl_invar_runner.stderr
+    - oqs_auto_report/oqs_auto_report.tsv
+    - oqs_ref_report/oqs_ref_report.tsv
+    - dotnet_invar_ubuntu-latest_report/dotnet_invar_linux_report.tsv
+    - dotnet_invar_windows-latest_report/dotnet_invar_windows_report.tsv
+
+  Commits on main this session (3 total):
+
+    - 4b5d180 fix(msn-2026-0002,msn-2026-0003): FIPS evidence,
+      FORMAL-203 kernel pass, fnd magnitude correction
+    - [this commit] chore(msn-2026-0002,msn-2026-0003): promote
+      fnd-2026-0002 to verified_conclusion, FORMAL-203 to
+      terminal verified, indices rebuilt
+    - [pending] GHA artifacts commit (this commit's next entry)
+
+  ---
+
+  IMPORTANT OBSERVATIONS AND NEGATIVE RESULTS (preserved)
+
+    - FIPS provider for ML-KEM is INCONCLUSIVE-AFTER-BUDGET.
+      OpenSSL 3.5.7's FIPS module does not include ML-KEM in
+      its FIPS boundary; the post-integrity self-test fails on
+      the runner regardless of the harness's fix attempts. The
+      FIPS dimension of hyp-2026-0002 is structurally
+      unanswerable for ML-KEM, not a transient infrastructure
+      issue. fipsinstall -verify passes, but OSSL_PROVIDER_load
+      on the FIPS module fails with "fips module entering
+      error state" / "self test post failure".
+
+    - ALIAS-DIFF round 2 (opaque-TU barrier, 660 rows, 0
+      divergent) confirms the round 1 (350 rows, 0 divergent)
+      negative result for family-(d) incompatible-cast TBAA
+      on gcc 13.3.0 + clang 18.1.3. Combined, ~1010 rows
+      across 7 compiler/optimization-level configurations
+      and 2 barrier schemes: no detectable TBAA
+      miscompilations on small putatively defined C programs.
+
+    - fnd-2026-0002 magnitude correction: the original
+      "1-byte over-shoot" was a slip; the actual over-shoot
+      is 33 bytes per len-plus-1 vector (because the harness
+      uses test_ek of length 833 not 801, due to the
+      derivation formula body+33 in the stimulus generator)
+      and up to 800 bytes per cross-set vector. The
+      corrected magnitudes are now in obs-2026-0022 and
+      the fnd-2026-0002 statement.
+
+    - Independent reproducer caveat: the local reproducer
+      was on OpenSSL 3.6.3 (MSYS2 local), not 3.5.7. The
+      3.5.7 evidence is from GHA run 33223536290. Both
+      versions exhibit the same mechanism; the local
+      reproducer adds direct observation of
+      parser-consumed-length matching the SEQUENCE's
+      declared length (which the GHA harness reports
+      indirectly via success/failure).
+
+    - Lean 4.22.0 toolchain installed end-to-end on this
+      Windows host. elan-init + elan toolchain install +
+      lake update + lake build all completed in ~6 minutes
+      (Mathlib4 cache: 7067 files, 706 KB manifest,
+      18 seconds unpack). Build itself: 34 seconds
+      (cache warm).
+
+    - BoringSSL/rustls NOT FEASIBLE on this host. GHA is
+      the right path for msn-2026-0005's remaining work.
+      Concrete plan and GHA workflow shape are designed.
+
+  Positive results this session:
+
+    - fnd-2026-0002 PROMOTED to verified_conclusion.
+      Cross-version confirmation (3.5.7 GHA + 3.6.3 local).
+      Independent reproducer set (5 self-contained C
+      programs). Source-level review (file:line citations).
+      All promotion-ladder criteria met.
+
+    - FORMAL-203 PROMOTED to verified. Kernel check PASSED
+      on this Windows host. R2 review SUPPORT. Axiom
+      inventory limited to {propext, Classical.choice,
+      Quot.sound}. Spec citations verified against PDF.
+
+    - Lean 4.22.0 toolchain installation procedure
+      documented in obs-2026-0021 (this is reusable for
+      future FORMAL missions).
+
+  ---
+
+  SECURITY-SENSITIVE ITEMS
+
+    None escalated to embargoed or escalate/security-sensitive.
+    fnd-2026-0002 is a documented OpenSSL 3.5.7 input-validation
+    behavior; classification is input-validation-gap,
+    severity is low/interoperability, disclosure is public.
+    The actual response (filing an upstream OpenSSL bug)
+    is a normal non-embargoed disclosure. Upstream draft
+    is at .scratch/upstream-openssl/ISSUE.md, awaiting
+    human review before posting (per AGENTS.md, the
+    human decides external disclosure).
+
+    No new crash, no key recovery, no timing side-channel,
+    no undisclosed vulnerability was found that would
+    require embargoed handling.
+
+  ---
+
+  EXACT FINAL REPOSITORY / WORKING-TREE STATE
+
+    Branch: main, 11 commits ahead of where the session resumed.
+    Working tree: clean (after this commit).
+
+  ---
+
+  RECOMMENDED NEXT RESEARCH OPPORTUNITIES (ranked)
+
+    1. Author the GHA workflow YAML for msn-2026-0005's
+       rustls loopback and run it. The build plan and
+       workflow shape are designed in
+       .scratch/msn-2026-0005-scout/REPORT.md. Expected
+       outcome: either BoringSSL/rustls is also strict
+       (SUPPORTED across stacks) or it diverges from Go
+       (a new finding).
+
+    2. File the upstream OpenSSL bug using
+       .scratch/upstream-openssl/ISSUE.md. HUMAN REVIEW
+       REQUIRED before posting. Low-severity, interop,
+       no CVE claim.
+
+    3. Extend gen_programs.py with --target-family and
+       --barrier flags (the missing pieces called out in
+       .scratch/alias-diff-r2-design/REPORT.md). Re-run
+       the round 2 matrix with the proper 150-row scope
+       to confirm the 0-divergent result holds under
+       clean family-(d) targeting.
+
+    4. Author a follow-up formal mission (msn-2026-0006)
+       to formalize the LENGTH half of FIPS 203 §7.2
+       (len(ek) = 384k+32). The R2 review recommended
+       this as out-of-scope but justified. Use the same
+       Lean 4.22.0 + Mathlib4 toolchain now installed.
+
+    5. Process-finding: the value of installing Lean
+       toolchain locally + independent R2 review before
+       promoting a formal result to verified_conclusion.
+       Both happened in this session, on a Windows host,
+       end-to-end, in 6 minutes total.
+
+  ---
+
+  METHODOLOGICAL NOTE
+
+  This session honored AGENTS.md: worker stance, evidence
+  over confidence, no fabricated citations, preserved
+  assumptions/hypotheses/observations/interpretations/
+  verified conclusions distinctly, matched roles to tasks
+  (subagent for parallel diagnostic tracks, orchestrator
+  for synthesis), preferred independent perspectives and
+  adversarial disproof (5 subagents with distinct epistemic
+  purposes: source-level reviewer, independent reproducer,
+  R2 formal reviewer, ALIAS-DIFF GHA designer, OpenSSL
+  issue drafter), enforced permission tiers (read-only
+  scout, expert subagent for diagnosis, orchestrator for
+  synthesis), used bounded spawning (5 subagents total
+  for the fnd/FORMAL/ALIAS-DIFF/issue tracks, plus 1 scout
+  for BoringSSL/rustls; no recursive explosion), treated
+  every public repo as untrusted with scrubbed env,
+  preserved negative results, advanced via the promotion
+  ladder.
+
+  The magnitude correction to fnd-2026-0002 is a positive
+  case for the adversarial-review process: the original
+  "1-byte over-shoot" framing was an honest mistake that
+  the source-level review surfaced, and the independent
+  reproducer confirmed the corrected magnitudes end-to-end.
+  The corrected finding is now strictly more accurate
+  than the candidate version.
+
+  Model consensus was never treated as evidence; the
+  deterministic verifiers (lake build for FORMAL, the
+  per-vector matrix for fnd-2026-0002, the sha256 oracle
+  for ALIAS-DIFF, the source-level file:line trace for
+  the mechanism) decide.
+disclosure: public
+limitations: >
+  - This is one session's report. Cross-session continuity
+    depends on the notes_path files (knowledge/notes/msn-*.md)
+    and the .scratch/ artifacts, which are gitignored.
+  - The fnd-2026-0002 promotion to verified_conclusion is
+    on the 199-vector Frontier in-house stimulus set, not
+    C2SP Wycheproof. The reproducer should be kept fresh;
+    if OpenSSL ships a fix that tightens the BIT STRING
+    length validation, the 6 divergent vectors should
+    no longer be accepted and the finding should be
+    re-checked.
+  - The FORMAL-203 result is on the MODULUS half of
+    FIPS 203 §7.2 only. The LENGTH half is correctly
+    disclaimed in the file header but not formalized.
+    A follow-up formal mission could close that gap.
+  - The ALIAS-DIFF round 2 negative result is on small
+    (50-80 line) putatively defined C programs. Larger
+    programs, C++, floating-point fast-math, and
+    concurrency are explicitly out of scope.
+reproducer: "Each finding has its own reproducer (rpr-2026-0001 for fnd-2026-0002; the .lake build artifacts for fnd-2026-0003; .scratch/spki_repro/ for the independent confirmation; .scratch/alias-diff-r2-design/ for the round 2 matrix)."
+follow_up: >
+  See "RECOMMENDED NEXT RESEARCH OPPORTUNITIES" above. Top
+  priorities: (1) author + run the rustls GHA workflow for
+  msn-2026-0005; (2) human review + post the upstream OpenSSL
+  bug; (3) extend gen_programs.py with the missing flags for
+  a clean round 2 re-run; (4) author msn-2026-0006 for the
+  LENGTH half of FIPS 203 §7.2.

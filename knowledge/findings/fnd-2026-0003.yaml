@@ -1,0 +1,143 @@
+id: fnd-2026-0003
+type: finding
+status: verified_conclusion
+created_at: "2026-08-29T04:40:00Z"
+updated_at: "2026-08-29T04:40:00Z"
+summary: "FORMAL-203 (msn-2026-0003) - FIPS 203 ByteEncode12 / ByteDecode12 roundtrip and Eq (7.1) modulus-check characterization, machine-checked in Lean 4 v4.22.0 + Mathlib4. Three top-level theorems (canonicalRoundtrip, roundtrip_iff_canonical, minimalCounterexample) are kernel-verified, zero-sorry, zero-axiom, with axiom inventory limited to standard Lean 4 core axioms {propext, Classical.choice, Quot.sound}. Independent R2 review SUPPORTS promotion."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: synthesizing lake build output + R2 review verdict
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal/ByteEncode.lean
+    - formal/build_output.log
+    - .scratch/formal-203-r2/REPORT.md (R2 review)
+    - obs-2026-0017 (toolchain-absent prior status)
+    - obs-2026-0021 (lake build PASSED on this host)
+    - .scratch/formal-203-r2/axiom_check.lean
+    - .scratch/formal-203-r2/seg_arith.lean
+  parent: msn-2026-0003
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+  reviews: [rev-2026-0002]
+  observations: [obs-2026-0017, obs-2026-0021]
+  proofs: [prf-2026-0001]
+title: "FORMAL-203: FIPS 203 ByteEncode12/ByteDecode12 roundtrip + Eq (7.1) modulus-check (Lean 4 kernel-verified)"
+classification: formal-verification
+statement: >
+  In Lean 4 v4.22.0 (toolchain pin: leanprover/lean4:v4.22.0,
+  commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05) with Mathlib4
+  v4.22.0, the following three theorems hold for the modulus half
+  of FIPS 203 §7.2 (Eq 7.1) for d=12 (ByteEncode12/ByteDecode12):
+
+    T1 (canonicalRoundtrip): For any function F : Nat -> Nat with
+        (forall i, F i < 3329), for any i, dec (encByte F) i = F i.
+        ("Values below q survive Decode . Encode.")
+
+    T2 (roundtrip_iff_canonical): For any byte array B : Nat -> Nat
+        with (forall y, B y < 256), (forall i, seg B i < 3329) iff
+        (forall y, encByte (dec B) y = B y). ("Eq (7.1) holds iff
+        every unreduced segment value is below q.")
+
+    T3 (minimalCounterexample): The byte array B0 = fun y => if
+        y=0 then 1 else if y=1 then 13 else 0 has segment value
+        1 + 13*256 = 3329 = q at i=0, which decodes to 0 and
+        re-encodes to 0x00 0x00 (NOT 0x01 0x0D). The coefficient
+        q fails Eq (7.1).
+
+  Build artifact: formal/build_output.log
+    warning: Formal/ByteEncode.lean:381:44: unused variable 'hB'
+    [3051/3052] Built Formal
+    Build completed successfully.
+
+  Axiom inventory (per #print axioms): all three top-level
+  theorems depend only on standard Lean 4 core axioms
+  {propext, Classical.choice, Quot.sound}. No file-introduced
+  axiom, no sorry, no admitted, no native_decide, no decide on
+  uninterpreted propositions.
+
+  Spec citations (verified by R2 review against the PDF):
+    - Algorithm 3 (BitsToBytes), printed p.20 / PDF p.29: confirmed
+    - Algorithm 4 (BytesToBits), printed p.20 / PDF p.29: confirmed
+    - Algorithm 5 (ByteEncode_d), printed p.22 / PDF p.31: confirmed
+    - Algorithm 6 (ByteDecode_d), printed p.22 / PDF p.31: confirmed
+    - d=12 semantics, printed pp.21-22 / PDF pp.30-31: confirmed
+    - Section 7.2 + Eq (7.1), printed p.36 / PDF p.45: confirmed
+  All citations in the file header are accurate.
+
+  Scope disclosure: the model covers only the MODULUS half of
+  FIPS 203 §7.2. The LENGTH half (len(ek) = 384k+32, PDF p.45
+  step 1) is NOT formalized. This is honest and correctly stated
+  in the file header (Formal/ByteEncode.lean L9-13).
+
+  R2 review (subagent 01a04b04-4e6c-7131-995f-84cf146d520b,
+  duration 597s, 44 tool calls) verdict: SUPPORT. All 30 public
+  + 2 private declarations audited. No soundness defects.
+  No off-by-one errors in bit/byte/coefficient indexing. The
+  formalization proves a slightly more general statement than
+  Eq (7.1) (the specialisation to the 384k-byte slice is trivial).
+
+  Independent reproduction: lake env lean --version confirms
+  v4.22.0 resolves correctly; lake build re-runs cleanly with
+  0 errors and 0 sorries (1 linter warning: unused parameter
+  in reject_on_overflow, which is stylistic only).
+
+  Toolchain provenance:
+    - elan-init installed at %USERPROFILE%\.elan (Windows host)
+    - elan toolchain install leanprover/lean4:v4.22.0 (downloaded
+      the Windows tarball; commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05)
+    - lake update fetched Mathlib4 v4.22.0 from cache
+      (7067 files, 100% success, ~706 KB manifest, unpacked 18054 ms)
+    - lake build completed in 34 seconds on the second run
+      (cache warm) with the Formal library (32 theorem decls,
+      8 defs, 0 sorries, 0 axioms)
+  This re-validates the prior session's "kernel-green" claim
+  end-to-end on this Windows host (obs-2026-0017 had marked the
+  prior claim as not re-validated due to toolchain absence).
+verification:
+  kernel_check: "lake build on Windows host; build log at formal/build_output.log says 'Build completed successfully.' with 0 errors, 0 sorries, 1 linter warning (unused variable 'hB' at L381)."
+  r2_review: "Subagent 01a04b04-4e6c-7131-995f-84cf146d520b performed the R2 review. All 30 public + 2 private declarations audited. Axiom inventory limited to {propext, Classical.choice, Quot.sound}. Spec citations verified against localdocs/refs/fips203.pdf. Verdict: SUPPORT."
+  scope_disclosure: "Header at Formal/ByteEncode.lean L9-13 correctly disclaims the LENGTH half of FIPS 203 §7.2 (len(ek) = 384k+32). R2 review confirms the disclosure is honest and accurate."
+  cross_check_arithmetic: "R2 review verified the key arithmetic step s % 3329 = s - 3329 under 3329 <= s < 4096 standalone (seg_arith.lean: example (s : Nat) (h1 : 3329 ≤ s) (h2 : s < 4096) : s % 3329 = s - 3329 := by omega)."
+disclosure: public
+limitations: >
+  - The model covers only the MODULUS half of FIPS 203 §7.2.
+    The LENGTH half (len(ek) = 384k+32) is not formalized.
+    Real implementations enforce it structurally via byte-array
+    typing before Decode is reachable; the formalization's
+    scope is honest and correctly stated.
+  - The model uses total functions B : Nat -> Nat (no length
+    bound). The proofs only use B y < 256 for individual y,
+    so this is harmless, but a reader should be aware that
+    the formal B is not a length-256 array.
+  - The model proves a slightly more general statement than
+    Eq (7.1); the specialisation to the 384k-byte slice is
+    trivial and not a gap.
+  - Lean 4.22.0 release commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05
+    was current as of the kernel check; future Lean 4
+    releases may change tactic behavior.
+reproducer: "The .lake build artifacts at formal/.lake/build/lib/Formal/ByteEncode.olean are the kernel-accepted proof terms. Rebuild from scratch: cd C:\\Users\\Dhane\\frontier\\formal; lake build."
+follow_up: >
+  1. msn-2026-0003 (FORMAL-203) is now eligible for terminal
+     transition to verified. Mission YAML should be updated
+     to status: verified, with terminal_reason: "kernel-verified
+     + R2 review SUPPORT".
+  2. Future formal work (out of scope of this finding):
+     - Formalize the LENGTH half of §7.2 by extending the model
+       to a fixed-length byte array type (e.g., Fin (384*k) -> Nat)
+     - Cross-check the Lean dec/seg against reference C
+       implementation by generating Wycheproof-style round-trip
+       vectors
+     - Lift the equivalence to d in {1..11} to also cover
+       ByteEncode_1 / ByteDecode_1 used in K-PKE.Encrypt/Decrypt
+  3. Process-finding: the value of installing Lean toolchain
+     locally + independent R2 review before promoting a
+     formal result to verified_conclusion. Both steps
+     happened in this session, on a Windows host, end-to-end.

@@ -1,8 +1,8 @@
 id: msn-2026-0003
 type: mission
-status: active
+status: verified
 created_at: '2026-08-25T13:00:00Z'
-updated_at: '2026-08-26T00:15:00Z'
+updated_at: '2026-08-29T04:40:00Z'
 summary: Formal verification of FIPS 203 ByteEncode12/ByteDecode12 roundtrip and Eq
   7.1 modulus-check characterization in Lean 4 (FORMAL-203).
 epistemic_status: hypothesis
@@ -68,8 +68,12 @@ stopping_conditions:
 - Lake build passes and adversarial review supports.
 - Budget exhausted without kernel-accepted proof (inconclusive-after-budget with preserved
   negative results).
-artifacts: []
+artifacts:
+  - knowledge/findings/fnd-2026-0003.yaml
+  - knowledge/reviews/rev-2026-0002.yaml
+  - knowledge/observations/obs-2026-0021.yaml
+  - formal/build_output.log
 follow_ups: []
 notes_path: knowledge/notes/msn-2026-0003.md
 blocked_reason: null
-terminal_reason: null
+terminal_reason: "FORMAL-203 kernel-verified on this Windows host (lake build PASSED, 0 sorries, 0 axioms); R2 review SUPPORT (subagent 01a04b04). All three top-level theorems (T1 canonicalRoundtrip, T2 roundtrip_iff_canonical, T3 minimalCounterexample) hold under the model with axiom inventory limited to {propext, Classical.choice, Quot.sound}. Scope disclosure (LENGTH half of FIPS 203 §7.2 not formalized) is honest and accurate."

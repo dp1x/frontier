@@ -18,6 +18,7 @@ experiment:
 finding:
 - fnd-2026-0001
 - fnd-2026-0002
+- fnd-2026-0003
 
 hypothesis:
 - hyp-2026-0001
@@ -59,17 +60,21 @@ observation:
 - obs-2026-0018
 - obs-2026-0019
 - obs-2026-0020
+- obs-2026-0021
+- obs-2026-0022
 
 report:
 - rpt-2026-0001
 - rpt-2026-0002
 - rpt-2026-0003
+- rpt-2026-0004
 
 reproducer:
 - rpr-2026-0001
 
 review:
 - rev-2026-0001
+- rev-2026-0002
 
 specification:
 - spc-2026-0001
