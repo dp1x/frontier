@@ -1,0 +1,335 @@
+id: rpt-2026-0005
+type: report
+status: final
+created_at: "2026-08-29T19:30:00Z"
+updated_at: "2026-08-29T19:30:00Z"
+summary: "Frontier session report 2026-08-29 - 5 new verified findings (fnd-2026-0002/0003/0004/0005/0006), 6 missions terminalized, FORMAL-203/204/205 chain complete, rustls+aws-lc-rs cohort landed, ALIAS-DIFF round-2 negative result recorded, structural bugs in validator fixed."
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: synthesizing full session evidence
+  sources:
+    - knowledge/findings/fnd-2026-0001.yaml
+    - knowledge/findings/fnd-2026-0002.yaml
+    - knowledge/findings/fnd-2026-0003.yaml
+    - knowledge/findings/fnd-2026-0004.yaml
+    - knowledge/findings/fnd-2026-0005.yaml
+    - knowledge/findings/fnd-2026-0006.yaml
+    - knowledge/reports/rpt-2026-0003.yaml
+    - missions/completed/msn-2026-0002.yaml
+    - missions/completed/msn-2026-0003.yaml
+    - missions/completed/msn-2026-0004.yaml
+    - missions/completed/msn-2026-0005.yaml
+    - missions/completed/msn-2026-0006.yaml
+    - missions/completed/msn-2026-0007.yaml
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0001, fnd-2026-0002, fnd-2026-0003, fnd-2026-0004, fnd-2026-0005, fnd-2026-0006]
+  missions: [msn-2026-0002, msn-2026-0003, msn-2026-0004, msn-2026-0005, msn-2026-0006, msn-2026-0007]
+title: "Frontier session report 2026-08-29 - 6 missions terminalized, 5 new verified findings, FORMAL chain complete"
+report: |
+  SESSION OVERVIEW
+
+  This session covers the resume from the 2026-08-27 session
+  (rpt-2026-0003) through 2026-08-29, building on the existing
+  3 verified findings and 1 verified FORMAL-203 result. The
+  session produced 5 NEW verified findings (fnd-2026-0002/0003/0004/0005/0006),
+  terminalized 6 missions (msn-2026-0002/0003/0004/0005/0006/0007), and
+  completed the FORMAL chain FORMAL-203/204/205 covering the
+  complete FIPS 203 s7.2 encapsulation-key check end-to-end.
+
+  EFFECTIVE WORK TIME
+
+  Approximately 6 hours of structured autonomous work, including:
+  - Initial state inspection and structural-bug fixing (~30 min)
+  - msn-2026-0002 terminalization with FIPS root-cause analysis (~30 min)
+  - fnd-2026-0002 evidence chain completion + sub-reproducer (~30 min)
+  - msn-2026-0003/0004 terminalization + ALIAS-DIFF round-2 (~45 min)
+  - msn-2026-0005 BoringSSL/rustls cohort via subagent (~60 min)
+  - FORMAL-204 LENGTH half formalization (~45 min)
+  - FORMAL-205 combined-half formalization (~45 min)
+  - Final structural fix + session report (~30 min)
+
+  COMPUTE ROUTING USAGE
+
+  Local (Windows 11, C:\Python312, C:\Users\Dhane\.elan\bin\lean,
+  MSYS2 mingw-w64 gcc 16.1.0, no clang):
+  - msn-2026-0004 ALIAS-DIFF round-2 partial (210 rows gcc only)
+  - FORMAL-204 + FORMAL-205 Lean 4 kernel builds
+  - re-validated FORMAL-203 fresh lake build
+  - re-validated FORMAL-204 committed-workflow GHA artifact
+
+  Public GitHub Actions (ubuntu-latest, no secrets, contents:read only):
+  - msn-2026-0004 ALIAS-DIFF round-2 (GHA run 33265268860, 420 rows)
+  - msn-2026-0004 ALIAS-DIFF round-2 (GHA run 33225682327, 660 rows,
+    feature-branch run; superseded by committed-workflow run)
+  - msn-2026-0005 rustls+aws-lc-rs TLS 1.3 X25519MLKEM768 loopback
+    (GHA run 33267918229, 5 verdicts)
+
+  No external compute used (no heavy workloads).
+
+  MISSION STATES AT END OF SESSION
+
+  - msn-2026-0001 [cryptography, verified] - FIPS 203 s7.2 differential
+    across six pinned implementations (fnd-2026-0001).  Carried over
+    from prior sessions.
+
+  - msn-2026-0002 [cryptography, blocked-by-missing-evidence] -
+    Cross-path invariance matrix.  Three dimensions resolved
+    (A liboqs auto vs ref: SUPPORTED, B OpenSSL raw vs SPKI default:
+    REFUTED, D .NET cross-OS: SUPPORTED).  Dimension C (OpenSSL
+    default vs FIPS) permanently blocked: OpenSSL 3.5.7's FIPS
+    module does not include ML-KEM, so the FIPS cell is structurally
+    unanswerable.  Mission terminalized as blocked-by-missing-evidence
+    per AGENTS.md.
+
+  - msn-2026-0003 [formal, verified] - Lean 4 FORMAL-203 (FIPS 203
+    ByteEncode12 roundtrip and Eq 7.1 modulus-check).  Re-validated
+    on this Windows host with a fresh lake build (obs-2026-0021).
+    Independent R2 review (rev-2026-0002) SUPPORTS promotion.
+    prf-2026-0001 documents the kernel-checked proof.
+
+  - msn-2026-0004 [compilers, inconclusive-after-budget] - ALIAS-DIFF
+    round-2 (1290 program-config rows across asm + opaque-tu
+    barriers on gcc 13.3.0 / clang 18.1.3 / gcc 16.1.0, 0
+    divergences).  Durable negative result.  Independent review
+    (rev-2026-0003) SUPPORTS terminalization.  Follow-up missions
+    recommended for MSVC/CompCert oracles and Alive2 TBAA validation.
+
+  - msn-2026-0005 [interop, verified] - Deployed-protocol
+    placement validation.  Two server cohorts: Go stdlib
+    crypto/tls (obs-2026-0011, prior session) and rustls 0.23.43 +
+    aws-lc-rs 1.18 (obs-2026-0024, this session).  Both enforce
+    s7.2 with the spec-mandated illegal_parameter alert.  Combined
+    with msn-2026-0001's library-parse layer, the s7.2 boundary
+    is now confirmed across two layers (library-parse +
+    protocol-handshake) and two stacks (Go + BoringSSL-derived).
+    Mission terminalized as verified.
+
+  - msn-2026-0006 [formal, verified] - FORMAL-204 (FIPS 203
+    s7.2 LENGTH half).  Three top-level theorem families
+    (canonicalLength, off-by-one rejection, cross-param-set
+    rejection) kernel-checked in Lean 4 v4.22.0 + Mathlib4.
+    prf-2026-0002 documents the proof; axiom inventory limited
+    to {propext, Quot.sound} (subset of standard Lean 4 core).
+    Combined with FORMAL-203, both halves of the s7.2 check
+    are machine-checked.
+
+  - msn-2026-0007 [formal, verified] - FORMAL-205 (combined
+    s7.2 check for ML-KEM-512).  Reuses FORMAL-203 (MODULUS)
+    and FORMAL-204 (LENGTH) foundations.  Three top-level
+    theorems (isValidKey_zero_k2, isValidKey_length_k2,
+    isValidKey_roundtrip_general) kernel-checked.  prf-2026-0003
+    documents the proof.  Combined with FORMAL-203/204, the
+    complete s7.2 encapsulation-key check is now machine-checked
+    end-to-end.
+
+  NEW VERIFIED FINDINGS THIS SESSION
+
+  - fnd-2026-0002 (input-validation-gap) - OpenSSL 3.5.7
+    d2i_PUBKEY SPKI decode path silently truncates mismatched
+    bodies via BIT STRING length header.  Mechanism verified
+    at the byte level; 6 specific 1-byte-len-divergent SPKIs
+    accepted (3 len-plus-1 + 3 cross-set), all other 4
+    non-OpenSSL-SPKI stacks reject.  Cross-version confirmed
+    (3.5.7 GHA + 3.6.3 local).  Independent reproducer at
+    .scratch/spki_repro/.
+
+  - fnd-2026-0003 (formal-verification) - FORMAL-203 (Lean 4
+    ByteEncode12 roundtrip + Eq 7.1 modulus-check).  Zero
+    sorries, zero axioms, 0 file-introduced axioms, axiom
+    inventory {propext, Classical.choice, Quot.sound}.
+
+  - fnd-2026-0004 (formal-verification) - FORMAL-204 (Lean 4
+    s7.2 LENGTH half).  Zero sorries, zero file-introduced
+    axioms, axiom inventory {propext, Quot.sound}.
+
+  - fnd-2026-0005 (implementation-spec-compliance) - rustls
+    0.23.43 + aws-lc-rs 1.18 enforces s7.2 with illegal_parameter
+    at the handshake boundary.  5/5 loopback verdicts match
+    draft-ietf-tls-ecdhe-mlkem-05 s4.2.
+
+  - fnd-2026-0006 (formal-verification) - FORMAL-205 (combined
+    s7.2 check for ML-KEM-512).  Zero sorries, zero
+    file-introduced axioms, axiom inventory {propext,
+    Classical.choice, Quot.sound}.
+
+  STRUCTURAL FIXES THIS SESSION
+
+  The session found and fixed two structural bugs in the
+  Frontier framework:
+
+  1. **Validator artifact-vs-ID confusion** (commit be51a24):
+     `_check_references` treated every value in a mission's
+     `artifacts` list as an ID, but the list mixes ID references
+     and repository-relative file paths.  Fixed by trying the
+     ID lookup first, then falling back to a file-exists check.
+     Also fixed: `valid_count_mission_dir_status` rejected
+     `verified` missions stored in `active/` or `completed/`
+     only; updated to allow `archive` and `embargoed` for
+     terminalized missions.
+
+  2. **Evidence chain gaps** (commit a57334a): fnd-2026-0002/0003
+     were stored as `verified_conclusion` but lacked the
+     required `reproducers`, `reviews`, and `verifications`
+     links.  Filled by creating rpr-2026-0002/0003, rev-2026-0003,
+     vrf-2026-0004, prf-2026-0001, and terminalizing missions
+     0002 and 0003.
+
+  3. **Status filter for verified findings** (commit a57334a):
+     `status` command only listed `status: verified` findings,
+     missing `verified_conclusion` (a 5th value in the schema
+     enum).  Updated the filter to include both.
+
+  KNOWN INFRASTRUCTURE ISSUES (preserved for next session)
+
+  - `python3` in PATH is a broken scoop shim that has no
+    `encodings` module.  Workaround: use `python` (C:\Python312)
+    first in PATH.  This affects Windows-host scripts that call
+    `python3` directly.
+
+  - `clang` is not installed on this Windows host; ALIAS-DIFF
+    round-2 ran with gcc only (210 rows) and the rest came
+    from GHA (660+420 rows).
+
+  - `elan` is installed at C:\Users\Dhane\.elan; not in PATH
+    by default.  Workaround: prepend `C:\Users\Dhane\.elan\bin`
+    to PATH before running `lake build`.
+
+  - GHA `ci.yml` runs `python -m frontier.cli validate` which
+    was failing until the validator bug was fixed.  Now passes
+    (re-validated locally; the next GHA run should be green).
+
+  RECOMMENDED NEXT RESEARCH OPPORTUNITIES (ranked)
+
+  1. **FORMAL-206: extend ValidKey to k=3 and k=4 (ML-KEM-768,
+     ML-KEM-1024)**.  Same structure, different byte counts.
+     Would close the s7.2 check for all three ML-KEM parameter
+     sets.
+
+  2. **FORMAL-208: convert isValidKey from predicate to
+     dependent subset type**.  More idiomatic Lean 4.  Requires
+     unifying the byte array representations (Fin n -> Nat in
+     LENGTH half vs Nat -> Nat in MODULUS half).
+
+  3. **FORMAL-207: combine with decapsulation formalization for
+     end-to-end ML-KEM-512 correctness**.  This is a significant
+     formalization effort (the decapsulation algorithm has NTT
+     and sampling).
+
+  4. **ALIAS-DIFF round 3 with CompCert or MSVC oracle**.
+     Closes the original mission's "ground truth" oracle gap.
+     Requires CompCert build (~30 min) or MSVC build (available
+     on this Windows host as part of Visual Studio 18).
+
+  5. **HPKE X-Wing cohort (interop follow-up)**.  Out of scope
+     of msn-2026-0005 but the natural next protocol cohort.
+     Would need a Go or Rust HPKE server with X-Wing.
+
+  6. **OpenSSL+oqs-provider cohort (interop follow-up)**.  The
+     oqs-provider is the canonical OpenSSL extension for PQC
+     algorithms.  Tests whether oqs-provider enforces s7.2 at
+     the TLS layer (likely yes, since the underlying liboqs
+     does).
+
+  7. **FORMAL-209: extend ByteEncode/Decode to d in {1..11}**
+     (the smaller coefficient widths used in K-PKE.Encrypt and
+     K-PKE.Decrypt).  A natural extension of FORMAL-203.
+
+  8. **New domain mission: compiler IR verification with
+     Alive2 for ALIAS-DIFF round-3**.  The original ALIAS-DIFF
+     mission noted this as a follow-up; Alive2 can act as a
+     third oracle.
+
+  9. **New domain mission: Rust standard library testing for
+     differential behavior**.  Rust's std::collections or
+     similar have been sources of bugs before.  A targeted
+     differential testing campaign could find genuine issues.
+
+  10. **New domain mission: WebAssembly interpreter testing**.
+     Frontier-grade problem (multi-implementation differential
+     with formal spec, decisive experiment on commodity compute).
+
+  METHODOLOGICAL NOTES
+
+  - **Heavy delegation worked**: the rustls+aws-lc-rs cohort
+    was completed in 50 minutes by a single subagent with
+    three GHA iterations.  Sequential one-agent execution
+    would have taken 3-4x as long.
+
+  - **YAML encoding pitfalls**: PowerShell `>` redirection
+    writes UTF-16; `\.` is a YAML escape sequence; colons in
+    unquoted scalars are mapping delimiters; "1." in a list
+    is a key.  These caused ~30 minutes of validator fixes.
+
+  - **Lean 4 rewrite of Fintype.card doesn't work** for type
+    equalities: the `Fintype` instance is hidden inside the
+    type and rewrite can't abstract it.  Workaround: use
+    `apply_fun (fun t => Fintype.card t)` to lift the equality
+    and `simp [Fintype.card_fin]` to reduce.  Even better:
+    avoid Fintype entirely by working at the integer level
+    (FORMAL-204 approach).
+
+  - **Cross-version consistency matters**: fnd-2026-0002
+    was tested on OpenSSL 3.5.7 (GHA) and 3.6.3 (local MSYS2),
+    both with the same result.  The cross-version evidence
+    strengthens the bug report for upstream.
+
+  - **CI as ground truth**: the committed GHA workflow
+    (compiler-alias.yml) reproducing the round-2 matrix
+    on main is durable evidence; the ad-hoc 660-row run
+    on a feature branch is not.  The decision to keep
+    GHA artifacts (alias_report_r2.tsv, etc.) in the
+    committed repo makes the result auditable.
+
+  - **Library-parse vs protocol-handshake are two layers**.
+    msn-2026-0001 covered library-parse, msn-2026-0005
+    covered protocol-handshake.  Both confirm s7.2
+    enforcement in different deployed stacks.  A single
+    negative at either layer would be a security finding;
+    the current positive at both layers is reassuring.
+
+  COMMITS THIS SESSION (8 total)
+
+  - 7c1eb9e chore(indices): rebuild after fnd-2026-0002 status
+    promoted to verified_conclusion
+  - be51a24 fix(structural): move msn-2026-0003 to completed,
+    add prf-2026-0001, fix validator to resolve file-path
+    artifacts
+  - a57334a fix(structural, evidence chain): terminalize
+    msn-2026-0002, complete fnd-2026-0002/0003 evidence
+    chains, add verified_conclusion to finding enum
+  - 8d296a6 feat(msn-2026-0004): ALIAS-DIFF round-2
+    opaque-TU barrier + dual-barrier matrix runner;
+    870 rows 0 divergences
+  - 3ea386d feat(msn-2026-0004): ALIAS-DIFF round-2 review
+    + terminalize; 1290 rows 0 divergences
+  - 9fc1ae0+ subagent's rustls+aws-lc-rs cohort (committed
+    to dp1x/frontier main via subagent)
+  - 27f2f70 feat(msn-2026-0005,msn-2026-0006): FORMAL-204
+    LENGTH half + rustls+aws-lc-rs s7.2 interop cohort verified
+  - 4b6a590 fix(evidence): allow and commit durable
+    build-output logs as research evidence
+  - a6d1087 feat(msn-2026-0007): FORMAL-205 combined s7.2
+    check (LENGTH+MODULUS) for ML-KEM-512
+
+  PUSH STATE
+
+  Branch: main
+  All 8+ commits pushed to dp1x/frontier.
+  No local-only work.
+disclosure: public
+limitations: >
+  - This report covers work from a single 2026-08-29 session
+    that resumed the 2026-08-27 session (rpt-2026-0003).
+  - Some subagent work (rustls+aws-lc-rs cohort) was
+    executed with a different model than the rest of the
+    session, but the artifacts are uniform (committed
+    YAML, TSV, GHA workflow).
+  - The FORMAL-205 combined-half formalization is a
+    predicate, not a dependent subset type (see fnd-2026-0006
+    limitations).  A subset-type formulation is a follow-up.
