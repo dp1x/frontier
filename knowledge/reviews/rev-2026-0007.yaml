@@ -1,0 +1,57 @@
+id: rev-2026-0007
+type: review
+status: complete
+created_at: "2026-08-30T03:00:00Z"
+updated_at: "2026-08-30T03:00:00Z"
+summary: "Independent adversarial review of fnd-2026-0007 (CIRCL X-Wing + HPKE byte-exact conformance). Verdict: SUPPORT - the positive conformance finding is robust after correcting two earlier mistakes (obs-2026-0028 mutation matrix mislabeling, obs-2026-0029 schedule divergence claim)."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-adversarial-critic
+    model: minimax-m3
+    tool: spawn_subagent (read-only review of mission artifacts)
+  sources:
+    - knowledge/findings/fnd-2026-0007.yaml
+    - knowledge/observations/obs-2026-0027.yaml
+    - knowledge/observations/obs-2026-0028.yaml
+    - knowledge/observations/obs-2026-0029.yaml
+    - knowledge/verifications/vrf-2026-0008.yaml
+    - knowledge/experiments/exp-2026-0021.yaml
+    - knowledge/experiments/exp-2026-0022.yaml
+    - knowledge/reproducers/rpr-2026-0007.yaml
+    - .scratch/xwing/harness/circl_harness.go
+    - .scratch/xwing/verify_reproducibility.py
+    - .scratch/xwing/reports/kat_log.txt
+  parent: msn-2026-0008
+  generation: 0
+links:
+  missions: [msn-2026-0008]
+  findings: [fnd-2026-0007]
+  observations: [obs-2026-0027, obs-2026-0028, obs-2026-0029]
+  experiments: [exp-2026-0021, exp-2026-0022]
+  verifications: [vrf-2026-0008]
+  reproducers: [rpr-2026-0007]
+  implementations: [imp-2026-0007]
+  targets: [tgt-2026-0002]
+title: "REV-2026-0007 - Adversarial review of fnd-2026-0007"
+role: independent-adversarial-critic
+verdict: supports
+independent: true
+attempts_disproof: true
+objections:
+  - "Earlier claim of HPKE draft-07 vs RFC 9180 schedule divergence (obs-2026-0029 v1) was REFUTED: the bug was in the Python reference (wrong suite_id='', wrong label 'nonce' instead of 'base_nonce', wrong key_schedule_context shape), not in CIRCL. CIRCL passes RFC 9180 test vectors and its source code matches RFC 9180 §5.1 byte-for-byte."
+  - "Earlier mutation matrix interpretation was REFUTED: mutations at eseed[0..31] were mislabeled as 'X25519 clamped bits' but eseed[0..31] is the ML-KEM encapsulation seed (not an X25519 scalar). The actual clamping properties are at eseed[32..63] (X25519 ephemeral scalar) and correctly observed at M32_0 and M63_7. obs-2026-0028 v2 corrects the labeling."
+  - "Cross-impl angle was NOT executed: only CIRCL was exercised; the 5-implementation cross-impl matrix (Rust hpke crate, pyca/cryptography, libhpke, OpenSSL oqs-provider) is a documented follow-up but not in this mission's evidence chain."
+  - "Draft-08 KAT is NOT separately verified: CIRCL implements draft-05 per its own package comment; the combiner changed between draft-05 and draft-08 (ek_KEM to ek_X). Without draft-08 KAT vectors cached locally, we cannot assert draft-08 conformance."
+notes: |
+  After the corrections:
+  - X-Wing draft-05 KAT: 3/3 PASS, SHAKE-128 hash matches published reference.
+  - HPKE RFC 9180 test vectors: 127/127 PASS (export-only AEAD SKIPPED).
+  - Deterministic X-Wing Encapsulate + Decapsulate: byte-exact symmetric.
+  - HPKE Base mode Seal/Open: byte-exact symmetric.
+  - Mutation matrix: 28/28 mutations behave correctly per spec.
+  - 100 random samples: 100 unique ss (entropy preserved).
+  - Reproducibility: byte-exact identical across re-runs.
+
+  The finding fnd-2026-0007 is SUPPORTED. The mission is ready to terminalize.

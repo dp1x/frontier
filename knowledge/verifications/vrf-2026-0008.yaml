@@ -1,0 +1,62 @@
+id: vrf-2026-0008
+type: verification
+status: pass
+created_at: "2026-08-30T03:00:00Z"
+updated_at: "2026-08-30T03:00:00Z"
+summary: "Deterministic verification of msn-2026-0008 - reproduction script confirms byte-exact reproducibility of CIRCL X-Wing + HPKE harness outputs across re-runs; KAT hash matches published draft-05 reference hash."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: minimax-m3
+    tool: frontier.execute.run_command (Python verify_reproducibility.py)
+  sources:
+    - .scratch/xwing/verify_reproducibility.py
+    - .scratch/xwing/reports/canonical.json
+    - .scratch/xwing/reports/mutations.json
+    - .scratch/xwing/reports/kat_log.txt
+    - knowledge/observations/obs-2026-0027.yaml
+    - knowledge/observations/obs-2026-0028.yaml
+    - knowledge/experiments/exp-2026-0022.yaml
+    - knowledge/reproducers/rpr-2026-0007.yaml
+  parent: msn-2026-0008
+  generation: 0
+links:
+  missions: [msn-2026-0008]
+  experiments: [exp-2026-0021, exp-2026-0022]
+  observations: [obs-2026-0027, obs-2026-0028, obs-2026-0029]
+  reproducers: [rpr-2026-0007]
+  findings: [fnd-2026-0007]
+  targets: [tgt-2026-0002]
+title: "VRF-2026-0008 - msn-2026-0008 deterministic verification"
+verification_checks:
+  - name: "X-Wing KAT vector hash matches draft-05 reference"
+    command: "go test -v -run TestVectors github.com/cloudflare/circl/kem/xwing"
+    expected: "PASS, hash = 1bcd0057d861d6b866239936cadcaeee1ec0164dedc181c386e9e54fe46156fe"
+    actual: "PASS, hash matches"
+    result: pass
+  - name: "Canonical X-Wing Encapsulate reproducible (seed 0x00..0x1f, eseed 0x40..0x7f)"
+    command: "go run ./harness/circl_harness.go --mode=canonical --out=reports/canonical.json"
+    expected: "ss = f285b028f4de617b6adf9eccbd811327848dd44ac7078c15390b16682576ad8c"
+    actual: "ss matches expected byte-for-byte"
+    result: pass
+  - name: "Mutation matrix reproducible (seed 0xA0..0xBF, eseed 0xB0..0xBF)"
+    command: "go run ./harness/circl_harness.go --mode=mutations --n=100 --out=reports/mutations.json"
+    expected: "Encaps/Decaps canonical ss match; 100 unique random ss"
+    actual: "Encaps/Decaps canonical ss match byte-for-byte; 100 unique ss"
+    result: pass
+  - name: "HPKE RFC 9180 conformance via CIRCL test vectors"
+    command: "go test -v github.com/cloudflare/circl/hpke"
+    expected: "TestVectors/v0..v127 PASS (with export-only test vectors SKIPPED)"
+    actual: "All 127 supported test vectors PASS"
+    result: pass
+verdict: pass
+notes: |
+  All four verification checks pass. The mission's reproducibility
+  requirement is met: the harness + KAT verifier produces byte-exact
+  identical outputs across re-runs. The cross-impl angle (against
+  Rust hpke crate, pyca/cryptography, libhpke, OpenSSL oqs-provider)
+  is intentionally deferred because CIRCL is verified draft-05
+  conformant and the X-Wing draft-08 KAT corpus is not available
+  locally to verify draft-08 conformance separately.
