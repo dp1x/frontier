@@ -149,7 +149,7 @@ mode={mode}|variant_num={variant_num}|port={port}",
                 Ok(n) => {
                     let mut cursor = std::io::Cursor::new(&tmp[..n]);
                     if let Err(e) = server.read_tls(&mut cursor) {
-                        last_err = Some(rustls::Error::Io(e));
+                        last_err = Some(rustls::Error::General(format!("read_tls io: {e}")));
                         break;
                     }
                 }
@@ -160,7 +160,7 @@ mode={mode}|variant_num={variant_num}|port={port}",
                     // No data right now; keep looping so write_tls can drain.
                 }
                 Err(e) => {
-                    last_err = Some(rustls::Error::Io(e));
+                    last_err = Some(rustls::Error::General(format!("tcp io: {e}")));
                     break;
                 }
             }
@@ -182,12 +182,12 @@ mode={mode}|variant_num={variant_num}|port={port}",
                 Ok(0) => break,
                 Ok(n) => {
                     if let Err(e) = tcp.write_all(&out[..n]) {
-                        last_err = Some(rustls::Error::Io(e));
+                        last_err = Some(rustls::Error::General(format!("tcp write_all: {e}")));
                         break;
                     }
                 }
                 Err(e) => {
-                    last_err = Some(rustls::Error::Io(e));
+                    last_err = Some(rustls::Error::General(format!("tcp io: {e}")));
                     break;
                 }
             }
@@ -253,7 +253,6 @@ fn extract_alert(err: &rustls::Error) -> String {
         Error::General(g) => format!("general:{g}"),
         Error::DecryptError => "decrypt_error".to_string(),
         Error::EncryptError => "encrypt_error".to_string(),
-        Error::Io(io) => format!("io:{:?}", io.kind()),
         _ => format!("other:{err:?}"),
     }
 }
