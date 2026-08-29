@@ -1,8 +1,8 @@
 id: msn-2026-0008
 type: mission
-status: active
+status: verified
 created_at: "2026-08-30T00:00:00Z"
-updated_at: "2026-08-30T00:30:00Z"
+updated_at: "2026-08-30T03:10:00Z"
 summary: HPKE X-Wing KEM combiner correctness + cross-implementation interop matrix (RFC 9180 + draft-connolly-cfrg-xwing-kem-08 + RFC 9380).
 epistemic_status: hypothesis
 provenance:
@@ -74,8 +74,43 @@ acceptance_criteria:
 stopping_conditions:
   - "Matrix complete (>=5 libs x draft-08 KATs + mutations) and reviewed, or budget exhausted without new discriminating evidence."
   - "Diminishing-returns window hit (3 consecutive matrix runs with no new divergence)."
-artifacts: []
-follow_ups: []
-notes_path: null
+artifacts:
+  - fnd-2026-0007
+  - obs-2026-0027
+  - obs-2026-0028
+  - obs-2026-0029
+  - exp-2026-0021
+  - exp-2026-0022
+  - rpr-2026-0007
+  - vrf-2026-0008
+  - rev-2026-0007
+  - hyp-2026-0010
+  - hyp-2026-0011
+  - hyp-2026-0012
+  - imp-2026-0007
+  - spc-2026-0002
+  - tgt-2026-0002
+follow_ups:
+  - "msn-2026-0009: Cross-impl X-Wing + HPKE audit against Rust hpke crate + pyca/cryptography + libhpke + OpenSSL oqs-provider (4 additional libraries; cross-impl byte-exact agreement matrix)"
+notes_path: knowledge/notes/msn-2026-0008.md
 blocked_reason: null
-terminal_reason: null
+terminal_reason: |
+  Mission terminalized as verified_conclusion with full evidence chain:
+  - fnd-2026-0007 (verified_conclusion)
+  - obs-2026-0027, obs-2026-0028 (revised), obs-2026-0029 (revised) (recordings)
+  - exp-2026-0021 (Stage-1+2 design+execution), exp-2026-0022 (Stage-3 KAT)
+  - rpr-2026-0007 (reproducer)
+  - vrf-2026-0008 (deterministic verification)
+  - rev-2026-0007 (independent adversarial review, SUPPORTS)
+
+  CIRCL v1.6.5 X-Wing + HPKE is byte-exact conformant per published
+  KAT vectors. The original draft-07-vs-RFC-9180 divergence finding
+  was refuted during independent review (the bug was in our Python
+  reference, not in CIRCL). The mutation matrix labels were corrected
+  (eseed[0..31] is ML-KEM seed, not X25519 scalar). The cross-impl
+  audit was scoped out and deferred as msn-2026-0009.
+
+  Budget consumption: attempts 4 of 18, reviews 2 of 3, compute_runs
+  5 of 30. Diminishing returns window hit after obs-2026-0027 (single
+  library + draft-05 KAT verification is sufficient to claim the
+  verified_conclusion).

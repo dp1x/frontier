@@ -1,0 +1,60 @@
+id: exp-2026-0022
+type: experiment
+status: complete
+created_at: "2026-08-30T02:45:00Z"
+updated_at: "2026-08-30T02:45:00Z"
+summary: "Stage-3 verification - CIRCL's X-Wing passes draft-05 KAT vectors via go test github.com/cloudflare/circl/kem/xwing (TestVectors PASS). The SHAKE-128 hash of the 3-vector corpus equals 1bcd0057d861d6b866239936cadcaeee1ec0164dedc181c386e9e54fe46156fe, the published draft-05 reference hash."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-executor
+    model: minimax-m3
+    tool: frontier.execute.run_command (go test -v -run TestVectors github.com/cloudflare/circl/kem/xwing)
+  sources:
+    - .scratch/xwing/kat_log.txt
+    - https://github.com/cloudflare/circl/blob/v1.6.5/kem/xwing/xwing_test.go
+    - knowledge/implementations/imp-2026-0007.yaml
+    - knowledge/observations/obs-2026-0027.yaml
+  parent: msn-2026-0008
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0007]
+  experiments: [exp-2026-0021]
+  observations: [obs-2026-0027, obs-2026-0028, obs-2026-0029]
+  missions: [msn-2026-0008]
+  targets: [tgt-2026-0002]
+title: "EXP-2026-0022 - Stage-3: CIRCL X-Wing draft-05 KAT vector verification"
+design: |
+  Run CIRCL's TestVectors function which:
+  1. Computes 3 KAT vectors via DeriveKeyPairPacked + Encapsulate + Decapsulate
+  2. Hashes the (seed, sk, pk, eseed, ct, ss) tuples with SHAKE-128
+  3. Asserts the hash equals "1bcd0057d861d6b866239936cadcaeee1ec0164dedc181c386e9e54fe46156fe"
+commands:
+  - "go test -v -run TestVectors github.com/cloudflare/circl/kem/xwing"
+compute_decision:
+  location: local
+  isolation: "env-scrubbed scratch workspace via frontier.execute.run_command"
+  reason: "CIRCL's TestVectors is a single Go test, deterministic, seconds-scale"
+determinism:
+  deterministic: true
+  seed_policy: "SHAKE-128-derived seed in the test itself"
+  nondeterminism_notes: "TestVectors is fully deterministic"
+results:
+  test_vectors_pass: 3
+  test_vectors_total: 3
+  hash_check: "1bcd0057d861d6b866239936cadcaeee1ec0164dedc181c386e9e54fe46156fe (matches published reference)"
+verdict: pass
+notes: |
+  This verification confirms that CIRCL v1.6.5 implements X-Wing
+  draft-05 correctly per the published KAT corpus. The hash check
+  is byte-exact, making this a strong positive finding.
+
+  Limitation: draft-08 KAT vectors are not separately verified.
+  draft-08 changed the combiner from (ssm, ssx, ctx, ek_KEM) to
+  (ssm, ssx, ctx, ek_X) — this single-byte-string swap at the end
+  of the SHA3 input would produce a different ss even with the same
+  (seed, eseed) inputs. Without draft-08 KAT vectors cached locally,
+  we cannot assert draft-08 conformance. The draft-05 conformance
+  is verified.

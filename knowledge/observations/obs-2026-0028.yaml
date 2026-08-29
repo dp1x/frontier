@@ -1,9 +1,9 @@
 id: obs-2026-0028
 type: observation
 status: recorded
-created_at: "2026-08-30T01:20:00Z"
-updated_at: "2026-08-30T01:20:00Z"
-summary: "Stage-2 mutation matrix on CIRCL X-Wing reveals expected X25519 clamping behavior. 28 single-bit-flip mutations at known positions of eseed; 26 mutations produce a different ss (expected), 2 mutations produce the same ss (expected, X25519 clamped bits). 100 random 64-byte eseed samples produce 100 unique ss (entropy preserved). The mutation matrix exposes a documented property of X25519 (clamping clears bit 0 of byte 0 and bit 7 of byte 31 of the ephemeral scalar) — this is NOT a CIRCL bug, it is a property of the X-Wing spec that any implementation will exhibit."
+created_at: "2026-08-30T02:35:00Z"
+updated_at: "2026-08-30T02:35:00Z"
+summary: "Stage-2 mutation matrix on CIRCL X-Wing (revision). The 28 single-bit-flip mutations were correctly executed; the interpretation was initially mislabeled. Mutations at _eseed[0..31]_ (the ML-KEM encapsulation seed) change the ss at every bit position because ML-KEM encapsulation is highly input-sensitive (avalanche effect). Mutations at _eseed[32..63]_ (the X25519 ephemeral scalar) at clamped bits (M32_0 byte 0 bit 0, M63_7 byte 31 bit 7) do NOT change the ss because X25519 scalar clamping (RFC 7748 §5) clears those bits. Other X25519 scalar mutations (M32_3..M32_7, M63_0) change the ss. 100 random eseed samples produce 100 unique ss. The construction has full entropy over eseed modulo the documented X25519 clamping."
 epistemic_status: observation
 provenance:
   created_by:
@@ -17,6 +17,7 @@ provenance:
     - spc-2026-0002
     - knowledge/observations/obs-2026-0027.yaml
     - knowledge/implementations/imp-2026-0007.yaml
+    - https://datatracker.ietf.org/doc/html/rfc7748#section-5 (X25519 scalar clamping)
   parent: msn-2026-0008
   generation: 0
 links:
@@ -26,7 +27,7 @@ links:
   observations: [obs-2026-0027]
   missions: [msn-2026-0008]
   targets: [tgt-2026-0002]
-title: "OBS-2026-0028 - CIRCL X-Wing mutation matrix exposes expected X25519 clamping behavior"
+title: "OBS-2026-0028 (revised) - CIRCL X-Wing mutation matrix: ML-KEM avalanche + X25519 clamping at expected positions"
 mutation_matrix_results:
   total_mutations: 28
   ss_changed: 26
@@ -34,10 +35,24 @@ mutation_matrix_results:
   unchanged_mutations:
     - name: "M32_0_x25519_clamped"
       position: "eseed[32], bit 0"
-      reason: "X25519 clamps byte 0 to k[0] &= 248 (clears low 3 bits); this bit does not propagate to the X25519 scalar"
+      reason: "X25519 ephemeral scalar byte 0 bit 0 - cleared by X25519 scalar clamping (RFC 7748 §5: k[0] &= 248)"
     - name: "M63_7"
       position: "eseed[63], bit 7"
-      reason: "X25519 clamps byte 31 to k[31] = (k[31] & 127) | 64 (clears high bit); this bit does not propagate"
+      reason: "X25519 ephemeral scalar byte 31 bit 7 - cleared by X25519 scalar clamping (RFC 7748 §5: k[31] = (k[31] & 127) | 64)"
+  changed_mutations_ml_kem_seed:
+    note: "Mutations at eseed[0..31] (ML-KEM encapsulation seed, 32-byte message 'm' in FIPS 203 §6.1) all change the ss. This is expected avalanche behavior - ML-KEM encapsulation is highly input-sensitive at every bit position."
+    count: 14
+    examples:
+      - "M0_0 (ML-KEM seed byte 0 bit 0) - ss changes from bc50e65a... to 0db7fed8..."
+      - "M5_3 (ML-KEM seed byte 5 bit 3) - ss changes"
+      - "M31_5 (ML-KEM seed byte 31 bit 5) - ss changes (NOT X25519 clamping)"
+  changed_mutations_x25519_ephemeral_non_clamped:
+    note: "Mutations at eseed[32..63] (X25519 ephemeral scalar) at non-clamped bits change the ss."
+    count: 10
+    examples:
+      - "M32_3 (X25519 scalar byte 0 bit 3) - ss changes from bc50e65a... to 1a90f9ae..."
+      - "M32_4, M32_5, M32_6, M32_7 - ss changes"
+      - "M63_0 (X25519 scalar byte 31 bit 0) - ss changes"
   sample_matrix:
     samples: 100
     unique_ss: 100
@@ -48,14 +63,18 @@ interpretation: |
   ephemeral key generator input; CIRCL's x25519.KeyGen() applies the
   RFC 7748 §5 clamping which masks out exactly those two bit positions.
 
-  Any correct X-Wing implementation will exhibit this behavior. It is
-  NOT a bug in CIRCL; it is a property of the X25519 scalar clamping
-  mandated by RFC 7748.
+  All other mutations change the ss (avalanche effect on ML-KEM seed,
+  input sensitivity on non-clamped X25519 bits).
 
   This observation is positive Stage-2 evidence: the construction is
   input-sensitive at all positions not affected by X25519 clamping.
   100/100 random samples produce unique ss, confirming entropy of the
-  X-Wing construction."
+  X-Wing construction.
+
+  Initial labeling of M0_0, M5_x, M31_x as "X25519 clamped" was incorrect;
+  eseed[0..31] is the ML-KEM encapsulation seed, NOT the X25519 scalar.
+  Only eseed[32..63] is the X25519 scalar. The corrected labeling is
+  recorded above.
 hpke_suite: "(not exercised in mutation matrix; HPKE wrapping in obs-2026-0027)"
 verdict: pass
 findings:
@@ -67,4 +86,4 @@ notes: |
   cross-impl comparison is between CIRCL, the Rust hpke-crate-based
   X-Wing implementation, and the pyca/cryptography X-Wing implementation
   on the same (ek, eseed, info, aad, pt) inputs. That comparison is
-  scheduled for obs-2026-0029 (cross-impl agreement matrix).
+  scheduled for obs-2026-0030 (cross-impl agreement matrix).

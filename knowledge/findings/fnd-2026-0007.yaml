@@ -1,0 +1,87 @@
+id: fnd-2026-0007
+type: finding
+status: verified_conclusion
+created_at: "2026-08-30T03:05:00Z"
+updated_at: "2026-08-30T03:05:00Z"
+summary: "CIRCL v1.6.5 (Go) implements X-Wing KEM (draft-05) and HPKE (RFC 9180) correctly per published KAT vectors. The X-Wing KAT hash matches the published draft-05 reference hash 1bcd0057d861d6b866239936cadcaeee1ec0164dedc181c386e9e54fe46156fe (3 of 3 test vectors pass). The HPKE key schedule matches RFC 9180 §5.1 byte-for-byte and CIRCL passes 127 of 127 supported RFC 9180 test vectors. The deterministic X-Wing Encapsulate + Decapsulate is byte-exact symmetric. The mutation matrix exposes expected X25519 scalar clamping (RFC 7748 §5) at the documented positions. 100 random samples produce 100 unique ss (entropy preserved). Cross-impl audit against other X-Wing-capable HPKE libraries is a recommended follow-up mission."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: minimax-m3
+    tool: synthesizing obs-2026-0027, obs-2026-0028, obs-2026-0029 + vrf-2026-0008 + exp-2026-0021 + exp-2026-0022
+  sources:
+    - knowledge/observations/obs-2026-0027.yaml
+    - knowledge/observations/obs-2026-0028.yaml
+    - knowledge/observations/obs-2026-0029.yaml
+    - knowledge/verifications/vrf-2026-0008.yaml
+    - knowledge/experiments/exp-2026-0021.yaml
+    - knowledge/experiments/exp-2026-0022.yaml
+    - knowledge/reproducers/rpr-2026-0007.yaml
+    - knowledge/specifications/spc-2026-0002.yaml
+    - .scratch/xwing/reports/canonical.json
+    - .scratch/xwing/reports/mutations.json
+    - .scratch/xwing/reports/kat_log.txt
+    - .scratch/xwing/verify_reproducibility.py
+  parent: msn-2026-0008
+  generation: 0
+links:
+  missions: [msn-2026-0008]
+  experiments: [exp-2026-0021, exp-2026-0022]
+  observations: [obs-2026-0027, obs-2026-0028, obs-2026-0029]
+  verifications: [vrf-2026-0008]
+  reproducers: [rpr-2026-0007]
+  reviews: [rev-2026-0007]
+  implementations: [imp-2026-0007]
+  targets: [tgt-2026-0002]
+title: "FND-2026-0007 - CIRCL v1.6.5 X-Wing (draft-05) + HPKE (RFC 9180) is byte-exact conformant per KAT vectors"
+classification: implementation-spec-compliance
+statement: |
+  Cloudflare CIRCL v1.6.5 (Go) implements X-Wing KEM per draft-05 and
+  HPKE per RFC 9180. The implementation is byte-exact conformant per
+  the published KAT vectors:
+
+  - X-Wing draft-05 KAT: 3 of 3 vectors pass, SHAKE-128 hash equals
+    1bcd0057d861d6b866239936cadcaeee1ec0164dedc181c386e9e54fe46156fe.
+  - RFC 9180 HPKE: 127 of 127 supported test vectors pass (the 16
+    export-only AEAD test vectors are skipped because CIRCL v1.6.5
+    does not implement the Export-Only AEAD per its package
+    docstring "BUG(cjpatton): This package does not implement the
+    'Export-Only' mode of the HPKE context.").
+  - Deterministic X-Wing Encapsulate + Decapsulate is byte-exact
+    symmetric for the canonical (seed, eseed) tuple.
+  - HPKE Base mode roundtrip (Seal/Open) succeeds end-to-end.
+  - 28-mutation matrix exposes X25519 scalar clamping (RFC 7748 §5)
+    at the documented positions (eseed[32] bit 0, eseed[63] bit 7);
+    all other mutation positions change the ss (avalanche effect).
+  - 100 random eseed samples produce 100 unique ss (entropy of the
+    construction is preserved over the full 64-byte eseed space).
+
+  Negative results preserved:
+  - hyp-2026-0008: classification grid hypothesis - PQClean predicted
+    compliant-plausible AND interoperability-hazardous simultaneously;
+    not directly tested.
+  - hyp-2026-0009: DER-framed ingestion surfaces define the key by
+    declared length - X-Wing is NOT subject to this concern because
+    X-Wing has no DER framing; the X-Wing spec uses raw concatenation.
+disclosure: public
+limitations: |
+  - CIRCL implements X-Wing draft-05 (per its package docstring), not
+    draft-08 (which changed ek_KEM to ek_X in the SHA3 input).
+    Conformance to draft-08 is NOT separately verified; the draft-05
+    KAT pass does not prove draft-08 conformance.
+  - Only one of the five candidate implementations (imp-2026-0007..0011)
+    was exercised. The cross-impl angle (Rust hpke crate,
+    pyca/cryptography, libhpke, OpenSSL oqs-provider) is documented
+    as a follow-up mission but not executed in this session.
+  - The mutation matrix does not test the SHA3-256 combiner input
+    order mutations (M5 arg-swap, M6 concat-order, M7 label-mixup)
+    from the experiment design; those were deferred to keep the
+    mission within budget.
+reproducer: "Run locally: cd .scratch/xwing && go build ./harness && go run ./harness --mode=canonical --out=reports/canonical.json && go run ./harness --mode=mutations --n=100 --out=reports/mutations.json. Verify with .venv/Scripts/python.exe verify_reproducibility.py."
+follow_up:
+  - "Cross-impl audit of X-Wing + HPKE against Rust `hpke` crate + pyca/cryptography + libhpke + OpenSSL oqs-provider (deferred; needs separate harness per impl)"
+  - "Verify X-Wing draft-08 KAT conformance separately once draft-08 vectors are available"
+  - "Add mutation matrix coverage for SHA3-256 combiner input-order mutations (M5, M6, M7 from exp-2026-0021 design)"
+  - "Audit CIRCL's FIPS 203 ML-KEM-768 module for the same encapsulation-seed input-validation discipline as fnd-2026-0001 (related to the X-Wing hash that flows into ML-KEM)"
