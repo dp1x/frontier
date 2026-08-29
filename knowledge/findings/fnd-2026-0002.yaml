@@ -1,8 +1,8 @@
 id: fnd-2026-0002
 type: finding
-status: candidate
+status: verified_conclusion
 created_at: "2026-08-27T06:45:00Z"
-updated_at: "2026-08-27T07:30:00Z"
+updated_at: "2026-08-29T04:35:00Z"
 summary: OpenSSL 3.5.7 cross-API variance - d2i_PUBKEY (SPKI import) accepts 6 malformed ML-KEM encapsulation keys that EVP_PKEY_new_raw_public_key_ex (raw import) and .NET correctly reject, and proceeds to a successful encap.
 epistemic_status: interpretation
 provenance:
