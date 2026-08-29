@@ -1,0 +1,68 @@
+id: exp-2026-0020
+type: experiment
+status: complete
+created_at: "2026-08-29T19:15:00Z"
+updated_at: "2026-08-29T19:15:00Z"
+summary: "FORMAL-205 Lean 4 v4.22.0 kernel build of formal/Formal/ValidKey.lean - combined s7.2 check (LENGTH + MODULUS) for ML-KEM-512, three top-level theorems checked end-to-end with zero sorries and zero file-introduced axioms."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation
+    model: grok-4.6
+    tool: lake build (Lean 4 v4.22.0 kernel)
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal/ValidKey.lean
+    - formal/Formal/ByteEncode.lean
+    - formal/Formal/LengthCheck.lean
+    - formal/build_output_r3.log
+    - obs-2026-0026
+  parent: msn-2026-0007
+  generation: 0
+links:
+  proofs: [prf-2026-0001, prf-2026-0002]
+  findings: [fnd-2026-0006]
+  observations: [obs-2026-0026]
+design: >
+  Pin Lean 4 v4.22.0 via formal/lean-toolchain.  Define
+  formal/Formal/ValidKey.lean with:
+    - isValidKey predicate combining LENGTH and MODULUS halves
+    - isValidKey_zero_k2: zero array is a ValidKey (T1)
+    - isValidKey_length_k2: canonical length is 800 (T2)
+    - isValidKey_roundtrip_general: byte-array roundtrip (T3)
+  The proof reuses:
+    - Fips203.ByteEncode (FORMAL-203): seg, dec, encByte, enc_dec_eq
+    - Fips203.Length (FORMAL-204): canonicalLength, canonicalLength_k2
+  Build via `lake build`; verify exit code 0, zero sorries.
+commands:
+  - "cd formal"
+  - "lake env lean --version  # expect Lean 4.22.0"
+  - "lake build  # build Formal library; expect 'Build completed successfully.'"
+  - "lake env lean check_valid.lean  # print axioms for key theorems"
+compute_decision:
+  location: local
+  isolation: "elan toolchain already installed; rebuild uses cache"
+  reason: "Lightweight: lake build is ~10s on commodity laptop."
+determinism:
+  deterministic: true
+  seed_policy: null
+  nondeterminism_notes: "Lean 4 kernel is deterministic; Mathlib4 cache may have non-deterministic order but build outcome is fully deterministic."
+environment:
+  os: Windows 11
+  lean: 4.22.0 (commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05)
+  mathlib: 4.22.0 (cache, 7067 files)
+  build_time_seconds: 13
+stdout: |
+  [3053/3054] Built Formal
+  Build completed successfully.
+exit_code: 0
+results:
+  kernel_check: pass
+  sorries: 0
+  axioms_introduced: 0
+  total_axioms_used: [propext, Classical.choice, Quot.sound]
+  warnings: 1
+  warning_detail: "Formal/ValidKey.lean:85:5: unused variable 'hy' (stylish only)"
+disclosure: public

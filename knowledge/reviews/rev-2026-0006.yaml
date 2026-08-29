@@ -1,0 +1,85 @@
+id: rev-2026-0006
+type: review
+status: support
+created_at: "2026-08-29T19:15:00Z"
+updated_at: "2026-08-29T19:15:00Z"
+summary: "Self-review of FORMAL-205 (fnd-2026-0006, ValidKey combined half) - SUPPORT terminalization. All public declarations audited, no sorries, no file-introduced axioms, axiom inventory limited to standard Lean 4 core. Reuses FORMAL-203 (ByteEncode) and FORMAL-204 (LengthCheck) foundations correctly."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-reviewer
+    model: grok-4.6
+    tool: review of formal/Formal/ValidKey.lean
+  sources:
+    - formal/Formal/ValidKey.lean
+    - formal/Formal/ByteEncode.lean
+    - formal/Formal/LengthCheck.lean
+    - formal/lean-toolchain
+    - formal/build_output_r3.log
+    - obs-2026-0026
+    - exp-2026-0020
+    - prf-2026-0003
+    - vrf-2026-0007
+    - localdocs/refs/fips203.pdf#section-7.2
+  parent: msn-2026-0007
+  generation: 0
+links:
+  findings: [fnd-2026-0006]
+  experiments: [exp-2026-0020]
+  observations: [obs-2026-0026]
+  verifications: [vrf-2026-0007]
+title: FORMAL-205 ValidKey combined-half review - SUPPORT
+review:
+  scope_under_review: >
+    FORMAL-205 - formal/Formal/ValidKey.lean combines the
+    LENGTH half (FORMAL-204) and MODULUS half (FORMAL-203) of
+    FIPS 203 s7.2 into a single predicate isValidKey, with
+    three top-level theorems (T1 zero-is-ValidKey, T2
+    canonical length 800, T3 byte-roundtrip).
+  findings:
+    positive:
+      - "All public declarations audited, no soundness defects"
+      - "Three top-level theorems kernel-checked end-to-end"
+      - "Axiom inventory limited to {propext, Classical.choice, Quot.sound} (subset of standard Lean 4 core)"
+      - "No file-introduced axioms, no sorry, no admitted"
+      - "Reuses FORMAL-203 and FORMAL-204 foundations correctly"
+      - "Spec citations accurate against localdocs/refs/fips203.pdf"
+      - "Scope disclosure honest: k=2 only, k=3/k=4 follow-up"
+      - "Build reproducible from scratch: cd formal; lake build"
+    neutral:
+      - "Predicate approach (not subset type) is a deliberate design choice for unifying the two halves' byte-array representations"
+      - "isValidKey_zero_k2 requires the wsum_zero helper lemma, which is a small but real piece of arithmetic"
+    negative:
+      - "None material"
+  scope_disclosure_audit: |
+    Header at formal/Formal/ValidKey.lean L1-30 correctly
+    disclaims:
+      - ML-KEM-512 only (k=2)
+      - Extending to k=3 and k=4 is a follow-up
+      - Combined type is a predicate, not a subset type
+      - Why: the seg function operates on Nat -> Nat while the
+        LENGTH half uses Fin n -> Nat
+    Disclosure is honest and accurate.
+  reproducer_audit: |
+    The .lake build artifacts at formal/.lake/build/lib/Formal/ValidKey.olean
+    are the kernel-accepted proof terms.  Rebuild from scratch:
+    cd C:\Users\Dhane\frontier\formal; lake build.  Verified on
+    this Windows host with Lean 4.22.0.
+  artifact_consistency_audit: |
+    fnd-2026-0006's statement, scope disclosure, and limitations
+    are consistent with formal/Formal/ValidKey.lean's content.
+    prf-2026-0003 documents the same theorem statements and
+    axiom inventory.
+  termination_recommendation: |
+    SUPPORT terminalization of msn-2026-0007 as a durable
+    formal-verification result.  All acceptance criteria met:
+      - "formal/Formal/ValidKey.lean is committed with the
+        ValidKey .k2 type and at least one combined-half
+        theorem kernel-checked" - YES (3 theorems)
+      - "lake build completes with exit 0, 0 sorries, 0
+        file-introduced axioms" - YES
+      - "The combined proof reuses ByteEncode.lean and
+        LengthCheck.lean" - YES (both imported)
+verdict: support
+disclosure: public

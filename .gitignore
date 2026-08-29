@@ -54,6 +54,9 @@ target/
 
 # Large logs and fuzz corpora
 *.log
+# Allow build-output logs that are durable research evidence
+!formal/build_output*.log
+!interop/**/reports/*_console.log
 corpus/
 fuzz-out/
 crash-*
