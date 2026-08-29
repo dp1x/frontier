@@ -70,3 +70,8 @@ missions/embargoed/*.yaml
 
 # ALIAS-DIFF generated programs (derivable from gen_programs.py)
 compilers/alias-diff/generated/
+
+# Lean 4 / lake build artifacts
+formal/.lake/
+formal/lake-manifest.json
+formal/build/lib/

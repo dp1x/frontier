@@ -1,0 +1,146 @@
+id: obs-2026-0022
+type: observation
+status: recorded
+created_at: "2026-08-29T04:30:00Z"
+updated_at: "2026-08-29T04:30:00Z"
+summary: "Adversarial review correction - the BIT STRING mechanism in fnd-2026-0002 is directionally correct (the parser uses BIT STRING's declared body length, not the SEQUENCE's, so trailing bytes past the SEQUENCE are un-inspected) but the magnitude claim is wrong: the over-shoot for len-plus-1 vectors is 33 bytes, not 1 byte. The harness's prefix declares BIT STRING body length 801 (= 800 canonical body + 1 unused-bits byte); the c2i BIT STRING reader copies 800 body bytes (per ossl_c2i_ASN1_BIT_STRING, body length = plen-1 after consuming the unused-bits byte), and the SEQUENCE accounting closes at len=0. The 33 bytes of trailing over-shoot past the BIT STRING TLV are un-inspected. This means an attacker can append 33+ arbitrary bytes of unauthenticated trailing data per len-plus-1 vector."
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: synthesizing subagent adversarial review (01a04aeb-8994-7143-b18d-1c5964288895)
+  sources:
+    - subagent 01a04aeb-8994-7143-b18d-1c5964288895 (adversarial review output)
+    - fnd-2026-0002 (the candidate finding being corrected)
+    - obs-2026-0020 (prior review contradiction resolution)
+    - crypto/mlkem-input-checks/stimuli/stimuli.tsv
+    - crypto/mlkem-input-checks/harnesses/openssl_invar_runner.c (harness code)
+    - OpenSSL 3.5.7 source: crypto/asn1/tasn_dec.c, crypto/x509/x_pubkey.c, providers/implementations/encode_decode/ml_kem_codecs.c
+  parent: fnd-2026-0002
+  generation: 1
+links:
+  findings: [fnd-2026-0002]
+  observations: [obs-2026-0020]
+title: "fnd-2026-0002 magnitude correction: 33-byte over-shoot, not 1-byte; mechanism directionally correct"
+statement: >
+  Independent source-level adversarial review (subagent
+  01a04aeb-8994-7143-b18d-1c5964288895) of the BIT STRING length
+  header mechanism in fnd-2026-0002. Outcome:
+
+  A. MECHANISM: SUPPORTED. The claim that the ASN.1 parser's BIT STRING
+     c2i uses the BIT STRING's own declared body length (via
+     `ASN1_get_object` returning `plen`) and the SEQUENCE's accounting
+     is `len -= p - q` per child field, is correct. With the harness's
+     22-byte prefix declaring BIT STRING body=801 and SEQUENCE content=818,
+     the BIT STRING c2i reads 5 bytes of header (tag+length+unused-bits)
+     plus 800 body bytes (per `ossl_c2i_ASN1_BIT_STRING` which does
+     body length = plen - 1, not plen). The SEQUENCE then sees
+     13 (algor) + 5 (BS hdr) + 800 (BS body) = 818 content bytes,
+     matching the declared 818. The SEQUENCE_LENGTH_MISMATCH check
+     does NOT fire because `len = 0` after the loop. The cursor `*in`
+     is advanced to offset 822 (= 4 outer SEQUENCE header + 818 content).
+
+  B. MAGNITUDE: PARTIALLY REFUTED. The original claim said "1-byte
+     over-shoot" for `len-plus-1` ML-KEM-512. The actual over-shoot
+     for `len-plus-1` is 33 bytes per vector, not 1, because the
+     harness stimulus uses `body + b"\x01"*33` = 833 body bytes, and
+     the harness's `build_spki_der` writes a 22+833=855-byte DER. The
+     parser advances 822 bytes; the remaining 33 bytes (positions
+     822-854) are completely un-inspected by `asn1_item_embed_d2i`.
+
+     Same for the other len-plus-1 and cross-set vectors: the trailing
+     bytes are 33 (len-plus-1) or 384 (cross-set-768-as-512) or 800
+     (cross-set-1024-as-512 / cross-set-1024-as-768) per vector.
+
+  C. KEYMGMT PATH: SUPPORTED. `x509_pubkey_ex_d2i_ex`
+     (crypto/x509/x_pubkey.c:175-196) computes `publen = *in - in_saved`
+     AFTER `asn1_item_embed_d2i` runs, so `publen` is the
+     parser-consumed length (822 for ML-KEM-512, 1206 for 768, 1590
+     for 1024), not the harness buffer length (855/1217/1622). The
+     OSSL_DECODER pipeline is called with `slen = publen` (x_pubkey.c:188).
+     The keymgmt's `ossl_ml_kem_d2i_PUBKEY`
+     (providers/implementations/encode_decode/ml_kem_codecs.c:213-218)
+     checks `publen != 22 + 800/1184/1568`, which passes for the
+     parser-consumed length. The keymgmt then reads 800/1184/1568
+     body bytes (the canonical length) and discards the rest.
+
+  D. OSSL_DECODER: SUPPORTED. The OSSL_DECODER pipeline
+     (decode_der2key.c:330-342) dispatches to `ossl_ml_kem_d2i_PUBKEY`
+     with the parser-truncated `slen`. The decoder's `slen` validation
+     in `OSSL_DECODER_from_data` requires `slen == 0` after success,
+     which is satisfied because the decoder only consumes the
+     parser-truncated region.
+
+  E. NET EFFECT: SUPPORTED with corrected magnitude. The 6 divergent
+     vectors are accepted by OpenSSL 3.5.7's d2i_PUBKEY because the
+     generic ASN.1 parser's BIT STRING c2i advances by its own
+     declared body length, the SEQUENCE's accounting closes, and the
+     keymgmt sees a `publen` matching the canonical body length. The
+     magnitude of un-inspected trailing data is 33 bytes per
+     len-plus-1 vector (not 1), and up to 800 bytes per cross-set
+     vector.
+
+  F. WHY THE MAGNITUDE WAS WRONG: The original analysis in obs-2026-0020
+     inferred "1-byte over-shoot" from the BIT STRING TLV declaring
+     801 (= 800 + 1 unused-bits byte) but misidentified the unused-bits
+     byte as part of the over-shoot. The correct reading is: the
+     BIT STRING TLV has tag (1) + length (3) + unused-bits (1) + body
+     (800) = 806 bytes total in the wire. The prefix declares 801
+     for `plen`; `ossl_c2i_ASN1_BIT_STRING` reads 1 unused-bits byte
+     then 800 body bytes. The harness's 833-byte body is the 800-byte
+     canonical body + 33 bytes of over-shoot. The 33 bytes are
+     un-inspected, not the 1 unused-bits byte.
+
+  Recommendation for fnd-2026-0002:
+    1. Update the magnitude claim throughout: "1-byte over-shoot" ->
+       "33-byte over-shoot (len-plus-1) / 384-byte over-shoot
+       (cross-set-768-as-512) / 800-byte over-shoot
+       (cross-set-1024-as-512, cross-set-1024-as-768)".
+    2. Strengthen the SEQUENCE_LENGTH_MISMATCH analysis with the
+       explicit body-of-c2i accounting (the 5+800=805 bytes consumed
+       by BIT STRING match the SEQUENCE's 13+805=818 content
+       byte count, so `len=0` after the loop).
+    3. After magnitude fix, fnd-2026-0002 can be promoted to
+       verified_conclusion pending the independent reproducer
+       (currently running) confirms the empirical observation.
+
+  Disclosure note: the magnitude of un-inspected trailing data (up
+  to 800 bytes for cross-set) is a real, specific, file:line-citable
+  OpenSSL behavior. It is a permissive input-validation gap that
+  does not appear to enable key recovery or signature forgery in
+  isolation, but it is an inconsistency between the raw and SPKI
+  import paths in OpenSSL 3.5.7. Disclosure remains public.
+environment:
+  where: parent orchestrator
+  isolation: not applicable (analysis only)
+  cwd: C:\Users\Dhane\frontier
+  versions:
+    subagent_id: "01a04aeb-8994-7143-b18d-1c5964288895"
+    subagent_duration_s: 474
+    subagent_tool_calls: 27
+stdout: |
+  Step-by-step trace verdict:
+    a. d2i_PUBKEY -> x509_pubkey_ex_d2i_ex path: SUPPORTED
+    b. SEQUENCE branch reads outer header, len=818: SUPPORTED
+    c. BIT STRING c2i advances by its own plen (=801, body=800 after
+       unused-bits byte): SUPPORTED
+    d. SEQUENCE_LENGTH_MISMATCH does NOT fire (len=0 after loop): SUPPORTED
+    e. Parser stops at offset 822 (canonical SPKI total, NOT 823): REFUTED
+       on magnitude; 33 bytes un-inspected, not 1
+    f. OSSL_DECODER dispatch with publen=822: SUPPORTED
+    g. Keymgmt check publen==822 passes: SUPPORTED
+    h. Keymgmt reads pubenc+22, 800 bytes: SUPPORTED
+    i. 1-byte over-shoot silently discarded: REFUTED on magnitude;
+       33-byte over-shoot silently discarded
+exit_code: 0
+
+follow_up: >
+  1. Update fnd-2026-0002 magnitudes per the verdict above.
+  2. Wait for independent reproducer (subagent 01a04aeb-8996-7841-945d-d51c83058955)
+     to confirm the empirical observation end-to-end.
+  3. If reproducer agrees, promote fnd-2026-0002 to verified_conclusion
+     pending R2 review.
+  4. File the upstream OpenSSL bug with the corrected magnitude and
+     the file:line citations from the adversarial review.
