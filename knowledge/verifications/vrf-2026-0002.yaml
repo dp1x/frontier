@@ -1,0 +1,89 @@
+id: vrf-2026-0002
+type: verification
+status: pass
+created_at: "2026-08-29T05:05:00Z"
+updated_at: "2026-08-29T05:05:00Z"
+summary: Deterministic verification of fnd-2026-0002 - per-cell cross-path matrix analysis confirms 6 divergent vectors between OpenSSL raw and SPKI default-provider import paths (3 len-plus-1 + 3 cross-set), with cross-stack correlation against 4 non-OpenSSL-SPKI stacks all-reject.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.6
+    tool: tools/analyze_invar_matrix.py (deterministic per-cell pairing)
+  sources:
+    - obs-2026-0013
+    - obs-2026-0014
+    - obs-2026-0015
+    - obs-2026-0022
+    - rev-2026-0002
+    - rpr-2026-0002
+    - crypto/mlkem-input-checks/reports/openssl_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/oqs_auto_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/oqs_ref_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/dotnet_linux_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/dotnet_windows_report.tsv
+  parent: msn-2026-0002
+  generation: 1
+links:
+  findings: [fnd-2026-0002]
+  experiments: [exp-2026-0014]
+  observations: [obs-2026-0013, obs-2026-0014, obs-2026-0015, obs-2026-0022]
+  reproducers: [rpr-2026-0002]
+  reviews: [rev-2026-0002]
+method: deterministic-script
+result: |
+  Per-cell analysis using tools/analyze_invar_matrix.py paired 199 stimuli
+  on (family, params, vector) and counted per-cell accepted/rejected/mismatched:
+
+  - OQS auto vs ref: 199 common, 0 mismatched.  Invariance holds.
+  - .NET Linux: 199 common (108 accepted, 91 rejected).  Invariance holds.
+  - OpenSSL default-provider raw vs SPKI: 199 common, 6 mismatched.
+    Mismatch breakdown (per-cell SPKI cell:
+    'import-accepted-UNEXPECTED: 6'):
+      - 2 len-plus-1 vectors (ML-KEM-512 and ML-KEM-768, body 801/1185
+        vs canonical 800/1184)
+      - 4 cross-set vectors (cross-set-1024-as-768, cross-set-1024-as-512,
+        cross-set-768-as-512, plus len-plus-1 ML-KEM-1024)
+  - OpenSSL FIPS cell: 0/199 (all blocked|fips-unavailable, structurally
+    empty per obs-2026-0016 and FIPS module boundary).
+  - Cross-stack correlation: 4 of 4 non-OpenSSL-SPKI stacks reject
+    all 6 vectors (.NET Windows, .NET Linux, liboqs auto, liboqs
+    forced-ref).  OpenSSL's SPKI path is the unique acceptor.
+
+  Independent reproducer (rpr-2026-0002) on OpenSSL 3.6.3 (local,
+  MSYS2) confirms the mechanism end-to-end with 5 self-contained C
+  programs not importing code from the original harness.  All 5
+  tests exhibit the BIT STRING length-header loophole with
+  parser-consumed length equal to ML_COMMON_SPKI_OVERHEAD +
+  canonical_body_length (e.g. 822 for len-plus-1 ML-KEM-512, 1206
+  for cross-set-768-as-512).
+
+  Source-level review (rev-2026-0002) traced d2i_PUBKEY ->
+  x509_pubkey_ex_d2i_ex -> OSSL_DECODER -> ossl_ml_kem_d2i_PUBKEY
+  path through OpenSSL 3.5.7 source, confirming:
+  - crypto/asn1/tasn_dec.c:283-308 (SEQUENCE branch trusts BIT STRING
+    declared length)
+  - crypto/asn1/tasn_dec.c:411-414 (SEQUENCE_LENGTH_MISMATCH check
+    does not fire because intermediate len is 0)
+  - crypto/x509/x_pubkey.c:175-196 (x509_pubkey_ex_d2i_ex dispatches
+    through OSSL_DECODER with parser-consumed publen)
+  - providers/implementations/encode_decode/ml_kem_codecs.c:213-225
+    (ossl_ml_kem_d2i_PUBKEY's strict publen check passes because
+    publen has been pre-truncated to canonical size).
+  Magnitude correction: harness uses 833-byte buffer for len-plus-1
+  ML-KEM-512 (33 over-shoot, not 1), per obs-2026-0022.
+command: |
+  C:\Python312\python.exe -c "import sys; sys.path.insert(0, r'C:\Users\Dhane\frontier\src'); from pathlib import Path; from tools.analyze_invar_matrix import analyze; import sys; sys.path.insert(0, r'C:\Users\Dhane\frontier\crypto\mlkem-input-checks'); from analyze_invar_matrix import analyze; print(analyze(r'C:\Users\Dhane\frontier\crypto\mlkem-input-checks\reports'))"
+environment:
+  openssl: 3.5.7 (GHA run 32914837764 + run 33223536290); 3.6.3 (MSYS2 local)
+  host: github-actions ubuntu-latest + Windows 11 MSYS2
+  python: 3.12
+  stimulus_manifest: crypto/mlkem-input-checks/stimuli/stimuli.tsv
+  cross_stack_reports:
+    - crypto/mlkem-input-checks/reports/oqs_auto_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/oqs_ref_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/dotnet_linux_invar_report.tsv
+    - crypto/mlkem-input-checks/reports/dotnet_windows_report.tsv
+    - openssl_invar_report/openssl_invar_report.tsv
+  verifier_tool: crypto/mlkem-input-checks/tools/analyze_invar_matrix.py

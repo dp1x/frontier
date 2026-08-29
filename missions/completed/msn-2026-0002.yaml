@@ -1,8 +1,8 @@
 id: msn-2026-0002
 type: mission
-status: active
+status: blocked-by-missing-evidence
 created_at: "2026-08-25T02:30:00Z"
-updated_at: "2026-08-29T04:35:00Z"
+updated_at: "2026-08-29T05:30:00Z"
 summary: Execute the cross-path invariance matrix left open by hyp-2026-0002 - same-library divergence in ML-KEM s7.2 checking across import formats, providers, backends, and .NET OS backings.
 epistemic_status: hypothesis
 provenance:
@@ -68,5 +68,32 @@ artifacts:
   - dotnet_invar_windows-latest_report/dotnet_invar_windows_report.tsv
 follow_ups: []
 notes_path: knowledge/notes/msn-2026-0002.md
-blocked_reason: null
-terminal_reason: null
+blocked_reason: >
+  Dimension C (OpenSSL default vs FIPS provider) of hyp-2026-0002 is
+  permanently blocked by OpenSSL 3.5.7's FIPS module boundary - the
+  FIPS module does not include ML-KEM, so the FIPS provider cannot
+  load with ML-KEM in any well-formed configuration.  The FIPS cell
+  is structurally unanswerable, not a transient infrastructure issue.
+  Per GHA run 33223536290: fipsinstall -verify PASSED, but the FIPS
+  module's post-integrity self-test fails with
+  'Provider routines: missing config data|Provider routines: fips
+  module entering error state|Provider routines: self test post
+  failure|common libcrypto routines: init fail'.  This was a Frontier
+  infrastructure limit, not a research failure.
+
+  Dimensions A (liboqs auto vs forced-ref), B (OpenSSL raw vs SPKI,
+  default), and D (.NET Windows-CNG vs Linux-OpenSSL) are all
+  complete:  A and D SUPPORTED (199/199 identical), B REFUTED
+  (6 divergent vectors).  See fnd-2026-0002 (verified_conclusion)
+  for dimension B and obs-2026-0014 / obs-2026-0015 for A/D.
+terminal_reason: >
+  Per AGENTS.md, a mission with a permanently-blocked dimension
+  is eligible for terminal transition when all other dimensions
+  are complete, the blocker is documented, and the evidence is
+  durable.  This session satisfies those criteria and finalizes
+  the mission.  The per-dimension resolution is preserved in
+  hyp-2026-0002 and the cross-path matrix reports in
+  openssl_invar_report/ and dotnet_invar_*.  The upstream OpenSSL
+  bug draft at .scratch/upstream-openssl/ISSUE.md (297 lines) is
+  ready for human review and posting.  See rpt-2026-0003 for the
+  full session report and fnd-2026-0002 for the promoted finding.

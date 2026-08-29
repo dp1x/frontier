@@ -1,0 +1,48 @@
+id: rpr-2026-0003
+type: reproducer
+status: reproduced
+created_at: "2026-08-29T05:10:00Z"
+updated_at: "2026-08-29T05:10:00Z"
+summary: Independent rebuild of FORMAL-203 (Lean 4 v4.22.0) on a clean checkout - `lake env lean --version` confirms the pinned toolchain resolves correctly and `lake build` re-runs the Formal library with 0 errors and 0 sorries.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-reproducer
+    model: ox-alpha
+    tool: lake build (Lean 4 v4.22.0 kernel)
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal/ByteEncode.lean
+    - formal/build_output.log
+    - knowledge/proofs/prf-2026-0001.yaml
+  parent: msn-2026-0003
+  generation: 0
+links:
+  findings: [fnd-2026-0003]
+  proofs: [prf-2026-0001]
+  experiments: [exp-2026-0016]
+  observations: [obs-2026-0021]
+path: formal/
+reproduction_commands:
+  - "cd C:\\Users\\Dhane\\frontier\\formal"
+  - "lake env lean --version  # expect Lean (version 4.22.0, commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05)"
+  - "lake update  # if not already cached"
+  - "lake build  # expect 'Build completed successfully.'"
+reproduced_on:
+  - environment: Windows 11 host, elan toolchain, Lean 4 v4.22.0 + Mathlib4 v4.22.0
+    date: "2026-08-29"
+    result: |
+      lake env lean --version reports: Lean (version 4.22.0, commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05, Release)
+      lake build produces:
+        warning: Formal/ByteEncode.lean:381:44: unused variable 'hB' (stylistic only)
+        [3051/3052] Built Formal
+        Build completed successfully.
+      0 errors, 0 sorries, 1 linter warning.
+notes: >
+  The .lake build artifacts at formal/.lake/build/lib/Formal/ByteEncode.olean
+  are the kernel-accepted proof terms.  The linter warning about the unused
+  variable 'hB' is stylistic only and does not affect the proof.  All three
+  top-level theorems (canonicalRoundtrip, roundtrip_iff_canonical,
+  minimalCounterexample) are kernel-checked and the build succeeds.

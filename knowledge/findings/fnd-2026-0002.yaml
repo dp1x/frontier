@@ -27,10 +27,11 @@ links:
   targets: [tgt-2026-0001]
   implementations: [imp-2026-0003]
   experiments: [exp-2026-0014]
-  observations: [obs-2026-0013, obs-2026-0015]
+  observations: [obs-2026-0013, obs-2026-0015, obs-2026-0022]
   hypotheses: [hyp-2026-0002]
-  reviews: []
-  verifications: []
+  reviews: [rev-2026-0002]
+  verifications: [vrf-2026-0002]
+  reproducers: [rpr-2026-0002]
 title: OpenSSL d2i_PUBKEY SPKI decode path silently truncates mismatched bodies via BIT STRING length header
 classification: input-validation-gap
 statement: >

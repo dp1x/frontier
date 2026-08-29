@@ -9,7 +9,8 @@
   "properties": {
     "id": {"type": "string", "pattern": "^fnd-[0-9]{4}-[0-9]{4}$"},
     "type": {"const": "finding"},
-    "status": {"enum": ["proposed", "under-review", "verified", "rejected",
+    "status": {"enum": ["proposed", "under-review", "verified",
+                         "verified_conclusion", "rejected",
                          "disputed", "stale", "superseded", "archived",
                          "escalate/security-sensitive"]},
     "created_at": {"type": "string"},
