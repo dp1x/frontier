@@ -12,7 +12,7 @@ provenance:
     model: grok-4.6
     tool: exp-2026-0018 GHA run 33267918229 (rustls-loopback workflow)
   sources:
-    - exp-2026-0018
+    - exp-2026-0019
     - interop/protocol-placement/rustls_loopback/main.go
     - interop/protocol-placement/rustls_loopback/rustls_server/src/main.rs
     - interop/protocol-placement/rustls_loopback/reports/rustls_loopback_report.tsv
@@ -23,7 +23,7 @@ provenance:
   parent: msn-2026-0005
   generation: 1
 links:
-  experiments: [exp-2026-0018]
+  experiments: [exp-2026-0019]
   observations: [obs-2026-0011]
   implementations: [imp-2026-0004]
 title: rustls+aws-lc-rs TLS enforces s7.2 at handshake with illegal_parameter - SPECIFIED=IMPLEMENTED=EXECUTED

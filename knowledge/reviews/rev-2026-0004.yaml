@@ -1,0 +1,81 @@
+id: rev-2026-0004
+type: review
+status: support
+created_at: "2026-08-29T18:00:00Z"
+updated_at: "2026-08-29T18:00:00Z"
+summary: Self-review of FORMAL-204 LENGTH half formalization (fnd-2026-0004) - SUPPORT promotion.  All public declarations audited, no sorries, no file-introduced axioms, axiom inventory limited to standard Lean 4 core.  Spec citations verified against localdocs/refs/fips203.pdf.  Scope disclosure accurate.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-reviewer
+    model: grok-4.6
+    tool: review of formal/Formal/LengthCheck.lean
+  sources:
+    - formal/Formal/LengthCheck.lean
+    - formal/Formal.lean
+    - formal/lean-toolchain
+    - formal/build_output_r2.log
+    - obs-2026-0025
+    - exp-2026-0018
+    - prf-2026-0002
+    - vrf-2026-0005
+    - localdocs/refs/fips203.pdf#section-7.2
+  parent: msn-2026-0006
+  generation: 0
+links:
+  findings: [fnd-2026-0004]
+  experiments: [exp-2026-0018]
+  observations: [obs-2026-0025]
+  verifications: [vrf-2026-0005]
+title: FORMAL-204 LENGTH half review - SUPPORT
+review:
+  scope_under_review: >
+    FORMAL-204 - formal/Formal/LengthCheck.lean kernel-checked in
+    Lean 4 v4.22.0 + Mathlib4 v4.22.0.  Three top-level theorem
+    families: T1 canonicalLength (k2=800, k3=1184, k4=1568),
+    T2 off-by-one rejection (801/1185/1569 rejected),
+    T3 cross-param-set rejection (distinct lengths across params).
+  findings:
+    positive:
+      - "All public declarations audited, no soundness defects"
+      - "Three top-level theorem families kernel-checked end-to-end"
+      - "Axiom inventory limited to {propext, Quot.sound} (subset of standard Lean 4 core)"
+      - "No file-introduced axioms, no sorry, no admitted"
+      - "Spec citations accurate against localdocs/refs/fips203.pdf"
+      - "Scope disclosure honest: only LENGTH half, MODULUS half in ByteEncode.lean"
+      - "Build reproducible from scratch: cd formal; lake build"
+    neutral:
+      - "Combination with MODULUS half (FORMAL-205) is a follow-up; this file is the LENGTH half only"
+      - "Total functions used; only the integer arithmetic of canonicalLength is exercised, which is harmless"
+      - "Proofs use case analysis on MLKEMParam; future extension to Nat-typed k would be more elegant"
+    negative:
+      - "None material"
+  scope_disclosure_audit: |
+    Header at formal/Formal/LengthCheck.lean L1-30 correctly
+    disclaims the MODULUS half (which is in ByteEncode.lean)
+    and points to FORMAL-205 as the future combination mission.
+    Disclosure is honest and accurate.
+  reproducer_audit: |
+    The .lake build artifacts at formal/.lake/build/lib/Formal/LengthCheck.olean
+    are the kernel-accepted proof terms.  Rebuild from scratch:
+    cd C:\Users\Dhane\frontier\formal; lake build.  Verified on
+    this Windows host with Lean 4.22.0.
+  artifact_consistency_audit: |
+    fnd-2026-0004's statement, scope disclosure, and limitations
+    are consistent with formal/Formal/LengthCheck.lean's content.
+    prf-2026-0002 documents the same theorem statements and
+    axiom inventory.
+  termination_recommendation: |
+    SUPPORT terminalization of msn-2026-0006 as a durable
+    formal-verification result.  All acceptance criteria met:
+      - "formal/Formal/LengthCheck.lean is committed with three
+        top-level theorem families" - YES
+      - "lake build completes with exit 0, 0 sorries, 0
+        file-introduced axioms" - YES
+      - "#print axioms on the canonical theorems shows axiom
+        inventory limited to {propext, Classical.choice,
+        Quot.sound} or a subset" - YES, with {propext, Quot.sound}
+        (Classical.choice not used in this file)
+verdict: support
+disclosure: public

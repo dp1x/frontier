@@ -43,7 +43,7 @@ commands:
   - "lake env lean check_axioms.lean  # print axioms for key theorems"
 compute_decision:
   location: local
-  isolation: "elan toolchain already installed at C:\Users\Dhane\.elan; rebuild uses cache"
+  isolation: "elan toolchain already installed; rebuild uses cache"
   reason: "Lightweight: lake build is ~10s on commodity laptop. The toolchain is already installed."
 determinism:
   deterministic: true

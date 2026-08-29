@@ -1,0 +1,101 @@
+id: fnd-2026-0005
+type: finding
+status: verified_conclusion
+created_at: "2026-08-29T18:30:00Z"
+updated_at: "2026-08-29T18:30:00Z"
+summary: "rustls 0.23.43 + aws-lc-rs 1.18 (BoringSSL-derived) TLS 1.3 X25519MLKEM768 server enforces FIPS 203 s7.2 encapsulation-key check at the handshake boundary - 4 tampered ek variants (coeff0=q, coeff0=4095, coeff255=4095, truncate-by-1) all abort with the spec-mandated illegal_parameter alert and rustls::Error::PeerMisbehaved(InvalidKeyShare) on the server side.  Independent of the Go cohort (obs-2026-0011), the BoringSSL-derived code path also enforces the s7.2 check at the protocol layer."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: synthesizing obs-2026-0024 + exp-2026-0019
+  sources:
+    - obs-2026-0024
+    - obs-2026-0011
+    - exp-2026-0019
+    - interop/protocol-placement/rustls_loopback/reports/rustls_loopback_report.tsv
+    - interop/protocol-placement/rustls_loopback/reports/rustls_loopback_console.log
+    - https://github.com/rustls/rustls/releases/tag/v0.23.43
+    - https://github.com/aws/aws-lc-rs
+    - https://datatracker.ietf.org/doc/html/draft-ietf-tls-ecdhe-mlkem-05
+  parent: msn-2026-0005
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+  implementations: [imp-2026-0004]
+  experiments: [exp-2026-0019]
+  observations: [obs-2026-0011, obs-2026-0024]
+  findings: [fnd-2026-0001]
+  reproducers: [rpr-2026-0005]
+  reviews: [rev-2026-0005]
+  verifications: [vrf-2026-0006]
+title: "rustls+aws-lc-rs TLS enforces s7.2 at handshake with illegal_parameter - SPECIFIED=IMPLEMENTED=EXECUTED (BoringSSL-derived cohort)"
+classification: implementation-spec-compliance
+statement: >
+  The msn-2026-0005 rustls+aws-lc-rs server cohort, run on GHA workflow
+  run 33267918229 (ubuntu-24.04, rustls 0.23.43, aws-lc-rs 1.18.0, go
+  1.26.4), confirms that the BoringSSL-derived ML-KEM path (used by
+  rustls via aws-lc-rs as the default CryptoProvider, prefer-post-quantum
+  feature ON so X25519MLKEM768 is the first entry in DEFAULT_KX_GROUPS)
+  enforces the FIPS 203 s7.2 encapsulation-key check at the protocol
+  layer with the spec-mandated alert mapping.
+
+  Result matrix (per-handshake verdicts):
+
+    variant                | client_alert            | rustls_server_error
+    -----------------------+-------------------------+-----------------------------------
+    control                 | (handshake-succeeded)    | (no error)
+    wire_coeff0_eq_q       | illegal_parameter       | PeerMisbehaved(InvalidKeyShare)
+    wire_coeff0_eq_4095    | illegal_parameter       | PeerMisbehaved(InvalidKeyShare)
+    wire_coeff255_eq_4095  | illegal_parameter       | PeerMisbehaved(InvalidKeyShare)
+    truncate_last_byte     | illegal_parameter       | PeerMisbehaved(InvalidKeyShare)
+
+  All 4 tampered variants abort with the spec-mandated illegal_parameter
+  alert (draft-ietf-tls-ecdhe-mlkem-05 s4.2: "The server MUST abort the
+  handshake with an alert of illegal_parameter" when the s7.2 check
+  fails).  The server-side error mapping is coarser than Go's (the
+  BoringSSL-derived code does not distinguish length-class from
+  modulus-class at the rustls API surface; both collapse to a single
+  PeerMisbehaved(InvalidKeyShare) variant), but the on-the-wire alert
+  is exactly illegal_parameter in all 4 cases.
+
+  Combined with obs-2026-0011 (Go stdlib crypto/tls enforces s7.2),
+  the FIPS 203 s7.2 boundary is now independently observed in two
+  distinct deployed code paths:
+
+    - Go stdlib crypto/tls (Go 1.26.4 windows/arm64) - obs-2026-0011
+    - rustls 0.23.43 + aws-lc-rs 1.18 (BoringSSL-derived) - obs-2026-0024
+
+  This is positive evidence for the hypothesis that the s7.2 check is
+  placed at the protocol layer by the major deployed stacks.
+disclosure: public
+limitations: >
+  - Single protocol path tested: TLS 1.3 X25519MLKEM768.  The
+    draft-ietf-tls-ecdhe-mlkem-05 s4.2 mandate applies to this
+    path; other paths (HPKE X-Wing, SSH hybrid KEX, IKEv2 RFC9370)
+    are out of scope of this finding and remain to be tested.
+  - Server-side error mapping is coarser than Go's: rustls
+    reports a single PeerMisbehaved(InvalidKeyShare) variant
+    for both modulus-class overflow and length-class
+    truncation.  The on-the-wire alert is the same in both
+    cases, so the protocol-layer security property holds, but
+    diagnostic detail is reduced.
+  - Only 4 tamper variants tested: 3 coefficient overflow
+    patterns (coeff0=q, coeff0=4095, coeff255=4095) and 1
+    length truncate.  Other patterns (cross-param-set body,
+    rho-tail mutation, etc.) are not in the rustls cohort
+    matrix; the msn-2026-0001 rustls row tested them in the
+    library-parse layer (not the protocol layer).
+  - The aws-lc-rs C library is not directly instrumented
+    in this experiment; the protocol-layer effect is the
+    primary observation.  Library-parse verification of
+    aws-lc-rs itself was done in msn-2026-0001.
+reproducer: "Run locally: cd interop/protocol-placement/rustls_loopback; cd rustls_server; cargo build --release; cd ..; go run . reports/rustls_loopback_report.tsv.  Or via GHA: gh workflow run rustls-loopback.yml."
+follow_up:
+  - "Open remaining protocol-layer cohorts: HPKE X-Wing, SSH hybrid KEX, OpenSSL+oqs-provider, OpenSSH"
+  - "Audit which implementations perform the s7.2 check at parse-time vs encapsulate-time"
+  - "Cross-reference the rustls+aws-lc-rs result with the underlying aws-lc-rs library-parse behavior (already in msn-2026-0001)"
+  - "File an interoperability note (not a CVE) for the rustls+aws-lc-rs deployment as a positively-conforming implementation of draft-ietf-tls-ecdhe-mlkem-05 s4.2"

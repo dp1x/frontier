@@ -1,0 +1,86 @@
+id: prf-2026-0002
+type: proof
+status: verified
+created_at: "2026-08-29T18:00:00Z"
+updated_at: "2026-08-29T18:00:00Z"
+summary: Lean 4 v4.22.0 kernel-checked proof of FIPS 203 §7.2 LENGTH half (len(ek) = 384k+32) (FORMAL-204).  Three top-level theorem families (canonical lengths, off-by-one rejection, cross-param-set rejection) hold with zero sorries, zero file-introduced axioms, axiom inventory limited to {propext, Quot.sound}.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: synthesizing lake build output and #print axioms output
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal/LengthCheck.lean
+    - formal/Formal.lean
+    - formal/build_output_r2.log
+    - obs-2026-0025
+    - exp-2026-0018
+  parent: msn-2026-0006
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+  findings: [fnd-2026-0003]
+  observations: [obs-2026-0025]
+  experiments: [exp-2026-0018]
+title: "FORMAL-204: FIPS 203 §7.2 LENGTH half (Lean 4 kernel-verified)"
+theorem_statements:
+  T1_canonicalLength:
+    - "canonicalLength_k2 : canonicalLength .k2 = 800"
+    - "canonicalLength_k3 : canonicalLength .k3 = 1184"
+    - "canonicalLength_k4 : canonicalLength .k4 = 1568"
+  T2_offbyone_rejection:
+    - "not_canonicalLength_offbyone_k2 : \u00ac801 = canonicalLength .k2"
+    - "not_canonicalLength_offbyone_k3 : \u00ac1185 = canonicalLength .k3"
+    - "not_canonicalLength_offbyone_k4 : \u00ac1569 = canonicalLength .k4"
+    - "canonicalLength_plus_one_neq : \u00accanonicalLength p + 1 = canonicalLength p"
+  T3_cross_param_set_rejection:
+    - "canonicalLength_distinct : pairwise distinct across k2/k3/k4"
+    - "not_canonicalLength_wrong_k_2to4 : \u00ac1568 = canonicalLength .k2"
+    - "not_canonicalLength_wrong_k_4to2 : \u00ac800 = canonicalLength .k4"
+    - "cross_param_set_rejection : p \u00ac= q \u21d2 \u00accanonicalLength p = canonicalLength q"
+kernel_check:
+  toolchain: leanprover/lean4:v4.22.0
+  toolchain_commit: ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05
+  build_command: "cd formal; lake build"
+  build_log: formal/build_output_r2.log
+  build_status: success
+  build_output_tail: "[3052/3053] Built Formal\nBuild completed successfully."
+  sorries: 0
+  axioms_introduced: 0
+  total_axioms_used: [propext, Quot.sound]
+  warnings: 0
+spec_citations:
+  - "FIPS 203 Section 7.2 (Encapsulation key check), Eq 7.1 step 1, printed p.36 / PDF p.45: confirmed"
+  - "FIPS 203 Algorithm 5 (ByteEncode_d), printed p.22 / PDF p.31: confirmed (referenced by MODULUS half)"
+  - "FIPS 203 Algorithm 6 (ByteDecode_d), printed p.22 / PDF p.31: confirmed (referenced by MODULUS half)"
+scope_disclosure: >
+  The model covers only the LENGTH half of FIPS 203 §7.2.  The
+  MODULUS half (every 12-bit coefficient in [0, q-1]) is in
+  formal/Formal/ByteEncode.lean and is kernel-checked separately
+  (FORMAL-203 / prf-2026-0001).  The combination of the two
+  halves into a single dependent type is a follow-up
+  (FORMAL-205).
+reproducer: "Rebuild from scratch: cd C:\\Users\\Dhane\\frontier\\formal; lake build"
+follow_up:
+  - "FORMAL-205: combine LENGTH and MODULUS halves into a single dependent type"
+  - "Cross-check the canonical lengths against the FIPS 203 spec's Section 8.1 (key generation) for consistency"
+  - "Lift to other ML-KEM specifications (e.g., draft-irtf-cfrg-kyber)"
+disclosure: public
+limitations: >
+  - The model uses total functions.  The proofs only depend on
+    the integer arithmetic of `canonicalLength`, so this is
+    harmless, but a reader should be aware that the formal
+    "byte count" is a `Nat` with no upper bound.
+  - The proof of `cross_param_set_rejection` uses case analysis
+    on `MLKEMParam` and explicit `omega` calls.  This is
+    straightforward but the proof term size grows with the
+    number of parameter values; a future extension to
+    `MLKEMParam : Type` with `k : Nat` would be more elegant.
+  - Lean 4.22.0 release commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05
+    was current as of the kernel check; future Lean 4 releases
+    may change tactic behavior.
