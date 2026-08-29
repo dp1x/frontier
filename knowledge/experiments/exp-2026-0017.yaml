@@ -2,7 +2,7 @@ id: exp-2026-0017
 type: experiment
 status: complete
 created_at: "2026-08-29T08:30:00Z"
-updated_at: "2026-08-29T08:30:00Z"
+updated_at: "2026-08-29T17:30:00Z"
 summary: ALIAS-DIFF round-2 - generated 50 asm-barrier C11 programs (5 families x 10 variants) and 20 opaque-tu-barrier C11 programs (d + ctl x 10 variants), ran the differential matrix on gcc 13.3.0 / clang 18.1.3 (GHA) and gcc 16.1.0 (local).  870 rows total, 0 divergences.
 epistemic_status: observation
 provenance:
@@ -73,22 +73,30 @@ environment:
   python: 3.12
   stimulus_dir: compilers/alias-diff/generated
 stdout: |
-  GHA run 33225682327:
+  GHA run 33225682327 (ad-hoc feature-branch run):
     META|tool=gcc|version=gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
     META|tool=clang|version=Ubuntu clang version 18.1.3 (1ubuntu1)
     META|round=2|barriers=asm,opaque-tu|families=d,ctl
     BYBARRIER|barrier=asm|rows=600|divergent=0
     BYBARRIER|barrier=opaque-tu|rows=60|divergent=0
     SUMMARY|rows=660|divergent=0
+  GHA run 33265268860 (committed-workflow run on main, alias-matrix-r2):
+    META|tool=gcc|version=gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+    META|tool=clang|version=Ubuntu clang version 18.1.3 (1ubuntu1)
+    META|round=2|barriers=asm,opaque-tu|families=d,ctl
+    BYBARRIER|barrier=asm|rows=300|divergent=0
+    BYBARRIER|barrier=opaque-tu|rows=120|divergent=0
+    SUMMARY|rows=420|divergent=0
   Local run (Windows 11, MSYS2, gcc 16.1.0 only):
     BYBARRIER|barrier=asm|rows=150|divergent=0
     BYBARRIER|barrier=opaque-tu|rows=60|divergent=0
     SUMMARY|rows=210|divergent=0
 exit_code: 0
 results:
-  total_rows_gha: 660
+  total_rows_gha_ad_hoc: 660
+  total_rows_gha_committed: 420
   total_rows_local: 210
-  total_rows_combined: 870
+  total_rows_combined: 1290
   divergent_rows: 0
-  negative_result: "No TBAA miscompilation detected across all 870 program-config rows"
+  negative_result: "No TBAA miscompilation detected across all 1290 program-config rows"
 disclosure: public

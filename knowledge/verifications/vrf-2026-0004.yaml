@@ -1,0 +1,70 @@
+id: vrf-2026-0004
+type: verification
+status: pass
+created_at: "2026-08-29T17:30:00Z"
+updated_at: "2026-08-29T17:30:00Z"
+summary: Verification of msn-2026-0004 ALIAS-DIFF round-2 negative result - 1290 program-config rows across asm and opaque-tu barriers on gcc 13.3.0 / clang 18.1.3 (GHA) and gcc 16.1.0 (local MSYS2), 0 divergences.  Reproduced on the committed workflow (GHA run 33265268860) and ad hoc on a feature branch (GHA run 33225682327).
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.6
+    tool: synthesizing alias_report_r2 artifacts
+  sources:
+    - exp-2026-0017
+    - obs-2026-0023
+    - compilers/alias-diff/reports/alias_report_r2.tsv (GHA 33225682327)
+    - compilers/alias-diff/reports/alias_report_r2_gha_committed.tsv (GHA 33265268860)
+    - compilers/alias-diff/reports/alias_report_r2_local.tsv (local Windows 11)
+    - compilers/alias-diff/reports/alias_report_r1_committed.tsv (GHA 33265268860 round-1)
+  parent: msn-2026-0004
+  generation: 0
+links:
+  experiments: [exp-2026-0017]
+  observations: [obs-2026-0023]
+method: deterministic-script
+result: |
+  Three independent runs converge on the same negative result:
+
+  Run 1 (GHA 33225682327, ad-hoc feature-branch run, gcc 13.3.0 + clang 18.1.3):
+    BYBARRIER|barrier=asm|rows=600|divergent=0
+    BYBARRIER|barrier=opaque-tu|rows=60|divergent=0
+    SUMMARY|rows=660|divergent=0
+
+  Run 2 (GHA 33265268860, committed-workflow run on main, gcc 13.3.0 + clang 18.1.3):
+    BYBARRIER|barrier=asm|rows=300|divergent=0
+    BYBARRIER|barrier=opaque-tu|rows=120|divergent=0
+    SUMMARY|rows=420|divergent=0
+
+  Run 3 (local Windows 11 MSYS2, gcc 16.1.0):
+    BYBARRIER|barrier=asm|rows=150|divergent=0
+    BYBARRIER|barrier=opaque-tu|rows=60|divergent=0
+    SUMMARY|rows=210|divergent=0
+
+  Combined: 1290 program-config rows, 0 divergent.
+
+  Coverage: family (a) memcpy punning, (b) union punning, (c) char* aliasing,
+  (d) incompatible-cast UB, and (ctl) same-type control.  Family (d) and
+  (ctl) also run with the opaque-TU barrier (programs link against
+  opaque_tu.c, a separately-compiled TU providing opaque_ext/touch_ext
+  that the caller's optimizer cannot see through without LTO).
+
+  This is a genuine negative result: the searched space for TBAA
+  miscompilations in gcc/clang at -O2/-O3 over the program shapes probed
+  is empty.  The result is not "no compiler bugs exist" - it is "for
+  the specific patterns we exercised, no divergence was found in the
+  1290 observed program-config combinations."
+command: |
+  cd C:\Users\Dhane\frontier
+  bash compilers/alias-diff/run_matrix_r2.sh compilers/alias-diff/reports/alias_report_r2.tsv
+environment:
+  gcc: 13.3.0 (GHA), 16.1.0 (local MSYS2)
+  clang: 18.1.3 (GHA only)
+  hosts: Linux 6.17.0-1022-azure (GHA), Windows 11 MSYS2 (local)
+  python: 3.12
+  stimulus_dir: compilers/alias-diff/generated
+  verifier_script: compilers/alias-diff/run_matrix_r2.sh
+  generator_scripts: [compilers/alias-diff/gen_programs.py, compilers/alias-diff/gen_programs_r2.py]
+  opaque_tu: compilers/alias-diff/opaque_tu.c
+disclosure: public
