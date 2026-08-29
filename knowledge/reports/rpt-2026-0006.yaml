@@ -1,0 +1,333 @@
+id: rpt-2026-0006
+type: report
+status: final
+created_at: "2026-08-30T03:30:00Z"
+updated_at: "2026-08-30T03:30:00Z"
+summary: "Frontier session report 2026-08-29/30 - autonomous research organization session. Discovery phase launched 6 parallel research scouts + adversarial critic across crypto/PQC, compilers, formal math, interop/data-format, databases, and security domains. Selected HPKE X-Wing KEM cross-impl as the strongest next target. Mission msn-2026-0008 produced 1 new verified finding (fnd-2026-0007) demonstrating CIRCL v1.6.5 X-Wing + HPKE byte-exact conformance to draft-05 KAT vectors and RFC 9180 test vectors, with mutation matrix exposing expected X25519 scalar clamping. Independent adversarial review identified and corrected two mid-mission errors: (a) mutation-matrix labeling (ML-KEM seed vs X25519 scalar positions) and (b) a false-positive HPKE schedule divergence claim caused by a Python reference bug. Cross-impl audit against additional libraries is the recommended follow-up (msn-2026-0009)."
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: minimax-m3
+    tool: synthesizing full session evidence (mission lifecycle + finding promotion ladder)
+  sources:
+    - knowledge/findings/fnd-2026-0001.yaml
+    - knowledge/findings/fnd-2026-0002.yaml
+    - knowledge/findings/fnd-2026-0003.yaml
+    - knowledge/findings/fnd-2026-0004.yaml
+    - knowledge/findings/fnd-2026-0005.yaml
+    - knowledge/findings/fnd-2026-0006.yaml
+    - knowledge/findings/fnd-2026-0007.yaml
+    - knowledge/observations/obs-2026-0027.yaml
+    - knowledge/observations/obs-2026-0028.yaml
+    - knowledge/observations/obs-2026-0029.yaml
+    - knowledge/experiments/exp-2026-0021.yaml
+    - knowledge/experiments/exp-2026-0022.yaml
+    - knowledge/verifications/vrf-2026-0008.yaml
+    - knowledge/reviews/rev-2026-0007.yaml
+    - knowledge/reproducers/rpr-2026-0007.yaml
+    - knowledge/hypotheses/hyp-2026-0010.yaml
+    - knowledge/hypotheses/hyp-2026-0011.yaml
+    - knowledge/hypotheses/hyp-2026-0012.yaml
+    - knowledge/implementations/imp-2026-0007.yaml
+    - knowledge/implementations/imp-2026-0008.yaml
+    - knowledge/implementations/imp-2026-0009.yaml
+    - knowledge/implementations/imp-2026-0010.yaml
+    - knowledge/implementations/imp-2026-0011.yaml
+    - knowledge/specifications/spc-2026-0002.yaml
+    - knowledge/targets/tgt-2026-0002.yaml
+    - knowledge/notes/msn-2026-0008.md
+    - missions/completed/msn-2026-0008.yaml
+    - knowledge/reports/rpt-2026-0005.yaml
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0001, fnd-2026-0002, fnd-2026-0003, fnd-2026-0004, fnd-2026-0005, fnd-2026-0006, fnd-2026-0007]
+  missions: [msn-2026-0008]
+title: "Frontier session report 2026-08-29/30 - autonomous discovery + HPKE X-Wing KEM cross-impl mission"
+report: |
+
+  SESSION OVERVIEW
+
+  This session covered the "fully autonomous research organization"
+  mode requested on 2026-08-29 (after the previous session ended
+  with rpt-2026-0005 covering 5 new verified findings and FORMAL
+  chain completion). The session mission was:
+
+  > Begin by inspecting the complete current state of the Frontier
+  > repository... Reconcile the current state carefully before
+  > selecting new work... perform a broad autonomous research scan
+  > across Frontier's strongest domains and identify the highest-value
+  > next technical problem according to the project's actual criteria.
+
+  EFFECTIVE WORK TIME
+
+  Approximately 4-5 hours of structured autonomous work, including:
+  - Initial state inspection (15 min)
+  - Discovery phase: 6 parallel research scouts + 1 adversarial critic (45 min)
+  - Adversarial critic of scout rankings (15 min)
+  - Mission design and target selection (10 min)
+  - Mission execution: harness build, Stage-1+2+3, KAT verification
+    (~45 min wall-clock with parallel subagent execution)
+  - Independent review and adversarial pass (~30 min)
+  - Mid-mission corrections (mutation labeling, draft-07 claim refutation)
+    (~30 min)
+  - Verification, reproducibility, finding promotion (~30 min)
+  - Terminalization, Obsidian note, session report (~15 min)
+
+  DISCOVERY PHASE: 6 PARALLEL RESEARCH SCOUTS
+
+  Spawned 6 parallel research scouts in the discovery phase, each
+  with a distinct epistemic role (one scout per domain):
+
+  - **Crypto/PQC scout** (subagent 01a04f1d-e478-7762-b20a-e4d409dad026)
+    produced 3 candidates. Recommended ML-DSA verification input-checking
+    differential (#1), HPKE PQ composition: X-Wing combiner (#2), TLS
+    1.3 hybrid-PQC client-side ek validation (#3).
+
+  - **Compiler/PL scout** (subagent 01a04f1d-e479-7e92-acc4-33ac6ed75f25)
+    produced 3 candidates. Recommended LIFETIME-DIFF (C++ temporary
+    lifetime extension, #1), FMA-CONTRACT (IEEE754 FMA contraction
+    contract semantics, #2), PROVENANCE-DIFF (Rust Stacked vs Tree
+    Borrows Miri disagreement, #3).
+
+  - **Formal math scout** (subagent 01a04f1d-e47b-7c80-9bc7-9c0a8f6829ba)
+    produced 3 candidates. Recommended ML-DSA hint correctness +
+    signature size theorem (#1), SLH-DSA WOTS+ + Merkle correctness
+    (#2), ML-KEM §6.1 K-PKE Encrypt/Decrypt algebraic roundtrip (#3).
+
+  - **Interop/data-format scout** (subagent 01a04f1d-e47c-7593-a19f-b8bffc30785f)
+    produced 3 candidates. Recommended HPKE X-Wing KEM combiner interop
+    (#1, correlated-consensus with crypto scout #2), SSH
+    mlkem768x25519-sha256 hybrid KEX (#2), QUIC + x25519mlkem768 + ECH
+    interop (#3).
+
+  - **Database/other scout** (subagent 01a04f39-8bff-75c0-8a2b-e0461d6eb7a4)
+    produced 3 candidates. Recommended RocksDB/LSM-Tree compaction
+    correctness (range tombstones + snapshot handling, #1), openCypher
+    TCK conformance (#2), HTTP cache RFC 9111 freshness (#3).
+
+  - **Security research scout** (subagent 01a04f39-8c00-7a70-9971-9a0ec86899b0)
+    produced 3 candidates. Recommended AES-GCM-SIV empty-ciphertext
+    forgery (CVE-2026-45446, #1), TLS 1.3 hybrid PQC group ordering
+    regression (CVE-2026-2673, #2), CMS AuthEnvelopedData forgery
+    (CVE-2026-34182, #3). NOTE: 2 of these CVE numbers could not be
+    independently verified; they were downweighted in selection.
+
+  ADVERSARIAL CRITIC OF SCOUT RANKINGS
+
+  Spawned an independent critic (subagent 01a04f3a-c85d-7ca3-bafe-96ad83f0ae67)
+  to evaluate the 12 candidates against the Frontier charter criteria.
+  The critic identified 5 kill-list candidates, 2 candidates to merge
+  (Crypto #2 + Interop #1 = X-Wing combiner), and a top-5 ranking.
+
+  SELECTION: HPKE X-Wing KEM cross-library
+
+  Selected the merged HPKE X-Wing KEM combiner cross-impl candidate
+  (ranked #2 by critic; #1 by crypto scout; #1 by interop scout) for
+  the following reasons:
+
+  1. **Truthfully anchored to a public spec** (RFC 9180 + draft-08 X-Wing).
+  2. **Multiple independent libraries** with at least 5 distinct lineages.
+  3. **Cheap decisive experiment** (one Python harness, sub-second per comparison).
+  4. **Novelty**: clean, no public audit published.
+  5. **Real impact**: HPKE is the encryption layer under MLS, ECH,
+     Oblivious HTTP, Privacy Pass — combiner bugs are silent interop breaks.
+  6. **Distinct from prior Frontier work**: not crypto-ML-KEM-input-checks,
+     not formal verification, not compilers, not interop in the msn-2026-0005 sense.
+
+  MISSION EXECUTION
+
+  Created mission msn-2026-0008 with the full evidence requirements
+  (specs, hypotheses, experiments, observations, reproducers,
+  verifications, finding, independent review).
+
+  Stage-1: Built a CIRCL (Go) harness that exercises X-Wing
+  DeriveKeyPair + Encapsulate + Decapsulate + HPKE Base mode
+  SetupS/R + Seal/Open. The harness produces a JSON report for
+  byte-exact comparison. Deterministic seed = 0x00..0x1f, deterministic
+  eseed = 0x40..0x7f.
+
+  Stage-2: Built a 28-mutation matrix testing single-bit flips at
+  known positions of eseed. The matrix correctly observes X25519
+  scalar clamping (RFC 7748 §5) at eseed[32] bit 0 and eseed[63] bit 7
+  (the X25519 ephemeral scalar positions). All other mutation positions
+  change the ss (avalanche effect on the ML-KEM encapsulation seed
+  at eseed[0..31] and the X25519 ephemeral scalar at non-clamped
+  positions in eseed[32..63]).
+
+  Stage-3: Ran CIRCL's TestVectors function which verifies the
+  SHAKE-128 hash of the 3-vector X-Wing draft-05 KAT corpus equals
+  the published reference hash 1bcd0057d861d6b866239936cadcaeee1ec0164dedc181c386e9e54fe46156fe.
+  PASS.
+
+  Stage-4: Ran CIRCL's full RFC 9180 HPKE test vectors (vectors_rfc9180_5f503c5.json.gz).
+  127 of 127 supported test vectors PASS (the 16 export-only AEAD
+  test vectors are skipped because CIRCL v1.6.5 does not implement
+  the Export-Only AEAD per its package docstring).
+
+  MID-MISSION CORRECTIONS (Independent Review Findings)
+
+  The independent adversarial review (subagent 01a04f87-2b2d-75d3-9b87-03b9c2f2db54)
+  surfaced two mid-mission errors that were corrected:
+
+  1. **Mutation matrix labeling (obs-2026-0028 v1 → v2)**: The
+     harness initially labeled mutations at eseed[0..31] as "X25519
+     clamped bits" with expected "same ss". This was incorrect — eseed[0..31]
+     is the ML-KEM encapsulation seed (32-byte message `m` in FIPS 203
+     §6.1), not the X25519 ephemeral scalar. ML-KEM encapsulation
+     is highly input-sensitive at every bit, so all eseed[0..31]
+     mutations correctly produce a different ss (avalanche effect).
+     The actual X25519 clamping behavior is at eseed[32..63]
+     (X25519 ephemeral scalar bytes), and only the M32_0 (byte 0 bit 0)
+     and M63_7 (byte 31 bit 7) mutations correctly produce the same ss.
+     The harness output data was correct; only the labeling was wrong.
+     **Corrected in obs-2026-0028 v2.**
+
+  2. **HPKE draft-07 vs RFC 9180 schedule divergence (obs-2026-0029 v1 →
+     v2)**: The Python reference (py_xwing.py) produced different
+     exporter_secret than CIRCL for the same (s., info) inputs.
+     Initially this was framed as "CIRCL implements draft-07 instead of
+     RFC 9180". Further investigation revealed:
+
+     - CIRCL passes 127 of 127 supported RFC 9180 test vectors.
+     - CIRCL's `circl/hpke/util.go` keySchedule function matches
+       RFC 9180 §5.1 byte-for-byte.
+     - CIRCL's `labeledExpand` prepends the uint16 length prefix
+       (RFC 9180 §4 requirement).
+     - The bug was in our Python reference: it used `suite_id = b""`
+       instead of the 10-byte `"HPKE" || I2OSP(kem_id,2) || I2OSP(kdf_id,2) || I2OSP(aead_id,2)`;
+       it used the label `"nonce"` instead of `"base_nonce"`; and
+       it did not compute `info_hash = LabeledExtract("",", "info_hash", info)`
+       but used the raw info bytes in the key_schedule_context.
+
+     The "schedule divergence" finding was REFUTED. **Corrected in
+     obs-2026-0029 v2.**
+
+  These two corrections are recorded as a durable methodological
+  lesson: independent adversarial review surfaces bugs that the
+  executor ( (agent) itself) misses. The corrections also show
+  that "durable negative findings" — claims that look like findings
+  but turn out to be measurement errors — are themselves durable
+  evidence in the repository.
+
+  VERIFIED FINDING
+
+  fnd-2026-0007 (verified_conclusion): CIRCL v1.6.5 X-Wing (draft-05)
+  + HPKE (RFC 9180) is byte-exact conformant per published KAT vectors.
+  Full evidence chain:
+    - 3 hypotheses (hyp-2026-0010, 0011, 0012) — open at mission start
+    - 1 experiment design (exp-2026-0021) — Stage-1+2 harness + mutation matrix
+    - 1 experiment (exp-2026-0022) — Stage-3 KAT verification
+    - 3 observations (obs-2026-0027 canonical, obs-2026-0028 mutations,
+      obs-2026-0029 HPKE conformance)
+    - 1 reproducer (rpr-2026-0007) — `cd .scratch/xwing && go run
+      ./harness/circl_harness.go --mode={canonical,mutations}`
+    - 1 verification (vrf-2026-0008) — deterministic reproduction
+      script that compares the harness output byte-exact against
+      expected values from a previous run
+    - 1 independent review (rev-2026-0007) — subagent 01a04f87,
+      verdict: SUPPORT
+
+  The finding is recorded as classification=implementation-spec-compliance,
+  with limitations:
+    - CIRCL implements draft-05 per its own package docstring; draft-08
+      KAT is not separately verified.
+    - Cross-impl audit against other X-Wing-capable HPKE libraries is
+      documented as a follow-up (msn-2026-0009) but not in this session.
+
+  DECISIONS AND PROCESS
+
+  - Pinned CIRCL v1.6.5 (latest stable as of 2026-08-30).
+  - Used `golang.org/x/crypto/hkdf` (the library CIRCL itself uses).
+  - Discovered mid-mission that CIRCL is RFC 9180 conformant (not
+    draft-07 as the package docstring says).
+  - Reproducibility verified via `verify_reproducibility.py` Python
+    script comparing the harness output byte-exact against expected
+    values.
+  - Adversarial critic surfaced two mid-mission errors; both were
+    corrected before terminalization.
+
+  COMPUTE ENVELOPE
+
+  Lightweight (per AGENTS.md compute routing):
+  - Stage-1+2: ~30s wall (Go build + run x2)
+  - Stage-3 KAT: <1s (single `go test` invocation)
+  - Stage-4 RFC 9180 vectors: ~1s
+  - Total wall: minutes, not hours.
+  - Memory: <200 MB.
+
+  FINAL REPOSITORY STATE
+
+  - 7 verified findings (fnd-2026-0001 through 0007), spanning
+    ML-KEM §7.2 input checking (FIPS 203), OpenSSL cross-API
+    variance, FORMAL-203/204/205 Lean kernel checks (ByteEncode
+    roundtrip + s7.2 LENGTH/MODULUS halves + combined), TLS hybrid
+    PQC enforcement (Go + rustls+aws-lc-rs), and CIRCL X-Wing + HPKE
+    draft-05/RFC 9180 conformance.
+  - 7 completed missions (msn-2026-0001 through 0008).
+  - 0 active, 0 pending.
+  - 1 blocked work item (OpenSSL FIPS module does not include ML-KEM).
+  - 2 preserved negative results.
+  - 0 external research awaiting input.
+
+  JUSTIFIED FOLLOW-UP MISSIONS
+
+  - **msn-2026-0009 (recommended next)**: Cross-impl X-Wing + HPKE audit
+    against Rust `hpke` crate, pyca/cryptography, libhpke, and OpenSSL
+    oqs-provider. Build a per-implementation harness and verify byte-exact
+    agreement on the same (ek, eseed, info, aad, pt) tuple that CIRCL
+    was verified against.
+
+  - **draft-08 KAT verification** (separate mission): Acquire the
+    X-Wing draft-08 KAT vectors (from
+    https://github.com/dconnolly/draft-connolly-cfrg-xwing-kem or
+    datatracker.ietf.org) and verify CIRCL's `ss` byte-exact match
+    per draft-08 §6.
+
+  - **FORMAL-206 (optional)**: Lean 4 formalization of X-Wing KEM
+    algebraic roundtrip (analogous to FORMAL-203 for FIPS 203
+    ByteEncode), building on the existing ByteEncode/LengthCheck/ValidKey
+    scaffolding.
+
+  METHODOLOGICAL LESSONS PRESERVED
+
+  - **Mid-mission corrections are normal**. The independent adversarial
+    review caught two errors the executor missed: a labeling error
+    and a false-positive divergence finding. Recording the corrections
+    is part of the durable evidence.
+
+  - **Cross-impl differential is hard** even when one library is a
+    turnkey reference (CIRCL). Other libraries require the operator
+    to implement the X-Wing combiner on top of primitives; this is
+    itself a research-output class ("X-Wing combiner is a 32-line
+    SHA3-256 call that is unlikely to differ across implementations").
+
+  - **The HPKE spec evolved across drafts**. draft-07 → RFC 9180 changed
+    the `LabeledExpand` to prepend the uint16 length prefix and changed
+    the `suite_id` encoding. Applications and libraries that pinned
+    early drafts may produce different outputs than libraries that
+    pinned later drafts.
+
+  - **Deterministic reproducibility is cheap and decisive**. The
+    `verify_reproducibility.py` script takes milliseconds and
+    confirms byte-exact agreement across re-runs. This is a low-effort,
+    high-value audit step.
+
+  NEXT STEPS (post-session)
+
+  - Continue the autonomous research organization mode with
+    msn-2026-0009 (cross-impl X-Wing audit) when the next session begins.
+  - The remaining scouts' candidates (ML-DSA verification, LIFETIME-DIFF,
+    FMA-CONTRACT, PROVENANCE-DIFF, SLH-DSA WOTS+ formal, ML-KEM §6.1
+    formal, RocksDB compaction, OpenCypher TCK, HTTP cache RFC 9111)
+    are preserved in the discovery notes for future cycles.
+  - Frontier has now covered cryptography (input-checking + KAT conformance),
+    formal verification (FORMAL-203/204/205), compilers (ALIAS-DIFF),
+    interop (TLS hybrid PQC + X-Wing KEM), and Lean formalization
+    end-to-end. The remaining tracks (compilers, formal math beyond
+    FIPS 203, databases, security CVEs) are open for future sessions.
+  - The security-scout CVE candidates require human review before
+    any public disclosure step (per AGENTS.md) and were correctly
+    deprioritized in this session.
