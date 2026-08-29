@@ -1,0 +1,58 @@
+id: imp-2026-0008
+type: implementation
+status: pinned
+created_at: "2026-08-30T00:30:00Z"
+updated_at: "2026-08-30T00:30:00Z"
+summary: Rust hpke crate (rozbb) + ml-kem (RustCrypto) + x25519-dalek + sha3 - manual X-Wing combiner on top of independent primitives.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: web_search (crates.io, github.com/rozbb/hpke)
+  sources:
+    - https://github.com/rozbb/hpke
+    - https://crates.io/crates/ml-kem
+    - https://crates.io/crates/x25519-dalek
+    - https://crates.io/crates/sha3
+    - https://docs.rs/hpke/latest/hpke/
+  parent: null
+  generation: 0
+links:
+  targets: [tgt-2026-0002]
+  specifications: [spc-2026-0002]
+title: Rust hpke crate + RustCrypto primitives - manual X-Wing combiner
+library:
+  name: "hpke"
+  vendor: "rozbb / RustCrypto"
+  language: "Rust"
+  repository: "https://github.com/rozbb/hpke"
+  license: "BSD-3-Clause OR MIT"
+version_pinning:
+  policy: "pin to specific crate versions (Cargo.lock)"
+  notes: |
+    The `hpke` crate (rozbb) exposes a `Kem` trait that allows custom KEMs.
+    For X-Wing we implement the trait on top of:
+      - `ml-kem` (RustCrypto, FIPS 203 ML-KEM-768)
+      - `x25519-dalek` (RustCrypto, RFC 7748 X25519)
+      - `sha3` (RustCrypto, SHA3-256 + SHAKE256)
+    The combiner is implemented per draft-connolly-cfrg-xwing-kem-08.
+independence:
+  lineage: "Rust / RustCrypto ecosystem"
+  reuses: "ml-kem (RustCrypto), x25519-dalek (RustCrypto), sha3 (RustCrypto)"
+  notes: |
+    Different language, different cryptographic library ecosystem than
+    CIRCL. Lineage-independent from Cloudflare CIRCL, aws-lc, libhpke.
+xwing_support:
+  kats_included: "manual - we add draft-08 vectors"
+  hpke_integration: "yes - via the `hpke` crate trait"
+  protocol_modes: ["Base", "PSK", "Auth", "AuthPSK"]
+  kdfs: ["HKDF-SHA256", "HKDF-SHA384", "HKDF-SHA512"]
+  aeads: ["AES-128-GCM", "AES-256-GCM", "ChaCha20-Poly1305", "Export-Only"]
+notes: |
+  The `hpke` crate is the most mature pure-Rust HPKE implementation. By
+  implementing the X-Wing KEM trait, we can use it as a full HPKE
+  participant. The audit checks that our hand-rolled X-Wing combiner
+  matches draft-08 KATs and that the resulting HPKE exporter matches
+  CIRCL's output for the same inputs.

@@ -1,0 +1,58 @@
+id: obs-2026-0027
+type: observation
+status: recorded
+created_at: "2026-08-30T01:20:00Z"
+updated_at: "2026-08-30T01:20:00Z"
+summary: "Stage-1 canonical CIRCL X-Wing + HPKE Base mode roundtrip succeeded. Deterministic seed 0x00..0x1f produces a 1216-byte pk, 1120-byte ct, 32-byte ss. HPKE Base mode (KEM_XWING=0x647A + HKDF-SHA256 + AES-128-GCM) roundtrip succeeded (32-byte exporter secret derived). Encaps/Decaps symmetric, HPKE Seal/Open symmetric, AEAD integrity preserved. This is positive Stage-1 evidence that CIRCL implements a working X-Wing + HPKE stack end-to-end."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-executor
+    model: minimax-m3
+    tool: frontier.execute.run_command (go run circl_harness.go --mode=canonical)
+  sources:
+    - .scratch/xwing/reports/canonical.json
+    - spc-2026-0002
+    - knowledge/implementations/imp-2026-0007.yaml
+    - knowledge/experiments/exp-2026-0021.yaml
+  parent: msn-2026-0008
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0007]
+  experiments: [exp-2026-0021]
+  missions: [msn-2026-0008]
+  targets: [tgt-2026-0002]
+title: "OBS-2026-0027 - CIRCL X-Wing + HPKE Base mode Stage-1 roundtrip succeeded"
+environment:
+  library: "circl v1.6.5"
+  language: "Go 1.26.4 windows/arm64"
+  host: "Windows 11"
+  scratch_path: "C:\\Users\\Dhane\\frontier\\.scratch\\xwing"
+  isolation: "env-scrubbed scratch workspace via frontier.execute.run_command"
+  determinism: "deterministic seed (byte sequence); no CSPRNG needed"
+inputs:
+  seed: "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f (32 bytes)"
+  eseed: "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f (64 bytes)"
+outputs:
+  pk: "6f54098a0a0e641146614b6960ba60d8...d7a (1216 bytes)"
+  ct: "332c248ecac774a5b9e28b7018565b7e...5c1f (1120 bytes)"
+  ss: "f285b028f4de617b6adf9eccbd811327848dd44ac7078c15390b16682576ad8c (32 bytes)"
+  hpke_enc: "0320b31afad988321214752b6d15bea7...9 (variable)"
+  hpke_exporter_secret: "a1ffe242dbe8b68431a7fa953a885f0776675bb422860c6900bcc3a2f2b74444 (32 bytes)"
+hpke_suite: "KEM_XWING (0x647A) + KDF_HKDF_SHA256 (0x01) + AEAD_AES128GCM (0x01)"
+verdict: pass
+findings:
+  - "CIRCL X-Wing KEM.Encapsulate + KEM.Decapsulate are byte-symmetric for the canonical (pk, eseed, sk) tuple."
+  - "HPKE Base mode (KEM_XWING + KDF_HKDF_SHA256 + AEAD_AES128GCM) SetupS + SetupR + Seal + Open roundtrip is byte-symmetric; the derived key/nonce allow identical Seal/Open results."
+  - "CIRCL exposes X-Wing as HPKE KEM ID 0x647A, matching the draft-08 experimental assignment."
+  - "The exporter_secret is derived from X-Wing ss via HKDF-Expand(Label = 'HPKE-Exporter-v1', context, 32)."
+notes: |
+  CIRCL implements X-Wing per draft-05 (per its own package comment). The
+  draft-08 spec supersedes draft-05 with minor clarifications; the combiner
+  order is unchanged. Cross-impl comparison will pin to draft-08 vectors
+  when those are available.
+
+  This observation is positive Stage-1 evidence. Stage-2 (mutation matrix)
+  is in obs-2026-0028.

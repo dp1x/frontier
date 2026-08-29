@@ -1,0 +1,48 @@
+id: hyp-2026-0011
+type: hypothesis
+status: open
+created_at: "2026-08-30T00:30:00Z"
+updated_at: "2026-08-30T00:30:00Z"
+summary: Hand-rolled X-Wing combiners across the four non-CIRCL libraries produce byte-exact identical (encaps, ss) for the same inputs - the combiner is a 32-line SHA3-256 call and is unlikely to differ across implementations.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator-B
+    model: minimax-m3
+    tool: independent generator
+  sources:
+    - spc-2026-0002
+    - knowledge/implementations/imp-2026-0008.yaml
+    - knowledge/implementations/imp-2026-0009.yaml
+    - knowledge/implementations/imp-2026-0010.yaml
+    - knowledge/implementations/imp-2026-0011.yaml
+  parent: msn-2026-0008
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0008, imp-2026-0009, imp-2026-0010, imp-2026-0011]
+  targets: [tgt-2026-0002]
+title: HYP-B - Combiners byte-agree across implementations
+statement: >
+  The X-Wing combiner is defined as ss = SHA3-256(ss_X || ss_KEM ||
+  ct_X || ek_KEM) (draft-08). Each library calls this differently
+  (Go concat, Rust Vec::extend_from_slice, Python bytes concatenation,
+  C memcpy, OpenSSL EVP_DigestUpdate). All produce byte-exact identical
+  ss for the same inputs because the inputs (ss_X, ss_KEM, ct_X, ek_KEM)
+  are each canonicalized by the upstream primitives (X25519 always
+  little-endian 32 bytes; ML-KEM-768 pk/ct/ss always canonical FIPS 203
+  byte encodings). So the expected outcome is uniform inter-library
+  agreement.
+falsifiable_predictions:
+  - All four hand-rolled combiners produce ss byte-exact identical to CIRCL's for 100 random (sk_X, ek_KEM) pairs.
+  - All four hand-rolled combiners produce ss byte-exact identical to the draft-08 KAT vectors.
+  - No mutation of the canonical input ordering (e.g., ss_X then ek_KEM vs ek_KEM then ss_X) produces the same ss as the spec-compliant ordering (each mutation should produce a different ss).
+disproof_attempts: []
+notes: |
+  The likely positive outcome. A finding here would be either:
+  (a) "all combiners agree" = positive conformance evidence (still a
+      valuable finding).
+  (b) "one combiner disagrees" = a bug-finding mission, with the
+      specific library's code path identified as the source of the
+      deviation.

@@ -1,0 +1,53 @@
+id: imp-2026-0010
+type: implementation
+status: pinned
+created_at: "2026-08-30T00:30:00Z"
+updated_at: "2026-08-30T00:30:00Z"
+summary: C libhpke (Deimos-C2P) - HPKE + X25519 + ML-KEM primitives; manual X-Wing combiner.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: web_search (github.com/Deimos-C2P/libhpke)
+  sources:
+    - https://github.com/Deimos-C2P/libhpke
+    - https://github.com/Deimos-C2P/libhpke/blob/main/lib/hpke.c
+    - RFC 9180
+  parent: null
+  generation: 0
+links:
+  targets: [tgt-2026-0002]
+  specifications: [spc-2026-0002]
+title: C libhpke (Deimos-C2P) - manual X-Wing combiner
+library:
+  name: "libhpke"
+  vendor: "Deimos-C2P"
+  language: "C99"
+  repository: "https://github.com/Deimos-C2P/libhpke"
+  license: "MIT"
+version_pinning:
+  policy: "pin to a specific commit"
+  notes: |
+    libhpke is a small HPKE library that supports custom KEMs via
+    function pointers. We link it against liboqs (for ML-KEM-768) and
+    libsodium or OpenSSL for X25519. The X-Wing combiner is hand-coded.
+independence:
+  lineage: "Deimos-C2P / embedded-systems community"
+  reuses: "liboqs (open-quantum-safe) for ML-KEM primitive"
+  notes: |
+    C-language baseline. Different ecosystem (liboqs vs CIRCL-internal
+    ML-KEM vs RustCrypto ML-KEM). Provides a different point of view on
+    the same combiner logic.
+xwing_support:
+  kats_included: "manual - we add draft-08 vectors"
+  hpke_integration: "yes - libhpke supports custom KEMs"
+  notes: |
+    libhpke's HPKE key schedule is independent of OpenSSL/circl. The
+    audit verifies that the libhpke-wrapped exporter matches CIRCL's
+    for the same (ek, m, info, aad) tuple.
+notes: |
+  C-language implementation with liboqs backend. Provides a fourth
+  independent ecosystem and exercises the cross-language portability
+  of the X-Wing spec.

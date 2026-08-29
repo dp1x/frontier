@@ -1,0 +1,68 @@
+id: tgt-2026-0002
+type: target
+status: active
+created_at: "2026-08-30T00:30:00Z"
+updated_at: "2026-08-30T00:30:00Z"
+summary: Independent HPKE + X-Wing KEM implementations suitable for cross-library combiner correctness and interop testing.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: web_search (GitHub releases, IETF datatracker, RFC editor)
+  sources:
+    - https://github.com/cloudflare/circl
+    - https://github.com/awslabs/aws-lc-rs
+    - https://github.com/awslabs/aws-lc
+    - https://github.com/pyca/cryptography
+    - https://github.com/rozbb/hpke
+    - https://github.com/DeimosC2P/libhpke
+    - https://github.com/openssl/openssl
+    - https://github.com/google/boringssl
+    - https://github.com/open-quantum-safe/liboqs
+    - https://datatracker.ietf.org/doc/draft-connolly-cfrg-xwing-kem/
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0007, imp-2026-0008, imp-2026-0009, imp-2026-0010, imp-2026-0011]
+title: HPKE + X-Wing KEM implementation landscape (candidate set)
+selection_rationale: >
+  Independent codebases, different languages, all buildable on commodity
+  hardware. Membership is provisional; the mission pins exact versions
+  during execution and may add/drop candidates with justification.
+  Lineage-independence weighting is strict: libraries that share upstream
+  code paths count as one lineage.
+lineage_note: >
+  Critical scoping observation: as of 2026-08, only CIRCL (Go) ships a
+  turnkey X-Wing KEM + HPKE integration. Other libraries (aws-lc-rs,
+  pyca/cryptography, the `hpke` Rust crate, libhpke, OpenSSL/BoringSSL
+  + oqs-provider) provide the underlying primitives (X25519 + ML-KEM-768)
+  but require the operator to implement the X-Wing combiner on top.
+  Therefore the audit operates in two modes:
+    (a) "turnkey" - only CIRCL is currently in scope; the audit verifies
+        CIRCL against the draft-08 KAT vectors.
+    (b) "combiner-implementation" - all libraries build the X-Wing
+        combiner from primitives; the audit verifies that all such
+        implementations produce byte-identical (encaps, decaps, ss)
+        and that they agree with the draft-08 vectors when given the
+        same inputs.
+candidates:
+  - implementation: imp-2026-0007
+    note: "Cloudflare CIRCL (Go) - turnkey X-Wing + HPKE"
+  - implementation: imp-2026-0008
+    note: "Rust `hpke` crate (rozbb) + ml-kem (RustCrypto) + x25519-dalek + sha3 - manual X-Wing combiner"
+  - implementation: imp-2026-0009
+    note: "Python pyca/cryptography - HPKE + ML-KEM-768 + X25519 primitives; manual X-Wing combiner"
+  - implementation: imp-2026-0010
+    note: "C libhpke (Deimos-C2P) - HPKE + X25519 + ML-KEM primitives; manual X-Wing combiner"
+  - implementation: imp-2026-0011
+    note: "OpenSSL 3.5+ oqs-provider (open-quantum-safe) - EVP_PKEY ML-KEM-768 + X25519; manual X-Wing combiner"
+excluded:
+  - candidate: BoringSSL
+    reason: "BoringSSL's HPKE path is API-incomplete for our purposes; X-Wing combiner not shipped. Useful as negative control only."
+  - candidate: liboqs alone
+    reason: "Provides ML-KEM primitive but no HPKE integration. Not a usable HPKE+X-Wing impl."
+  - candidate: mupq/pqm4
+    reason: "Embedded target; violates lightweight local compute class."

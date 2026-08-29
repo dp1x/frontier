@@ -1,0 +1,54 @@
+id: imp-2026-0007
+type: implementation
+status: pinned
+created_at: "2026-08-30T00:30:00Z"
+updated_at: "2026-08-30T00:30:00Z"
+summary: Cloudflare CIRCL (Go) - the only library shipping a turnkey X-Wing KEM + HPKE integration as of 2026-08.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: web_search (github.com/cloudflare/circl)
+  sources:
+    - https://github.com/cloudflare/circl
+    - https://github.com/cloudflare/circl/tree/main/kem/xwing
+    - https://github.com/cloudflare/circl/tree/main/hpke
+  parent: null
+  generation: 0
+links:
+  targets: [tgt-2026-0002]
+  specifications: [spc-2026-0002]
+title: Cloudflare CIRCL X-Wing + HPKE
+library:
+  name: "circl"
+  vendor: "Cloudflare"
+  language: "Go"
+  repository: "https://github.com/cloudflare/circl"
+  license: "BSD-3-Clause"
+version_pinning:
+  policy: "pin to a specific commit/tag recorded in each observation"
+  reference: "github.com/cloudflare/circl/releases (latest release as of mission start)"
+  notes: |
+    CIRCL's xwing package implements both KEM and HPKE integration. The
+    kem/xwing package exposes the standard KEM interface (GenerateKeyPair,
+    Encapsulate, Decapsulate); the hpke package exposes the X-Wing KEM under
+    its suite IDs.
+independence:
+  lineage: "Cloudflare / CIRCL team"
+  reuses: "CIRCL-internal X25519 + ML-KEM-768 (CIRCL has its own ML-KEM impl)"
+  notes: |
+    CIRCL is the reference implementation for X-Wing in Go. Authors
+    include the X-Wing draft co-authors. Treat as the "ground truth"
+    impl for byte-level inter-library comparison.
+xwing_support:
+  kats_included: "yes - CIRCL ships draft-08 test vectors"
+  hpke_integration: "yes - exposes X-Wing as an HPKE KEM"
+  protocol_modes: ["Base", "PSK", "Auth", "AuthPSK"]
+  kdfs: ["HKDF-SHA256", "HKDF-SHA384", "HKDF-SHA512"]
+  aeads: ["AES-128-GCM", "AES-256-GCM", "ChaCha20-Poly1305"]
+notes: |
+  CIRCL's xwing package is the reference implementation for X-Wing in
+  Go. Co-authored by the X-Wing draft authors. Used as the canonical
+  byte-level oracle for the cross-library audit.

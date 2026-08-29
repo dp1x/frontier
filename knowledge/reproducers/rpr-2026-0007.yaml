@@ -1,0 +1,51 @@
+id: rpr-2026-0007
+type: reproducer
+status: recorded
+created_at: "2026-08-30T01:50:00Z"
+updated_at: "2026-08-30T01:50:00Z"
+summary: Reproducer for msn-2026-0008 Stage-1 + Stage-2 - run CIRCL v1.6.5 X-Wing + HPKE harness against canonical inputs and mutation matrix; outputs JSON report.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: reproducer
+    model: minimax-m3
+    tool: GitHub Actions yaml (gha-rust) + frontier.execute.run_command
+  sources:
+    - .scratch/xwing/harness/circl_harness.go
+    - .scratch/xwing/reports/canonical.json
+    - .scratch/xwing/reports/mutations.json
+    - .scratch/xwing/go.mod
+    - knowledge/observations/obs-2026-0027.yaml
+    - knowledge/observations/obs-2026-0028.yaml
+  parent: msn-2026-0008
+  generation: 0
+links:
+  missions: [msn-2026-0008]
+  observations: [obs-2026-0027, obs-2026-0028, obs-2026-0029]
+  experiments: [exp-2026-0021]
+  implementations: [imp-2026-0007]
+  targets: [tgt-2026-0002]
+title: "RPR-2026-0007 - CIRCL X-Wing + HPKE reproducer"
+reproduction_command: "cd .scratch/xwing && go build ./harness && go run ./harness --mode=canonical --out=reports/canonical.json && go run ./harness --mode=mutations --n=100 --out=reports/mutations.json"
+expected_outputs:
+  - path: ".scratch/xwing/reports/canonical.json"
+    description: "X-Wing + HPKE Base mode roundtrip on canonical seed; deterministic"
+  - path: ".scratch/xwing/reports/mutations.json"
+    description: "28-mutation matrix + 100 random samples; ss changes recorded"
+expected_duration_seconds: 30
+environment:
+  language: "Go 1.26.4"
+  library: "github.com/cloudflare/circl v1.6.5"
+  host: "Windows 11 + R: ramdisk"
+deterministic: true
+notes: |
+  The reproducer runs the CIRCL X-Wing + HPKE harness twice (canonical
+  and mutations). It is fully deterministic given the same Go build and
+  circl version. The mutation matrix exposes the X25519 clamping
+  property at eseed[32] bit 0 and eseed[63] bit 7 (these mutations
+  produce the same ss; all others produce a different ss).
+
+  The reproducer is the canonical artifact for obs-2026-0027 and
+  obs-2026-0028. To reproduce, clone .scratch/xwing/ from a clean
+  checkout and run the commands above.
