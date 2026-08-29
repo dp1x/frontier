@@ -1,0 +1,82 @@
+id: prf-2026-0001
+type: proof
+status: verified
+created_at: "2026-08-29T05:00:00Z"
+updated_at: "2026-08-29T05:00:00Z"
+summary: Lean 4 v4.22.0 kernel-checked proof of FIPS 203 ByteEncode12/ByteDecode12 roundtrip and Eq 7.1 modulus-check equivalence (FORMAL-203). Three top-level theorems (canonicalRoundtrip, roundtrip_iff_canonical, minimalCounterexample) hold with zero sorries, zero file-introduced axioms, and an axiom inventory limited to standard Lean 4 core axioms {propext, Classical.choice, Quot.sound}.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: synthesizing lake build output and R2 review verdict
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal/ByteEncode.lean
+    - formal/build_output.log
+    - obs-2026-0017 (prior toolchain-absent status)
+    - obs-2026-0021 (kernel check passed on this host)
+    - rev-2026-0002 (R2 review)
+    - knowledge/findings/fnd-2026-0003.yaml
+  parent: msn-2026-0003
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+  findings: [fnd-2026-0003]
+  reviews: [rev-2026-0002]
+  observations: [obs-2026-0021]
+title: FORMAL-203 - FIPS 203 ByteEncode12 roundtrip and Eq 7.1 (Lean 4 kernel-verified)
+theorem_statements:
+  T1_canonicalRoundtrip: >
+    For any function F : Nat -> Nat with (forall i, F i < 3329), for any i,
+    dec (encByte F) i = F i. ("Values below q survive Decode . Encode.")
+  T2_roundtrip_iff_canonical: >
+    For any byte array B : Nat -> Nat with (forall y, B y < 256),
+    (forall i, seg B i < 3329) iff (forall y, encByte (dec B) y = B y).
+    ("Eq (7.1) holds iff every unreduced segment value is below q.")
+  T3_minimalCounterexample: >
+    The byte array B0 = fun y => if y=0 then 1 else if y=1 then 13 else 0
+    has segment value 1 + 13*256 = 3329 = q at i=0, which decodes to 0 and
+    re-encodes to 0x00 0x00 (NOT 0x01 0x0D). The coefficient q fails Eq (7.1).
+kernel_check:
+  toolchain: leanprover/lean4:v4.22.0
+  toolchain_commit: ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05
+  build_command: "cd formal; lake build"
+  build_log: formal/build_output.log
+  build_status: success
+  build_output_tail: "[3051/3052] Built Formal\nBuild completed successfully."
+  sorries: 0
+  axioms_introduced: 0
+  total_axioms_used: [propext, Classical.choice, Quot.sound]
+  warnings: 1
+  warning_detail: "Formal/ByteEncode.lean:381:44: unused variable 'hB' (stylistic only)"
+spec_citations:
+  - "FIPS 203 Algorithm 3 (BitsToBytes), printed p.20 / PDF p.29: confirmed"
+  - "FIPS 203 Algorithm 4 (BytesToBits), printed p.20 / PDF p.29: confirmed"
+  - "FIPS 203 Algorithm 5 (ByteEncode_d), printed p.22 / PDF p.31: confirmed"
+  - "FIPS 203 Algorithm 6 (ByteDecode_d), printed p.22 / PDF p.31: confirmed"
+  - "FIPS 203 Section 7.2 / Eq (7.1), printed p.36 / PDF p.45: confirmed"
+scope_disclosure: >
+  The model covers only the MODULUS half of FIPS 203 §7.2.  The LENGTH half
+  (len(ek) = 384k+32, PDF p.45 step 1) is NOT formalized.  This is honest
+  and correctly stated in the file header (Formal/ByteEncode.lean L9-13).
+reproducer: "Rebuild from scratch: cd C:\\Users\\Dhane\\frontier\\formal; lake build"
+follow_up:
+  - Formalize the LENGTH half of §7.2 by extending the model to a fixed-length byte array type
+  - Cross-check the Lean dec/seg against reference C implementation
+  - Lift the equivalence to d in {1..11} to also cover ByteEncode_1 / ByteDecode_1 used in K-PKE.Encrypt/Decrypt
+disclosure: public
+limitations: >
+  - The model covers only the MODULUS half of FIPS 203 §7.2; the LENGTH
+    half is not formalized.  Real implementations enforce it structurally
+    via byte-array typing before Decode is reachable; the formalization's
+    scope is honest and correctly stated.
+  - The model uses total functions B : Nat -> Nat (no length bound).  The
+    proofs only use B y < 256 for individual y, so this is harmless, but
+    a reader should be aware that the formal B is not a length-256 array.
+  - Lean 4.22.0 release commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05
+    was current as of the kernel check; future Lean 4 releases may change
+    tactic behavior.

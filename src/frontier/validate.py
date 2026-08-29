@@ -268,7 +268,7 @@ def validate_repo(root: Path) -> RepoValidationResult:
         for message in validate_document(doc):
             errors.append(f"{rel}: {message}")
         _check_location(rel, doc, label, errors)
-        _check_references(rel, doc, label, defined_ids, errors)
+        _check_references(rel, doc, label, defined_ids, errors, root)
 
     return RepoValidationResult(ok=not errors, errors=errors, warnings=warnings)
 
@@ -308,6 +308,7 @@ def _check_references(
     label: str,
     defined_ids: set[str],
     errors: list[str],
+    repo_root: Path,
 ) -> None:
     refs: list[str] = []
     for key in ("candidate_targets", "dependencies"):
@@ -318,9 +319,22 @@ def _check_references(
         for values in links.values():
             if isinstance(values, list):
                 refs.extend(v for v in values if isinstance(v, str))
+    # Mission `artifacts` may mix ID references and repository-relative file
+    # paths.  Each entry is resolved against ``defined_ids`` first; if that
+    # fails we fall back to checking the file exists on disk (allowing paths
+    # like ``openssl_fips_report/openssl_fips_report.tsv``).
     artifacts = doc.get("artifacts") or []
     if isinstance(artifacts, list):
-        refs.extend(v for v in artifacts if isinstance(v, str))
+        for v in artifacts:
+            if not isinstance(v, str):
+                continue
+            if v in defined_ids:
+                refs.append(v)
+                continue
+            # Treat as a relative file path under the repo root.
+            candidate = repo_root / v
+            if not candidate.exists():
+                refs.append(v)  # report as dangling
     for ref in refs:
         if ref not in defined_ids:
             errors.append(
