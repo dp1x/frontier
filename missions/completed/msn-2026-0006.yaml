@@ -1,0 +1,93 @@
+id: msn-2026-0006
+type: mission
+status: verified
+created_at: "2026-08-29T17:50:00Z"
+updated_at: "2026-08-29T18:00:00Z"
+summary: FORMAL-204 - formalize the LENGTH half of FIPS 203 §7.2 (len(ek) = 384k+32) in Lean 4 + Mathlib4, machine-checked end-to-end.  Closes the explicit scope gap from FORMAL-203 (ByteEncode.lean L9-13).
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-scout
+    model: grok-4.6
+    tool: follow-up to FORMAL-203 R2 review's scope gap finding
+  sources:
+    - localdocs/refs/fips203.pdf#section-7.2
+    - knowledge/findings/fnd-2026-0003.yaml
+    - knowledge/notes/msn-2026-0003.md
+    - knowledge/proofs/prf-2026-0001.yaml
+    - formal/Formal/ByteEncode.lean
+    - formal/Formal/LengthCheck.lean
+  parent: msn-2026-0003
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+  proofs: [prf-2026-0001]
+  findings: [fnd-2026-0003]
+title: FORMAL-204 - FIPS 203 §7.2 LENGTH half formalization
+objective: >
+  Machine-check the LENGTH half of FIPS 203 §7.2 (Eq 7.1 step 1:
+  len(ek) = 384k+32) in Lean 4 v4.22.0 + Mathlib4.  The §7.2 check
+  is the conjunction of two halves: a LENGTH check (byte count must
+  match 384k+32 for the parameter set) and a MODULUS check (every
+  12-bit coefficient must be in [0, q-1]).  FORMAL-203 proved the
+  MODULUS half; FORMAL-204 proves the LENGTH half.
+  Deliver: formal/Formal/LengthCheck.lean with three top-level
+  theorems (T1 canonical lengths, T2 off-by-one rejection, T3
+  cross-param-set rejection), kernel-checked with `lake build`
+  exit 0 and 0 sorries, axiom inventory limited to standard
+  Lean 4 core axioms.
+domain: formal
+scope: >
+  Formal definitions of the byte count function for each ML-KEM
+  parameter set, the canonical length predicate, and the
+  rejection theorems for off-by-one and cross-param-set
+  violations.  Out of scope: combining LENGTH and MODULUS
+  halves into a single dependent type (this combination is a
+  follow-up because LENGTH is structural and MODULUS is a
+  content property, with different mathematical flavours);
+  Isabelle/AFP port; CBMC; performance.
+constraints:
+- Pinned Lean toolchain v4.22.0 via formal/lean-toolchain.
+- Deterministic verifier is Lean kernel via `lake build`; no
+  sorry/axiom/admitted.
+- Public repos only; no secrets.
+- All proof attempts in scrubbed scratch; record seeds and versions.
+desired_evidence_level: verified
+candidate_targets: [tgt-2026-0001]
+dependencies: []
+compute:
+  expected_class: lightweight
+  notes: "lake build is seconds on commodity laptop; ~10s rebuild after first build."
+budget:
+  max_attempts: 6
+  max_independent_reviews: 1
+  max_compute_runs: 10
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+- formal/Formal/LengthCheck.lean is committed with three top-level
+  theorem families (canonical lengths, off-by-one rejection,
+  cross-param-set rejection).
+- lake build completes with exit 0, 0 sorries, 0 file-introduced
+  axioms.
+- #print axioms on the canonical theorems shows axiom inventory
+  limited to {propext, Classical.choice, Quot.sound} or a subset.
+stopping_conditions:
+- Lake build passes and adversarial review supports.
+- Budget exhausted without kernel-accepted proof.
+artifacts:
+  - knowledge/findings/fnd-2026-0004.yaml
+  - knowledge/proofs/prf-2026-0002.yaml
+  - knowledge/observations/obs-2026-0025.yaml
+  - knowledge/experiments/exp-2026-0018.yaml
+  - knowledge/reviews/rev-2026-0004.yaml
+  - knowledge/verifications/vrf-2026-0005.yaml
+  - knowledge/reproducers/rpr-2026-0004.yaml
+  - formal/Formal/LengthCheck.lean
+  - formal/build_output_r2.log
+follow_ups: []
+notes_path: knowledge/notes/msn-2026-0006.md
+blocked_reason: null
+terminal_reason: "FORMAL-204 kernel-verified on this Windows host (lake build PASSED, 0 sorries, 0 file-introduced axioms); axiom inventory limited to {propext, Quot.sound} (subset of standard Lean 4 core).  All three top-level theorem families (T1 canonicalLength, T2 off-by-one rejection, T3 cross-param-set rejection) hold.  Together with FORMAL-203 (prf-2026-0001, MODULUS half), both halves of FIPS 203 §7.2 are now machine-checked."

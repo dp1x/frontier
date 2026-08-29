@@ -1,0 +1,106 @@
+id: fnd-2026-0004
+type: finding
+status: verified_conclusion
+created_at: "2026-08-29T18:00:00Z"
+updated_at: "2026-08-29T18:00:00Z"
+summary: "FORMAL-204 (msn-2026-0006) - FIPS 203 §7.2 LENGTH half machine-checked in Lean 4 v4.22.0 + Mathlib4. Three top-level theorem families (canonical lengths T1: k2=800 k3=1184 k4=1568, off-by-one rejection T2: 801 1185 1569 rejected, cross-param-set rejection T3: distinct lengths across parameters) are kernel-verified, zero-sorry, zero-axiom-file-introduced, with axiom inventory limited to {propext, Quot.sound} (subset of standard Lean 4 core axioms). Together with FORMAL-203 (fnd-2026-0003, MODULUS half), both halves of the §7.2 encapsulation-key check are now machine-checked."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: synthesizing lake build output + #print axioms output
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal/LengthCheck.lean
+    - formal/Formal/ByteEncode.lean
+    - formal/build_output_r2.log
+    - obs-2026-0025
+    - exp-2026-0018
+    - prf-2026-0002
+    - prf-2026-0001
+  parent: msn-2026-0006
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+  implementations: [imp-2026-0003]
+  experiments: [exp-2026-0018]
+  observations: [obs-2026-0025]
+  proofs: [prf-2026-0001, prf-2026-0002]
+  findings: [fnd-2026-0003]
+  reviews: [rev-2026-0004]
+  verifications: [vrf-2026-0005]
+  reproducers: [rpr-2026-0004]
+title: "FORMAL-204: FIPS 203 §7.2 LENGTH half (Lean 4 kernel-verified)"
+classification: formal-verification
+statement: >
+  In Lean 4 v4.22.0 (toolchain pin: leanprover/lean4:v4.22.0,
+  commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05) with Mathlib4
+  v4.22.0, the following three theorem families hold for the
+  LENGTH half of FIPS 203 §7.2 (Eq 7.1 step 1: len(ek) = 384k+32):
+
+    T1 (canonicalLength): For each ML-KEM parameter set
+        k ∈ {2, 3, 4}, the canonical byte length is
+        canonicalLength .k = 384*k + 32, which evaluates to
+        800, 1184, 1568 respectively.
+
+    T2 (off-by-one rejection): For each parameter set k, an
+        off-by-one length (801 for k=2, 1185 for k=3, 1569 for
+        k=4) does not equal the canonical length.  This is the
+        LENGTH half of the §7.2 rejection semantics.
+
+    T3 (cross-param-set rejection): The canonical lengths are
+        pairwise distinct across parameter sets; a byte count
+        matching one parameter's canonical length cannot
+        simultaneously match another parameter's canonical
+        length.  This is the "wrong k" half of the length
+        check.
+
+  Build artifact: formal/build_output_r2.log
+    [3050/3053] Built Formal.LengthCheck
+    [3052/3053] Built Formal
+    Build completed successfully.
+
+  Axiom inventory (per #print axioms): all formal/Formal/LengthCheck.lean
+  theorems depend only on standard Lean 4 core axioms
+  {propext, Quot.sound}.  No file-introduced axiom, no sorry,
+  no admitted.
+
+  Spec citations (verified against the PDF):
+    - Section 7.2, Eq 7.1 step 1, printed p.36 / PDF p.45: confirmed
+    - 384*k + 32 is the standard FIPS 203 byte length for
+      ML-KEM-k.  For k=2,3,4 this is 800, 1184, 1568.
+  All citations in the file header are accurate.
+
+  Scope disclosure: the model covers only the LENGTH half of
+  FIPS 203 §7.2.  The MODULUS half is in formal/Formal/ByteEncode.lean
+  (FORMAL-203 / fnd-2026-0003 / prf-2026-0001).  Together
+  FORMAL-203 + FORMAL-204 cover both halves of the §7.2
+  encapsulation-key check.  The combination of the two halves
+  into a single dependent type is FORMAL-205 (follow-up).
+verification:
+  kernel_check: "lake build on Windows host; build log at formal/build_output_r2.log says 'Build completed successfully.' with 0 errors, 0 sorries, 0 warnings."
+  axiom_check: "Per #print axioms: 3 theorems do not depend on any axioms (definitional equalities); 5 theorems depend on {propext, Quot.sound}.  All standard Lean 4 core."
+  cross_check: "All citations to FIPS 203 spec verified against localdocs/refs/fips203.pdf."
+  scope_disclosure: "Header at formal/Formal/LengthCheck.lean correctly disclaims the MODULUS half (which is in formal/Formal/ByteEncode.lean)."
+disclosure: public
+limitations: >
+  - The model covers only the LENGTH half of FIPS 203 §7.2.
+    The MODULUS half is formalized separately.  Real
+    implementations enforce both halves; this formalization
+    proves the LENGTH half is consistent with the §7.2 spec.
+  - The model uses total functions.  The proofs only depend
+    on the integer arithmetic of canonicalLength, so this is
+    harmless, but a reader should be aware that the formal
+    "byte count" is a Nat with no upper bound.
+  - Lean 4.22.0 release commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05
+    was current as of the kernel check; future Lean 4
+    releases may change tactic behavior.
+reproducer: "Rebuild from scratch: cd C:\\Users\\Dhane\\frontier\\formal; lake build"
+follow_up:
+  - "FORMAL-205: combine LENGTH and MODULUS halves into a single dependent type"
+  - "Cross-check the canonical lengths against FIPS 203 Section 8.1 (key generation) for consistency"
+  - "Audit which production implementations actually enforce the LENGTH check (versus the MODULUS check) at import time"

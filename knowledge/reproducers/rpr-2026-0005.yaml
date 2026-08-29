@@ -1,0 +1,55 @@
+id: rpr-2026-0005
+type: reproducer
+status: reproduced
+created_at: "2026-08-29T18:30:00Z"
+updated_at: "2026-08-29T18:30:00Z"
+summary: Independent reproduction of fnd-2026-0005 (rustls+aws-lc-rs cohort) - re-ran the rustls-loopback GHA workflow (run 33267918229) end-to-end on the committed code; 5/5 variants (control + 4 tampered) match the committed TSV.  Server-side error collapse (single PeerMisbehaved::InvalidKeyShare for both modulus-class and length-class) is the BoringSSL-derived behavior, not a harness bug.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-reproducer
+    model: grok-4.6
+    tool: GHA workflow 33267918229 + manual byte-trace review
+  sources:
+    - obs-2026-0024
+    - exp-2026-0019
+    - fnd-2026-0005
+    - interop/protocol-placement/rustls_loopback/reports/rustls_loopback_report.tsv
+    - interop/protocol-placement/rustls_loopback/reports/rustls_loopback_console.log
+    - .github/workflows/rustls-loopback.yml
+  parent: msn-2026-0005
+  generation: 1
+links:
+  findings: [fnd-2026-0005]
+  experiments: [exp-2026-0019]
+  observations: [obs-2026-0024]
+path: interop/protocol-placement/rustls_loopback/
+reproduction_commands:
+  - "gh workflow run rustls-loopback.yml --repo dp1x/frontier"
+  - "Or locally: cd interop/protocol-placement/rustls_loopback/rustls_server; cargo build --release; cd ..; go run . reports/rustls_loopback_report.tsv"
+reproduced_on:
+  - environment: github-actions ubuntu-24.04, rustls 0.23.43, aws-lc-rs 1.18.0, go 1.26.4
+    date: "2026-08-29"
+    result: |
+      GHA run 33267918229 produced rustls_loopback_report.tsv with
+      5 rows:
+        control: handshake-succeeded, no error
+        wire_coeff0_eq_q: illegal_parameter + PeerMisbehaved(InvalidKeyShare)
+        wire_coeff0_eq_4095: illegal_parameter + PeerMisbehaved(InvalidKeyShare)
+        wire_coeff255_eq_4095: illegal_parameter + PeerMisbehaved(InvalidKeyShare)
+        truncate_last_byte: illegal_parameter + PeerMisbehaved(InvalidKeyShare)
+      All 4 tampered variants match draft-ietf-tls-ecdhe-mlkem-05 s4.2.
+notes: >
+  Independent reproduction confirms the rustls+aws-lc-rs cohort
+  reproduces the spec-mandated illegal_parameter alert for all
+  tampered variants.  The server-side error mapping collapses
+  length-class and modulus-class to a single PeerMisbehaved
+  variant; this is the BoringSSL-derived behavior, not a harness
+  bug.  The on-the-wire alert is the same in both classes, so
+  the protocol-layer security property holds.
+
+  Cross-stack correlation (combined with obs-2026-0011):
+  - Go stdlib crypto/tls: enforces s7.2 with illegal_parameter
+  - rustls+aws-lc-rs: enforces s7.2 with illegal_parameter
+  Two independent deployed code paths confirm the boundary.

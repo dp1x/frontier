@@ -1,0 +1,100 @@
+id: obs-2026-0025
+type: observation
+status: recorded
+created_at: "2026-08-29T18:00:00Z"
+updated_at: "2026-08-29T18:00:00Z"
+summary: FORMAL-204 (FIPS 203 §7.2 LENGTH half) - Lean 4 v4.22.0 kernel-accepted formal/Formal/LengthCheck.lean with three top-level theorem families (canonical lengths, off-by-one rejection, cross-param-set rejection), 0 sorries, 0 file-introduced axioms, axiom inventory limited to {propext, Quot.sound} (subset of standard Lean 4 core axioms).
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: synthesizing lake build output and #print axioms output
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal/LengthCheck.lean
+    - formal/Formal.lean
+    - formal/build_output_r2.log
+    - .scratch/formal-204-check/axiom_check.lean (transient)
+  parent: msn-2026-0006
+  generation: 1
+links:
+  proofs: [prf-2026-0001]
+  experiments: [exp-2026-0018]
+  findings: [fnd-2026-0003]
+title: FORMAL-204 - FIPS 203 §7.2 LENGTH half Lean 4 kernel-accepted
+statement: >
+  In Lean 4 v4.22.0 (toolchain pin: leanprover/lean4:v4.22.0,
+  commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05) with Mathlib4
+  v4.22.0, formal/Formal/LengthCheck.lean kernel-checks three
+  top-level theorem families for the LENGTH half of FIPS 203 §7.2:
+
+    T1_canonicalLength (3 theorems):
+      canonicalLength_k2 : canonicalLength .k2 = 800
+      canonicalLength_k3 : canonicalLength .k3 = 1184
+      canonicalLength_k4 : canonicalLength .k4 = 1568
+
+    T2_offbyone_rejection (4 theorems):
+      not_canonicalLength_offbyone_k2 : ¬801 = canonicalLength .k2
+      not_canonicalLength_offbyone_k3 : ¬1185 = canonicalLength .k3
+      not_canonicalLength_offbyone_k4 : ¬1569 = canonicalLength .k4
+      canonicalLength_plus_one_neq : ¬canonicalLength p + 1 = canonicalLength p
+
+    T3_cross_param_set_rejection (4 theorems):
+      canonicalLength_distinct : pairwise distinct across k2/k3/k4
+      not_canonicalLength_wrong_k_2to4 : ¬1568 = canonicalLength .k2
+      not_canonicalLength_wrong_k_4to2 : ¬800 = canonicalLength .k4
+      cross_param_set_rejection : for p ≠ q, ¬canonicalLength p = canonicalLength q
+
+  Plus: isCanonicalLength predicate (5 theorems showing the
+  predicate-level rejection).
+
+  Build artifact: formal/build_output_r2.log
+    [3050/3053] Built Formal.LengthCheck
+    [3051/3053] Built Formal.ByteEncode
+    [3052/3053] Built Formal
+    Build completed successfully.
+
+  Axiom inventory (per #print axioms):
+    canonicalLength_k2/k3/k4:           does not depend on any axioms
+    isCanonicalLength_canonical:        does not depend on any axioms
+    not_canonicalLength_offbyone_k2:    {propext, Quot.sound}
+    canonicalLength_distinct:           {propext, Quot.sound}
+    cross_param_set_rejection:          {propext, Quot.sound}
+    isCanonicalLength_rejects_offbyone_k2: {propext, Quot.sound}
+
+  All axioms are standard Lean 4 core axioms.  No file-introduced
+  axioms, no sorry, no admitted.
+
+  Scope disclosure: FORMAL-204 covers the LENGTH half of §7.2.  It
+  does not combine with FORMAL-203's MODULUS half into a single
+  dependent type.  The combination is a follow-up because LENGTH
+  is structural (length equality) and MODULUS is content-dependent
+  (every 12-bit coefficient < q), with different mathematical
+  flavours.
+
+  Cross-reference: FORMAL-203 (fnd-2026-0003) covered the MODULUS
+  half (every 12-bit segment value below q = 3329).  Together
+  FORMAL-203 + FORMAL-204 cover both halves of the §7.2 check
+  in FIPS 203 (Eq 7.1: LENGTH + MODULUS).
+environment:
+  where: local
+  isolation: "scratch ramdisk for elan toolchain install (no longer needed; elan already installed)"
+  versions:
+    lean: "4.22.0 (commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05)"
+    mathlib: "4.22.0 (cached, 7067 files)"
+    host: "Windows 11; elan toolchain at C:/Users/Dhane/.elan/toolchains/leanprover--lean4---v4.22.0"
+stdout: |
+  [3050/3053] Built Formal.LengthCheck
+  [3051/3053] Built Formal.ByteEncode
+  [3052/3053] Built Formal
+  Build completed successfully.
+exit_code: 0
+implication: >
+  The LENGTH half of FIPS 203 §7.2 is now machine-checked.
+  Together with FORMAL-203's MODULUS half, the structural and
+  content halves of the §7.2 encapsulation-key check are
+  covered.  The follow-up combination of the two halves into a
+  single dependent type is a follow-up mission (FORMAL-205).

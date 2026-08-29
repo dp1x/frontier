@@ -1,0 +1,51 @@
+id: rpr-2026-0004
+type: reproducer
+status: reproduced
+created_at: "2026-08-29T18:00:00Z"
+updated_at: "2026-08-29T18:00:00Z"
+summary: Independent rebuild of FORMAL-204 (Lean 4 v4.22.0) on this Windows host - `lake env lean --version` confirms the pinned toolchain resolves correctly and `lake build` re-runs the Formal library (now including LengthCheck) with 0 errors, 0 sorries, 0 file-introduced axioms.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-reproducer
+    model: grok-4.6
+    tool: lake build (Lean 4 v4.22.0 kernel)
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal/LengthCheck.lean
+    - formal/Formal.lean
+    - formal/build_output_r2.log
+    - knowledge/proofs/prf-2026-0002.yaml
+  parent: msn-2026-0006
+  generation: 0
+links:
+  findings: [fnd-2026-0004]
+  proofs: [prf-2026-0002]
+  experiments: [exp-2026-0018]
+  observations: [obs-2026-0025]
+path: formal/
+reproduction_commands:
+  - "cd C:\\Users\\Dhane\\frontier\\formal"
+  - "lake env lean --version  # expect Lean (version 4.22.0, commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05)"
+  - "lake build  # expect 'Build completed successfully.'"
+  - "lake env lean check_axioms.lean  # verify axiom inventory"
+reproduced_on:
+  - environment: Windows 11 host, elan toolchain, Lean 4 v4.22.0 + Mathlib4 v4.22.0
+    date: "2026-08-29"
+    result: |
+      lake env lean --version reports: Lean (version 4.22.0, commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05, Release)
+      lake build produces:
+        [3050/3053] Built Formal.LengthCheck
+        [3051/3053] Built Formal.ByteEncode
+        [3052/3053] Built Formal
+        Build completed successfully.
+      0 errors, 0 sorries, 0 warnings.
+notes: >
+  The .lake build artifacts at formal/.lake/build/lib/Formal/LengthCheck.olean
+  are the kernel-accepted proof terms.  The full Formal library
+  (ByteEncode + LengthCheck) builds cleanly with no errors and no
+  sorries.  The independent reproducer confirms the
+  kernel-accepted proof terms are re-derivable from the
+  committed source.
