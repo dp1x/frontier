@@ -1,0 +1,21 @@
+META|experiment=msn-2026-0005 exp-2026-0018 rustls+aws-lc-rs cohort|tool=go1.26.4 linux/amd64|time=2026-08-29T18:20:30Z
+META|deps=stdlib + golang.org/x/crypto|groups_forced=X25519MLKEM768(0x11EC)|transport=net.Pipe x2 + MITM mutator + TCP loopback to spawned rustls_server
+META|determinism=crypto/rand for keys/nonces/cert; lane-overwrite verdicts input-determined
+META|server_binary=/home/runner/work/frontier/frontier/interop/protocol-placement/rustls_loopback/rustls_server/target/release/rustls_server
+CITE|rustls 0.23.43, aws-lc-rs 1.14.x default CryptoProvider, prefer-post-quantum enables X25519MLKEM768 in DEFAULT_KX_GROUPS
+CITE|ServerConnection::new -> process_new_packets / read_tls / write_tls; on wire tamper located in ClientHello key_share entry X25519MLKEM768 (group 0x11EC, share 1216 B), ek portion is bytes 0..1184 of the share
+CITE|aws-lc-rs derives ML-KEM from BoringSSL upstream; same FIPS 203 s7.2 boundary that Go stdlib enforces (obs-2026-0011)
+
+# family|variant|wire_mutated|handshake_result|alert_observed|server_side_result|alert_rustls|verdict|expectation
+RUSTLS_STDOUT|variant=control|found=true|applied=true|fragmented=false|detail="no edit (control)"|server_result_ok=true|server_error=""|server_alert=""
+TSV| tls-wire | control | applied=true;found=true;fragmented=false | success | none(handshake-succeeded) | ok=true | - | want=success | MET
+RUSTLS_STDOUT|variant=wire_coeff0_eq_q|found=true|applied=true|fragmented=false|detail="ek[0..1] rewritten to coeff0==3329(q)"|server_result_ok=false|server_error="peer misbehaved: InvalidKeyShare"|server_alert="peer_misbehaved:InvalidKeyShare"
+TSV| tls-wire | wire_coeff0_eq_q | applied=true;found=true;fragmented=false | failure(client_err="remote error: tls: illegal parameter",server_pipe_err="") | illegal_parameter | ok=false error="peer misbehaved: InvalidKeyShare" | peer_misbehaved:InvalidKeyShare | want=abort:illegal_parameter | MET
+RUSTLS_STDOUT|variant=wire_coeff0_eq_4095|found=true|applied=true|fragmented=false|detail="ek[0..1] rewritten to coeff0==4095"|server_result_ok=false|server_error="peer misbehaved: InvalidKeyShare"|server_alert="peer_misbehaved:InvalidKeyShare"
+TSV| tls-wire | wire_coeff0_eq_4095 | applied=true;found=true;fragmented=false | failure(client_err="remote error: tls: illegal parameter",server_pipe_err="") | illegal_parameter | ok=false error="peer misbehaved: InvalidKeyShare" | peer_misbehaved:InvalidKeyShare | want=abort:illegal_parameter | MET
+RUSTLS_STDOUT|variant=wire_coeff255_eq_4095|found=true|applied=true|fragmented=false|detail="ek[763..764] rewritten to coeff255==4095"|server_result_ok=false|server_error="peer misbehaved: InvalidKeyShare"|server_alert="peer_misbehaved:InvalidKeyShare"
+TSV| tls-wire | wire_coeff255_eq_4095 | applied=true;found=true;fragmented=false | failure(client_err="remote error: tls: illegal parameter",server_pipe_err="") | illegal_parameter | ok=false error="peer misbehaved: InvalidKeyShare" | peer_misbehaved:InvalidKeyShare | want=abort:illegal_parameter | MET
+RUSTLS_STDOUT|variant=truncate_last_byte|found=true|applied=true|fragmented=false|detail="ek shrunk to 1183 B, all six length fields repaired (-1)"|server_result_ok=false|server_error="peer misbehaved: InvalidKeyShare"|server_alert="peer_misbehaved:InvalidKeyShare"
+TSV| tls-wire | truncate_last_byte | applied=true;found=true;fragmented=false | failure(client_err="remote error: tls: illegal parameter",server_pipe_err="") | illegal_parameter | ok=false error="peer misbehaved: InvalidKeyShare" | peer_misbehaved:InvalidKeyShare | want=abort:illegal_parameter | MET
+
+DONE|2026-08-29T18:20:31Z

@@ -1,0 +1,26 @@
+META|experiment=msn-2026-0005 decisive local loopback|tool=go1.26.4 windows/arm64|time=2026-08-25T21:33:54Z
+META|deps=stdlib-only|groups_forced=X25519MLKEM768(0x11EC)|transport=net.Pipe x2 + MITM mutator
+META|determinism=crypto/rand for keys/nonces/cert; lane-overwrite verdicts input-determined; bitflip variants aggregated over N trials
+CITE|crypto/internal/fips140/mlkem/mlkem768.go:374 NewEncapsulationKey768 -> :384 parseEK (len check :385) -> polyByteDecode field.go:164 -> fieldCheckReduced field.go:17-22, a>=q reject at :18
+CITE|crypto/tls/handshake_server_tls13.go:254 ke.serverSharedSecret(clientKeyShare) -> :256 sendAlert(alertIllegalParameter) on any error
+CITE|crypto/tls/key_schedule.go:83-85,98-101 newMLKEMPublicKey768==mlkem.NewEncapsulationKey768; :200-224 hybrid serverSharedSecret splits ek-first for 0x11EC (:206-208)
+
+# family|variant|input_len|verdict|error_class|error_string
+TSV| library-parse | canonical | 1184 | accepted | - | -
+TSV| library-parse | coeff0_eq_q | 1184 | rejected | modulus | mlkem: invalid polynomial encoding
+TSV| library-parse | coeff0_eq_4095 | 1184 | rejected | modulus | mlkem: invalid polynomial encoding
+TSV| library-parse | coeff255_4095 | 1184 | rejected | modulus | mlkem: invalid polynomial encoding
+TSV| library-parse | seed_byte_set | 1184 | accepted | - | -
+TSV| library-parse | truncate_last_byte | 1183 | rejected | length | mlkem: invalid encapsulation key length
+TSV| library-parse | append_extra_byte | 1185 | rejected | length | mlkem: invalid encapsulation key length
+TSV| library-parse | bitflip_b0_xor80_n64 | 1184 | mixed_accepted=64_rejected=0 | base-key-dependent | single-bit flip crosses q only when original coeff0 high bits allow
+
+# family|variant|wire_mutated|handshake_result|alert_observed|mlkem_parse_result
+TSV| tls-wire | control | true;found=true;fragmented=false | success | none(handshake-succeeded) | cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=success;expectation=MET
+TSV| tls-wire | wire_coeff0_eq_q | true;found=true;fragmented=false | failure(server_err='tls: invalid client key share' client_err='remote error: tls: illegal parameter') | other: illegal parameter | cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=abort:illegal_parameter;expectation=UNMET
+TSV| tls-wire | wire_coeff0_eq_4095 | true;found=true;fragmented=false | failure(server_err='tls: invalid client key share' client_err='remote error: tls: illegal parameter') | other: illegal parameter | cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=abort:illegal_parameter;expectation=UNMET
+TSV| tls-wire | wire_coeff255_eq_4095 | true;found=true;fragmented=false | failure(server_err='tls: invalid client key share' client_err='remote error: tls: illegal parameter') | other: illegal parameter | cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=abort:illegal_parameter;expectation=UNMET
+TSV| tls-wire | truncate_last_byte | true;found=true;fragmented=false | failure(server_err='unexpected EOF' client_err='EOF') | no-alert-seen:EOF | cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=abort:illegal_parameter;expectation=UNMET
+TSV| tls-wire | wire_bitflip_b0_xor80 | true;found=true;fragmented=false | failure(server_err='local error: tls: bad record MAC' client_err='local error: tls: bad record MAC') | no-alert-seen:local error: tls: bad record MAC | cited:not-directly-observed(NewEncapsulationKey768->parseEK->polyByteDecode,a>=q@field.go:18);verdict=indeterminate(base-key-dependent);expectation=?
+
+DONE|2026-08-25T21:34:54Z
