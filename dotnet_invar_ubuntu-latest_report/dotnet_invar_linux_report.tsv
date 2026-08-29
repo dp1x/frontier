@@ -1,0 +1,201 @@
+META|runtime=10.0.11|os=Ubuntu 24.04.4 LTS|arch=X64|mlkemSupported=True|backing=OpenSSL
+valid-control|ML-KEM-512|pass|seed:20262824|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262825|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262826|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262827|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262828|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262829|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262830|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262831|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262832|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262833|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262834|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262835|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262836|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262837|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262838|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262839|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262840|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262841|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262842|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262843|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262844|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262845|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262846|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262847|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262848|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262849|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262850|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262851|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262852|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262853|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262854|import-accepted|encap-accepted
+valid-control|ML-KEM-512|pass|seed:20262855|import-accepted|encap-accepted
+noncanon-q3329-first|ML-KEM-512|fail-modulus|seed:779000+coeff[0]:=3329|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-v4000-first|ML-KEM-512|fail-modulus|seed:779000+coeff[0]:=4000|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-max4095-first|ML-KEM-512|fail-modulus|seed:779000+coeff[0]:=4095|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-q3329-middle|ML-KEM-512|fail-modulus|seed:779000+coeff[256]:=3329|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-v4000-middle|ML-KEM-512|fail-modulus|seed:779000+coeff[256]:=4000|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-max4095-middle|ML-KEM-512|fail-modulus|seed:779000+coeff[256]:=4095|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-q3329-last|ML-KEM-512|fail-modulus|seed:779000+coeff[511]:=3329|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-v4000-last|ML-KEM-512|fail-modulus|seed:779000+coeff[511]:=4000|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-max4095-last|ML-KEM-512|fail-modulus|seed:779000+coeff[511]:=4095|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+len-minus-1|ML-KEM-512|fail-type|derived:len-1|import-rejected|arg-class:ArgumentException
+len-plus-1|ML-KEM-512|fail-type|derived:len+1|import-rejected|arg-class:ArgumentException
+rho-zero|ML-KEM-512|pass|derived:rho-mutation|import-accepted|encap-accepted
+rho-ff|ML-KEM-512|pass|derived:rho-mutation|import-accepted|encap-accepted
+rho-prng-a|ML-KEM-512|pass|derived:rho-mutation|import-accepted|encap-accepted
+rho-prng-b|ML-KEM-512|pass|derived:rho-mutation|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263824|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263825|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263826|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263827|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263828|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263829|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263830|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263831|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263832|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263833|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263834|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263835|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263836|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263837|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263838|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263839|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263840|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263841|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263842|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263843|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263844|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263845|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263846|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263847|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263848|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263849|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263850|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263851|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263852|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263853|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263854|import-accepted|encap-accepted
+valid-control|ML-KEM-768|pass|seed:20263855|import-accepted|encap-accepted
+noncanon-q3329-first|ML-KEM-768|fail-modulus|seed:780000+coeff[0]:=3329|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-v4000-first|ML-KEM-768|fail-modulus|seed:780000+coeff[0]:=4000|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-max4095-first|ML-KEM-768|fail-modulus|seed:780000+coeff[0]:=4095|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-q3329-middle|ML-KEM-768|fail-modulus|seed:780000+coeff[384]:=3329|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-v4000-middle|ML-KEM-768|fail-modulus|seed:780000+coeff[384]:=4000|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-max4095-middle|ML-KEM-768|fail-modulus|seed:780000+coeff[384]:=4095|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-q3329-last|ML-KEM-768|fail-modulus|seed:780000+coeff[767]:=3329|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-v4000-last|ML-KEM-768|fail-modulus|seed:780000+coeff[767]:=4000|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-max4095-last|ML-KEM-768|fail-modulus|seed:780000+coeff[767]:=4095|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+len-minus-1|ML-KEM-768|fail-type|derived:len-1|import-rejected|arg-class:ArgumentException
+len-plus-1|ML-KEM-768|fail-type|derived:len+1|import-rejected|arg-class:ArgumentException
+rho-zero|ML-KEM-768|pass|derived:rho-mutation|import-accepted|encap-accepted
+rho-ff|ML-KEM-768|pass|derived:rho-mutation|import-accepted|encap-accepted
+rho-prng-a|ML-KEM-768|pass|derived:rho-mutation|import-accepted|encap-accepted
+rho-prng-b|ML-KEM-768|pass|derived:rho-mutation|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264824|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264825|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264826|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264827|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264828|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264829|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264830|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264831|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264832|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264833|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264834|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264835|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264836|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264837|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264838|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264839|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264840|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264841|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264842|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264843|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264844|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264845|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264846|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264847|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264848|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264849|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264850|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264851|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264852|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264853|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264854|import-accepted|encap-accepted
+valid-control|ML-KEM-1024|pass|seed:20264855|import-accepted|encap-accepted
+noncanon-q3329-first|ML-KEM-1024|fail-modulus|seed:781000+coeff[0]:=3329|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-v4000-first|ML-KEM-1024|fail-modulus|seed:781000+coeff[0]:=4000|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-max4095-first|ML-KEM-1024|fail-modulus|seed:781000+coeff[0]:=4095|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-q3329-middle|ML-KEM-1024|fail-modulus|seed:781000+coeff[512]:=3329|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-v4000-middle|ML-KEM-1024|fail-modulus|seed:781000+coeff[512]:=4000|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-max4095-middle|ML-KEM-1024|fail-modulus|seed:781000+coeff[512]:=4095|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-q3329-last|ML-KEM-1024|fail-modulus|seed:781000+coeff[1023]:=3329|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-v4000-last|ML-KEM-1024|fail-modulus|seed:781000+coeff[1023]:=4000|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+noncanon-max4095-last|ML-KEM-1024|fail-modulus|seed:781000+coeff[1023]:=4095|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+len-minus-1|ML-KEM-1024|fail-type|derived:len-1|import-rejected|arg-class:ArgumentException
+len-plus-1|ML-KEM-1024|fail-type|derived:len+1|import-rejected|arg-class:ArgumentException
+rho-zero|ML-KEM-1024|pass|derived:rho-mutation|import-accepted|encap-accepted
+rho-ff|ML-KEM-1024|pass|derived:rho-mutation|import-accepted|encap-accepted
+rho-prng-a|ML-KEM-1024|pass|derived:rho-mutation|import-accepted|encap-accepted
+rho-prng-b|ML-KEM-1024|pass|derived:rho-mutation|import-accepted|encap-accepted
+cross-set-1024-as-768|ML-KEM-768|fail-type|seed:555000+4000|import-rejected|arg-class:ArgumentException
+cross-set-1024-as-512|ML-KEM-512|fail-type|seed:555000+4000|import-rejected|arg-class:ArgumentException
+cross-set-768-as-512|ML-KEM-512|fail-type|seed:555000+3000|import-rejected|arg-class:ArgumentException
+congruent-plant|ML-KEM-512|fail-modulus|seed:911001+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-512|fail-modulus|seed:911002+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-512|fail-modulus|seed:911003+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-512|fail-modulus|seed:911004+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-512|fail-modulus|seed:911005+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-512|fail-modulus|seed:911006+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-512|fail-modulus|seed:911007+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-768|fail-modulus|seed:912000+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-768|fail-modulus|seed:912002+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-768|fail-modulus|seed:912004+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-768|fail-modulus|seed:912005+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-768|fail-modulus|seed:912006+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-768|fail-modulus|seed:912007+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913001+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913002+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913003+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913004+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913005+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+congruent-plant|ML-KEM-1024|fail-modulus|seed:913007+plant(c+q)@0,mid,last|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId2|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId3|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId4|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId5|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId6|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId7|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId8|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-512|fail-modulus|wycheproof:tcId9|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId2|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId3|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId4|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId5|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId6|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId7|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId8|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId9|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId10|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId11|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId12|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-768|fail-modulus|wycheproof:tcId13|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId2|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId3|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId4|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId5|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId6|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId7|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId8|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId9|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId10|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId11|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId12|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId13|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId14|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId15|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId16|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+wycheproof-modoverflow|ML-KEM-1024|fail-modulus|wycheproof:tcId17|import-rejected|crypto-class:error:1C80009E:Provider routines::invalid key
+SUMMARY|total=199

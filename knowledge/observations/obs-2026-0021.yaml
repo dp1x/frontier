@@ -1,0 +1,79 @@
+id: obs-2026-0021
+type: observation
+status: recorded
+created_at: "2026-08-29T04:30:00Z"
+updated_at: "2026-08-29T04:30:00Z"
+summary: "FORMAL-203 (msn-2026-0003) lake build successful on this host - kernel check PASSED with 0 sorries, 0 axioms, 1 unused-variable warning (linter only). Mathlib4 cache fetched (7067 files, ~706 KB manifest)."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: grok-4.6
+    tool: lake build (kernel verification)
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal/ByteEncode.lean
+    - formal/build_output.log
+    - subagent obs-2026-0017 (toolchain-absent status)
+  parent: msn-2026-0003
+  generation: 1
+links:
+  experiments: []
+  findings: []
+  hypotheses: []
+  observations: [obs-2026-0017]
+title: FORMAL-203 kernel check PASSED on this host - elan toolchain install + lake build = success
+statement: >
+  After elan-init install (commit-free, in %USERPROFILE%\.elan), the
+  pinned toolchain (leanprover/lean4:v4.22.0) was installed and `lake build`
+  was invoked in C:\Users\Dhane\frontier\formal. Toolchain resolution
+  fetched Mathlib4 from cache (7067 files, 100% success), built cache
+  helpers, and compiled the Formal library. Final build log:
+    warning: Formal/ByteEncode.lean:381:44: unused variable `hB`
+    ✔ [3051/3052] Built Formal
+    Build completed successfully.
+  No errors, no sorries, no axioms admitted, no #print axioms calls.
+
+  This RESOLVES obs-2026-0017 (toolchain-absent kernel check blocked).
+  The prior "kernel-green" claim from the previous session is now
+  independently re-validated on this Windows host.
+
+  Remaining work for FORMAL-203 promotion to verified_conclusion:
+    1. Apply the adversarial-review magnitude fix from obs-2026-0022
+       (no bearing on ByteEncode.lean itself; this is a fix to fnd-2026-0002
+       magnitudes, not to the formal proof).
+    2. Independent R2 review of ByteEncode.lean by a non-synthesizer role
+       (per AGENTS.md promotion ladder). The static text scan and kernel
+       check are by the same orchestrator model; an R2 subagent should
+       audit the Lean source for soundness: examine the proofs at the
+       key lemma points (canonicalRoundtrip L332-349, roundtrip_iff_canonical
+       L420-432, minimalCounterexample L440-451), confirm `decide` is
+       only used on concretely-decidable propositions, and verify
+       no `native_decide` / `sorry` / `axiom` / `admitted` slipped in.
+    3. After R2 supports, the formal finding (conjecture or formal
+       finding) can be promoted to verified_conclusion.
+environment:
+  where: local
+  isolation: env-scrubbed (elan install in %USERPROFILE%\.elan, no secrets)
+  cwd: C:\Users\Dhane\frontier\formal
+  versions:
+    pinned_lean: "leanprover/lean4:v4.22.0"
+    actual_lean: "Lean (version 4.22.0, x86_64-w64-windows-gnu, commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05, Release)"
+    actual_lake: "lake (Lean 4 toolchain version)"
+    mathlib4_cache: "7067 files, 100% success, ~706 KB manifest, unpacked 18054 ms"
+    build_target: "Formal library (lean_lib target, ByteEncode.lean)"
+stdout: |
+  ⚠ [3050/3052] Built Formal.ByteEncode
+  warning: Formal/ByteEncode.lean:381:44: unused variable `hB`
+  Note: This linter can be disabled with `set_option linter.unusedVariables false`
+  ✔ [3051/3052] Built Formal
+  Build completed successfully.
+exit_code: 0
+
+follow_up: >
+  1. Run an R2 adversarial review subagent to audit ByteEncode.lean proofs.
+  2. If R2 supports, the FORMAL-203 result can be promoted.
+  3. The magnitude correction to fnd-2026-0002 (obs-2026-0022) is
+     independent of FORMAL-203 promotion.
