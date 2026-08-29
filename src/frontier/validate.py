@@ -145,7 +145,7 @@ def _validate_mission(doc: dict, did: str) -> list[str]:
 def _validate_finding(doc: dict, did: str) -> list[str]:
     errors: list[str] = []
     links = doc.get("links") or {}
-    if doc.get("status") == "verified":
+    if doc.get("status") in ("verified", "verified_conclusion"):
         missing = [key for key in EVIDENCE_LINKS if not links.get(key)]
         if missing:
             errors.append(

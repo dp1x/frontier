@@ -1,0 +1,69 @@
+id: exp-2026-0016
+type: experiment
+status: complete
+created_at: "2026-08-29T05:10:00Z"
+updated_at: "2026-08-29T05:10:00Z"
+summary: FORMAL-203 Lean 4 v4.22.0 kernel build of formal/Formal/ByteEncode.lean - canonicalRoundtrip, roundtrip_iff_canonical, and minimalCounterexample theorems checked end-to-end with zero sorries and zero file-introduced axioms.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation
+    model: ox-alpha
+    tool: lake build (Lean 4 v4.22.0 kernel)
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal/ByteEncode.lean
+    - formal/build_output.log
+    - obs-2026-0021
+  parent: msn-2026-0003
+  generation: 0
+links:
+  findings: [fnd-2026-0003]
+  proofs: [prf-2026-0001]
+  observations: [obs-2026-0021]
+  reviews: [rev-2026-0002]
+design: >
+  Pin Lean 4 v4.22.0 via formal/lean-toolchain (leanprover/lean4:v4.22.0,
+  commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05).  Install via
+  `elan toolchain install` (downloads Windows tarball).  Initialize
+  Mathlib4 v4.22.0 dependency via `lake update` (uses mathlib cache).
+  Define formal/Formal/ByteEncode.lean with three top-level theorems:
+  canonicalRoundtrip, roundtrip_iff_canonical, and minimalCounterexample,
+  all building on the bit/wsum/extract/bitsum foundation.  Build via
+  `lake build` and verify exit code 0, zero sorries, zero file-introduced
+  axioms.  Run `#print axioms` on each theorem to confirm the axiom
+  inventory is limited to standard Lean 4 core axioms.
+commands:
+  - "cd formal"
+  - "lake env lean --version  # expect Lean (version 4.22.0, commit ...)"
+  - "lake update  # fetch Mathlib4 v4.22.0 from cache"
+  - "lake build  # build Formal library; expect 'Build completed successfully.'"
+  - "lake env lean --root=. -c 'import Formal.ByteEncode; #print axioms Formal.ByteEncode.canonicalRoundtrip'"
+compute_decision:
+  location: local
+  isolation: "scratch R: ramdisk for elan toolchain install (~400MB); formal/ project is committed"
+  reason: "One-time elan install is the only heavy step; thereafter `lake build` is seconds on commodity laptop. Lightweight class."
+determinism:
+  deterministic: true
+  seed_policy: null
+  nondeterminism_notes: "Lean 4 kernel is deterministic; Mathlib4 cache may have non-deterministic order but build outcome is fully deterministic."
+environment:
+  os: Windows 11
+  python: 3.12
+  lean: 4.22.0 (commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05)
+  mathlib: 4.22.0 (cache, 7067 files)
+  build_time_seconds: 34
+stdout: |
+  [3051/3052] Built Formal
+  Build completed successfully.
+exit_code: 0
+results:
+  kernel_check: pass
+  sorries: 0
+  axioms_introduced: 0
+  total_axioms_used: [propext, Classical.choice, Quot.sound]
+  warnings: 1
+  warning_detail: "Formal/ByteEncode.lean:381:44: unused variable 'hB' (stylistic only)"
+disclosure: public

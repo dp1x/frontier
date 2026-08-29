@@ -29,6 +29,9 @@ links:
   reviews: [rev-2026-0002]
   observations: [obs-2026-0017, obs-2026-0021]
   proofs: [prf-2026-0001]
+  experiments: [exp-2026-0016]
+  reproducers: [rpr-2026-0003]
+  verifications: [vrf-2026-0003]
 title: "FORMAL-203: FIPS 203 ByteEncode12/ByteDecode12 roundtrip + Eq (7.1) modulus-check (Lean 4 kernel-verified)"
 classification: formal-verification
 statement: >

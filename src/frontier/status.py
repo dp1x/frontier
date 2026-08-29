@@ -92,7 +92,7 @@ def collect_status(repo_root: Path) -> dict:
                 report[key].append(entry)
 
     for doc in _load_yaml_docs(root / "knowledge" / "findings"):
-        if doc.get("status") == "verified":
+        if doc.get("status") in ("verified", "verified_conclusion"):
             report["verified_findings"].append(
                 {
                     "id": doc.get("id"),

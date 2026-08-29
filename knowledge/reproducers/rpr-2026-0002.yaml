@@ -1,0 +1,76 @@
+id: rpr-2026-0002
+type: reproducer
+status: reproduced
+created_at: "2026-08-29T05:00:00Z"
+updated_at: "2026-08-29T05:00:00Z"
+summary: Independent reproduction of fnd-2026-0002 mechanism on OpenSSL 3.6.3 (MSYS2 local) - five self-contained C programs verify the BIT STRING length-header loophole end-to-end without importing code from the original harness.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-reproducer
+    model: ox-alpha
+    tool: frontier.execute.run_command (scratch R ramdisk, MSYS2 environment)
+  sources:
+    - knowledge/findings/fnd-2026-0002.yaml
+    - .scratch/spki_repro/REPORT.md
+    - .scratch/spki_repro/repro_len_plus_1.c
+    - .scratch/spki_repro/repro_cross_set_768.c
+    - .scratch/spki_repro/repro_canonical_512.c
+    - .scratch/spki_repro/repro_cross_set_768_harness.c
+    - .scratch/spki_repro/repro_alg_check.c
+  parent: msn-2026-0002
+  generation: 1
+links:
+  findings: [fnd-2026-0002]
+  experiments: [exp-2026-0014]
+  observations: [obs-2026-0022]
+path: .scratch/spki_repro/
+reproduction_commands:
+  - "$env:MSYS2_ROOT = 'C:\\Users\\Dhane\\scoop\\apps\\msys2\\current'"
+  - "$env:PATH = \"$env:MSYS2_ROOT\\mingw64\\bin;$env:MSYS2_ROOT\\usr\\bin;$env:PATH\""
+  - "Set-Location C:\\Users\\Dhane\\frontier\\.scratch\\spki_repro"
+  - "gcc -O2 -Wall repro_len_plus_1.c       -o repro_len_plus_1.exe       -lssl -lcrypto"
+  - "gcc -O2 -Wall repro_cross_set_768.c    -o repro_cross_set_768.exe    -lssl -lcrypto"
+  - "gcc -O2 -Wall repro_canonical_512.c    -o repro_canonical_512.exe    -lssl -lcrypto"
+  - "gcc -O2 -Wall repro_cross_set_768_harness.c -o repro_cross_set_768_harness.exe -lssl -lcrypto"
+  - "gcc -O2 -Wall repro_alg_check.c        -o repro_alg_check.exe        -lssl -lcrypto"
+reproduced_on:
+  - environment: Windows 11 host, MSYS2 mingw-w64, OpenSSL 3.6.3 (scoop), GCC 16.1.0 -O2 -Wall
+    date: "2026-08-29"
+    result: |
+      Test A (repro_len_plus_1.c, len-plus-1 ML-KEM-512): d2i_PUBKEY ACCEPTED,
+        parser consumed 822 of 823 bytes, EVP_PKEY_encapsulate produced
+        768-byte ciphertext + 32-byte shared secret.
+      Test B (repro_cross_set_768.c, ML-KEM-768 prefix + 1184-byte ML-KEM-768
+        ek + 384 bytes garbage, 1590 bytes total): d2i_PUBKEY ACCEPTED,
+        parser consumed 1206 of 1590 bytes (1184 + 22 prefix), keymgmt
+        validated 1184 bytes as canonical ML-KEM-768 ek.
+      Test C (repro_canonical_512.c, positive control): d2i_PUBKEY
+        ACCEPTED, parser consumed 822 of 822 bytes.
+      Test D (repro_cross_set_768_harness.c, harness layout 22-byte
+        ML-KEM-768 prefix + 1568 bytes ML-KEM-1024 ek = 1590 bytes):
+        d2i_PUBKEY ACCEPTED, parser consumed 1206 of 1590 bytes.
+      Test E (repro_alg_check.c): Re-encoded SPKI is canonical 822 bytes;
+        OID matches prefix's param set; keymgmt params
+        (bits=512/768/1024, security_bits=128/192/256, size=768/1088/1568)
+        match OID not raw body length.
+notes: >
+  This is an INDEPENDENT reproducer (does not import code from
+  crypto/mlkem-input-checks/harnesses/openssl_invar_runner.c). The
+  five self-contained C programs in .scratch/spki_repro/ each build
+  the SPKI from scratch (22-byte prefix + body bytes verbatim) and
+  exercise the d2i_PUBKEY / EVP_PKEY_encapsulate path. Direct
+  observation of parser-consumed length matches the mechanism claim
+  in fnd-2026-0002: BIT STRING length header masks any over-shoot
+  and the keymgmt validates only the canonical body length.
+
+  Version drift note: the original fnd-2026-0002 finding and harness
+  were targeted at OpenSSL 3.5.7 (GHA run 32914837764). The local
+  environment has OpenSSL 3.6.3, not 3.5.7. The permissive BIT
+  STRING length-header path is present in both versions. The
+  cross-version consistency is a positive result for the mechanism
+  claim but does not by itself upgrade the version scope of
+  fnd-2026-0002 (which remains 3.5.7 with 3.6.3 noted as consistent).
+  See REPORT.md lines 21-28 for the explicit version drift
+  disclosure.
