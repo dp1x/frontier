@@ -24,7 +24,7 @@ if ! command -v clang >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-
 command -v gcc >/dev/null 2>&1 || { echo "FATAL|gcc unavailable"; exit 1; }
 command -v clang >/dev/null 2>&1 || { echo "FATAL|clang unavailable"; exit 1; }
 
-python3 "$SCRIPT_DIR/gen_programs.py" "$GEN_DIR" || exit 1
+python "$SCRIPT_DIR/gen_programs.py" "$GEN_DIR" || exit 1
 
 CFG_IDS=(gcc-O0 gcc-O2 gcc-O3 gcc-O2-nostrict clang-O2 clang-O3 clang-O2-nostrict)
 CCS=(gcc gcc gcc gcc clang clang clang)

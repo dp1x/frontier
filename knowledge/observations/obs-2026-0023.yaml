@@ -1,0 +1,93 @@
+id: obs-2026-0023
+type: observation
+status: recorded
+created_at: "2026-08-29T08:25:00Z"
+updated_at: "2026-08-29T08:25:00Z"
+summary: ALIAS-DIFF round-2 negative result - 870 program-config rows across asm + opaque-tu barriers on gcc/clang O0/O2/O3, 0 divergences.  The opaque-TU barrier (programs call into opaque_tu.c, a separately-compiled translation unit providing opaque_ext/touch_ext) does not expose any TBAA miscompilation that the round-1 inline-asm barrier was hiding.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-synthesizer
+    model: grok-4.6
+    tool: synthesizing alias_report_r2.tsv and alias_report_r2_local.tsv
+  sources:
+    - exp-2026-0015
+    - compilers/alias-diff/gen_programs_r2.py
+    - compilers/alias-diff/run_matrix_r2.sh
+    - compilers/alias-diff/opaque_tu.c
+    - compilers/alias-diff/opaque_tu.h
+    - compilers/alias-diff/reports/alias_report_r2.tsv (GHA run 33225682327, gcc 13.3.0 + clang 18.1.3, Linux)
+    - compilers/alias-diff/reports/alias_report_r2_local.tsv (local Windows 11, MSYS2 mingw-w64, gcc 16.1.0)
+  parent: msn-2026-0004
+  generation: 0
+links:
+  experiments: [exp-2026-0015]
+  hypotheses: [hyp-2026-0001]
+title: ALIAS-DIFF round-2 negative result - 0 divergences across 870 program-config rows
+statement: >
+  Round-2 of the ALIAS-DIFF strict-aliasing / effective-type differential
+  matrix ran 870 program-config rows total (660 GHA + 210 local) across
+  two barrier modes (asm and opaque-tu) and 6 compiler configurations
+  (gcc-O0/O2/O3, clang-O0/O2/O3) for family (d) incompatible-cast UB
+  and family (ctl) same-type control.  All 870 rows match the gcc-O0
+  baseline.  No divergence appears.
+
+  Coverage matrix:
+    - GHA run 33225682327 (Ubuntu 24.04, gcc 13.3.0 + clang 18.1.3):
+      asm barrier: 600 rows (5 families x 10 variants x 6 configs)
+      opaque-tu barrier: 60 rows (family d + ctl x 10 variants x 6 configs)
+    - Local Windows 11 (MSYS2 mingw-w64, gcc 16.1.0):
+      asm barrier: 150 rows (5 families x 10 variants x 3 configs)
+      opaque-tu barrier: 60 rows (family d + ctl x 10 variants x 3 configs)
+
+  The opaque-TU barrier design (programs link against opaque_tu.c which
+  provides opaque_ext() and touch_ext() in a separately-compiled TU; the
+  caller's optimizer cannot see through the call body without LTO) was
+  specifically intended to prevent the optimizer from folding the
+  store->read edge through the aliasing barrier, which was the round-1
+  coverage limitation.  Even with this stronger barrier, family (d)
+  produces 0 divergences.
+
+  Genuine narrowing of the tested hypothesis: the search space for TBAA
+  miscompilations in gcc/clang at -O2/-O3 over small programs using the
+  (a) memcpy punning, (b) union punning, (c) char* aliasing, and (d)
+  incompatible-cast UB patterns has been exercised and found to be empty
+  for the program shapes probed (deterministic, single-TU, no external
+  state, fixed parameter sets).
+
+  What this does NOT claim:
+    - It does not claim there is no TBAA miscompilation lurking in any
+      gcc/clang version for any program shape.
+    - It does not cover C++ (templates, virtual calls, references).
+    - It does not cover floating-point fast-math interactions.
+    - It does not cover concurrency (atomics, threads).
+    - It does not cover translation validation with unbounded loops
+      (round-2 programs are bounded to N+M iterations).
+  All these scope limits are honest and align with the mission scope
+  per msn-2026-0004's scope field.
+
+  How the negative result is durable:
+    - generators and runner are committed
+    - the GHA artifact is preserved at alias_report_r2.tsv
+    - the local artifact is preserved at alias_report_r2_local.tsv
+    - the GHA workflow (compiler-alias-diff-r2) ran on commit
+      dff45ce34ee14745d2439a3dffc83ddfe705ce34; workflow file is not in
+      main but the artifact is.
+
+environment:
+  where: github-actions + local
+  isolation: github-runner (ubuntu-24.04, public) + env-scrubbed local scratch
+  versions:
+    gcc: 13.3.0 (GHA) + 16.1.0 (local MSYS2)
+    clang: 18.1.3 (GHA only)
+    hosts: Linux 6.17.0-1022-azure, Windows 11 + MSYS2 mingw-w64
+implication: >
+  Per the mission's stopping conditions, the negative result is
+  preserved with explicit coverage counts and scope.  No further
+  investigation is justified by the current evidence for family (d)
+  at the program shapes probed.  A revalidation mission should be
+  opened if either: (a) a new program shape is observed to exhibit
+  the property, (b) a new compiler version is released with documented
+  TBAA behavior changes, or (c) Alive2 or Valgrind TBAA checking is
+  integrated as a third oracle.

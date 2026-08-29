@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   alias-matrix:
-    name: gcc/clang strict-aliasing differential
+    name: round-1 gcc/clang strict-aliasing differential (asm barrier)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,8 +29,8 @@ jobs:
           gcc --version | head -1
           clang --version | head -1
       - name: Generate programs
-        run: python3 compilers/alias-diff/gen_programs.py compilers/alias-diff/generated
-      - name: Run differential matrix
+        run: python compilers/alias-diff/gen_programs.py compilers/alias-diff/generated
+      - name: Run differential matrix (round-1, asm barrier)
         run: bash compilers/alias-diff/run_matrix.sh alias_report.tsv
       - name: Show summary + divergences
         run: |
@@ -43,3 +43,32 @@ jobs:
         with:
           name: alias_report
           path: alias_report.tsv
+
+  alias-matrix-r2:
+    name: round-2 opaque-TU differential
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install + verify toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc clang
+          gcc --version | head -1
+          clang --version | head -1
+      - name: Generate round-1 + round-2 programs
+        run: |
+          python compilers/alias-diff/gen_programs.py compilers/alias-diff/generated
+          python compilers/alias-diff/gen_programs_r2.py compilers/alias-diff/generated
+      - name: Run round-2 differential matrix (asm + opaque-tu barriers)
+        run: bash compilers/alias-diff/run_matrix_r2.sh alias_report_r2.tsv
+      - name: Show summary + divergences
+        run: |
+          grep '^META' alias_report_r2.tsv
+          grep '^BYBARRIER' alias_report_r2.tsv
+          grep '^SUMMARY' alias_report_r2.tsv
+          echo "divergent rows:"
+          grep 'DIVERGENT' alias_report_r2.tsv || echo '(none)'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alias_report_r2
+          path: alias_report_r2.tsv
