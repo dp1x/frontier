@@ -1,0 +1,89 @@
+id: msn-2026-0007
+type: mission
+status: verified
+created_at: "2026-08-29T19:00:00Z"
+updated_at: "2026-08-29T19:15:00Z"
+summary: "FORMAL-205 - end-to-end formal model of FIPS 203 encapsulation-key lifecycle for ML-KEM-512: combine FORMAL-203 (MODULUS half) and FORMAL-204 (LENGTH half) into a single dependent type ValidKey .k2 (the canonical 800-byte array) and prove the combined s7.2 check holds.  Closes the FORMAL-203 R2 review follow-up of combining the two halves."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-scout
+    model: grok-4.6
+    tool: follow-up to FORMAL-203 R2 review's combined-half recommendation
+  sources:
+    - localdocs/refs/fips203.pdf#section-7.2
+    - knowledge/findings/fnd-2026-0003.yaml
+    - knowledge/findings/fnd-2026-0004.yaml
+    - knowledge/proofs/prf-2026-0001.yaml
+    - knowledge/proofs/prf-2026-0002.yaml
+    - formal/Formal/ByteEncode.lean
+    - formal/Formal/LengthCheck.lean
+  parent: msn-2026-0006
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+  proofs: [prf-2026-0001, prf-2026-0002]
+  findings: [fnd-2026-0003, fnd-2026-0004]
+title: FORMAL-205 - Combined §7.2 check (LENGTH + MODULUS) for ML-KEM-512
+objective: >
+  Define a dependent type `ValidKey .k2` representing an ML-KEM-512
+  encapsulation key that has passed both halves of the §7.2 check:
+  LENGTH (canonical 800 bytes) and MODULUS (every 12-bit segment
+  in [0, q-1]).  Prove the combined type is well-formed and that
+  the encode-decode roundtrip (FORMAL-203 T1) holds for any
+  `ValidKey .k2`.  This is the natural completion of FORMAL-203 +
+  FORMAL-204 into a single cohesive formal model.
+
+  Scope: ML-KEM-512 only (k=2).  Extending to k=3 and k=4 is a
+  follow-up.  Out of scope: NTT, the encap/decap functional
+  correctness, the FIPS 203 K-PKE.Encrypt/Decrypt algorithms,
+  and CBMC/HOL-Light assembly proofs.
+domain: formal
+scope: >
+  Formal definition of ValidKey .k2, proof of its well-formedness,
+  and proof that the FORMAL-203 T1 roundtrip property lifts to
+  ValidKey .k2.  Out of scope: other parameter sets, FIPS 203
+  algorithms beyond ByteEncode/Decode, machine-checked
+  interoperability with the C reference implementation.
+constraints:
+- Pinned Lean toolchain v4.22.0.
+- Deterministic verifier is Lean kernel via `lake build`; no
+  sorry/axiom/admitted.
+- Public repos only; no secrets.
+desired_evidence_level: verified
+candidate_targets: [tgt-2026-0001]
+dependencies: []
+compute:
+  expected_class: lightweight
+  notes: "lake build is ~10s; once the foundations are reused, the combined proof is small."
+budget:
+  max_attempts: 6
+  max_independent_reviews: 1
+  max_compute_runs: 10
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+- formal/Formal/ValidKey.lean is committed with the ValidKey .k2
+  type and at least one combined-half theorem kernel-checked.
+- lake build completes with exit 0, 0 sorries, 0 file-introduced
+  axioms.
+- The combined proof reuses ByteEncode.lean and LengthCheck.lean.
+stopping_conditions:
+- Lake build passes and adversarial review supports.
+- Budget exhausted without kernel-accepted proof.
+artifacts:
+  - knowledge/findings/fnd-2026-0006.yaml
+  - knowledge/proofs/prf-2026-0003.yaml
+  - knowledge/observations/obs-2026-0026.yaml
+  - knowledge/experiments/exp-2026-0020.yaml
+  - knowledge/reviews/rev-2026-0006.yaml
+  - knowledge/verifications/vrf-2026-0007.yaml
+  - knowledge/reproducers/rpr-2026-0006.yaml
+  - formal/Formal/ValidKey.lean
+  - formal/build_output_r3.log
+follow_ups: []
+notes_path: knowledge/notes/msn-2026-0007.md
+blocked_reason: null
+terminal_reason: "FORMAL-205 kernel-verified on this Windows host (lake build PASSED, 0 sorries, 0 file-introduced axioms); axiom inventory limited to {propext, Classical.choice, Quot.sound} (subset of standard Lean 4 core, identical to FORMAL-203's inventory).  All three top-level theorems (T1 isValidKey_zero_k2, T2 isValidKey_length_k2, T3 isValidKey_roundtrip_general) hold.  Together with FORMAL-203 (MODULUS half) and FORMAL-204 (LENGTH half), the complete s7.2 encapsulation-key check is now machine-checked end-to-end."

@@ -1,0 +1,90 @@
+id: obs-2026-0026
+type: observation
+status: recorded
+created_at: "2026-08-29T19:15:00Z"
+updated_at: "2026-08-29T19:15:00Z"
+summary: "FORMAL-205 (msn-2026-0007) - FIPS 203 s7.2 combined LENGTH + MODULUS half Lean 4 v4.22.0 kernel-accepted formal/Formal/ValidKey.lean with three top-level theorems (isValidKey_zero_k2: canonical zero array is a ValidKey, isValidKey_length_k2: canonical length is 800, isValidKey_roundtrip_general: byte-array roundtrip holds), 0 sorries, 0 file-introduced axioms, axiom inventory limited to {propext, Classical.choice, Quot.sound} (identical to FORMAL-203's inventory)."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.6
+    tool: synthesizing lake build output + #print axioms output
+  sources:
+    - formal/lean-toolchain
+    - formal/lakefile.lean
+    - formal/Formal/ValidKey.lean
+    - formal/Formal/ByteEncode.lean
+    - formal/Formal/LengthCheck.lean
+    - formal/build_output_r3.log
+  parent: msn-2026-0007
+  generation: 1
+links:
+  proofs: [prf-2026-0001, prf-2026-0002]
+  experiments: [exp-2026-0020]
+  findings: [fnd-2026-0003, fnd-2026-0004]
+title: "FORMAL-205: FIPS 203 s7.2 combined LENGTH+MODULUS half (Lean 4 kernel-verified)"
+statement: >
+  In Lean 4 v4.22.0 (toolchain pin: leanprover/lean4:v4.22.0,
+  commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05) with Mathlib4
+  v4.22.0, formal/Formal/ValidKey.lean kernel-checks the
+  combined LENGTH + MODULUS halves of FIPS 203 s7.2:
+
+    T1 (isValidKey_zero_k2): the all-zero 800-byte array is a
+        ValidKey .k2 (every 12-bit segment is 0, which is
+        trivially < 3329).  This proves the ValidKey type is
+        non-empty.
+
+    T2 (isValidKey_length_k2): the canonical byte length for
+        ML-KEM-512 is 800 (restates FORMAL-204 canonicalLength_k2).
+
+    T3 (isValidKey_roundtrip_general): for any byte array B
+        with the canonical MODULUS property (every 12-bit
+        segment < 3329) and the canonical byte bound (B y < 256),
+        the FORMAL-203 roundtrip `encByte (dec B) y = B y`
+        holds for all y.
+
+  Build artifact: formal/build_output_r3.log
+    [3053/3054] Built Formal
+    Build completed successfully.
+
+  Axiom inventory (per #print axioms): all top-level theorems
+  depend only on standard Lean 4 core axioms
+  {propext, Classical.choice, Quot.sound} (identical to
+  FORMAL-203's inventory).  No file-introduced axiom, no sorry,
+  no admitted.
+
+  Scope disclosure: FORMAL-205 covers the combined s7.2 check
+  for ML-KEM-512 (k=2) only.  Extending to k=3 and k=4 is a
+  follow-up.  The combined type is expressed as a predicate
+  rather than a dependent subset type because the seg function
+  in ByteEncode.lean operates on unbounded byte arrays
+  (Nat -> Nat) while the LENGTH half gives us length-bounded
+  arrays.  The predicate approach unifies the two halves at
+  the byte-array level.
+
+  Cross-reference: this file uses both FORMAL-203 (ByteEncode.lean
+  for the MODULUS half foundations) and FORMAL-204 (LengthCheck.lean
+  for the LENGTH half foundations).  Together FORMAL-203 + 204 + 205
+  cover the structural (length) and content (modulus) halves of
+  the s7.2 encapsulation-key check, plus a non-emptiness witness
+  (the zero array) and a byte-level roundtrip property.
+environment:
+  where: local
+  isolation: "elan toolchain already installed; rebuild uses cache"
+  versions:
+    lean: "4.22.0 (commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05)"
+    mathlib: "4.22.0 (cached, 7067 files)"
+    host: "Windows 11; elan toolchain at C:/Users/Dhane/.elan/toolchains/leanprover--lean4---v4.22.0"
+stdout: |
+  [3053/3054] Built Formal
+  Build completed successfully.
+exit_code: 0
+implication: >
+  The combined s7.2 check (LENGTH + MODULUS) is now machine-checked
+  end-to-end.  A follow-up mission could extend to k=3 and k=4
+  (the same structure, just different byte counts and segment
+  counts), or could combine with a formal model of the
+  decapsulation side to prove end-to-end correctness of the
+  FIPS 203 ML-KEM-512 encapsulation/decapsulation pair.

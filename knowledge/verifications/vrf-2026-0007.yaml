@@ -1,0 +1,55 @@
+id: vrf-2026-0007
+type: verification
+status: pass
+created_at: "2026-08-29T19:15:00Z"
+updated_at: "2026-08-29T19:15:00Z"
+summary: Verification of FORMAL-205 (fnd-2026-0006) - Lean 4 v4.22.0 kernel accepted formal/Formal/ValidKey.lean with three top-level theorems (isValidKey_zero_k2, isValidKey_length_k2, isValidKey_roundtrip_general), 0 sorries, 0 file-introduced axioms, axiom inventory {propext, Classical.choice, Quot.sound}.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.6
+    tool: lake build (Lean 4 v4.22.0 formal kernel)
+  sources:
+    - formal/build_output_r3.log
+    - formal/Formal/ValidKey.lean
+    - obs-2026-0026
+    - exp-2026-0020
+    - prf-2026-0003
+  parent: msn-2026-0007
+  generation: 1
+links:
+  findings: [fnd-2026-0006]
+  proofs: [prf-2026-0003]
+  experiments: [exp-2026-0020]
+  observations: [obs-2026-0026]
+method: formal-verifier
+result: |
+  Lean 4 v4.22.0 kernel accepted formal/Formal/ValidKey.lean with
+  0 errors, 0 sorries, 0 file-introduced axioms, 1 linter warning
+  (unused variable).
+
+  All three top-level theorem families hold with axiom inventory
+  limited to {propext, Classical.choice, Quot.sound} (subset of
+  standard Lean 4 core, identical to FORMAL-203's inventory):
+
+    T1 (isValidKey_zero_k2): isValidKey .k2 (fun _ => 0)
+      Depends on: {propext, Classical.choice, Quot.sound}
+    T2 (isValidKey_length_k2): canonicalLength .k2 = 800
+      Depends on: (no axioms, definitional equality)
+    T3 (isValidKey_roundtrip_general): encByte (fun i => dec B i) y = B y
+      Depends on: {propext, Classical.choice, Quot.sound}
+
+  Toolchain pin: leanprover/lean4:v4.22.0
+    commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05
+  Mathlib4 pin: v4.22.0 (cached, 7067 files)
+  Build time: ~13 seconds (cache warm)
+  Build output: 'Build completed successfully.'
+command: "cd C:\\Users\\Dhane\\frontier\\formal; lake build"
+environment:
+  os: Windows 11
+  lean: 4.22.0 (commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05)
+  mathlib: 4.22.0
+  build_time_seconds: 13
+  build_log: formal/build_output_r3.log
