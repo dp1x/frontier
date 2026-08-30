@@ -244,10 +244,22 @@ func runOne(cohort string, stim Stimulus, serverAddr string, ekSize, cInitSize i
 	conn.SetDeadline(time.Now().Add(30 * time.Second))
 
 	// Drive the SSH binary packet protocol:
-	//   1. Client sends SSH_MSG_KEXINIT with hybrid KEX in the list.
-	//   2. Server replies SSH_MSG_KEXINIT with its chosen kex + host key.
-	//   3. Client sends SSH_MSG_KEX_HYBRID_INIT with mutated C_INIT.
-	//   4. Server replies SSH_MSG_KEX_HYBRID_REPLY (lenient) or SSH_MSG_DISCONNECT (strict) or closes.
+	//   0. Client sends version banner (RFC 4253 s4.2):
+	//      "SSH-protoversion-softwareversion SP comments CR LF"
+	//   1. Server replies with its version banner.
+	//   2. Client sends SSH_MSG_KEXINIT with hybrid KEX in the list.
+	//   3. Server replies SSH_MSG_KEXINIT with its chosen kex + host key.
+	//   4. Client sends SSH_MSG_KEX_HYBRID_INIT with mutated C_INIT.
+	//   5. Server replies SSH_MSG_KEX_HYBRID_REPLY (lenient) or SSH_MSG_DISCONNECT (strict) or closes.
+
+	if err := sendBanner(conn); err != nil {
+		res.Error = fmt.Sprintf("send banner: %v", err)
+		return res
+	}
+	if err := recvBanner(conn); err != nil {
+		res.Error = fmt.Sprintf("recv banner: %v", err)
+		return res
+	}
 
 	if err := sendKexInit(conn, cohort); err != nil {
 		res.Error = fmt.Sprintf("send kexinit: %v", err)
@@ -469,6 +481,32 @@ func appendNameList(buf []byte, names string) []byte {
 	buf = append(buf, l...)
 	buf = append(buf, nl...)
 	return buf
+}
+
+// --- SSH version banner (RFC 4253 s4.2) ---
+
+func sendBanner(conn net.Conn) error {
+	banner := "SSH-2.0-FrontierSSHLoopback_1.0\r\n"
+	_, err := conn.Write([]byte(banner))
+	return err
+}
+
+func recvBanner(conn net.Conn) error {
+	buf := make([]byte, 256)
+	n, err := conn.Read(buf)
+	if err != nil {
+		return err
+	}
+	if n < 4 || string(buf[:4]) != "SSH-" {
+		return fmt.Errorf("expected SSH banner, got %q", string(buf[:n]))
+	}
+	// Find end of banner line (CRLF).
+	for i := 0; i < n-1; i++ {
+		if buf[i] == '\r' && buf[i+1] == '\n' {
+			return nil
+		}
+	}
+	return fmt.Errorf("banner line missing CRLF: %q", string(buf[:n]))
 }
 
 // --- helpers ---
