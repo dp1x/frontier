@@ -476,22 +476,12 @@ func readFull(br *bufio.Reader, n int) ([]byte, error) {
 }
 
 func appendNameList(buf []byte, names string) []byte {
-	parts := strings.Split(names, ",")
-	var nl []byte
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		l := make([]byte, 4)
-		binary.BigEndian.PutUint32(l, uint32(len(p)))
-		nl = append(nl, l...)
-		nl = append(nl, []byte(p)...)
-	}
+	// Per RFC 4251 s5, a name-list is encoded as a single uint32 length
+	// followed by the comma-separated string (no per-name length prefix).
 	l := make([]byte, 4)
-	binary.BigEndian.PutUint32(l, uint32(len(nl)))
+	binary.BigEndian.PutUint32(l, uint32(len(names)))
 	buf = append(buf, l...)
-	buf = append(buf, nl...)
+	buf = append(buf, []byte(names)...)
 	return buf
 }
 
