@@ -1,0 +1,91 @@
+id: rev-2026-0011
+type: review
+status: complete
+independent: true
+role: adversarial-reviewer
+verdict: supports
+created_at: "2026-08-30T09:22:00Z"
+updated_at: "2026-08-30T09:22:00Z"
+summary: "Adversarial review of fnd-2026-0011 (Frontier environment capability gap for C23 #embed). Verifies the finding is well-scoped, the reproduction is deterministic, the classification (environment-capability-gap, not security vulnerability) is correct, and the limitations are explicitly acknowledged. The finding is a useful negative result that documents Frontier's standard CI environment cannot exercise post-C23 features without explicit compiler installation."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-reviewer
+    model: minimax-m3
+    tool: independent review of fnd-2026-0011 evidence chain
+  sources:
+    - knowledge/findings/fnd-2026-0011.yaml
+    - knowledge/verifications/vrf-2026-0012.yaml
+    - knowledge/reproducers/rpr-2026-0011.yaml
+    - knowledge/observations/obs-2026-0036.yaml
+    - knowledge/hypotheses/hyp-2026-0023.yaml
+    - .github/workflows/clang-embed-crash.yml
+    - compilers/embed/run_embed_matrix.sh
+  parent: msn-2026-0012
+  generation: 0
+links:
+  missions: [msn-2026-0012]
+  findings: [fnd-2026-0011]
+  verifications: [vrf-2026-0012]
+  reproducers: [rpr-2026-0011]
+title: "REV-2026-0011 - Adversarial review of fnd-2026-0011 (Frontier environment capability gap)"
+review_axes:
+  axis_scope_correctness:
+    question: "Is the finding's scope correctly bounded?"
+    analysis: |
+      The finding claims Frontier's GHA ubuntu-latest default image ships
+      clang-18.1.3 and gcc-13.3.0 (both predating C23 finalization) and
+      neither supports #embed. The evidence:
+      - Direct GHA run 33307657900 (deterministic, reproducible)
+      - 26 cells of clean rejection (no crashes, no surprises)
+      - Compiler versions explicitly captured per cell
+      
+      Scope is correctly bounded to:
+      - GHA ubuntu-latest default image (Ubuntu 24.04 LTS)
+      - System clang + gcc only (not apt.llvm.org-installed versions)
+      - The 13-stimulus characterization matrix
+      
+      The finding correctly does NOT claim:
+      - That the upstream bugs are real (well-documented elsewhere)
+      - That Frontier cannot reproduce them with explicit compiler install
+      - That other C23 features have the same gap (surveyed but not claimed)
+    verdict: scope_correct
+  axis_classification_correctness:
+    question: "Is the classification environment-capability-gap correct?"
+    analysis: |
+      The finding's classification (environment-capability-gap, not
+      security-vulnerability, not compliance-gap, not correctness-bug) is
+      correct. The upstream bugs ARE real (LLVM bug tracker documents them)
+      but this finding is about Frontier's ABILITY TO REPRODUCE them with
+      the standard CI environment, not about the bugs themselves.
+    verdict: classification_correct
+  axis_reproducer_determinism:
+    question: "Is the reproducer deterministic?"
+    analysis: |
+      The bash harness uses fixed heredoc strings (no RNG, no dynamic
+      content). The GHA workflow uses system compilers (deterministic
+      builds). The per-cell TSV is reproducible. Re-running yields the same
+      results.
+    verdict: determinism_adequate
+  axis_limitations_acknowledged:
+    question: "Are limitations explicitly acknowledged?"
+    analysis: |
+      Yes. The finding explicitly notes:
+      - The upstream bugs are well-documented in the LLVM bug tracker
+      - This is about Frontier's ENVIRONMENT, not the bugs themselves
+      - The fix is a one-line workflow change
+      - Other C23 features may have the same gap (not surveyed in this
+        finding)
+    verdict: limitations_acknowledged
+overall_verdict: "SUPPORT -- the finding is consistent, scoped correctly, verified by deterministic GHA run, and classified appropriately as an environment-capability-gap rather than a security vulnerability. The finding is a useful negative result that documents a Frontier infrastructure limitation and provides a clear remediation path."
+disagreement_notes: |
+  None. The finding is straightforward and well-bounded.
+limitations_acknowledged: |
+  - The upstream bugs themselves are not claimed by this finding
+  - The 13-stimulus matrix may not cover the full #embed crash surface
+  - The fix (apt.llvm.org install) depends on network availability
+follow_up:
+  - "Verify the fix (apt.llvm.org install in workflow) produces expected crashes on clang-19"
+  - "Survey other C23 features for similar environment gaps"
+  - "Document the environment gap in localdocs/compute.md"
