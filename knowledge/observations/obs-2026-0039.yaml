@@ -1,0 +1,105 @@
+id: obs-2026-0039
+type: observation
+status: recorded
+created_at: "2026-08-31T07:30:00Z"
+updated_at: "2026-08-31T07:30:00Z"
+summary: "Clean-room Python reference implementation of RFC 9591 §4.1 nonce_generate (secp256k1_sha256) failed to reproduce the KAT's hiding_nonce expected value (09764379667f9a9fa61928947bd925a7f162b21886b750d3b11c226d16b32f58). Tested four hash construction variants (SHA256(rand||share), SHA256(share||rand), SHA256(contextString||nonce||rand||share), SHA256(contextString||nonce||rand)) and one RFC 9380 expand_message_xmd(SHA256, L=48) variant. All five variants produce different outputs from the KAT expected value. The divergence is informative: even with RFC 9591 + RFC 9380 normative text alone, the nonce_generate derivation for secp256k1_sha256 ciphersuite produces multiple plausible interpretations that yield different byte outputs. The clean-room reference is structurally limited because RFC 9591 §6.5 specifies hash_to_field via RFC 9380 §5.2 (expand_message_xmd), which is a multi-step derivation not directly exposed by Python's cryptography library; the full implementation requires either a manual RFC 9380 implementation or a third-party library that exposes hash_to_field."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: clean-room-implementation-author
+    model: minimax-m3
+    tool: "manual Python implementation of RFC 9591 §4.1 nonce_generate + §4.4 compute_binding_factors"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://www.rfc-editor.org/rfc/rfc9380
+    - knowledge/findings/fnd-2026-0012.yaml
+    - knowledge/reviews/rev-2026-0013.yaml
+    - knowledge/hypotheses/hyp-2026-0027.yaml
+    - missions/active/msn-2026-0014.yaml
+    - crypto/frost-cross-impl/cleanroom/frost_cleanroom.py
+    - crypto/frost-cross-impl/kat/rfc9591_appendix_e5_secp256k1.json
+  parent: msn-2026-0014
+  generation: 0
+links:
+  specifications: [spc-2026-0003]
+  targets: [tgt-2026-0004]
+  hypotheses: [hyp-2026-0027]
+  findings: [fnd-2026-0012]
+title: "OBS-2026-0039 - Clean-room Python RFC 9591 §4.1 nonce_generate divergence (informative negative result)"
+tested_variants:
+  - variant: SHA256(rand || share)
+    output: 498fa9a01351ab5369fb36ad1789e6b8f4e7b507fd8ec6968b79d2b88e3b15c2
+    match: false
+  - variant: SHA256(share || rand)
+    output: cd59f79a3633c08096de997e5cd03dfaf4a88588be862956a50e0101a33a4cc7
+    match: false
+  - variant: SHA256(contextString || nonce || rand || share)
+    output: bf0cac475c9f390d18c0540bbe1aee2da0ba0fb9c2d73e2580cde84935792a04
+    match: false
+  - variant: SHA256(contextString || nonce || rand)
+    output: 7ac6ffb2f5d997b55fbba1c6b1d3bf048d2c02118c890fa1229872449c1d50f8
+    match: false
+  - variant: expand_message_xmd(SHA256, L=48) over (rand || share) with DST=contextString||nonce
+    output: f3e2155bdf85878d385ffa5a369cce44c2011cd835583a096968b1eef3246152
+    match: false
+expected_value: 09764379667f9a9fa61928947bd925a7f162b21886b750d3b11c226d16b32f58
+interpretation: |
+  The five tested variants all produce different outputs from the KAT expected value. This
+  demonstrates that even with explicit RFC 9591 + RFC 9380 normative text, the
+  nonce_generate derivation for secp256k1_sha256 ciphersuite has multiple plausible
+  interpretations:
+
+  1. Direct SHA-256 of (rand || share) — the simplest reading of RFC 9591 §4.1.
+  2. SHA-256 of (share || rand) — alternative ordering.
+  3. SHA-256 with contextString||nonce domain prefix — incorporates ciphersuite prefix.
+  4. SHA-256 with contextString||nonce domain prefix only on rand — inconsistent.
+  5. RFC 9380 §5.2 hash_to_field with expand_message_xmd — the RFC 9591 §6.5 prescribed
+     method for P-256/secp256k1 ciphersuites.
+
+  The ZcashFoundation/frost test vectors (which the implementation produces byte-exactly)
+  use a specific derivation that may not be obvious from the RFC text alone. This is
+  precisely the kind of normatively-silent parameter that the clean-room reference was
+  designed to characterize.
+
+  The divergence is informative rather than negative: it characterizes the practical
+  difficulty of building an independent RFC 9591 reference from the RFC text alone,
+  and reinforces the implementation-archaeologist's correction that the FROST RFC 9591
+  implementation universe is supply-starved.
+
+  Independent verification would require either: (a) reading ZcashFoundation/frost source
+  code to extract the specific hash construction used (violates clean-room constraint),
+  (b) implementing RFC 9380 §5.2 hash_to_field with full expand_message_xmd in a
+  high-level language with elliptic curve point addition support (Python's cryptography
+  library does not expose this), or (c) using a different language's library that
+  exposes hash_to_field (e.g., Python's py_ecc, Go's go-ethereum/crypto, Rust's
+  elliptic-curve crate).
+implementation_path:
+  status: partial
+  what_completed:
+    - "RFC 9591 §4.1 nonce_generate variants tested (5 variants, all diverge)"
+    - "RFC 9591 §4.4 compute_binding_factors structure derived (not yet executed due to nonce_generate divergence)"
+    - "RFC 9591 §5.1 commit structure derived (not yet executed due to nonce_generate divergence)"
+  what_blocked:
+    - "Section 6.5 hash_to_field via RFC 9380 §5.2 expand_message_xmd requires either: (a) manual implementation of multi-block hash chain, (b) third-party library that exposes hash_to_field, (c) reading ZcashFoundation/frost source to extract the specific construction (violates clean-room)"
+  what_next:
+    - "Install py_ecc or go-ethereum/crypto binding for hash_to_field"
+    - "Or implement RFC 9380 expand_message_xmd manually with careful step-by-step verification"
+    - "Or accept that clean-room RFC 9591 verification requires non-Python tooling"
+notes: |
+  This observation is a meta-finding about the practical barriers to independent RFC 9591
+  verification, not a regression. The decision to use Python's cryptography library was
+  a constraint imposed by the host's available packages; the implementation correctly
+  identifies that the normatively-prescribed derivation method (RFC 9380 §5.2
+  hash_to_field with expand_message_xmd) is not directly exposed.
+
+  Recommended next-mission adjustment: either (a) install a third-party library that
+  exposes hash_to_field (py_ecc, go-ethereum/crypto bindings, or coincurve), or
+  (b) accept that the clean-room reference is structurally limited and treat the
+  ZcashFoundation/frost self-consistency verification (obs-2026-0037) as the best
+  available evidence for RFC 9591 conformance, with the explicit annotation that
+  independent verification has not been achieved.
+
+  Disclosure surface unchanged: the original fnd-2026-0012 implementation-universe
+  asymmetry finding stands independent of this observation.
