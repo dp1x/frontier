@@ -1,0 +1,93 @@
+id: msn-2026-0011
+type: mission
+status: pending
+created_at: "2026-08-30T06:00:00Z"
+updated_at: "2026-08-30T06:00:00Z"
+summary: "Stage C of msn-2026-0010 - OpenSSH portable client-side decapsulation parity audit. Determine whether the OpenSSH portable ssh client (and Go golang.org/x/crypto/ssh client) catches non-canonical C_PK2 via FIPS-conformant decapsulation of the server S_REPLY. Discovery lever: if client is also lenient, the handshake completes end-to-end with both sides silently deriving keys from non-canonical inputs (security finding); if client is strict, the handshake fails safely after S_REPLY (interop note)."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: continuation-evaluator
+    model: minimax-m3
+    tool: generating follow-up from msn-2026-0010 follow_ups section
+  sources:
+    - missions/completed/msn-2026-0010.yaml
+    - knowledge/findings/fnd-2026-0009.yaml
+    - knowledge/hypotheses/hyp-2026-0017.yaml
+    - knowledge/notes/msn-2026-0010.md
+  parent: msn-2026-0010
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0003]
+  hypotheses: [hyp-2026-0017]
+  implementations: [imp-2026-0012]
+title: msn-2026-0011 - OpenSSH portable client-side decapsulation parity audit (Stage C)
+objective: >-
+  Determine whether the OpenSSH portable ssh *client* catches
+  non-canonical C_PK2 via FIPS-conformant decapsulation of the
+  server S_REPLY.
+
+  Per msn-2026-0010 finding fnd-2026-0009, the server is length-only
+  lenient on C_INIT. The handshake completes through kex_kem_mlkem768x25519_enc
+  with garbage K_PQ from encapsulating against non-canonical C_PK2.
+
+  The discovery question is whether the **client** catches this on
+  decapsulation. If the OpenSSH portable client uses the OpenBSD-native
+  ML-KEM library (libcrucible) which embeds the FIPS 203 s7.2 modulus
+  check at decaps time, then the client will reject the malformed
+  S_REPLY before deriving shared key. If the client uses a PQClean-style
+  library or library without decaps-time check, the handshake completes
+  end-to-end with both sides silently deriving keys.
+
+  Predicted outcomes:
+    H2-strict: OpenSSH portable client rejects S_REPLY (handshake
+      fails safely; interop note)
+    H2-lenient: OpenSSH portable client silently decapsulates
+      (handshake completes end-to-end; security finding)
+
+  Secondary cohort: golang.org/x/crypto/ssh client (Go 1.26+ has
+  ML-KEM-X25519 client support).
+domain: interop
+scope: >
+  OpenSSH portable master HEAD built with USE_MLKEM768X25519=1
+  on GHA ubuntu-latest. OpenSSH portable client binary invoked
+  against the same sshd, with a Go MITM mutator that injects a
+  tampered C_INIT into the client's KEX_INIT message.
+  Plus golang.org/x/crypto/ssh client for cross-language cohort.
+  Out of scope: server-side enforcement (already audited by msn-2026-0010).
+constraints:
+  - Fix harness recvPacket bug from msn-2026-0010 before Stage C.
+  - All builds in env-scrubbed scratch via GHA ubuntu-latest.
+  - "Decision surface -- client completes handshake (lenient) vs client returns error (strict) vs client hangs (dangerous)."
+desired_evidence_level: independently-reviewed
+candidate_targets: [tgt-2026-0003]
+dependencies:
+  - fnd-2026-0009
+compute:
+  expected_class: medium
+  notes: "OpenSSH portable client + Go client built on GHA. Same harness as msn-2026-0010 but with client-side observation. ~10 GHA runs expected."
+budget:
+  max_attempts: 6
+  max_independent_reviews: 1
+  max_compute_runs: 8
+  diminishing_returns_window: 3
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Stage C executed -- OpenSSH portable client + Go client tested against tampered C_INIT (control, truncate_by_1, coeff0_q) with per-client verdict recorded."
+  - "Verdict classified as {strict, lenient, dangerous} with attribution (client, version, stimulus)."
+  - "Cross-cohort: at least 2 independent client implementations tested (OpenSSH + Go)."
+  - "Any lenient verdict minimized to single-byte reproducer and confirmed in second GHA run."
+  - "Adversarial review by non-synthesizer role."
+stopping_conditions:
+  - "Stage C matrix complete and reviewed, OR"
+  - "Diminishing-returns window hit, OR"
+  - "Budget exhausted without new discriminating evidence."
+artifacts: []
+follow_ups:
+  - "If Stage C result is lenient (client also lacks check), escalate to security disclosure (this would be a more serious finding)."
+  - "Stage D (Erlang/OTP ssh independent cohort) follows Stage C result."
+notes_path: knowledge/notes/msn-2026-0011.md
+blocked_reason: null
+terminal_reason: null

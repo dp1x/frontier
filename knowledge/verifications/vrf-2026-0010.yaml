@@ -1,0 +1,71 @@
+id: vrf-2026-0010
+type: verification
+status: verified
+created_at: "2026-08-30T05:40:00Z"
+updated_at: "2026-08-30T05:40:00Z"
+summary: "Independent verification of fnd-2026-0009 by re-reading kexmlkem768x25519.c commit 0ef0f5a8 and confirming the empirical sshd log artifact at R:/ssh-loopback/gha_artifacts7/33288641132/mlkem768x25519-sha256_sshd.log. Verdict: fnd-2026-0009 is consistent with both source code and empirical evidence."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: verifier
+    model: minimax-m3
+    tool: byte-trace + source-read verification
+  sources:
+    - https://github.com/openssh/openssh-portable/blob/master/kexmlkem768x25519.c
+    - R:/ssh-loopback/gha_artifacts7/ssh-loopback-mlkem768x25519-sha256-33288641132/frontier/interop/protocol-placement/ssh_loopback/reports/mlkem768x25519-sha256_sshd.log
+    - knowledge/findings/fnd-2026-0009.yaml
+  parent: msn-2026-0010
+  generation: 0
+links:
+  missions: [msn-2026-0010]
+  findings: [fnd-2026-0009]
+title: "VRF-2026-0010 - Independent verification of fnd-2026-0009"
+method: deterministic-script
+verification:
+  source_audit:
+    file: kexmlkem768x25519.c
+    commit: 0ef0f5a839831c213f24e3f2ae434765c607fb50
+    function: kex_kem_mlkem768x25519_enc
+    line_range: 117-130
+    assertion: |
+      The function only checks sshbuf_len(client_blob) != need before
+      calling crypto_kem_mlkem768_enc. There is no 12-bit coefficient
+      range check on the ML-KEM-768 pk portion of client_blob.
+    verified: true
+  empirical_evidence:
+    artifact_path: R:/ssh-loopback/gha_artifacts7/ssh-loopback-mlkem768x25519-sha256-33288641132/frontier/interop/protocol-placement/ssh_loopback/reports/mlkem768x25519-sha256_sshd.log
+    artifact_size_bytes: 16647
+    key_log_lines:
+      - "debug1: expecting SSH2_MSG_KEX_ECDH_INIT [preauth]"
+      - "debug1: SSH2_MSG_KEX_ECDH_INIT received [preauth]"
+      - "ssh_dispatch_run_fatal: Connection from 127.0.0.1 port ...: incorrect signature [preauth]"
+    interpretation: |
+      The server received the tampered C_INIT (SSH2_MSG_KEX_ECDH_INIT
+      message 30) and proceeded past the C_INIT boundary check. The
+      "incorrect signature" error is downstream (signature verification
+      on garbage K_PQ), NOT a s2.1 enforcement rejection. The s2.1
+      mandate required SSH_DISCONNECT reason 3 (KEY_EXCHANGE_FAILED),
+      which the server did NOT emit.
+    verified: true
+  cross_cohort_audit:
+    file: kexsntrup761x25519.c
+    function: kex_kem_sntrup761x25519_enc
+    assertion: |
+      Same length-only check pattern; no small-coefficient range check.
+    verified: true
+  conclusion: |
+    fnd-2026-0009 is verified: OpenSSH portable master HEAD is length-only
+    lenient on C_INIT for both mlkem768x25519-sha256 and sntrup761x25519-sha512.
+    The empirical sshd log confirms the server reaches the KEM encapsulation
+    step rather than rejecting the tampered C_INIT with SSH_DISCONNECT.
+reproducer: |
+  Independently re-verify by:
+  1. Cloning openssh-portable at commit 0ef0f5a8:
+     git clone https://github.com/openssh/openssh-portable.git
+     cd openssh-portable && git checkout 0ef0f5a8
+  2. Reading kexmlkem768x25519.c lines 117-130 (kex_kem_mlkem768x25519_enc).
+  3. Confirming the only pre-crypto_kem_mlkem768_enc check is
+     sshbuf_len(client_blob) != need (length only).
+  4. Comparing against draft-ietf-sshm-mlkem-hybrid-kex-10 s2.1 mandate
+     (MUST perform encapsulation key checks defined in Section 7.2 of FIPS203).
