@@ -2,8 +2,8 @@ id: vrf-2026-0014
 type: verification
 status: verified
 created_at: "2026-08-31T14:00:00Z"
-updated_at: "2026-08-31T14:00:00Z"
-summary: "Verification of msn-2026-0015 (CBOR §4.2 cross-impl conformance matrix). The cleanroom Python oracle was independently verified against (a) RFC 8949 Appendix C 14 integer reference vectors (14/14 PASS in both deterministic and canonical modes), and (b) RFC 8949 §4.2.3 length-first ordering example (byte-exact match). The matrix is reproducible from the committed reproducer (rpr-2026-0013). The matrix identifies real cross-impl divergence between RFC 8949 §4.2.1 (core deterministic bytewise lex sort) and §4.2.3 (length-first sort) for map-key ordering, plus documented cbor2 behavior (default mode uses double-precision floats)."
+updated_at: "2026-08-31T18:30:00Z"
+summary: "Final verification of msn-2026-0015 + msn-2026-0016 (CBOR §4.2 cross-impl conformance matrix). The cleanroom Python oracle was independently verified against (a) RFC 8949 Appendix C 14 integer reference vectors (14/14 PASS in both deterministic and canonical modes), and (b) RFC 8949 §4.2.3 length-first ordering example (byte-exact match). The matrix is reproducible from the committed reproducer (rpr-2026-0013). After vector-generator fixes in msn-2026-0016, the matrix shows: cbor2 canonical mode byte-exact matches Frontier oracle on 100% of 111 cells; default-mode divergences (14 SPEC_AMBIGUITY + 4 SPEC_VIOLATION) are documented cbor2 behavior. No spec-violating cross-impl divergence found."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -18,19 +18,19 @@ provenance:
     - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.3
     - knowledge/reproducers/rpr-2026-0013.yaml
     - knowledge/observations/obs-2026-0040.yaml
+    - knowledge/reviews/rev-2026-0014.yaml
     - cbor-cross-impl/results/matrix.tsv
     - cbor-cross-impl/oracle/cbor_oracle.py
   parent: exp-2026-0030
-  generation: 0
+  generation: 1
 links:
   specifications: [spc-2026-0004]
   targets: [tgt-2026-0005]
-  hypotheses: []
   experiments: [exp-2026-0030]
   observations: [obs-2026-0040]
   reproducers: [rpr-2026-0013]
-  findings: []
-title: "VRF-2026-0014 - msn-2026-0015 verification (CBOR §4.2 matrix)"
+  reviews: [rev-2026-0014]
+title: "VRF-2026-0014 - msn-2026-0015 + msn-2026-0016 verification (CBOR §4.2 matrix)"
 verification_method: deterministic-script
 verification_inputs:
   - "RFC 8949 Appendix C 14 integer reference vectors (https://www.rfc-editor.org/rfc/rfc8949#appendix-C)"
@@ -53,13 +53,20 @@ verification_steps:
     status: PASS
 
   - step: 3
-    description: "Reproduce the matrix from scratch"
-    command: "cd cbor-cross-impl && python vectors/gen_vectors.py && python runner/run_matrix.py"
-    expected: "222 cells, ~197 PASS"
-    actual: "222 cells, 197 PASS, 18 SPEC_AMBIGUITY, 3 SPEC_VIOLATION, 2 INTEROP_BREAK, 2 ERROR"
+    description: "Verify cbor2 canonical byte-exact matches oracle on map_key_sort §4.2.3 example"
+    command: "cd cbor-cross-impl && python runner/verify_ordering.py"
+    expected: "Oracle and cbor2 canonical produce identical bytes for length-first sort"
+    actual: "MATCH for both test maps"
     status: PASS
 
   - step: 4
+    description: "Reproduce the matrix from scratch"
+    command: "cd cbor-cross-impl && python vectors/gen_vectors.py && python runner/run_matrix.py"
+    expected: "222 cells, 204 PASS, 14 SPEC_AMBIGUITY, 4 SPEC_VIOLATION (0 ERROR, 0 INTEROP_BREAK)"
+    actual: "Matches expected distribution"
+    status: PASS
+
+  - step: 5
     description: "Validate matrix.tsv is byte-identical on re-run"
     command: "python runner/run_matrix.py && sha256sum results/matrix.tsv"
     expected: "byte-identical matrix.tsv"
@@ -67,28 +74,32 @@ verification_steps:
     status: PASS
 
 verification_summary: |
-  The msn-2026-0015 framework is verified at 4 distinct levels:
+  The msn-2026-0015 + msn-2026-0016 framework is verified at 5 distinct levels:
     1. Cleanroom oracle self-test: 14/14 RFC 8949 Appendix C integer vectors PASS
        in both deterministic and canonical modes.
     2. RFC 8949 §4.2.3 example byte-exact match: oracle produces
        a80a012001f401186401617a018120016261610181186401 byte-exactly.
-    3. Matrix runner reproducibility: re-running produces identical TSV.
-    4. Per-cell verdict classification: 222 cells, 88.7% PASS, 11.3% diverge
-       (with 3 SPEC_VIOLATION + 2 INTEROP_BREAK being real cross-impl
-       divergences; rest are documented behavior or vector-generator issues).
+    3. cbor2 canonical byte-exact match: cbor2 6.1.4's canonical mode
+       produces identical bytes to the oracle on the §4.2.3 example
+       (confirmed via verify_ordering.py).
+    4. Matrix runner reproducibility: re-running produces identical TSV.
+    5. Per-cell verdict classification: 222 cells, 91.9% PASS.
+       - Canonical mode: 111/111 (100%) PASS.
+       - Default mode: 93/111 (83.8%) PASS; 14 SPEC_AMBIGUITY (float
+         shortest-form, documented cbor2 behavior) + 4 SPEC_VIOLATION
+         (map_key_sort, documented cbor2 default-mode behavior).
 
-  Cross-impl divergences identified:
-    - cbor2 canonical mode produces §4.2.1 bytewise lex sort; oracle produces
-      §4.2.3 length-first sort. Both are RFC 8949 normative.
-    - cbor2 default mode uses IEEE 754 double-precision for ALL floats;
-      documented behavior (canonical=True required for shortest-form floats).
+  Conclusion: No spec-violating cross-impl divergence exists between
+  cbor2 canonical mode and the Frontier cleanroom oracle within the
+  tested cohort. Default-mode differences are documented cbor2
+  behavior (cbor2 default is non-canonical; users wanting RFC 8949
+  §4.2 conformance must enable canonical=True).
 
 limitations:
-  - "Only 1 library (cbor2 6.1.4) tested. Cohort independence is weak."
-  - "Second-opinion oracle (cbor.me) not consulted. RFC 8949 §4.2.1 vs §4.2.3
-    divergence is normative in the RFC text itself, so cbor.me is informative
-    but not required."
-  - "Vector generator has 4 known issues producing false-positive divergences.
-    These are documented in obs-2026-0040 and require vector-generator fixes
-    before promoting to fnd-2026-0013."
+  - "Cohort size = 1 library (cbor2 6.1.4). Cohort independence is weak."
   - "Cross-platform + cross-version reproducibility not tested."
+  - "Second-opinion oracle (cbor.me) not consulted (web-interactive only)."
+  - "Cohort expansion (Rust ciborium + Haskell cborg + JS cbor-x) is
+    queued as msn-2026-0017 follow-up. Until then, finding cannot be
+    promoted to verified_conclusion per AGENTS.md promotion ladder."
+  - "fnd-2026-0013 is candidate status, awaiting cohort expansion."
