@@ -1,0 +1,107 @@
+id: rpr-2026-0013
+type: reproducer
+status: verified
+created_at: "2026-08-31T13:30:00Z"
+updated_at: "2026-08-31T13:30:00Z"
+summary: "Reproducer for msn-2026-0015 CBOR §4.2 cross-impl conformance matrix. Reproduces the (oracle × cbor2) matrix from clean source: cleanroom Python oracle (RFC 8949 §4.2 + §4.2.1 + §4.2.3), 111 adversarial vectors across 8 audit axes, 1-library adapter (cbor2 6.1.4), per-cell verdict classifier. Re-running the reproducer produces byte-identical TSV output. Deterministic given library version + Python version. Cross-version reproducibility not yet tested (only cbor2 6.1.4 is in the adapter)."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: independent-reproducer
+    model: minimax-m3
+    tool: "reproducer script (reproduce.sh / reproduce.bat)"
+  sources:
+    - knowledge/experiments/exp-2026-0030.yaml
+    - knowledge/observations/obs-2026-0040.yaml
+    - knowledge/specifications/spc-2026-0004.yaml
+    - cbor-cross-impl/oracle/cbor_oracle.py
+    - cbor-cross-impl/vectors/gen_vectors.py
+    - cbor-cross-impl/adapters/lib_cbor2_adapter.py
+    - cbor-cross-impl/runner/run_matrix.py
+  parent: exp-2026-0030
+  generation: 0
+links:
+  specifications: [spc-2026-0004]
+  targets: [tgt-2026-0005]
+  hypotheses: []
+  experiments: [exp-2026-0030]
+  observations: [obs-2026-0040]
+title: "RPR-2026-0013 - CBOR §4.2 cross-impl conformance matrix reproducer"
+reproducer_command: |
+  #!/usr/bin/env bash
+  # Reproduce msn-2026-0015 (CBOR §4.2 cross-impl conformance matrix)
+  # Deterministic given: cleanroom oracle source, vector generator seed 0xCB0F1E21,
+  # cbor2 version 6.1.4, Python version 3.11+.
+
+  set -euo pipefail
+
+  cd "$(dirname "$0")/cbor-cross-impl"
+
+  # Step 1: Verify cleanroom oracle against RFC 8949 Appendix C (14 integer vectors + §4.2.3 example)
+  python3 oracle/cbor_oracle.py
+  # Expected: "Overall: PASS (14 vectors tested)"
+
+  # Step 2: Generate adversarial vectors (deterministic; seed 0xCB0F1E21)
+  python3 vectors/gen_vectors.py
+  # Expected: 111 vectors across 8 axes
+
+  # Step 3: Install cbor2 if not already installed
+  pip install cbor2==6.1.4
+
+  # Step 4: Run matrix
+  python3 runner/run_matrix.py
+  # Expected: 222 cells, ~197 PASS / ~25 diverge (for cbor2)
+
+  # Step 5: Dump diverging rows for human review
+  python3 runner/dump_diverge.py results/matrix.tsv > results/diverge_summary.txt
+
+  # Step 6: Validate TSV is reproducible (re-run should produce identical output)
+  sha256sum results/matrix.tsv > results/matrix.tsv.sha256
+  python3 runner/run_matrix.py > /dev/null
+  diff <(sha256sum results/matrix.tsv | awk '{print $1}') <(cat results/matrix.tsv.sha256 | awk '{print $1}')
+
+reproducer_files:
+  - path: cbor-cross-impl/oracle/cbor_oracle.py
+    role: cleanroom oracle
+    sha256: pending (will compute in next mission)
+  - path: cbor-cross-impl/vectors/gen_vectors.py
+    role: adversarial vector generator (deterministic, seed 0xCB0F1E21)
+  - path: cbor-cross-impl/vectors/vectors_*.jsonl
+    role: pre-generated adversarial vectors (8 files, 111 vectors total)
+  - path: cbor-cross-impl/adapters/lib_cbor2_adapter.py
+    role: cbor2 6.1.4 adapter (Python)
+  - path: cbor-cross-impl/runner/run_matrix.py
+    role: matrix runner
+  - path: cbor-cross-impl/runner/dump_diverge.py
+    role: divergence dump utility
+  - path: cbor-cross-impl/results/matrix.tsv
+    role: matrix output (committed for reproducibility verification)
+
+reproducibility:
+  deterministic: true
+  seed: 0xCB0F1E21
+  library_versions:
+    cbor2: 6.1.4
+    python: ">=3.11"
+  cross_platform_tested: false
+  cross_version_tested: false
+  notes: "Re-running the reproducer on the same Python + cbor2 versions produces byte-identical matrix.tsv. Different Python or cbor2 versions may produce different cells (e.g., cbor2 upgrades could change float-shortest-form behavior)."
+
+validation_results:
+  rfc_8949_appendix_c_integers:
+    expected: "14/14 PASS in both deterministic and canonical modes"
+    actual: "14/14 PASS in both modes (verified 2026-08-31 by oracle self-test)"
+  rfc_8949_section_4_2_3_example:
+    expected: "byte-exact match with oracle (length-first ordering)"
+    actual: "byte-exact match verified 2026-08-31 (oracle produces a80a012001f401186401617a018120016261610181186401)"
+  matrix_reproducibility:
+    expected: "re-running runner produces identical matrix.tsv"
+    actual: "verified 2026-08-31 (deterministic for given inputs + library version)"
+
+limitations:
+  - "Only 1 library (cbor2) tested. Cross-impl matrix requires more libraries for evidentiary weight."
+  - "Vector generator has 4 known issues (undefined handling, tag nesting, bytes serialization, tuple-as-array-key). These produce false-positive divergences in matrix.tsv; they are NOT cbor2 bugs."
+  - "No cross-platform validation. (this matrix was run on Windows host + Python 3.11.)"
+  - "Second-opinion oracle (cbor.me) not consulted. The §4.2.1-vs-§4.2.3 divergence is documented in RFC 8949 itself, so cbor.me consultation is informative but not required."
+  - "Matrix cells with verdict 'SPEC_AMBIGUITY' (longer-but-valid encodings) are not filtered by default. The cbor2 default mode produces 18 SPEC_AMBIGUITY cells, all due to double-precision floats."

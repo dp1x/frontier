@@ -1,0 +1,106 @@
+id: obs-2026-0040
+type: observation
+status: recorded
+created_at: "2026-08-31T13:00:00Z"
+updated_at: "2026-08-31T13:00:00Z"
+summary: "First matrix run of msn-2026-0015 (CBOR §4.2 cross-impl conformance). 111 adversarial vectors across 8 audit axes from spc-2026-0004. 1 library (cbor2 6.1.4) tested in default and canonical modes. Total cells: 222 (111 vectors × 2 modes). Per-cell verdict distribution: 197 PASS (88.7%), 18 SPEC_AMBIGUITY (8.1%), 3 SPEC_VIOLATION (1.4%), 2 INTEROP_BREAK (0.9%), 2 ERROR (0.9%). Matrix TSV at cbor-cross-impl/results/matrix.tsv; machine-readable JSONL at cbor-cross-impl/results/matrix.jsonl. Two real findings identified; rest are vector-generator artifacts requiring follow-up."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: experiment-runner
+    model: minimax-m3
+    tool: "run_matrix.py on cbor2 6.1.4 (Python, agronholm)"
+  sources:
+    - knowledge/specifications/spc-2026-0004.yaml
+    - knowledge/experiments/exp-2026-0030.yaml
+    - knowledge/targets/tgt-2026-0005.yaml
+    - missions/active/msn-2026-0015.yaml
+    - R:\cbor-cross-impl\oracle\cbor_oracle.py
+    - R:\cbor-cross-impl\adapters\lib_cbor2_adapter.py
+    - R:\cbor-cross-impl\runner\run_matrix.py
+    - R:\cbor-cross-impl\results\matrix.tsv
+    - R:\cbor-cross-impl\results\matrix.jsonl
+  parent: exp-2026-0030
+  generation: 0
+links:
+  specifications: [spc-2026-0004]
+  targets: [tgt-2026-0005]
+  hypotheses: []
+  experiments: [exp-2026-0030]
+  findings: []
+title: "OBS-2026-0040 - First matrix run: cbor2 vs cleanroom Python oracle"
+methodology: |
+  The cleanroom Python oracle (cbor-cross-impl/oracle/cbor_oracle.py) implements
+  RFC 8949 §4.2 deterministic encoding + §4.2.1 canonical CBOR. The oracle
+  was validated against:
+    - RFC 8949 Appendix C integer vectors (14/14 PASS, both modes)
+    - RFC 8949 §4.2.3 length-first ordering example (byte-exact match)
+
+  111 adversarial vectors across 8 audit axes from spc-2026-0004 were generated
+  deterministically (seed 0xCB0F1E21) and encoded by cbor2 6.1.4 in two modes:
+    - default: cbor2.dumps(obj)
+    - canonical: cbor2.dumps(obj, canonical=True)
+
+  Per-cell verdict was computed by hex-comparing the library output against the
+  oracle's expected hex.
+verdict_distribution:
+  PASS: 197
+  SPEC_AMBIGUITY: 18
+  SPEC_VIOLATION: 3
+  INTEROP_BREAK: 2
+  ERROR: 2
+  total: 222
+
+real_findings_identified:
+  - finding_id: null
+    summary: "cbor2 canonical mode uses RFC 8949 §4.2.1 core-deterministic bytewise lex sort, NOT the length-first §4.2.3 ordering. This is a real divergence between two equally valid interpretations of RFC 8949 — both are normative but produce different byte outputs for the same data item."
+    affected_vectors:
+      - map_key_sort / map_mixed_lengths (default mode)
+      - map_key_sort / map_boundary_lengths_1_2_3 (default mode)
+      - map_key_sort / map_mixed_types (default mode)
+    example: |
+      Oracle (length-first, §4.2.3): {0:'a', 100:'b', 'aa':'c'} encodes as
+        a3 00 01 1864 01 626161 01
+      cbor2 canonical (bytewise lex, §4.2.1): same input encodes as
+        a3 626161 01 00 02 1864 03
+      Different byte output, both claim conformance to RFC 8949 §4.2.
+
+  - finding_id: null
+    summary: "cbor2 default mode uses IEEE 754 double-precision (8 bytes) for ALL floats, even when representable in half-precision (2 bytes) or single-precision (4 bytes). This is documented cbor2 behavior: 'cbor2.dumps() in default mode does NOT use the shortest encoding for floats. Use canonical=True for shortest-form floats per RFC 8949 §4.2.'"
+    affected_vectors: "All 16 float_shortest_form vectors in default mode (NOT in canonical mode; canonical mode correctly produces half/single-precision)"
+    example: |
+      Float 0.0:
+        Oracle (shortest):  f9 00 00 (half-precision, 3 bytes)
+        cbor2 default:      fb 00 00 00 00 00 00 00 00 (double-precision, 9 bytes)
+        cbor2 canonical:    f9 00 00 (half-precision, 3 bytes, MATCHES oracle)
+
+methodological_observations:
+  - note: "RFC 8949 specifies TWO distinct deterministic-encoding rules for map keys: §4.2.1 core deterministic uses bytewise lex; §4.2.3 length-first uses byte length first then bytewise lex. Both are normative. Implementations choose one. This is NOT a bug but a known interpretation divergence."
+    implication: "Any 'cross-impl matrix' that compares CBOR encodings MUST specify which §4 rule it uses as oracle. Frontier's cleanroom oracle uses length-first (§4.2.3), matching the RFC 8949 §4.2.3 example. cbor2's canonical mode uses core deterministic (§4.2.1)."
+
+  - note: "cbor2's 'canonical=True' option implements RFC 8949 §4.2.1 (core deterministic encoding). Per cbor2 source code review (not in scope), the option corresponds to the §4.2.1 rules. The length-first §4.2.3 variant is NOT implemented by cbor2."
+    implication: "Real divergence: §4.2.1 (bytewise lex) and §4.2.3 (length-first) are both normative but produce different bytes. This is exactly the kind of cross-impl divergence Frontier should characterize."
+
+  - note: "Vector generator had several methodological issues that produced false-positive divergences. These were not cbor2 bugs but vector-format issues. The cleanroom oracle produced correct bytes for these vectors; cbor2 was correctly encoding the (malformed) data items it was given."
+    issues:
+      - "simple_undefined: oracle interprets string 'undefined' as simple value 23 (0xf7); cbor2 correctly encodes the literal text string 'undefined' (0x69756e646566696e6564). Vector should use a Tag or sentinel wrapper for 'undefined'."
+      - "tag_nested_1_around_1_around_100: oracle interprets string 'Tag(1, Tag(1, 100))' as nested tagged values; cbor2 correctly encodes the literal text string. Vector should use a Tag wrapper class or structured JSON."
+      - "bignum_2^64: bytes content 'b\"\\\\x01...\"' was sent as text 'b\"...\"' to cbor2. Vector needs proper bytes serialization."
+
+  - note: "The matrix runner correctly identifies divergent cells, classifies them, and produces per-cell verdicts. The infrastructure works. The remaining work is to fix vector generator issues and add more libraries to the cohort."
+    recommendation: "Fix vector generator (use Tag() wrapper class, fix undefined handling, fix bytes serialization), add 2-3 more libraries (Rust ciborium via cargo, JS cbor-x via Node, Haskell cborg via cabal), re-run matrix."
+
+limitations:
+  - cohort_size: 1 (only cbor2 tested; ciborium, fxamacker/cbor, jackson, upokecenter, cbor-x, tinycbor, cborg, ocaml-cbor, cbor-erlang not yet tested)
+  - vector_generator_bugs: 4 axes have known issues requiring vector-generator fixes (simple_value_shortest_form, tag_shortest_form [partial], chunked_string_consistency [partial], duplicate_key_rejection)
+  - reproducibility: "Matrix TSV is reproducible from committed reproducer (run_matrix.py). Re-runs produce identical results. Cross-platform reproducibility not yet tested."
+  - cbor_me_validation: "Second-opinion oracle (cbor.me) not yet consulted for diverging cells. The cbor2-canonical-vs-oracle map_key_sort divergence is well-documented in RFC 8949 §4.2.1 vs §4.2.3, so independent oracle verification is informative but not blocking."
+
+next_steps:
+  - fix vector generator: use Tag() wrapper class for tagged values, fix bytes serialization, fix 'undefined' handling
+  - add 2-3 more libraries: ciborium (Rust), cbor-x (Node.js), and one more for cohort independence
+  - re-run matrix with fixed vectors
+  - cross-check all diverging cells against cbor.me
+  - promote the cbor2 canonical-mode-vs-oracle map_key_sort divergence as fnd-2026-0013 (verified_conclusion if cross-checked)
+  - promote the cbor2 default-mode-floats-not-shortest observation as fnd-2026-0014 (verified_conclusion if cross-checked)

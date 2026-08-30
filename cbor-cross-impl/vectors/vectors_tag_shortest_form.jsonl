@@ -1,0 +1,20 @@
+{"axis": "tag_shortest_form", "vector_id": "tag_0_int1", "data_item_repr": "Tag(0, 1)", "description": "tag 0 around integer 1", "oracle_deterministic_hex": "c001", "oracle_canonical_hex": "c001"}
+{"axis": "tag_shortest_form", "vector_id": "tag_1_int1", "data_item_repr": "Tag(1, 1)", "description": "tag 1 around integer 1", "oracle_deterministic_hex": "c101", "oracle_canonical_hex": "c101"}
+{"axis": "tag_shortest_form", "vector_id": "tag_2_int1", "data_item_repr": "Tag(2, 1)", "description": "tag 2 around integer 1", "oracle_deterministic_hex": "c201", "oracle_canonical_hex": "c201"}
+{"axis": "tag_shortest_form", "vector_id": "tag_3_int1", "data_item_repr": "Tag(3, 1)", "description": "tag 3 around integer 1", "oracle_deterministic_hex": "c301", "oracle_canonical_hex": "c301"}
+{"axis": "tag_shortest_form", "vector_id": "tag_4_int1", "data_item_repr": "Tag(4, 1)", "description": "tag 4 around integer 1", "oracle_deterministic_hex": "c401", "oracle_canonical_hex": "c401"}
+{"axis": "tag_shortest_form", "vector_id": "tag_5_int1", "data_item_repr": "Tag(5, 1)", "description": "tag 5 around integer 1", "oracle_deterministic_hex": "c501", "oracle_canonical_hex": "c501"}
+{"axis": "tag_shortest_form", "vector_id": "tag_21_int1", "data_item_repr": "Tag(21, 1)", "description": "tag 21 around integer 1", "oracle_deterministic_hex": "d501", "oracle_canonical_hex": "d501"}
+{"axis": "tag_shortest_form", "vector_id": "tag_22_int1", "data_item_repr": "Tag(22, 1)", "description": "tag 22 around integer 1", "oracle_deterministic_hex": "d601", "oracle_canonical_hex": "d601"}
+{"axis": "tag_shortest_form", "vector_id": "tag_23_int1", "data_item_repr": "Tag(23, 1)", "description": "tag 23 around integer 1", "oracle_deterministic_hex": "d701", "oracle_canonical_hex": "d701"}
+{"axis": "tag_shortest_form", "vector_id": "tag_24_int1", "data_item_repr": "Tag(24, 1)", "description": "tag 24 around integer 1", "oracle_deterministic_hex": "d81801", "oracle_canonical_hex": "d81801"}
+{"axis": "tag_shortest_form", "vector_id": "tag_25_int1", "data_item_repr": "Tag(25, 1)", "description": "tag 25 around integer 1", "oracle_deterministic_hex": "d81901", "oracle_canonical_hex": "d81901"}
+{"axis": "tag_shortest_form", "vector_id": "tag_32_int1", "data_item_repr": "Tag(32, 1)", "description": "tag 32 around integer 1", "oracle_deterministic_hex": "d82001", "oracle_canonical_hex": "d82001"}
+{"axis": "tag_shortest_form", "vector_id": "tag_33_int1", "data_item_repr": "Tag(33, 1)", "description": "tag 33 around integer 1", "oracle_deterministic_hex": "d82101", "oracle_canonical_hex": "d82101"}
+{"axis": "tag_shortest_form", "vector_id": "tag_34_int1", "data_item_repr": "Tag(34, 1)", "description": "tag 34 around integer 1", "oracle_deterministic_hex": "d82201", "oracle_canonical_hex": "d82201"}
+{"axis": "tag_shortest_form", "vector_id": "tag_36_int1", "data_item_repr": "Tag(36, 1)", "description": "tag 36 around integer 1", "oracle_deterministic_hex": "d82401", "oracle_canonical_hex": "d82401"}
+{"axis": "tag_shortest_form", "vector_id": "tag_255_int1", "data_item_repr": "Tag(255, 1)", "description": "tag 255 around integer 1", "oracle_deterministic_hex": "d8ff01", "oracle_canonical_hex": "d8ff01"}
+{"axis": "tag_shortest_form", "vector_id": "tag_256_int1", "data_item_repr": "Tag(256, 1)", "description": "tag 256 around integer 1", "oracle_deterministic_hex": "d9010001", "oracle_canonical_hex": "d9010001"}
+{"axis": "tag_shortest_form", "vector_id": "tag_55799_int1", "data_item_repr": "Tag(55799, 1)", "description": "tag 55799 around integer 1", "oracle_deterministic_hex": "d9d9f701", "oracle_canonical_hex": "d9d9f701"}
+{"axis": "tag_shortest_form", "vector_id": "tag_nested_1_around_1_around_100", "data_item_repr": "Tag(1, Tag(1, 100))", "description": "nested tag 1 around tag 1 around 100", "oracle_deterministic_hex": "c1c11864", "oracle_canonical_hex": "c1c11864"}
+{"axis": "tag_shortest_form", "vector_id": "bignum_2^64", "data_item_repr": "Tag(2, bytes)", "description": "bignum tag 2 around 2^64 (RFC 8949 \u00a73.4.3 example)", "oracle_deterministic_hex": "c249010000000000000000", "oracle_canonical_hex": "c249010000000000000000"}

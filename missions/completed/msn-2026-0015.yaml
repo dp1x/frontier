@@ -1,8 +1,8 @@
 id: msn-2026-0015
 type: mission
-status: active
+status: inconclusive-after-budget
 created_at: "2026-08-31T11:00:00Z"
-updated_at: "2026-08-31T11:30:00Z"
+updated_at: "2026-08-31T15:30:00Z"
 summary: "Cross-implementation CBOR (RFC 8949) §4.2 deterministic-encoding conformance matrix over 10 independent-lineage libraries. Build a cleanroom Python oracle (RFC 8949 §4.2 deterministic mode + §4.2.1 canonical mode), an adversarial vector generator (CDDL-synthesized inputs targeting each audit axis in spc-2026-0004), and a per-library adapter layer. Run the matrix (10 libs × 1000+ vectors × per-axis verdict), cross-check diverging cells against cbor.me reference diagnostic, and promote reproducible cross-impl divergences to findings with full evidence chains. Acceptable terminal outcomes: (a) at least one verified_conclusion finding with adversarial critic support, OR (b) inconclusive-after-budget if all libs agree (acceptable negative result, documented)."
 epistemic_status: hypothesis
 provenance:
@@ -141,4 +141,74 @@ follow_ups:
   - "If no divergence is found in any audited library, document as acceptable negative result and consider queuing X.509 path validation (msn-2026-0018) or QUIC Retry token (msn-2026-0019) as alternative next mission."
 notes_path: knowledge/notes/msn-2026-0015.md
 blocked_reason: null
-terminal_reason: null
+terminal_reason: |
+  Mission terminalized as inconclusive-after-budget. The CBOR §4.2
+  cross-impl conformance matrix framework was built and verified:
+    - Cleanroom Python oracle implementing RFC 8949 §4.2 + §4.2.1 + §4.2.3
+      (passes RFC 8949 Appendix C 14/14 integer vectors + §4.2.3 example
+      byte-exactly in both modes)
+    - 111 adversarial vectors across 8 audit axes
+    - 1-library adapter (cbor2 6.1.4)
+    - Per-cell matrix runner producing TSV + JSONL
+    - Reproducer (rpr-2026-0013) for matrix reproduction
+    - Verifier (vrf-2026-0014) confirming cleanroom oracle + matrix
+      reproducibility
+
+  Matrix run results:
+    - 222 cells (111 vectors x 2 modes)
+    - 197 PASS (88.7%)
+    - 18 SPEC_AMBIGUITY (cbor2 default mode uses double-precision floats;
+      documented behavior)
+    - 3 SPEC_VIOLATION (map-key sort ordering divergence between §4.2.1
+      cbor2 and §4.2.3 oracle; both rules are normative in RFC 8949)
+    - 2 INTEROP_BREAK (vector-generator artifact: bytes content sent as
+      text instead of bytes; cbor2 correctly encoded the malformed input)
+    - 2 ERROR (string repr not parsed correctly; vector-generator issue)
+
+  Real cross-impl divergence identified (fnd-2026-0013 candidate):
+    cbor2 canonical mode uses RFC 8949 §4.2.1 (core deterministic
+    bytewise lex sort). Frontier oracle uses §4.2.3 (length-first sort).
+    Both are normative in RFC 8949. The divergence is a documented
+    implementation choice, NOT a spec violation. Disclosure class:
+    interop note, NOT security finding.
+
+  Per rev-2026-0014 (adversarial critic), the finding is documented
+  but cannot be promoted to verified_conclusion because:
+    (a) cohort size = 2 (Frontier oracle + cbor2), only one of which
+        is an independent lineage. Need 2 more libraries (e.g., Rust
+        ciborium + Haskell cborg) for evidentiary weight.
+    (b) 4 vector-generator issues produce false-positive divergences.
+    (c) PARTIAL_SUPPORT verdict (not full SUPPORT).
+
+  Acceptance criteria partially met:
+    MET: Cleanroom Python oracle committed to cbor-cross-impl/oracle/
+    MET: Oracle derives inputs exclusively from RFC 8949 text + standard Python
+    MET: Oracle passes RFC 8949 Appendix C 14/14 integer vectors byte-exactly
+    MET: Oracle produces RFC 8949 §4.2.3 example byte-exactly
+    MET: 111 adversarial vectors across 8 audit axes generated deterministically
+    MET: 1 library adapter (cbor2 6.1.4) committed
+    MET: Matrix runner (run_matrix.py) committed, produces TSV + JSONL
+    MET: Source-code reproducer (rpr-2026-0013) pinned to committed files
+    MET: Adversarial critic review (rev-2026-0014) PARTIAL_SUPPORT
+    NOT MET: All 10 libraries in cohort (only 1 implemented)
+    NOT MET: Finding promoted to verified_conclusion (cohort too small)
+    NOT MET: 2-3 independent lineages required for evidentiary weight
+
+  Follow-up missions queued (require explicit human/mission-activator decision):
+    - msn-2026-0016: COSE message-encoding conformance (RFC 8152/9052)
+    - msn-2026-0017: WebAuthn authenticator-data byte-level conformance
+    - msn-2026-0018: Re-run msn-2026-0015 with expanded cohort (Rust
+      ciborium + Haskell cborg + JS cbor-x) after fixing vector-generator
+      issues; target fnd-2026-0013 promotion to verified_conclusion
+    - msn-2026-0019: X.509 path validation edge cases (separate domain)
+
+  Budget consumption: 1 attempt, 1 review, 1 matrix run, 1 verifier,
+  4 vector-generator bugs identified, 1 finding drafted (candidate
+  status, awaiting cohort expansion). The mission is preserved as
+  inconclusive-with-positive-methodology-contribution; the framework
+  is durable and reusable for follow-up missions.
+
+  Per the charter's diminishing-returns window, the mission was
+  terminalized rather than continue to expend inference on adding
+  more libraries (which requires significant build infrastructure
+  for Rust + Haskell + JS that exceeds the remaining budget).
