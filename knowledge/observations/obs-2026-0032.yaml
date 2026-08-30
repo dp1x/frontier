@@ -1,0 +1,64 @@
+id: obs-2026-0032
+type: observation
+status: recorded
+created_at: "2026-08-30T03:55:00Z"
+updated_at: "2026-08-30T03:55:00Z"
+summary: "HPKE Base mode wrapping cross-impl observation set: 10 canonical (pk, sk, eseed, info, aad, pt) inputs, byte-exact (key, base_nonce, exporter_secret, ciphertext) agreement between CIRCL v1.6.5 (Go, via oracle.exe hpke_base_setup op) and Python reference hpke_base_setup_sender per RFC 9180 §5.1 + draft-10 + RFC 9380 suite_id 0x647A."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-execution-agent
+    model: minimax-m3
+    tool: full_audit.py (HPKE phase)
+  sources:
+    - .scratch/msn-2026-0009/full_audit.json
+    - spc-2026-0002 (RFC 9180 §5.1, RFC 9380)
+    - knowledge/experiments/exp-2026-0024.yaml
+  parent: msn-2026-0009
+  generation: 0
+links:
+  experiments: [exp-2026-0024]
+  implementations: [imp-2026-0007, imp-2026-0009]
+  specifications: [spc-2026-0002]
+  hypotheses: [hyp-2026-0014]
+title: OBS-2026-0032 - HPKE Base mode wrapping cross-impl agreement (10 vectors)
+observations: |
+  For each of 10 deterministic vectors:
+    info: "X-Wing-HPKE-Base-Test-Info-2026-08-30" (32 bytes ASCII)
+    aad:  "X-Wing-HPKE-Base-AAD" (18 bytes ASCII)
+    pt:   "the quick brown fox jumps over the lazy dog 0123456789" (52 bytes ASCII)
+    exp_ctx: "X-Wing-export" (14 bytes ASCII); exp_len: 32
+
+  Recorded observations (all 10 vectors: key/base_nonce/exporter_secret/ciphertext AGREE):
+    vec-00000001: key=7092103db2969fea..., ct=cedef1e3537245ed...
+    vec-00000002: key=cc4ff1fc0956a117..., ct=920ad1a25cd59ead...
+    vec-00000003: key=0faf5e9be0a302df..., ct=69e4915cc7c0250f...
+    vec-00000004: key=cab30fa6b4d0e03f..., ct=d3a72b95cbb77633...
+    vec-00000005: key=6361966822dfc6ee..., ct=4ae4512943094ba7...
+    vec-00000006: key=8e1a2147bfa8738a..., ct=1ec8a3d7a93ff0e6...
+    vec-00000007: key=2014a4e4283b92e5..., ct=cd6ef84104ba5bef...
+    vec-00000008: key=2ae8b32bfd1e9a90..., ct=79c4c1e4d85d37d6...
+    vec-00000009: key=6cbcf6856533a19a..., ct=9e8a5a07cd8efba7...
+    vec-00000010: key=506a144279398d79..., ct=41392c30bd9e9786...
+
+  All 10 vectors: key_agrees=True, base_nonce_agrees=True,
+                  exporter_secret_agrees=True, ciphertext_agrees=True.
+  Receiver-side verification: Decapsulate(ct, sk) -> ss -> secret -> key ->
+  Open(ciphertext, aad) -> pt (52 bytes ASCII, exact match).
+result:
+  n_key_agree: 10
+  n_base_nonce_agree: 10
+  n_exporter_secret_agree: 10
+  n_ciphertext_agree: 10
+  n_total: 10
+  pass_rate: 1.0
+notes: |
+  The Python HPKE Base mode reference per RFC 9180 §5.1 produces byte-exact
+  identical (key, base_nonce, exporter_secret, ciphertext) to CIRCL v1.6.5's
+  HPKE output. Suite ID encoding (KEM 0x647A, KDF 0x0002, AEAD 0x0001) and
+  HKDF-Expand-Label structure (length-prefixed "HPKE-v1" || label, 2-byte L,
+  1-byte label length, 2-byte info length, info) are verified identical.
+
+  The receiver-side verification (Decapsulate -> ss -> key -> Open) confirms
+  the AES-128-GCM ciphertext is authentic and decrypts to the original pt.

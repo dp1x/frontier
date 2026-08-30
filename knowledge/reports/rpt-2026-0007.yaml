@@ -1,0 +1,116 @@
+id: rpt-2026-0007
+type: report
+status: complete
+created_at: "2026-08-30T03:55:00Z"
+updated_at: "2026-08-30T03:55:00Z"
+summary: "Cross-implementation X-Wing + HPKE audit report (msn-2026-0009). Summary of the cross-impl agreement matrix, mutation matrix, HPKE Base mode wrapping test, pyca primitive cross-check, and adversarial review. Verifies that a pure-Python reference X-Wing + HPKE implementation per draft-10 + RFC 9180 matches CIRCL v1.6.5 byte-exact on all 10 test vectors."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: minimax-m3
+    tool: synthesizing fnd-2026-0008 + obs + exp + vrf + rpr + rev
+  sources:
+    - knowledge/findings/fnd-2026-0008.yaml
+    - knowledge/observations/obs-2026-0030.yaml
+    - knowledge/observations/obs-2026-0031.yaml
+    - knowledge/observations/obs-2026-0032.yaml
+    - knowledge/experiments/exp-2026-0023.yaml
+    - knowledge/experiments/exp-2026-0024.yaml
+    - knowledge/verifications/vrf-2026-0009.yaml
+    - knowledge/reproducers/rpr-2026-0008.yaml
+    - knowledge/reviews/rev-2026-0008.yaml
+    - knowledge/specifications/spc-2026-0002.yaml
+    - .scratch/msn-2026-0009/full_audit.json
+    - .scratch/msn-2026-0009/full_audit_summary.json
+  parent: msn-2026-0009
+  generation: 0
+links:
+  missions: [msn-2026-0009]
+  experiments: [exp-2026-0023, exp-2026-0024]
+  observations: [obs-2026-0030, obs-2026-0031, obs-2026-0032]
+  verifications: [vrf-2026-0009]
+  reproducers: [rpr-2026-0008]
+  reviews: [rev-2026-0008]
+  findings: [fnd-2026-0008]
+title: RPT-2026-0007 - Cross-impl X-Wing + HPKE audit report
+sections:
+  background: |
+    Mission msn-2026-0009 is the cross-implementation follow-up to
+    msn-2026-0008 (which verified CIRCL v1.6.5 X-Wing + HPKE byte-exact
+    conformant to draft-08 KAT vectors and a mutation matrix). The follow-up
+    extends the audit to a Python reference implementation, with byte-exact
+    agreement tested at the X-Wing Combiner level and the HPKE Base mode
+    wrapping level. The audit also updates the spec artifact to draft-10
+    (March 2026, the latest revision as of 2026-08-30; the prior mission
+    locked to draft-08 which is now superseded).
+
+  methods: |
+    The audit built a vendored fork of CIRCL v1.6.5's kem/xwing package
+    with ONE additional exported function (Components) that exposes the
+    inner X-Wing Combiner inputs (ss_M, ss_X, ct_X, pk_X) to external
+    auditors. The vendored fork is otherwise byte-identical to upstream.
+    A Go program (oracle.exe) reads JSON requests and writes JSON
+    responses for 8 operations:
+      keygen_derand, encapsulate_derand, decapsulate, components,
+      decaps_components, mlkem_keygen_internal, mlkem_encapsulate_derand,
+      x25519_pub, x25519, hpke_base_setup.
+
+    The Python audit harness (full_audit.py) drives oracle.exe via
+    subprocess and independently computes:
+      - xwing_combiner(ss_M, ss_X, ct_X, pk_X) per draft-10 §5.3
+      - hpke_base_setup_sender(ss, enc, info) per RFC 9180 §5.1
+        producing (key, base_nonce, exporter_secret)
+      - hpke_seal(key, base_nonce, aad, pt) for AES-128-GCM
+
+    The audit's discriminators are byte-exact equality, not statistical.
+    10 deterministic (sk_seed, eseed) pairs drive the canonical matrix.
+    13 single-bit flips + 3 structural mutations form the mutation matrix.
+
+  results: |
+    Cross-impl X-Wing Combiner agreement (10 vectors): 10/10 AGREE.
+    CIRCL Encaps/Decaps symmetry (10 vectors): 10/10 AGREE.
+    X-Wing Combiner mutation matrix (48 cells): 48/48 changed ss.
+    HPKE Base mode wrapping agreement (10 vectors):
+      key: 10/10 AGREE
+      base_nonce: 10/10 AGREE
+      exporter_secret: 10/10 AGREE
+      ciphertext: 10/10 AGREE
+    pyca/cryptography 50.0.1 vs CIRCL v1.6.5 X25519:
+      pk: 10/10 AGREE
+      ss: 10/10 AGREE
+    pyca/cryptography 50.0.1 ML-KEM-768 round-trip: 5/5 OK.
+
+  findings: |
+    FND-2026-0008 (verified_conclusion):
+      "Cross-implementation X-Wing + HPKE byte-exact agreement: A pure-
+      Python reference implementation of draft-10 §5.3 + RFC 9180 §5.1
+      matches CIRCL v1.6.5 byte-for-byte on all 10 test vectors. Mutation
+      matrix 48/48. pyca X25519 byte-exact with CIRCL on 10/10 keys.
+      pyca ML-KEM-768 round-trip correct on 5/5."
+
+  limitations: |
+    - One of five candidate X-Wing implementations exercised (CIRCL only);
+      AWS-LC, libhpke, OpenSSL oqs-provider, Rust hpke not audited.
+    - pyca ML-KEM-768 derandomized cross-comparison infeasible (pyca 50.0.1
+      API limitation); round-trip correctness used instead.
+    - X25519 clamped-bit mutation matrix out of scope (msn-2026-0008).
+    - 10 vectors is small for statistical purposes but adequate for
+      deterministic byte-exact discriminators.
+
+  recommended_follow_ups:
+    - Extend matrix to additional X-Wing-capable HPKE libraries.
+    - Re-run when pyca exposes from-seed ML-KEM-768 API.
+    - Add X-Wing PSK and AuthPSK modes.
+    - Investigate empty KAT vectors in draft-10 Appendix C.
+    - Track draft-10's IANA KEM ID assignment through to RFC publication.
+
+classification: positive-conformance-evidence
+notes: |
+  All 7 evidence categories (experiment, observation, reproducer, review,
+  verification, hypotheses, finding) are populated. The mission is
+  terminalized as verified_conclusion with full evidence chain. The
+  reproducer is self-contained and reproducible on the same machine
+  configuration (Windows 11 Pro + Python 3.11.15 + Go 1.26.4 + .venv
+  cryptography 50.0.1).

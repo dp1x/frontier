@@ -1,0 +1,61 @@
+id: obs-2026-0030
+type: observation
+status: recorded
+created_at: "2026-08-30T03:55:00Z"
+updated_at: "2026-08-30T03:55:00Z"
+summary: "X-Wing Combiner cross-impl observation set 1: 10 canonical (sk, eseed) test vectors, byte-exact ss agreement between CIRCL v1.6.5 (Go, via oracle.exe) and Python reference xwing_combiner per draft-10 Section 5.3."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-execution-agent
+    model: minimax-m3
+    tool: full_audit.py (driven by oracle.exe subprocess)
+  sources:
+    - .scratch/msn-2026-0009/full_audit.json
+    - spc-2026-0002
+    - knowledge/experiments/exp-2026-0023.yaml
+  parent: msn-2026-0009
+  generation: 0
+links:
+  experiments: [exp-2026-0023]
+  implementations: [imp-2026-0007, imp-2026-0009]
+  specifications: [spc-2026-0002]
+  hypotheses: [hyp-2026-0013]
+title: OBS-2026-0030 - X-Wing Combiner canonical cross-impl agreement (10 vectors)
+observations: |
+  For each of 10 deterministic (sk_seed, eseed) pairs:
+    sk_seed = SHA3-256("xwing-cross-vec-{i:08d}")[:32]
+    eseed = SHAKE256("xwing-cross-eseed-{i:08d}", 64)
+
+  Steps run per vector:
+    1. CIRCL KeyGenDerand(sk_seed) -> (sk, pk) (32, 1216 bytes)
+    2. CIRCL Components(pk, eseed) -> (ss_M, ss_X, ct_X, pk_X, ss, ct)
+    3. Python xwing_combiner(ss_M, ss_X, ct_X, pk_X) -> py_ss
+    4. CIRCL Decapsulate(ct, sk) -> decaps_ss
+    5. CIRCL DecapsComponents(ct, sk) -> (ss_M', ss_X', ct_X', pk_X', ss')
+
+  Recorded observations:
+    vec-00000001: circl_ss = b6e924fedb0de952...; py_ss = b6e924fedb0de952...; AGREE
+    vec-00000002: circl_ss = 3132b50842ac1a1c...; py_ss = 3132b50842ac1a1c...; AGREE
+    vec-00000003: circl_ss = 099577c64c604a6c...; py_ss = 099577c64c604a6c...; AGREE
+    vec-00000004: circl_ss = 51178c93f2a737a5...; py_ss = 51178c93f2a737a5...; AGREE
+    vec-00000005: circl_ss = fcd2bb2aea5e314e...; py_ss = fcd2bb2aea5e314e...; AGREE
+    vec-00000006: circl_ss = 02795788b3d06832...; py_ss = 02795788b3d06832...; AGREE
+    vec-00000007: circl_ss = ccee047f27470530...; py_ss = ccee047f27470530...; AGREE
+    vec-00000008: circl_ss = 0d1dff4e1655400b...; py_ss = 0d1dff4e1655400b...; AGREE
+    vec-00000009: circl_ss = 71057ae0a433d4c5...; py_ss = 71057ae0a433d4c5...; AGREE
+    vec-00000010: circl_ss = 377492d53766c064...; py_ss = 377492d53766c064...; AGREE
+
+  All 10 vectors: combiner_agrees=True, decaps_agrees_with_encaps=True.
+result:
+  n_combiner_agrees: 10
+  n_combiner_total: 10
+  n_decaps_agrees: 10
+  n_decaps_total: 10
+  pass_rate: 1.0
+notes: |
+  The Python X-Wing Combiner per draft-10 Section 5.3 produces byte-exact
+  identical ss to CIRCL v1.6.5's reference X-Wing KEM on all 10 vectors.
+  Encaps/Decaps symmetry also confirmed: CIRCL Decapsulate(ct, sk) returns
+  the same ss as CIRCL Encapsulate(pk, eseed).

@@ -1,0 +1,44 @@
+id: hyp-2026-0013
+type: hypothesis
+status: open
+created_at: "2026-08-30T03:55:00Z"
+updated_at: "2026-08-30T03:55:00Z"
+summary: A pure-Python reference X-Wing Combiner (SHA3-256(ss_M || ss_X || ct_X || pk_X || XWingLabel)) per draft-connolly-cfrg-xwing-kem-10 Section 5.3, when fed the (ss_M, ss_X, ct_X, pk_X) byte sequences produced by CIRCL v1.6.5's X-Wing Encapsulate, will produce a byte-exact identical X-Wing shared secret (ss) for the same (sk_XWing, eseed) inputs across all tested vectors.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator-A
+    model: minimax-m3
+    tool: independent generator
+  sources:
+    - spc-2026-0002
+    - knowledge/implementations/imp-2026-0007.yaml (CIRCL v1.6.5 vendored fork)
+  parent: msn-2026-0009
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0007, imp-2026-0009]
+  targets: [tgt-2026-0002]
+title: HYP-A - Python X-Wing combiner matches CIRCL byte-exact
+statement: >
+  The X-Wing Combiner per draft-10 Section 5.3 is a 32-byte SHA3-256 call:
+    ss = SHA3-256(ss_M || ss_X || ct_X || pk_X || XWingLabel)
+  where XWingLabel = bytes.fromhex("5c2e2f2f5e5c") (ASCII '\./ /^\').
+  All audited Python implementations of this combiner produce a byte-exact
+  identical ss to CIRCL v1.6.5's reference X-Wing KEM for the same (sk, eseed)
+  pair, because all components are produced by canonicalized primitives
+  (FIPS 203 ML-KEM-768 byte encodings, RFC 7748 X25519 clamped scalar outputs).
+falsifiable_predictions:
+  - All 10 canonical test vectors produce py_ss == circl_ss (256-bit equality).
+  - All 48 single-bit mutations of (ss_M, ss_X, ct_X, pk_X) change the ss.
+  - The structural mutations (swap ss_M<->ss_X, swap ct_X<->pk_X, drop label) all change the ss.
+disproof_attempts: []
+notes: |
+  This is the central positive-conformance hypothesis of msn-2026-0009. The
+  audit runs 10 random (sk, eseed) pairs through CIRCL, captures the inner
+  (ss_M, ss_X, ct_X, pk_X) via the vendored Components() accessor, runs the
+  Python combiner, and compares. A divergence would indicate that the
+  Python reference impl has a different XWingLabel, a different input order,
+  or a different hash; a finding would localize the divergence to a single
+  line of code in xwing_ref.py.

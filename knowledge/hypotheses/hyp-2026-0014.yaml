@@ -1,0 +1,48 @@
+id: hyp-2026-0014
+type: hypothesis
+status: open
+created_at: "2026-08-30T03:55:00Z"
+updated_at: "2026-08-30T03:55:00Z"
+summary: A pure-Python reference implementation of HPKE Base mode wrapping per RFC 9180 Section 5.1 (HKDF-SHA256 + AES-128-GCM, suite_id = KEM 0x647A || KDF 0x0002 || AEAD 0x0001), when fed the X-Wing ss produced by CIRCL v1.6.5's deterministic Encapsulate(pk, eseed), will produce byte-exact identical (key, base_nonce, exporter_secret, ciphertext) to CIRCL v1.6.5's HPKE output for the same (pk, sk, eseed, info, aad, pt) inputs.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator-B
+    model: minimax-m3
+    tool: independent generator
+  sources:
+    - spc-2026-0002 (RFC 9180 §5.1, RFC 9380 KEM registry update)
+    - knowledge/implementations/imp-2026-0007.yaml (CIRCL v1.6.5 vendored fork)
+  parent: msn-2026-0009
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0007, imp-2026-0009]
+  targets: [tgt-2026-0002]
+title: HYP-B - Python HPKE Base mode wrapping matches CIRCL byte-exact
+statement: >
+  RFC 9180 Section 5.1 defines HPKE Base mode as:
+    secret = Extract(zero_salt, kem_context)
+    key = Expand(secret, "key", key_schedule_context, Nk)        # 16 bytes
+    base_nonce = Expand(secret, "base_nonce", key_schedule_context, Nn)  # 12 bytes
+    exporter_secret = Extract(zero_salt, Expand(secret, "exp", key_schedule_context, Nh))  # 32 bytes
+  where key_schedule_context = enc || suite_id || psk_id_hash || info
+  and suite_id = "KEM" || 0x647A || "KDF" || 0x0002 || "AEAD" || 0x0001.
+  Both CIRCL v1.6.5 and the Python reference use the same RFC 9180 algorithm,
+  same HKDF-SHA256, same AES-128-GCM, same suite_id; they should agree
+  byte-exactly on (key, base_nonce, exporter_secret, ciphertext).
+falsifiable_predictions:
+  - All 10 canonical test vectors produce py_key == circl_key (16 bytes).
+  - All 10 vectors: py_base_nonce == circl_base_nonce (12 bytes).
+  - All 10 vectors: py_exporter_secret == circl_exporter_secret (32 bytes).
+  - All 10 vectors: py_ciphertext == circl_ciphertext (pt + 16-byte AES-GCM tag).
+disproof_attempts: []
+notes: |
+  This is the HPKE-wrapping conformance hypothesis. The audit's HPKE oracle
+  uses a deterministic Encapsulate(pk, eseed) so the same enc/ss pair is
+  presented to both CIRCL's HPKE wrapper and the Python reference. A
+  divergence would indicate a wrong suite_id byte encoding (likely 0x0002
+  vs 0x0001), a wrong HKDF-Expand-Label info construction (the length
+  prefix or label-prefix bug), or a wrong key_schedule_context construction
+  (off-by-one in the enc/suite_id/psk_id_hash/info concatenation).
