@@ -41,7 +41,7 @@ jobs:
       - name: Install compiler
         run: |
           set -euxo pipefail
-          sudo apt-get update
+          apt-get update
           eval "${{ matrix.compiler.install }}"
           if [ "${{ matrix.compiler.name }}" = "clang-default" ]; then
             which clang || true
