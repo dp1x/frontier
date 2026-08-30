@@ -30,10 +30,10 @@ jobs:
       fail-fast: false
       matrix:
         compiler:
+          - name: clang-19
+            bin: clang-19
           - name: clang-default
             bin: clang
-          - name: gcc-default
-            bin: gcc
     steps:
       - name: Checkout frontier
         uses: actions/checkout@v4
@@ -45,6 +45,15 @@ jobs:
         run: |
           set -euxo pipefail
           CLANG_BIN="${{ matrix.compiler.bin }}"
+          # If clang-19, install via apt.llvm.org (Ubuntu 24.04 default is clang-18)
+          if [ "$CLANG_BIN" = "clang-19" ] && ! command -v clang-19 >/dev/null 2>&1; then
+            echo "Installing clang-19 from apt.llvm.org..."
+            wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc >/dev/null
+            echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-19 main" > /etc/apt/sources.list.d/llvm-19.list
+            apt-get update -o Dir::Etc::sourcelist="sources.list.d/llvm-19.list" -o Dir::Etc::sourceparts="-" -o APT::Get::List-Cleanup="0"
+            apt-get install -y clang-19
+            CLANG_BIN="clang-19"
+          fi
           which "$CLANG_BIN" || echo "not found"
           "$CLANG_BIN" --version | head -n1
           echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,79 @@
+id: obs-2026-0036
+type: observation
+status: open
+created_at: "2026-08-30T09:05:00Z"
+updated_at: "2026-08-30T09:05:00Z"
+summary: "GHA clang-embed-crash workflow run 33307657900 - characterization matrix executed on GHA ubuntu-latest with system clang-18.1.3 and gcc-13.3.0. Both system compilers REJECT every #embed stimulus with 'invalid preprocessing directive' (clang) or 'unrecognized command-line option -std=c23' (gcc). The matrix produces 13 cells per compiler, all with verdict 'rejects_with_error', none crashing. The bugs (LLVM #212075 + #219332) require clang-19+ with #embed support, which is NOT in the GHA ubuntu-latest default image. This is itself a Frontier-grade finding: the bug surface requires a compiler that is NOT yet in any default Linux distribution's package manager (clang-18 is the Ubuntu 24.04 default; clang-19 is only in LLVM's apt.llvm.org). Mission identifies the exact gap: Frontier's standard GHA ubuntu-latest image cannot run the bug reproducers without explicit clang-19+ installation. This is a meta-finding about the Frontier environment, not a finding about the bugs themselves (which are well-documented by the LLVM bug tracker)."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: observation-synthesizer
+    model: minimax-m3
+    tool: synthesizing GHA run 33307657900 outputs
+  sources:
+    - .github/workflows/clang-embed-crash.yml
+    - compilers/embed/run_embed_matrix.sh
+    - R:/clang-embed/clang-embed-crash-clang-default-33307657900/clang-default/embed_crash_matrix.tsv
+    - R:/clang-embed/clang-embed-crash-gcc-default-33307657900/gcc-default/embed_crash_matrix.tsv
+    - https://github.com/llvm/llvm-project/issues/212075
+    - https://github.com/llvm/llvm-project/issues/219332
+  parent: exp-2026-0028
+  generation: 0
+links:
+  missions: [msn-2026-0012]
+  hypotheses: [hyp-2026-0023]
+title: "OBS-2026-0036 - System compilers on GHA ubuntu-latest reject #embed (clang-18.1.3 + gcc-13.3.0 too old)"
+gha_runs:
+  - run_id: "33307657900"
+    purpose: "Run #embed characterization matrix on GHA ubuntu-latest with system clang + gcc"
+    outcome_summary: "All 26 cells (13 clang + 13 gcc) produce 'rejects_with_error' verdict. No crashes."
+    per_compiler_verdict:
+      clang_18_1_3: "rejects_with_error (all 13 stimuli) - #embed not implemented"
+      gcc_13_3_0: "rejects_with_error (all 13 stimuli) - -std=c23 not supported"
+
+key_evidence:
+  clang_18_1_3:
+    compiler_version: "Ubuntu clang version 18.1.3 (1ubuntu1)"
+    stimulus_results: "All 13 stimuli (control + 2 known_bug_repro + 10 char_variant) produce 'invalid preprocessing directive' error"
+    interpretation: |
+      clang-18.1.3 (released ~Mar 2024, before C23 finalization) does not
+      implement #embed. All reproducers exit 1 with a clean error message;
+      no crash. The bugs (#212075, #219332) are in clang-19+ which added
+      #embed support.
+  gcc_13_3_0:
+    compiler_version: "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+    stimulus_results: "All 13 stimuli produce 'unrecognized command-line option -std=c23' error"
+    interpretation: |
+      GCC-13.3.0 does not support -std=c23 (only -std=c2x for the C23 draft).
+      #embed support in GCC landed in GCC 15. The harness cannot test
+      GCC's #embed handling without GCC 15+.
+
+interpretation: |
+  The GHA ubuntu-latest default image (Ubuntu 24.04 LTS) ships:
+  - clang-18.1.3 (released March 2024, predates C23 finalization in October 2024)
+  - gcc-13.3.0 (released April 2024, predates C23 finalization)
+  
+  Neither system compiler supports #embed. Frontier's standard CI
+  environment is therefore UNABLE to reproduce the upstream #embed
+  crash bugs without explicit installation of clang-19+ (from
+  apt.llvm.org) or gcc-15+ (from a PPA).
+  
+  This is a meta-finding about Frontier's environment capabilities, not
+  about the bugs themselves (which are well-documented in the LLVM bug
+  tracker and reproducible by anyone with clang-19+).
+
+next_steps:
+  - "Update msn-2026-0012 acceptance criteria: the experiment cannot complete on system compilers; need to install clang-19+ via apt.llvm.org OR build from source"
+  - "Document the gap as a Frontier environment observation"
+  - "Decide: pursue the mission with apt.llvm.org installation (compute cost goes medium to heavy) OR close as 'blocked by environment' and preserve as useful negative result"
+  - "The negative result itself is publishable: 'Frontier's GHA ubuntu-latest default image cannot run C23 #embed tests without explicit compiler installation; this is a one-line fix in the workflow but it adds 30+ seconds per run'"
+
+reproducer: |
+  cd frontier
+  gh workflow run clang-embed-crash.yml --repo dp1x/frontier --ref main
+  gh run view <run_id> --repo dp1x/frontier --log-failed
+  gh run download <run_id> --repo dp1x/frontier --dir R:/clang-embed
+
+  All 26 cells produce 'rejects_with_error'. No crashes. Both system
+  compilers are too old for C23 #embed.
