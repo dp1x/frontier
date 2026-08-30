@@ -1,0 +1,158 @@
+id: exp-2026-0028
+type: experiment
+status: designed
+created_at: "2026-08-30T08:30:00Z"
+updated_at: "2026-08-30T08:30:00Z"
+summary: "Clang C23 #embed crash characterization - reproduce, localize, and characterize two upstream fuzzer-discovered #embed crash bugs (LLVM issues #212075 and #219332). Build clang from upstream main on GHA ubuntu-latest, run minimal reproducers, capture exit code + stderr trace, build a broader crash-input matrix to characterize the surface, and cross-test with GCC if available."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: minimax-m3
+    tool: designing clang #embed crash characterization matrix
+  sources:
+    - https://github.com/llvm/llvm-project/issues/212075
+    - https://github.com/llvm/llvm-project/issues/219332
+    - https://github.com/llvm/llvm-project/issues/95222
+    - knowledge/notes/msn-2026-0011.md
+  parent: msn-2026-0012
+  generation: 0
+links:
+  missions: [msn-2026-0012]
+  hypotheses: [hyp-2026-0023]
+title: "EXP-2026-0028 - Clang C23 #embed crash characterization (LLVM issues #212075 + #219332)"
+design:
+  objective: |
+    Reproduce, localize, and characterize two upstream fuzzer-discovered clang
+    #embed crash bugs:
+    - Issue #212075: assertion failure in HandleEmbedDirective on
+      `#embed <foo> limit(defined(bar)),`
+    - Issue #219332: out-of-memory error in clang on `#embed __FILE__ prefix([sizeof(a) - 1])`
+      where `a` is the previous #embed result.
+    
+    Confirm both crashes reproduce on clang built from upstream main (LLVM
+    commit that addresses these as of mission activation), capture exit code +
+    stderr, build a minimal crash-input matrix to characterize the surface,
+    cross-test with GCC if available (GCC 15+ has separate #embed implementation),
+    document any compensating behavior, and produce a Frontier finding.
+
+  harness:
+    build:
+      approach: "Build clang from upstream main on GHA ubuntu-latest (~5-10 min) using existing clang or apt clang-19+"
+      artifacts:
+        - "/usr/bin/clang (system, ubuntu-latest apt clang-19+)"
+        - "/tmp/clang-trunk (built from source)"
+      gha_workflow: ".github/workflows/clang-embed-crash.yml (new)"
+
+    stimulus_set:
+      - id: ctrl_canary
+        path: "compilers/embed/ctrl_canary.c"
+        purpose: "Control: a canonical #embed that should compile cleanly"
+        contents: |
+          // Verify clang accepts a basic #embed
+          const unsigned char data[] = {
+          #embed "/etc/hostname"
+          };
+          int main(void) { return sizeof(data); }
+        expected: "exit 0, sizeof(data) == length of /etc/hostname"
+        classification: control
+
+      - id: iss212075_min
+        path: "compilers/embed/iss212075_min.c"
+        contents: "#embed <foo> limit(defined(bar)),"
+        purpose: "Minimal reproducer for LLVM #212075 (assertion in HandleEmbedDirective)"
+        expected: "exit 134, stderr contains 'Assertion' and 'expected success or to be at the end of the directive'"
+        classification: "known_bug_repro"
+
+      - id: iss219332_min
+        path: "compilers/embed/iss219332_min.c"
+        contents: |
+          char a[] = {
+          #embed
+          };
+          char b[] = {
+          #embed __FILE__ prefix([sizeof(a) - 1])
+          };
+        purpose: "Minimal reproducer for LLVM #219332 (OOM via infinite recursive embed)"
+        expected: "exit 134, stderr contains 'out of memory' and 'Allocation failed'"
+        classification: "known_bug_repro"
+
+      - id: characterization_matrix
+        variants:
+          # Cross-test crash-input variants
+          - "limit(0)"          # Zero limit should produce empty embed
+          - "limit(1)"          # Single byte
+          - "limit(1000)"       # Large limit
+          - "limit(defined(X))" # defined() guard without trailing comma (variation on #212075)
+          - "limit(__has_embed(<foo>))" # nested __has_embed
+          - "prefix([0])"        # zero-length prefix
+          - "suffix([0])"       # zero-length suffix
+          - "if_empty(0)"        # empty on no-file
+          - "__FILE__"           # self-reference non-recursive
+          - "concat-of-bugs"     # combine limit and prefix
+        purpose: "Build a characterization matrix to surface the bug surface"
+
+  run_loop:
+    per_stimulus:
+      - "Write stimulus C source to /tmp/stimulus.c"
+      - "Invoke: /tmp/clang-trunk/bin/clang -std=c23 -c /tmp/stimulus.c -o /tmp/stimulus.o 2> /tmp/stimulus.stderr"
+      - "Capture exit code, stderr, wall-clock time"
+      - "If exit != 0, parse stderr for 'Assertion', 'out of memory', 'Segmentation fault', 'fatal error'"
+      - "Record verdict: {compiles_cleanly, exits_with_assertion, exits_with_oom, exits_with_segv, exits_with_other_error}"
+    aggregation:
+      - "Compute crash rate per stimulus family"
+      - "Identify whether assertions come from HandleEmbedDirective vs SemaInit (init-list check)"
+      - "Report matrix as TSV"
+
+  controls:
+    positive:
+      - "ctrl_canary.c compiles cleanly (control)"
+      - "/etc/hostname is a small ASCII file (control for #embed correctness)"
+    negative:
+      - "compile a malformed C file (control for compiler's error path)"
+    self_consistency:
+      - "run iss212075_min.c twice on the same clang build, expect identical verdicts"
+
+  execution:
+    runtime: GHA ubuntu-latest
+    isolation: github-runner
+    env_scrubbed: true
+    network: "github clone only, no other network"
+    secrets_exposed: false
+    expected_gha_runs: 3-5 (build clang, run characterization matrix, run GCC cross-check)
+
+  artifact_outputs:
+    per_run:
+      - "compilers/embed/reports/iss{N}_stimulus_{id}_verdict.tsv"
+      - "compilers/embed/reports/iss{N}_stimulus_{id}_stderr.log"
+      - "compilers/embed/reports/iss{N}_stimulus_{id}_exit.txt"
+    summary:
+      - "compilers/embed/reports/embed_crash_matrix.tsv"
+      - "compilers/embed/reports/embed_crash_summary.md"
+      - "compilers/embed/reports/embed_crash_console.log"
+
+  decision_surface:
+    - compiles_cleanly: exit 0, no stderr error
+    - crashes_with_assertion: exit 134, stderr contains "Assertion"
+    - crashes_with_oom: exit 134, stderr contains "out of memory"
+    - crashes_with_segv: exit 139, stderr contains "Segmentation fault"
+    - rejects_with_error: exit 1, stderr contains "error:" (no crash)
+    - hangs_or_other: any other outcome
+
+  acceptance:
+    - "Both upstream bugs (#212075, #219332) reproduced deterministically (same verdict across 2 runs)"
+    - "Characterization matrix executed with >= 8 variants"
+    - "Cross-implementation check: GCC produces different verdict on at least one variant"
+    - "Positive + negative controls pass"
+    - "Per-variant verdict recorded with attribution (clang build, commit, stimulus)"
+
+compute:
+  expected_class: medium
+  location: github-actions
+  isolation: github-runner
+  notes: "GHA ubuntu-latest; clang build from upstream ~5-10 min; characterization matrix ~2 min; total ~15 min wall"
+risks:
+  - "Upstream may have already fixed the bugs in main by mission execution time. Mitigation: pin to the specific commit that exhibits the bug (the commit at the issue's created_at minus a few days); if fixed, the matrix produces 'cleanly rejects' instead of 'crashes', which is still informative."
+  - "GCC cross-check requires GCC 15+ with #embed support. Ubuntu 24.04 LTS has GCC 13.3 by default; GCC 15 may need a PPA or a manual build. Mitigation: if GCC cross-check is impossible, fall back to documenting the comparison as 'cross-check deferred'."
+  - "The OOM crash (#219332) is non-deterministic on resource-limited systems; may OOM the runner. Mitigation: set a memory limit via ulimit -v on the clang invocation, and record the memory consumed."

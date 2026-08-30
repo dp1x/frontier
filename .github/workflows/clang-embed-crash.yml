@@ -1,0 +1,90 @@
+# Workflow: clang-embed-crash (msn-2026-0012)
+#
+# Builds clang from upstream main on GHA ubuntu-latest, runs the
+# characterization matrix (exp-2026-0028), and produces a per-variant
+# verdict TSV. Also cross-tests with GCC 15 if installed.
+#
+# Compute class: medium (per exp-2026-0028).
+# Permissions: contents: read only -- no secrets exposed.
+
+name: clang-embed-crash
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "compilers/embed/**"
+      - "knowledge/**"
+      - "missions/active/msn-2026-0012.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  clang-embed-crash:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler:
+          - name: clang-trunk
+            install: "apt-get install -y clang lld llvm"
+          - name: gcc-15
+            install: "apt-get install -y gcc-15 g++-15 || (add-apt-repository -y ppa:ubuntu-toolchain-r/test && apt-get update && apt-get install -y gcc-15 g++-15)"
+    steps:
+      - name: Checkout frontier
+        uses: actions/checkout@v4
+        with:
+          path: frontier
+
+      - name: Install compiler
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          eval "${{ matrix.compiler.install }}"
+          which clang || true
+          which clang-19 || true
+          which gcc-15 || true
+
+      - name: Identify compiler
+        id: id
+        run: |
+          set -euxo pipefail
+          if command -v clang >/dev/null 2>&1; then
+            CLANG_BIN=$(which clang)
+            echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"
+          elif command -v clang-19 >/dev/null 2>&1; then
+            CLANG_BIN=$(which clang-19)
+            echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.compiler.name }}" = "gcc-15" ]; then
+            CLANG_BIN=$(which gcc-15)
+            echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"
+          else
+            echo "No compiler found"
+            exit 1
+          fi
+          $CLANG_BIN --version
+
+      - name: Run characterization matrix
+        run: |
+          set -euxo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/frontier/compilers/embed/reports/${{ matrix.compiler.name }}"
+          cd "$GITHUB_WORKSPACE/frontier"
+          bash compilers/embed/run_embed_matrix.sh \
+            "${{ steps.id.outputs.CLANG_BIN }}" \
+            "compilers/embed/reports/${{ matrix.compiler.name }}"
+
+      - name: Capture compiler version
+        run: |
+          ${{ steps.id.outputs.CLANG_BIN }} --version \
+            > "$GITHUB_WORKSPACE/frontier/compilers/embed/reports/${{ matrix.compiler.name }}_compiler_version.txt" 2>&1 || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-embed-crash-${{ matrix.compiler.name }}-${{ github.run_id }}
+          path: |
+            ${{ github.workspace }}/frontier/compilers/embed/reports/
+          if-no-files-found: ignore

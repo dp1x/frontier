@@ -1,0 +1,75 @@
+id: msn-2026-0012
+type: mission
+status: pending
+created_at: "2026-08-30T08:35:00Z"
+updated_at: "2026-08-30T08:35:00Z"
+summary: "Clang C23 #embed crash characterization - reproduce two upstream fuzzer-discovered #embed crash bugs (LLVM issues #212075 and #219332), build a characterization matrix of related malformed inputs, cross-test with GCC, document the threat model (compiler crashes on untrusted C source), and produce a Frontier finding + reproducible matrix + GHA workflow."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: mission-activator
+    model: minimax-m3
+    tool: activating msn-2026-0012 from autonomous scan scout-4 candidate E
+  sources:
+    - knowledge/notes/msn-2026-0011.md
+    - knowledge/notes/scout-protocol-interop-2026-08-30.md
+    - https://github.com/llvm/llvm-project/issues/212075
+    - https://github.com/llvm/llvm-project/issues/219332
+    - https://github.com/llvm/llvm-project/issues/95222
+  parent: msn-2026-0011
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0023]
+  experiments: [exp-2026-0028]
+title: msn-2026-0012 - Clang C23 #embed crash characterization (LLVM #212075 + #219332)
+objective: >-
+  Reproduce, localize, and characterize two upstream fuzzer-discovered
+  clang C23 #embed crash bugs. Build clang from upstream main on GHA
+  ubuntu-latest, run minimal reproducers, capture exit code + stderr
+  trace, build a broader crash-input matrix to characterize the surface,
+  cross-test with GCC if available, document any compensating behavior,
+  and produce a Frontier finding + reproducer matrix.
+domain: compilers
+scope: >
+  Clang built from upstream main (LLVM commit at or near issue creation
+  dates). Stimulus set: minimal reproducers for #212075 + #219332, plus
+  a 10-variant characterization matrix. Cross-impl: GCC 15+ if available.
+  Out of scope: GCC versions < 15 (no #embed support), MSVC (no #embed
+  support), clang versions older than 19 (older #embed implementation),
+  performance measurements, fuzz-test corpus generation.
+constraints:
+  - All builds in env-scrubbed scratch via GHA ubuntu-latest.
+  - Pin clang to a specific commit near each issue's created_at.
+  - "Disclosure: public upstream bug reports (already on github.com); characterization study, not fresh vulnerability disclosure."
+desired_evidence_level: independently-reviewed
+candidate_targets: []
+compute:
+  expected_class: medium
+  notes: "GHA ubuntu-latest; clang build ~5-10 min; characterization matrix ~2 min; ~3 GHA runs total"
+budget:
+  max_attempts: 4
+  max_independent_reviews: 1
+  max_compute_runs: 6
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Both upstream bugs (#212075, #219332) reproduced deterministically on clang built from upstream main at the relevant commit"
+  - "Characterization matrix executed with >= 8 variants"
+  - "Cross-implementation check: at least one of GCC 15+ or older clang (pre-#embed) produces a different verdict"
+  - "Positive + negative controls pass (ctrl_canary compiles cleanly)"
+  - "Per-variant verdict recorded with attribution"
+  - "Adversarial review by non-synthesizer role"
+stopping_conditions:
+  - "Both bugs reproduced and characterization matrix complete, OR"
+  - "Diminishing-returns window hit (2 consecutive runs with no new variant), OR"
+  - "Budget exhausted without new discriminating evidence."
+artifacts: []
+follow_ups:
+  - "If bugs reproduce: file characterization report to upstream LLVM via GitHub issue comment (or open new tracking issue)"
+  - "Cross-test with other #embed implementations as they appear (IAR, ARM Compiler, EDG)"
+  - "Document the threat model for 'untrusted C source -> compiler crash' in knowledge/process-findings/"
+  - "Adjacent follow-up: clang other C23 features with similar crash surface (#warning, #pragma, #include_next)"
+notes_path: knowledge/notes/msn-2026-0012.md
+blocked_reason: null
+terminal_reason: null
