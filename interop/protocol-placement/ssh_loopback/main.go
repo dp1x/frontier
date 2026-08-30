@@ -41,6 +41,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"bufio"
 	"io"
 	"net"
 	"os"
@@ -256,7 +257,8 @@ func runOne(cohort string, stim Stimulus, serverAddr string, ekSize, cInitSize i
 		res.Error = fmt.Sprintf("send banner: %v", err)
 		return res
 	}
-	if err := recvBanner(conn); err != nil {
+	br, err := recvBanner(conn)
+	if err != nil {
 		res.Error = fmt.Sprintf("recv banner: %v", err)
 		return res
 	}
@@ -266,7 +268,7 @@ func runOne(cohort string, stim Stimulus, serverAddr string, ekSize, cInitSize i
 		return res
 	}
 
-	serverKex, err := recvPacket(conn)
+	serverKex, err := recvPacket(br)
 	if err != nil {
 		res.Error = fmt.Sprintf("recv server kexinit: %v", err)
 		return res
@@ -300,7 +302,7 @@ func runOne(cohort string, stim Stimulus, serverAddr string, ekSize, cInitSize i
 	}
 
 	// Read server response.
-	resp, err := recvPacket(conn)
+	resp, err := recvPacket(br)
 	if err != nil {
 		res.Error = fmt.Sprintf("recv response: %v", err)
 		return res
@@ -444,23 +446,33 @@ func sendPacket(conn net.Conn, payload []byte) error {
 	return nil
 }
 
-// recvPacket reads one an SSH packet.
-func recvPacket(conn net.Conn) ([]byte, error) {
-	header := make([]byte, 4)
-	if _, err := io.ReadFull(conn, header); err != nil {
+// recvPacket reads one an SSH packet via the supplied bufio.Reader (which
+// has the connection's read buffer aligned after recvBanner).
+func recvPacket(br *bufio.Reader) ([]byte, error) {
+	header, err := readFull(br, 4)
+	if err != nil {
 		return nil, err
 	}
 	packetLen := binary.BigEndian.Uint32(header)
 	if packetLen < 1 || packetLen > 35000 {
 		return nil, fmt.Errorf("invalid packet length %d", packetLen)
 	}
-	body := make([]byte, packetLen)
-	if _, err := io.ReadFull(conn, body); err != nil {
+	body, err := readFull(br, int(packetLen))
+	if err != nil {
 		return nil, err
 	}
 	paddingLen := int(body[0])
+	if 1+paddingLen > len(body) {
+		return nil, fmt.Errorf("padding length %d exceeds packet body %d", paddingLen, len(body))
+	}
 	payload := body[1 : 1+int(packetLen)-1-paddingLen]
 	return payload, nil
+}
+
+func readFull(br *bufio.Reader, n int) ([]byte, error) {
+	buf := make([]byte, n)
+	_, err := io.ReadFull(br, buf)
+	return buf, err
 }
 
 func appendNameList(buf []byte, names string) []byte {
@@ -486,27 +498,28 @@ func appendNameList(buf []byte, names string) []byte {
 // --- SSH version banner (RFC 4253 s4.2) ---
 
 func sendBanner(conn net.Conn) error {
-	banner := "SSH-2.0-FrontierSSHLoopback_1.0\r\n"
+	// RFC 4253 s4.2 requires protoversion "2.0" or "1.99" and softwareversion
+	// of printable US-ASCII excluding control chars. Underscores are valid.
+	banner := "SSH-2.0-FrontierSSHLoopback\r\n"
 	_, err := conn.Write([]byte(banner))
 	return err
 }
 
-func recvBanner(conn net.Conn) error {
-	buf := make([]byte, 256)
-	n, err := conn.Read(buf)
+func recvBanner(conn net.Conn) (*bufio.Reader, error) {
+	// Read banner line up to first LF. Per RFC 4253 s4.2, the banner is
+	// terminated by CRLF. Use bufio.Reader.ReadString which reads exactly
+	// up to and including the first LF, leaving the conn's read buffer
+	// aligned for the subsequent binary packet protocol. Return the reader
+	// so recvPacket can use the same buffer for subsequent reads.
+	br := bufio.NewReader(conn)
+	line, err := br.ReadString('\n')
 	if err != nil {
-		return err
+		return br, fmt.Errorf("banner read: %w (got %q)", err, line)
 	}
-	if n < 4 || string(buf[:4]) != "SSH-" {
-		return fmt.Errorf("expected SSH banner, got %q", string(buf[:n]))
+	if len(line) < 4 || line[:4] != "SSH-" {
+		return br, fmt.Errorf("expected SSH banner, got %q", line)
 	}
-	// Find end of banner line (CRLF).
-	for i := 0; i < n-1; i++ {
-		if buf[i] == '\r' && buf[i+1] == '\n' {
-			return nil
-		}
-	}
-	return fmt.Errorf("banner line missing CRLF: %q", string(buf[:n]))
+	return br, nil
 }
 
 // --- helpers ---
