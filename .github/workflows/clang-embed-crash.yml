@@ -38,28 +38,28 @@ jobs:
         with:
           path: frontier
 
-      - name: Install compiler
-        run: |
-          set -euxo pipefail
-          apt-get update
-          eval "${{ matrix.compiler.install }}"
-          if [ "${{ matrix.compiler.name }}" = "clang-default" ]; then
-            which clang || true
-            CLANG_VER=$(clang --version | head -n1)
-            echo "CLANG_VER=$CLANG_VER"
-          fi
-          if [ "${{ matrix.compiler.name }}" = "gcc-default" ]; then
-            gcc --version | head -n1
-          fi
-
-      - name: Identify compiler
+      - name: Identify compiler (use system default; skip apt install if unavailable)
         id: id
         run: |
           set -euxo pipefail
+          # ubuntu-latest already has clang and gcc preinstalled
           if [ "${{ matrix.compiler.name }}" = "clang-default" ]; then
-            CLANG_BIN=$(which clang)
+            CLANG_BIN=$(which clang || echo clang)
           else
-            CLANG_BIN=$(which gcc)
+            CLANG_BIN=$(which gcc || echo gcc)
+          fi
+          echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"
+          $CLANG_BIN --version
+
+      - name: Identify compiler (use system default; skip apt install if unavailable)
+        id: id
+        run: |
+          set -euxo pipefail
+          # ubuntu-latest already has clang and gcc preinstalled
+          if [ "${{ matrix.compiler.name }}" = "clang-default" ]; then
+            CLANG_BIN=$(which clang || echo clang)
+          else
+            CLANG_BIN=$(which gcc || echo gcc)
           fi
           echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"
           $CLANG_BIN --version
