@@ -28,10 +28,10 @@ jobs:
       fail-fast: false
       matrix:
         compiler:
-          - name: clang-trunk
-            install: "apt-get install -y clang lld llvm"
-          - name: gcc-15
-            install: "apt-get install -y gcc-15 g++-15 || (add-apt-repository -y ppa:ubuntu-toolchain-r/test && apt-get update && apt-get install -y gcc-15 g++-15)"
+          - name: clang-default
+            install: "apt-get install -y clang"
+          - name: gcc-default
+            install: "apt-get install -y gcc"
     steps:
       - name: Checkout frontier
         uses: actions/checkout@v4
@@ -43,27 +43,25 @@ jobs:
           set -euxo pipefail
           sudo apt-get update
           eval "${{ matrix.compiler.install }}"
-          which clang || true
-          which clang-19 || true
-          which gcc-15 || true
+          if [ "${{ matrix.compiler.name }}" = "clang-default" ]; then
+            which clang || true
+            CLANG_VER=$(clang --version | head -n1)
+            echo "CLANG_VER=$CLANG_VER"
+          fi
+          if [ "${{ matrix.compiler.name }}" = "gcc-default" ]; then
+            gcc --version | head -n1
+          fi
 
       - name: Identify compiler
         id: id
         run: |
           set -euxo pipefail
-          if command -v clang >/dev/null 2>&1; then
+          if [ "${{ matrix.compiler.name }}" = "clang-default" ]; then
             CLANG_BIN=$(which clang)
-            echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"
-          elif command -v clang-19 >/dev/null 2>&1; then
-            CLANG_BIN=$(which clang-19)
-            echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.compiler.name }}" = "gcc-15" ]; then
-            CLANG_BIN=$(which gcc-15)
-            echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"
           else
-            echo "No compiler found"
-            exit 1
+            CLANG_BIN=$(which gcc)
           fi
+          echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"
           $CLANG_BIN --version
 
       - name: Run characterization matrix
