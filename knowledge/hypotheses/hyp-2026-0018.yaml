@@ -1,0 +1,47 @@
+id: hyp-2026-0018
+type: hypothesis
+status: open
+created_at: "2026-08-30T04:50:00Z"
+updated_at: "2026-08-30T04:50:00Z"
+summary: H3 - The sntrup761x25519-sha512 cohort in OpenSSH portable behaves identically to mlkem768x25519-sha256 (only length check on C_INIT, no NTRU Prime 761 small-coefficient range check); confirmed by analogy from kexsntrup761x25519.c structure.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator-A
+    model: minimax-m3
+    tool: independent generator (synthesis of scout-protocol-interop §9 H3)
+  sources:
+    - knowledge/notes/scout-protocol-interop-2026-08-30.md
+    - https://github.com/openssh/openssh-portable/blob/master/kexsntrup761x25519.c
+  parent: msn-2026-0010
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0003]
+  implementations: [imp-2026-0013]
+title: HYP-H3 - OpenSSH portable sntrup761x25519-sha512 is length-only lenient on C_INIT (analogous to H1)
+statement: >
+  Per the read of kexsntrup761x25519.c (master HEAD), OpenSSH portable's
+  sntrup761x25519-sha512 server-side enc() path performs only the length
+  check `if (sshbuf_len(client_blob) != need)` before calling
+  crypto_kem_sntrup761_enc(). There is no small-coefficient range check
+  (each NTRU Prime 761 small-coefficient must be in [-1, 1] / {0, 1, 2}).
+
+  Predicted wire verdict: identical to H1 but with sntruprime stimulus
+  family. Sntruprime stimuli use {-1, 2} coefficient overflow instead
+  of {3329, 4095} for ML-KEM.
+
+  Significance: sntrup761x25519-sha512 is the DEFAULT PQ KEX in OpenSSH
+  9.5+ (since 2023). This is deployed in production on a non-trivial
+  fraction of internet-facing SSH servers. A confirmed wire-level gap
+  here is materially more security-relevant than the experimental
+  ML-KEM-768 cohort.
+falsifiable_predictions:
+  - "Tampered C_INIT with NTRU Prime 761 small-coefficient = -2 or 2 produces completed handshake"
+  - "Length-half stimuli produce SSH_MSG_DISCONNECT reason 3"
+disproof_attempts: []
+notes: |
+  This is the more security-relevant hypothesis because sntruprime is
+  deployed. If H3 is true, the mission must escalate to disclosure
+  coordination with IETF sshm WG + OpenSSH portability list.

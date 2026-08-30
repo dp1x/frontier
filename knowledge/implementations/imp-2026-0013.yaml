@@ -1,0 +1,62 @@
+id: imp-2026-0013
+type: implementation
+status: pinned
+created_at: "2026-08-30T04:55:00Z"
+updated_at: "2026-08-30T04:55:00Z"
+summary: OpenSSH portable - sntrup761x25519-sha512 KEX (default-enabled since OpenSSH 9.5, deployed in production on a non-trivial fraction of internet-facing sshd). Per kexsntrup761x25519.c read, server enc() path performs only length check on C_INIT before calling crypto_kem_sntrup761_enc().
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: web_search + github source inspection (kexsntrup761x25519.c master HEAD)
+  sources:
+    - https://github.com/openssh/openssh-portable/blob/master/kexsntrup761x25519.c
+    - https://datatracker.ietf.org/doc/draft-ietf-sshm-ntruprime-ssh/
+    - knowledge/findings/fnd-2026-0001.yaml
+  parent: msn-2026-0010
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0003]
+title: OpenSSH portable sntrup761x25519-sha512 (kexsntrup761x25519.c)
+library:
+  name: "openssh-portable"
+  vendor: "OpenBSD / OpenSSH portability team"
+  language: "C"
+  repository: "https://github.com/openssh/openssh-portable"
+  license: "BSD-2-Clause"
+version_pinning:
+  policy: "pin to a specific commit at mission-start time"
+  reference: "github.com/openssh/openssh-portable/commits/master (kexsntrup761x25519.c)"
+  notes: |
+    sntrup761x25519-sha512 was added in OpenSSH 9.5 (2023-09-18) and is
+    the default PQ KEX in OpenSSH 9.5+. Currently the only spec is
+    draft-ietf-sshm-ntruprime-ssh (currently -06, 2025-09-30).
+independence:
+  lineage: "OpenBSD / OpenSSH portability team"
+  reuses: "OpenSSH libcruxy/sntrup761 OR system OpenSSL/liboqs binding"
+  notes: |
+    sntruprime is NTRU Prime 761 (Streamlined NTRU Prime), not lattice
+    ML-KEM. The encapsulation-key check is different: sntruprime's pk
+    encodes small coefficients in {-1, 0, 1} (or {-1, 0, 1, 2} depending
+    on encoding); the s2.1-equivalent mandate requires the server to
+    validate that each small coefficient is in the allowed range before
+    calling crypto_kem_sntrup761_enc.
+sntruprime_support:
+  pk_size_bytes: 1031
+  ct_size_bytes: 1035
+  ss_size_bytes: 32
+  kats_included: "yes - NTRU Prime reference implementation ships KATs"
+  hpke_integration: "no -- SSH KEX direct path"
+  protocol_modes: ["SSH hybrid KEX per draft-ietf-sshm-ntruprime-ssh-06"]
+notes: |
+  CRITICAL DEPLOYMENT RELEVANCE: sntrup761x25519-sha512 is the DEFAULT
+  PQ KEX in OpenSSH 9.5+, deployed in production today. A confirmed
+  wire-level gap here is materially more security-relevant than a
+  hypothetical ML-KEM-768 gap (which is not yet deployed by default).
+
+  Per kexsntrup761x25519.c, the server enc() path does NOT perform a
+  small-coefficient range check on C_PK2. The audit must confirm this
+  empirically on a loopback handshake.

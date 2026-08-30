@@ -1,0 +1,152 @@
+id: exp-2026-0025
+type: experiment
+status: designed
+created_at: "2026-08-30T05:00:00Z"
+updated_at: "2026-08-30T05:00:00Z"
+summary: SSH hybrid KEX protocol-layer FIPS 203 s7.2 enforcement - Stage A (length half) + Stage B (modulus half) + Stage C (client-side decapsulation parity) per SSH binary packet framing RFC 4253 s6 for OpenSSH portable mlkem768x25519-sha256 and sntrup761x25519-sha512 server cohorts.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: minimax-m3
+    tool: design synthesis from scout-protocol-interop-2026-08-30 §10 + reuse msn-2026-0005 harness shape
+  sources:
+    - knowledge/notes/scout-protocol-interop-2026-08-30.md
+    - knowledge/findings/fnd-2026-0001.yaml
+    - knowledge/findings/fnd-2026-0005.yaml
+    - interop/protocol-placement/rustls_loopback/main.go
+    - crypto/mlkem-input-checks/stimuli/stimuli.tsv
+    - https://datatracker.ietf.org/doc/draft-ietf-sshm-mlkem-hybrid-kex/
+    - https://datatracker.ietf.org/doc/draft-ietf-sshm-ntruprime-ssh/
+    - https://www.rfc-editor.org/rfc/rfc4253
+  parent: msn-2026-0010
+  generation: 0
+links:
+  missions: [msn-2026-0010]
+  hypotheses: [hyp-2026-0016, hyp-2026-0017, hyp-2026-0018, hyp-2026-0019, hyp-2026-0020]
+  targets: [tgt-2026-0003]
+  implementations: [imp-2026-0012, imp-2026-0013, imp-2026-0014]
+title: SSH loopback MITM harness for hybrid KEX s7.2 enforcement audit
+design:
+  summary: |
+    Build a Go harness that drives an SSH handshake against an OpenSSH portable
+    server with hybrid KEX advertised, parses the SSH_MSG_KEX_HYBRID_INIT
+    payload per RFC 4253 s6 + draft-ietf-sshm-mlkem-hybrid-kex-10 s2.1,
+    rewrites C_PK2 (or sntruprime's equivalent) per stimulus, and observes
+    the server's response:
+      (a) SSH_MSG_DISCONNECT reason 3 = strict (rejected)
+      (b) Completed handshake (KEXDH_REPLY received) = lenient (silent encapsulate)
+      (c) TCP reset / hang = dangerous (likely crash or silent close)
+
+    The harness is structured as Go native SSH client + Go MITM that sits on
+    the same net.Pipe as the rustls_loopback harness. SSH binary packet
+    framing (RFC 4253 s6) is simpler than TLS 1.3: uint32 packet_length ||
+    byte padding_length || payload || random padding || mac.
+
+    Stimulus families:
+      (control): canonical C_INIT (1184 B ML-KEM-768 || 32 B X25519) = 1216 B
+      (truncate_by_1): 1215 B (length-half)
+      (append_1): 1217 B (length-half)
+      (coeff0_q): first 12-bit coefficient = 3329 (modulus-half)
+      (coeff0_4095): first 12-bit coefficient = 4095 (modulus-half)
+      (coeff255_4095): last 12-bit coefficient = 4095 (modulus-half)
+      (cross_param_set): replace C_PK2 with 800-B ML-KEM-512 body + 416 B
+        filler (cross-param-set body; this is a structural break in the
+        fixed-length encoding so the server MUST reject by length check)
+
+  stages:
+    - stage: A
+      name: Length-half stimuli
+      goal: confirm baseline server rejects length-only tampering
+      stimuli: [control, truncate_by_1, append_1]
+      expected: control=handshake, others=disconnect reason 3
+      failure_mode: append_1 accepted = spec violation; control rejected = harness bug
+
+    - stage: B
+      name: Modulus-half stimuli
+      goal: test whether server enforces coefficient range check
+      stimuli: [coeff0_q, coeff0_4095, coeff255_4095, cross_param_set]
+      expected:
+        strict: all four rejected with disconnect reason 3
+        lenient: all four complete handshake (H1 confirmed)
+      failure_mode: cross_param_set accepted at length but ignored at body = spec violation
+
+    - stage: C
+      name: Client-side decapsulation parity (mandatory)
+      goal: determine whether OpenSSH / Go client catches lenient server's S_REPLY
+      stimuli: same as Stage B but observed from client side
+      expected:
+        strict_client: handshake aborts on client side after S_REPLY
+        lenient_client: handshake completes end-to-end (dangerous)
+      failure_mode: client silently accepts = critical discovery
+
+    - stage: D
+      name: Erlang/OTP ssh independent cohort (gated)
+      goal: determine whether strict-mode implementation exists
+      stimuli: same as Stage B
+      gating: only run if OpenSSH portable is lenient in Stages A/B
+
+  ssh_packet_layout:
+    client_first_kex:
+      - SSH_MSG_KEXINIT (20)
+      - payload: "16-byte cookie || kex algorithms || server host key algos || encryption algos c2s || s2c || mac algos c2s || s2c || compression algos c2s || s2c || languages c2s || s2c || first_kex_packet_follows"
+      - role: client advertises its kex preference list
+
+    server_kex_reply:
+      - SSH_MSG_KEXINIT (20)
+      - role: server selects one kex from the intersection; announces its host key
+
+    client_kex_init:
+      - SSH_MSG_KEX_HYBRID_INIT (30) -- for mlkem768x25519-sha256
+      - payload: string C_INIT = C_PK2 (1184 B ML-KEM-768 pk) || C_PK1 (32 B X25519 pk)
+      - role: client sends its hybrid KEM public key
+
+    server_kex_reply_2:
+      - SSH_MSG_KEX_HYBRID_REPLY (31) -- for mlkem768x25519-sha256
+      - payload: K_S (server host key) || H (exchange hash) || C_REPLY (server hybrid ciphertext)
+
+    exchange_hash:
+      - H = SHA-512(V_C || V_S || I_C || I_S || K_S || C_INIT || C_REPLY || K)
+      - role: shared secret derivation
+      - note: K_PQ is the concatenated shared secret (ss_M from ML-KEM || ss_X from X25519)
+
+  byte_layout_mlkem:
+    pk_structure: |
+      1184 bytes = 384 bytes encoded t-hat (k=3 NTT coefficients) + 32 bytes rho seed
+      384 bytes encode 1024 12-bit coefficients packed 2 per 3 bytes
+      (low-coeff: b0 | ((b1 & 0x0F) << 8); high-coeff: (b1 >> 4) | (b2 << 4))
+    stimuli_byte_positions:
+      coeff0: "bytes [0..2]: low nibble of b0 = coeff0 & 0xFF, then ((b1 & 0x0F) << 8)"
+      coeff255: "last 12-bit coeff: b[763] low half + b[764] high half + b[765] low half"
+      cross_param_set: "replace bytes [0..799] with 800-B ML-KEM-512 t-hat + 384-B filler (creates 1184 B but structurally malformed for k=3)"
+
+  byte_layout_sntruprime:
+    pk_structure: |
+      1031 bytes = 6 bytes (small public key header) + NTRU Prime 761 polynomial coefficients
+      Each coefficient is in {-1, 0, 1} (or {-1, 0, 1, 2} for Round2 mult-encoding)
+      Encoding uses specific per-byte packing per the NTRU Prime reference implementation
+    stimuli_byte_positions:
+      to_be_determined_during_implementation: "sntruprime byte layout requires reading libcruxy/sntrup761.c"
+
+  compute_class: medium
+  expected_wall_time_minutes: "First build: 5-15 min OpenSSH portable on GHA; harness development: 30-60 min; matrix: 5-10 min total"
+  dependencies:
+    - "github.com/openssh/openssh-portable (cloned from master at mission start)"
+    - "github.com/erlang/otp (Stage D only)"
+    - "Go 1.26+ for harness; openssh-portable build dependencies (gcc, autoconf, libssl-dev OR system openssl + liboqs)"
+verifier_notes: |
+  Deterministic binary oracle:
+    - For each (cohort, stimulus) pair, record: { handshake-completed, disconnect-reason-3, tcp-reset, timeout }
+    - Hash: stimulus name + cohort commit + server's first 4 bytes of S_REPLY (or N/A)
+    - Cross-host: rerun on local + GHA ubuntu-latest for any lenient verdict (confirmation rule)
+
+  Risk mitigations:
+    - The harness uses Go's standard library for SSH key exchange (no ssh client in Go stdlib yet for PQ KEX; use a Go-side MITM pattern).
+    - Server-side OpenSSH portable is built from source on GHA with USE_MLKEM768X25519=1.
+    - Cross-validation: OpenSSH portable's published KAT vectors for sntrup761x25519-sha512 used as control.
+notes: |
+  This experiment design explicitly accommodates the critic's review by making
+  Stage C mandatory. The discovery lever is "does the client also lack the
+  coefficient check" -- this is what makes the mission discovery-grade rather
+  than confirmation-grade.

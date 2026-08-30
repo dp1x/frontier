@@ -1,0 +1,122 @@
+id: msn-2026-0010
+type: mission
+status: active
+created_at: "2026-08-30T04:45:00Z"
+updated_at: "2026-08-30T04:45:00Z"
+summary: SSH hybrid KEX protocol-layer FIPS 203 s7.2 enforcement - audit OpenSSH portable mlkem768x25519-sha256 and sntrup761x25519-sha512 server cohort against tampered C_INIT stimuli to determine whether the SSH_MSGKEX_HYBRID_INIT protocol-layer check performs the encapsulation-key modulus check per draft-ietf-sshm-mlkem-hybrid-kex-10 s2.1.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: minimax-m3
+    tool: scout-protocol-interop-2026-08-30 + adversarial critic review + Frontier continuation evaluator
+  sources:
+    - knowledge/notes/scout-protocol-interop-2026-08-30.md
+    - knowledge/findings/fnd-2026-0001.yaml
+    - knowledge/findings/fnd-2026-0005.yaml
+    - missions/completed/msn-2026-0005.yaml
+    - https://datatracker.ietf.org/doc/draft-ietf-sshm-mlkem-hybrid-kex/
+    - https://datatracker.ietf.org/doc/draft-ietf-sshm-ntruprime-ssh/
+    - https://github.com/openssh/openssh-portable/blob/master/kexmlkem768x25519.c
+    - https://github.com/openssh/openssh-portable/blob/master/kexsntrup761x25519.c
+    - https://www.rfc-editor.org/rfc/rfc4253
+  parent: msn-2026-0005
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0003]
+  hypotheses: [hyp-2026-0016, hyp-2026-0017, hyp-2026-0018, hyp-2026-0019, hyp-2026-0020]
+  implementations: [imp-2026-0012, imp-2026-0013, imp-2026-0014]
+title: SSH hybrid KEX protocol-layer FIPS 203 s7.2 enforcement audit (OpenSSH portable)
+objective: >
+  Determine whether OpenSSH portable's sshd enforces the FIPS 203 s7.2
+  encapsulation-key modulus check (and the analogous NTRU Prime 761
+  encapsulation-key check) on the C_PK2 portion of SSH_MSGKEX_HYBRID_INIT
+  before calling Encaps, as mandated by
+  draft-ietf-sshm-mlkem-hybrid-kex-10 s2.1 and
+  draft-ietf-sshm-ntruprime-ssh-06 s2.1.
+
+  Per-cohort verdicts (server-side response to tampered C_INIT):
+
+  1. OpenSSH portable mlkem768x25519-sha256 server:
+     - Length half (truncate_by_1, append_1) -- does the server reject?
+     - Modulus half (coeff0=q, coeff0=4095, coeff255=4095,
+       cross-param-set body) -- does the server reject?
+     - Verdict rule -- SSH_MSG_DISCONNECT reason 3 = strict;
+       completed handshake = lenient;
+       silent encapsulate = dangerous.
+
+  2. OpenSSH portable sntrup761x25519-sha512 server (deployed default
+     in OpenSSH 9.5+, sntruprime is in production):
+     - Same stimulus family adapted to NTRU Prime 761 wire format
+       (small-coefficient over Z_761 instead of 12-bit packed over Z_3329).
+     - Same verdict rule.
+
+  3. Stage C -- client-side decapsulation parity (critical discovery lever):
+     Does the OpenSSH portable *client* (and the Go x/crypto/ssh client)
+     catch non-canonical C_PK2 either via len or decapsulation-time
+     rejection on S_REPLY? This stage is mandatory, not optional.
+
+  4. Stage D (gated) -- if Stage A/B shows lenient server for either cohort,
+     bring in Erlang/OTP ssh as an independent cohort. (Skip if Stages A/B
+     show strict enforcement, since orthogonal-cohort value is then low.)
+
+  Out of scope (deferred to follow-ups if discovery emerges):
+  - Dropbear sshd ML-KEM-X25519 audit (Dropbear does not ship ML-KEM-X25519).
+  - IKEv2 RFC 9370 hybrid ML-KEM audit.
+  - QUIC + ECH + ML-KEM audit.
+domain: interop
+scope: >
+  OpenSSH portable master HEAD (v9.x line) with USE_MLKEM768X25519=1 and
+  sntrup761x25519-sha512 (default-enabled). Both build paths use the same
+  OpenSSH portable kex.c dispatch code.
+  Out of scope: sshd configurations with custom KEX lists; client-side KEX
+  preference override; performance/timing; memory-safety audits; side channels.
+constraints:
+  - All builds in env-scrubbed scratch on R:\ ramdisk or GHA ubuntu-latest.
+  - Pinned OpenSSH portable commit at the time of mission start.
+  - Stimuli reuse the byte-position logic from msn-2026-0005
+    (crypto/mlkem-input-checks/stimuli/stimuli.tsv family).
+  - Decision surface is binary (handshake-completed vs SSH_MSG_DISCONNECT
+    reason 3) plus a third "silent encapsulate" capture.
+  - Cross-stage evidence required -- Stage C (client-side decaps parity) is
+    mandatory per the adversarial critic review; the mission does not
+    terminalize as a discovery without Stage C executed.
+  - No secrets; tests use self-signed host keys.
+  - Disclosure: public, interop-note class (not CVE).
+desired_evidence_level: independently-reviewed
+candidate_targets: [tgt-2026-0003]
+dependencies:
+  - fnd-2026-0001
+  - fnd-2026-0005
+compute:
+  expected_class: medium
+  notes: "OpenSSH portable builds (lightweight per build) + Go MITM harness + GHA ubuntu-latest runner. Local Windows host ssh cannot serve as server cohort (LibreSSL 3.8.2 lacks PQ KEX); use as client only."
+budget:
+  max_attempts: 8
+  max_independent_reviews: 2
+  max_compute_runs: 12
+  diminishing_returns_window: 3
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Stage A executed -- length-half stimuli (truncate_by_1, append_1, control) tested against OpenSSH portable mlkem768x25519-sha256 server with per-handshake verdict recorded."
+  - "Stage B executed -- modulus-half stimuli (coeff0=q, coeff0=4095, coeff255=4095, cross-param-set body) tested against same server with per-handshake verdict recorded."
+  - "Stage C executed (mandatory) -- client-side decapsulation parity. Both the OpenSSH portable client and the Go golang.org/x/crypto/ssh client are tested against the tampered-server path; verdict recorded."
+  - "Sntrup761x25519-sha512 cohort executed -- same Stage A/B stimuli adapted to NTRU Prime 761 wire format; per-handshake verdict recorded."
+  - "All variants classified as {strict, lenient, dangerous} with attribution (cohort, version, stimulus). Capture wire-level verdict (SSH_MSG_DISCONNECT reason code vs completed handshake vs S_REPLY length-disparity)."
+  - "Any lenient verdict minimized to single-byte reproducer and confirmed across two independent host environments (local + GHA ubuntu-latest)."
+  - "Adversarial review by a non-synthesizer role (rev-2026-XXXX) that did not write the harness."
+  - "Finding promoted through the standard ladder -- hypothesis -> experiment -> observation -> reproducer -> independent review -> verified (or rejected)."
+stopping_conditions:
+  - "All 4 stages executed and reviewed, OR"
+  - "Diminishing-returns window hit (3 consecutive runs with no new verdict), OR"
+  - "Budget exhausted without new discriminating evidence."
+artifacts: []
+follow_ups:
+  - "If Stage D (Erlang/OTP) is skipped due to strict Stage A/B, document as out-of-scope follow-up."
+  - "If discovery emerges on sntrup761x25519-sha512, escalate to IETF sshm WG mailing list for draft-ietf-sshm-ntruprime-ssh-06 spec clarification."
+  - "If OpenSSH portable is lenient on either cohort, recommend upstream patch to kexmlkem768x25519.c / kexsntrup761x25519.c adding the s2.1-mandated check."
+notes_path: knowledge/notes/msn-2026-0010.md
+blocked_reason: null
+terminal_reason: null

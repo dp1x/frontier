@@ -1,0 +1,134 @@
+id: exp-2026-0026
+type: experiment
+status: designed
+created_at: "2026-08-30T05:00:00Z"
+updated_at: "2026-08-30T05:00:00Z"
+summary: GitHub Actions workflow design - ssh-loopback.yml - that builds OpenSSH portable with USE_MLKEM768X25519=1 on ubuntu-latest, then runs the Go MITM harness (interop/protocol-placement/ssh_loopback/main.go) against the local sshd for both mlkem768x25519-sha256 and sntrup761x25519-sha512 cohorts, with per-stimulus verdict capture.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: minimax-m3
+    tool: design synthesis from exp-2026-0025 + reuse msn-2026-0005 .github/workflows/rustls-loopback.yml pattern
+  sources:
+    - knowledge/experiments/exp-2026-0025.yaml
+    - knowledge/notes/scout-protocol-interop-2026-08-30.md
+    - .github/workflows/rustls-loopback.yml (template)
+    - https://github.com/openssh/openssh-portable
+  parent: msn-2026-0010
+  generation: 0
+links:
+  missions: [msn-2026-0010]
+  hypotheses: [hyp-2026-0016, hyp-2026-0017, hyp-2026-0018]
+  targets: [tgt-2026-0003]
+  implementations: [imp-2026-0012, imp-2026-0013]
+title: ssh-loopback.yml workflow design
+design:
+  workflow_path: ".github/workflows/ssh-loopback.yml"
+  triggers: ["workflow_dispatch", "push to msn-2026-0010-* branch"]
+  permissions: "contents: read only -- no secrets exposed"
+  matrix:
+    cohort:
+      - name: mlkem768x25519-sha256
+        kex_method: "mlkem768x25519-sha256"
+        build_flag: "USE_MLKEM768X25519=1"
+        ek_size: 1184
+      - name: sntrup761x25519-sha512
+        kex_method: "sntrup761x25519-sha512"
+        build_flag: "(default-enabled since OpenSSH 9.5)"
+        ek_size: 1031
+  steps:
+    - name: "Checkout repo"
+      uses: actions/checkout@v4
+    - name: "Install build dependencies"
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential autoconf libssl-dev zlib1g-dev
+    - name: "Clone openssh-portable"
+      run: |
+        git clone --depth 1 https://github.com/openssh/openssh-portable.git
+        cd openssh-portable
+        echo "OPENSSH_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+    - name: "Build openssh-portable with USE_MLKEM768X25519=1"
+      run: |
+        cd openssh-portable
+        autoreconf -fi
+        ./configure --with-libs=-ldl --prefix=/tmp/openssh-install ${{ matrix.cohort.build_flag }}
+        make -j4
+        sudo make install
+        which /tmp/openssh-install/sbin/sshd
+        /tmp/openssh-install/sbin/sshd -V 2>&1 | head -3
+    - name: "Install Go"
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.26"
+    - name: "Generate self-signed host key"
+      run: |
+        ssh-keygen -t ed25519 -f /tmp/ssh_host_ed25519_key -N ''
+    - name: "Start sshd"
+      run: |
+        cat > /tmp/sshd_config <<EOF
+        Port 2222
+        ListenAddress 127.0.0.1
+        HostKey /tmp/ssh_host_ed25519_key
+        PasswordAuthentication no
+        PubkeyAuthentication yes
+        KexAlgorithms ${{ matrix.cohort.kex_method }}
+        Ciphers aes256-gcm@openssh.com
+        MACs hmac-sha2-512
+        LogLevel DEBUG
+        AuthorizedKeysFile /tmp/authorized_keys
+        PidFile /tmp/sshd.pid
+        EOF
+        /tmp/openssh-install/sbin/sshd -f /tmp/sshd_config -E /tmp/sshd.log
+        sleep 1
+        cat /tmp/sshd.pid
+    - name: "Generate client keypair"
+      run: |
+        ssh-keygen -t ed25519 -f /tmp/client_ed25519_key -N ''
+        cat /tmp/client_ed25519_key.pub > /tmp/authorized_keys
+    - name: "Run SSH loopback MITM harness"
+      run: |
+        cd $GITHUB_WORKSPACE
+        mkdir -p interop/protocol-placement/ssh_loopback/reports
+        go run ./interop/protocol-placement/ssh_loopback \
+          --cohort ${{ matrix.cohort.name }} \
+          --server-addr 127.0.0.1:2222 \
+          --client-key /tmp/client_ed25519_key \
+          --out-tsv interop/protocol-placement/ssh_loopback/reports/${{ matrix.cohort.name }}_report.tsv \
+          --out-log interop/protocol-placement/ssh_loopback/reports/${{ matrix.cohort.name }}_console.log
+    - name: "Capture sshd debug log"
+      if: always()
+      run: |
+        cat /tmp/sshd.log > interop/protocol-placement/ssh_loopback/reports/${{ matrix.cohort.name }}_sshd.log || true
+    - name: "Upload artifacts"
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ssh-loopback-${{ matrix.cohort.name }}-${{ github.run_id }}
+        path: |
+          interop/protocol-placement/ssh_loopback/reports/
+          openssh-portable/kex*.c  # for cross-reference
+
+  expected_artifacts:
+    - reports/mlkem768x25519-sha256_report.tsv
+    - reports/mlkem768x25519-sha256_console.log
+    - reports/sntrup761x25519-sha512_report.tsv
+    - reports/sntrup761x25519-sha512_console.log
+    - reports/{cohort}_sshd.log
+  expected_wall_time_minutes: "15-20 min total (5 min build + 5 min harness + 5 min matrix + 5 min artifacts)"
+
+compute_class: medium
+local_constraint: |
+  This Windows host has OpenSSH_for_Windows_9.5p2 + LibreSSL 3.8.2, which
+  does NOT support mlkem768x25519-sha256 or sntrup761x25519-sha512 KEX
+  algorithms. The local ssh -Q kex output confirms only classical KEX
+  algorithms. Therefore the ssh-loopback workflow must execute on GHA
+  ubuntu-latest where OpenSSH portable can be built from source.
+notes: |
+  The workflow design reuses the .github/workflows/rustls-loopback.yml
+  template structure verbatim (matrix + checkout + build + run + upload).
+  The key difference is that OpenSSH portable's PQ KEX support is
+  USE_MLKEM768X25519=1 (configure-time flag) for the ML-KEM cohort, and
+  sntrup761x25519-sha512 is enabled by default since OpenSSH 9.5.

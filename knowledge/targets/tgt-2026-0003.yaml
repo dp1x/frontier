@@ -1,0 +1,62 @@
+id: tgt-2026-0003
+type: target
+status: active
+created_at: "2026-08-30T04:45:00Z"
+updated_at: "2026-08-30T04:45:00Z"
+summary: SSH protocol stacks (OpenSSH portable, Erlang/OTP ssh, Dropbear) implementing SSH hybrid KEX (mlkem768x25519-sha256 + sntrup761x25519-sha512) per draft-ietf-sshm-mlkem-hybrid-kex-10 and draft-ietf-sshm-ntruprime-ssh-06, suitable for protocol-layer FIPS 203 s7.2 enforcement audit.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-scout
+    model: minimax-m3
+    tool: scout-protocol-interop-2026-08-30.md + mission msn-2026-0010 design
+  sources:
+    - https://datatracker.ietf.org/doc/draft-ietf-sshm-mlkem-hybrid-kex/
+    - https://datatracker.ietf.org/doc/draft-ietf-sshm-ntruprime-ssh/
+    - https://github.com/openssh/openssh-portable/blob/master/kexmlkem768x25519.c
+    - https://github.com/openssh/openssh-portable/blob/master/kexsntrup761x25519.c
+    - knowledge/findings/fnd-2026-0001.yaml
+    - knowledge/findings/fnd-2026-0005.yaml
+    - missions/completed/msn-2026-0005.yaml
+  parent: msn-2026-0010
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  implementations: [imp-2026-0012, imp-2026-0013, imp-2026-0014]
+title: SSH hybrid KEX implementation cohort (msn-2026-0010)
+selection_rationale: >
+  OpenSSH portable is the canonical reference implementation for SSH PQ
+  hybrid KEX, with Damien Miller and Markus Friedl as authors of record.
+  Erlang/OTP ssh provides an independent Erlang implementation lineage.
+  Dropbear SSH provides a lightweight C independent lineage (sntruprime
+  cohort only; ML-KEM-X25519 not shipped).
+lineage_note: >
+  Independent-cohort ceiling: as of 2026-08-30, only OpenSSH portable
+  ships BOTH mlkem768x25519-sha256 AND sntrup761x25519-sha512. Erlang/OTP
+  ships only sntrup761x25519-sha512. Dropbear ships only
+  sntrup761x25519-sha512. ML-KEM-X25519 cross-impl therefore relies on a
+  single OpenBSD/OpenSSH-portable lineage, bounding the matrix's generality.
+candidates:
+  - implementation: imp-2026-0012
+    note: "OpenSSH portable - mlkem768x25519-sha256 (experimental, gated by USE_MLKEM768X25519)"
+  - implementation: imp-2026-0013
+    note: "OpenSSH portable - sntrup761x25519-sha512 (default in OpenSSH 9.5+)"
+  - implementation: imp-2026-0014
+    note: "Erlang/OTP ssh - sntrup761x25519-sha512 (OTP 27+, independent Erlang lineage)"
+excluded:
+  - candidate: Dropbear sshd ML-KEM-X25519
+    reason: "Dropbear does not ship mlkem768x25519-sha256 as of 2026-08-30"
+  - candidate: libssh / AsyncSSH / paramiko
+    reason: "No hybrid PQ KEX support in any of these libraries as of 2026-08-30"
+  - candidate: golang.org/x/crypto/ssh server
+    reason: "Client-side support only; no production-grade sshd in this library"
+  - candidate: PuTTY / WinSCP / FileZilla
+    reason: "Windows-only clients; ssh client only, no server cohort available"
+local_constraint_note: >
+  This Windows host's ssh.exe is OpenSSH_for_Windows_9.5p2 with LibreSSL
+  3.8.2, which does NOT ship sntrup761x25519-sha512 or mlkem768x25519-sha256
+  KEX algorithms (ssh -Q kex shows only classical algorithms). Therefore
+  the local Windows ssh cannot serve as a server cohort for the audit.
+  Use OpenSSH portable built on GHA ubuntu-latest as the primary cohort;
+  the local Windows ssh can serve as a Go x/crypto/ssh client peer only.
