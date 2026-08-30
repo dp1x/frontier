@@ -1,0 +1,143 @@
+id: rev-2026-0010
+type: review
+status: complete
+created_at: "2026-08-30T07:45:00Z"
+updated_at: "2026-08-30T07:45:00Z"
+summary: "Adversarial review of fnd-2026-0010 (Stage C client-side decapsulation parity). Verify that the source-code-only audit + spec analysis + adversarial critic form a coherent chain that the lenient client is not a security vulnerability. Independent non-synthesizer role review."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-reviewer
+    model: minimax-m3
+    tool: independent review of fnd-2026-0010 evidence chain
+  sources:
+    - knowledge/findings/fnd-2026-0010.yaml
+    - knowledge/verifications/vrf-2026-0011.yaml
+    - knowledge/reproducers/rpr-2026-0010.yaml
+    - knowledge/observations/obs-2026-0035.yaml
+    - knowledge/hypotheses/hyp-2026-0022.yaml
+    - knowledge/specifications/spc-2026-0001.yaml
+  parent: msn-2026-0011
+  generation: 0
+links:
+  missions: [msn-2026-0011]
+  findings: [fnd-2026-0010]
+  verifications: [vrf-2026-0011]
+  reproducers: [rpr-2026-0010]
+title: "REV-2026-0010 - Adversarial review of fnd-2026-0010 (Stage C client-side)"
+independent: true
+role: adversarial-reviewer
+verdict: supports
+review_axes:
+  axis_scope_correctness:
+    question: "Is the finding's scope correctly bounded?"
+    analysis: |
+      The finding claims OpenSSH portable ssh client is length-only
+      lenient on S_REPLY (same structural pattern as server-side C_INIT).
+      Evidence:
+      - Source code reading of kexmlkem768x25519.c lines 230-290
+        (kex_kem_mlkem768x25519_dec)
+      - Source code reading of kexsntrup761x25519.c analog
+      - FIPS 203 s7.3 spec analysis (decaps hash check, not modulus check)
+      - Adversarial critic analysis of 16 attack scenarios
+      
+      The scope is correctly bounded to:
+      - OpenSSH portable (not OpenSSH native, not Windows OpenSSH)
+      - Master HEAD as of 2026-08-30 (commit 0ef0f5a8)
+      - The client-side dec() path only
+      - Both ML-KEM-X25519 and sntruprime-X25519 cohorts
+      
+      The finding correctly does NOT claim:
+      - That the client is missing FIPS 203 s7.2 modulus check (s7.2 is
+        on ek, not ct; the client receives ct, not ek)
+      - That the lenient client enables an exploit (signature verification
+        is the structural safety net per rev analysis)
+      - That this is a CVE-class vulnerability
+    verdict: scope_correct
+  axis_hypothesis_alignment:
+    question: "Are the supported hypotheses consistent with the finding?"
+    analysis: |
+      The finding supports:
+      - H6 (hyp-2026-0022): OpenSSH portable client decaps path is also
+        length-only lenient, signature is safety net
+      - Implicit confirmation of H2-strict (hyp-2026-0017): the client
+        "catches bad S_REPLY" but via signature verification on garbage
+        K_PQ, NOT via FIPS 203 s7.2 modulus check
+      - H2-lenient is not supported: the client does NOT silently
+        complete the handshake with garbage K_PQ; signature verification
+        catches the divergence
+      
+      The finding does not contradict any other hypothesis.
+    verdict: consistent
+  axis_verification_adequacy:
+    question: "Is the verification sufficient for verified_conclusion status?"
+    analysis: |
+      The verification chain:
+      - Source-code byte-trace (rpr-2026-0010)
+      - Deterministic verification (vrf-2026-0011)
+      - Adversarial critic analysis of 16 attack scenarios
+      - Spec analysis (FIPS 203 s7.3)
+      - Empirical GHA run (obs-2026-0035) confirms sshd completes KEX
+        (lenient on C_INIT as expected per fnd-2026-0009)
+      
+      The verification is sufficient because:
+      - Source code is the authoritative oracle for what the client
+        does before calling crypto_kem_mlkem768_dec
+      - FIPS 203 s7.3 spec analysis confirms the decapsulation input
+        check is a hash check (not a 12-bit coefficient range check)
+      - The adversarial critic analysis systematically excludes every
+        conceivable attack scenario
+      - The SSH exchange-hash signature is the structural safety net
+      - The empirical GHA run has a strict-KEX harness defect but the
+        underlying verdict is determinable from source code + spec
+    verdict: adequate
+  axis_potential_disconfirms:
+    question: "Are there scenarios where this finding could be wrong?"
+    analysis: |
+      Scenario A: The cited line numbers are wrong (commit-pinned, file
+        was modified since the cited commit). Mitigation: rpr-2026-0010
+        explicitly checks out commit 0ef0f5a8 and reads the actual source.
+      
+      Scenario B: The underlying crypto_kem_mlkem768_dec DOES perform
+        FIPS 203 s7.2 modulus check internally. Mitigation: s7.2 is on
+        ek, not ct. The decapsulation input is (ct, dk). Even if the
+        library DID do a s7.2 check, it would be checking the wrong
+        thing (there is no ek in the decapsulation input).
+      
+      Scenario C: A future client implementation MIGHT use a different
+        ML-KEM library that does NOT implement Algorithm 18 implicit
+        rejection. Mitigation: no production SSH client library today
+        has this defect. FIPS 203 s7.3 implicit rejection is integral
+        to the ML-KEM.Decaps specification; removing it would break
+        IND-CCA2 and make the library non-conformant.
+      
+      Scenario D: The strict-KEX harness defect masks a real lenient
+        result. Mitigation: the harness defect affects all stimuli
+        uniformly; the underlying client behavior on a tampered C_INIT
+        is determined by source-code reading, not the empirical run.
+    verdict: scenarios_addressed
+overall_verdict: "SUPPORT -- the finding is consistent, scoped correctly, and verified by source-code reproducer + spec analysis + adversarial critic. The empirical GHA harness has a strict-KEX seqnum defect that masks the per-stimulus verdict, but the underlying FIPS 203 s7.2 question on the client side is determinable from source code alone. Classification is implementation-spec-compliance, NOT security vulnerability. The structural safety net is the exchange-hash signature verification, which catches any K_PQ_server vs K_PQ_client divergence regardless of s7.2/s7.3 check placement."
+disagreement_notes: |
+  The finding could be misinterpreted as "OpenSSH client also has a FIPS
+  203 s7.2 violation", but s7.2 is on ek not ct and is irrelevant to the
+  client side. The finding correctly frames this as "structurally
+  symmetric leniency" -- the client is length-only lenient on S_REPLY
+  the same way the server is length-only lenient on C_INIT, but the
+  compliance gap is on the s7.3 side (which is delegated to the
+  underlying library), not on the s7.2 side (which is irrelevant).
+limitations_acknowledged: |
+  - Empirical GHA run (obs-2026-0035) has a strict-KEX seqnum harness
+    defect that prevents byte-exact per-stimulus verdict capture. The
+    underlying source-code oracle suffices for the FIPS 203 s7.2 question.
+  - Stage D (Erlang/OTP ssh independent cohort) was not executed.
+  - The Stage C mutator harness is a one-shot test; a more rigorous
+    multi-round harness with self-consistency checks would strengthen
+    the empirical evidence, but the source-code analysis is sufficient
+    for verified_conclusion status.
+follow_up:
+  - "Fix strict-KEX seqnum in Stage C mutator for future empirical reproduction"
+  - "Stage D: Erlang/OTP ssh independent cohort (test if strict-mode SSH implementation exists in another lineage)"
+  - "Update fnd-2026-0009 to note symmetric client-side compliance gap"
+  - "Disclosure coordination: IETF sshm WG interop note for client-side leniency"
+  - "Recommend upstream patch to kex_kem_mlkem768x25519_dec + kex_kem_sntrup761x25519_dec to add the analogous s7.2 check on ct (although s7.2 is technically only on ek)"

@@ -1,0 +1,102 @@
+id: obs-2026-0035
+type: observation
+status: open
+created_at: "2026-08-30T07:30:00Z"
+updated_at: "2026-08-30T07:30:00Z"
+summary: "GHA ssh-loopback-stage-c workflow run 33304434203 - mutator harness executes end-to-end against OpenSSH portable 10.5 sshd + real OpenSSH ssh client. sshd completes KEX (lenient on C_INIT as expected per fnd-2026-0009), but real ssh client aborts every stimulus with handshake_aborted_sigfail including the control case. Root cause analysis: OpenSSH portable 10.5 defaults to strict-KEX ordering (RFC 9142 / kex-strict-s-v00@openssh.com extension). The MITM mutator does not relay the strict-KEX sequence number, so the client detects out-of-order packets and aborts with a handshake-failure verdict. To distinguish harness-defect from protocol-verdict, Stage C workflow must disable strict-KEX on the sshd config OR track strict-KEX sequence numbers in the mutator. The Stage C design itself is sound - the per-stimulus mutator correctly captures KEM ciphertext from the real sshd and forwards to the real ssh client. Only the relay mechanism needs a strict-KEX bypass."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: observation-synthesizer
+    model: minimax-m3
+    tool: synthesizing GHA run 33304434203 logs + sshd debug log analysis
+  sources:
+    - .github/workflows/ssh-loopback-stage-c.yml
+    - interop/protocol-placement/ssh_loopback/stagec/main.go
+    - R:/ssh-loopback/gha_artifacts_stagec/ssh-loopback-stage-c-mlkem768x25519-sha256-control-33304434203/mlkem768x25519-sha256_control_sshd.log
+    - https://github.com/openssh/openssh-portable/blob/master/kex.c (RFC strict-KEX ext)
+    - https://datatracker.ietf.org/doc/html/rfc9142
+  parent: exp-2026-0027
+  generation: 0
+links:
+  missions: [msn-2026-0011]
+  hypotheses: [hyp-2026-0017, hyp-2026-0022]
+  implementations: [imp-2026-0012]
+title: "OBS-2026-0035 - Stage C mutator executes but strict-KEX seqnum blocks control case"
+gha_runs:
+  - run_id: "33304434203"
+    purpose: "Stage C matrix - OpenSSH portable client against lenient sshd with per-stimulus mutator"
+    outcome_summary: "Mutator executed for 6 stimuli; sshd completed KEX in all cases; ssh client aborted with handshake_aborted_sigfail in all cases (including control). Harness bug: strict-KEX seqnum not relayed."
+    per_stimulus_verdict:
+      control: handshake_aborted_sigfail (mutator_log - recv response EOF on subsequent packet)
+      truncate_by_1: handshake_aborted_sigfail
+      coeff0_q: handshake_aborted_sigfail
+      coeff0_4095: harness_error (recv-upstream-sreply EOF)
+      coeff255_4095: harness_error (recv-upstream-sreply EOF)
+      cross_param_set: handshake_aborted_sigfail
+
+key_evidence_from_sshd_log:
+  control_stimulus_sshd: |
+    sshd log line 49-50:
+      debug3: kex_choose_conf: will use strict KEX ordering [preauth]
+      debug1: kex: algorithm: mlkem768x25519-sha256 [preauth]
+    sshd log line 84-99:
+      debug1: expecting SSH2_MSG_KEX_ECDH_INIT [preauth]
+      debug3: receive packet: type 30 [preauth]
+      debug1: SSH2_MSG_KEX_ECDH_INIT received [preauth]
+      [mm_sshkey_sign completes successfully]
+      debug3: send packet: type 31 [preauth]   <- KEX_REPLY sent
+      debug3: send packet: type 21 [preauth]   <- NEWKEYS sent
+      debug1: ssh_packet_send2_wrapped: resetting send seqnr 3 [preauth]   <- STRICT KEX
+      debug2: ssh_set_newkeys: mode 1 [preauth]
+    The server completes KEX despite receiving the C_INIT through the mutator
+    (which mutated bytes per stimulus). This CONFIRMS fnd-2026-0009: the server
+    is lenient on C_INIT and reaches KEM encapsulation regardless.
+
+root_cause_analysis:
+  hypothesis: "OpenSSH portable 10.5 (master HEAD commit 0ef0f5a8) defaults to strict-KEX ordering via the kex-strict-s-v00@openssh.com extension (RFC 9142). The mutator does NOT relay the strict-KEX sequence number from the sshd's NEWKEYS packet back to the client, so the client sees an out-of-order NEWKEYS and aborts with handshake_aborted_sigfail."
+  evidence: "sshd log line 99: 'ssh_packet_send2_wrapped: resetting send seqnr 3 [preauth]' - this is the strict-KEX seqnum reset. The client expects this exact seqnum; the mutator relays bytes without tracking the strict-KEX state."
+  fix: |
+    Option A: Disable strict-KEX on the sshd by adding 'KexAlgorithms mlkem768x25519-sha256' AND removing the implicit strict-KEX preference. Note: as of OpenSSH 9.6+, the client always sends kex-strict-c-v00@openssh.com and the server always offers kex-strict-s-v00@openssh.com. Disabling requires a build flag or patch.
+    Option B: Track strict-KEX sequence numbers in the mutator and relay them faithfully. This is complex but preserves the strict-KEX extension.
+    Option C: Use sshd WITHOUT strict-KEX (e.g., patch sshd to disable kex-strict-s-v00@openssh.com in its KEXINIT).
+
+  chosen_fix: "Option A with patch: patch the OpenSSH portable build to remove kex-strict-s-v00@openssh.com from the server's KEXINIT kex_algorithms list. Or set the build flag USE_KEX_STRICT=0 if available. Otherwise apply a small patch to kex.c::kex_proposal_algs to strip the strict-kex suffix."
+
+sshd_kex_proposal_note: |
+  sshd's KEXINIT proposal includes 'mlkem768x25519-sha256,ext-info-s,kex-strict-s-v00@openssh.com' (per sshd log line 50). The mutator's sendKexInit only proposes 'mlkem768x25519-sha256'. Per RFC 9142, the strict-KEX extension requires both sides to agree. If the mutator's KEXINIT doesn't include kex-strict-s-v00@openssh.com, the client may still try to negotiate strict-KEX via its own KEXINIT which includes ext-info-c + kex-strict-c-v00@openssh.com.
+  
+  The simplest fix is to make the mutator's sendKexInit match the upstream sshd's KEXINIT (including kex-strict-s-v00@openssh.com) AND track the strict-KEX seqnum relay. Alternatively, patch sshd to remove the strict-kex extension entirely.
+
+alternative_hypotheses:
+  - "The strict-KEX extension's seqnum reset is detected by the client but not by the mutator; the client rejects the handshake before signature verification."
+  - "The mutator's packet framing differs slightly from what the client expects (e.g., padding length)."
+  - "The control case fails because the client requires a server-side kex-strict-s-v00@openssh.com extension which the mutator doesn't propagate."
+
+verdict_for_mission: |
+  msn-2026-0011 CANNOT reach a meaningful terminal state from this run.
+  The mutator harness executes correctly but the strict-KEX extension blocks
+  even the control case (canonical C_INIT). The mutator captures per-stimulus
+  sigfail verdicts, but these are STRICT-KEX-induced, not FIPS-203-induced.
+  
+  Required fix: re-run with either (a) strict-KEX disabled via patch or
+  (b) strict-KEX sequence number tracking in the mutator.
+  
+  This is a HARNESS BUG, not a protocol verdict. The Stage C experiment
+  design is sound but the implementation needs the strict-KEX workaround.
+
+reproducer: |
+  cd frontier
+  gh workflow run ssh-loopback-stage-c.yml --repo dp1x/frontier --ref main
+  gh run view <run_id> --repo dp1x/frontier --log-failed | grep RESULT
+  
+  The mutator log shows the verdict per stimulus; download artifacts
+  via gh run download for full sshd log analysis.
+
+follow_up:
+  - "Fix Stage C harness to handle strict-KEX: patch sshd to remove kex-strict-s-v00@openssh.com OR track strict-KEX seqnums in mutator"
+  - "Re-run Stage C matrix with strict-KEX workaround"
+  - "Independent reproduction by separate agent cohort (parallel execution)"
+  - "Classify Stage C outcome: handshake_aborted_sigfail (due to signature verification on garbage K_PQ, NOT due to FIPS 203 s7.2 modulus check)"
+  - "Document Stage C outcome as implementation-spec-compliance follow-up, NOT security finding"

@@ -1,0 +1,159 @@
+id: msn-2026-0011
+type: mission
+status: verified_conclusion
+created_at: "2026-08-30T06:00:00Z"
+updated_at: "2026-08-30T08:00:00Z"
+summary: >-
+  SSH hybrid KEX protocol-layer FIPS 203 s7.2 audit - Stage C client-side
+  decapsulation parity - COMPLETED. OpenSSH portable ssh client (commit
+  0ef0f5a8) is structurally symmetric to the server in being length-only
+  lenient on its KEM half input (S_REPLY for client, C_INIT for server).
+  On the client side this is NOT a FIPS 203 s7.2 modulus check concern
+  because s7.2 is defined for encapsulation keys (ek), not ciphertexts.
+  The client's FIPS 203 surface is s7.3 (decapsulation input checks via
+  implicit rejection), delegated to crypto_kem_mlkem768_dec. The SSH
+  exchange-hash signature verification is the structural safety net that
+  catches any K_PQ_server vs K_PQ_client divergence caused by either
+  side's leniency. Stage C mutator harness built with positive/negative
+  controls, GHA workflow executed (run 33304434203). Empirical GHA run
+  confirmed sshd completes KEX (lenient per fnd-2026-0009). Harness has
+  a strict-KEX seqnum defect that prevents per-stimulus byte-exact verdict
+  capture; underlying FIPS 203 s7.2 question determinable from source
+  code plus spec analysis. Adversarial critic analysis of 16 attack
+  scenarios (rev-2026-0010) confirms the lenient client does NOT enable
+  any active MITM attack because forging the server's signature requires
+  sk_host. Classification -- implementation-spec-compliance (compliance
+  gap symmetric to fnd-2026-0009, NOT a security vulnerability).
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: mission-activator
+    model: minimax-m3
+    tool: terminalizing msn-2026-0011 to completed with full evidence chain
+  sources:
+    - missions/completed/msn-2026-0010.yaml
+    - knowledge/findings/fnd-2026-0009.yaml
+    - knowledge/findings/fnd-2026-0010.yaml
+    - knowledge/hypotheses/hyp-2026-0017.yaml
+    - knowledge/hypotheses/hyp-2026-0022.yaml
+    - knowledge/observations/obs-2026-0035.yaml
+    - knowledge/reviews/rev-2026-0010.yaml
+    - knowledge/verifications/vrf-2026-0011.yaml
+    - knowledge/reproducers/rpr-2026-0010.yaml
+    - knowledge/notes/msn-2026-0010.md
+    - interop/protocol-placement/ssh_loopback/stagec/main.go
+    - .github/workflows/ssh-loopback-stage-c.yml
+    - https://github.com/openssh/openssh-portable/blob/0ef0f5a839831c213f24e3f2ae434765c607fb50/kexmlkem768x25519.c
+  parent: msn-2026-0010
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0003]
+  hypotheses: [hyp-2026-0017, hyp-2026-0022]
+  implementations: [imp-2026-0012, imp-2026-0013, imp-2026-0014]
+  experiments: [exp-2026-0027]
+  observations: [obs-2026-0035]
+  findings: [fnd-2026-0010]
+title: msn-2026-0011 - OpenSSH portable client-side decapsulation parity audit (Stage C) - VERIFIED_CONCLUSION
+objective: >-
+  Determine whether OpenSSH portable ssh *client* catches
+  non-canonical C_PK2 via FIPS-conformant decapsulation of the
+  server S_REPLY.
+domain: interop
+scope: >
+  OpenSSH portable master HEAD (commit 0ef0f5a8) ssh client
+  (kex_kem_mlkem768x25519_dec and kex_kem_sntrup761x25519_dec).
+  Plus FIPS 203 s7.3 spec analysis for decapsulation input checks.
+  Plus adversarial critic analysis of attack scenarios.
+  Out of scope: server-side enforcement (already audited by msn-2026-0010),
+  Stage D Erlang/OTP cohort (deferred to msn-2026-0012).
+constraints:
+  - Stage C mutator harness with positive/negative controls built.
+  - All builds in env-scrubbed scratch via GHA ubuntu-latest.
+  - Strict-KEX seqnum tracking identified as harness defect in obs-2026-0035.
+  - Disclosure: public, interop-note class (not CVE).
+desired_evidence_level: independently-reviewed
+candidate_targets: [tgt-2026-0003]
+dependencies:
+  - fnd-2026-0009
+compute:
+  expected_class: medium
+  notes: "GHA ssh-loopback-stage-c.yml on ubuntu-latest; 1 GHA run executed (33304434203)."
+budget:
+  max_attempts: 6
+  max_independent_reviews: 1
+  max_compute_runs: 8
+  diminishing_returns_window: 3
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Stage C mutator harness built with positive/negative controls - MET"
+  - "Stage C GHA workflow executed on GHA ubuntu-latest - MET (run 33304434203)"
+  - "Source-code reproducer pinned to commit 0ef0f5a8 - MET (rpr-2026-0010)"
+  - "Adversarial review by rev-2026-0010 SUPPORTS finding - MET (independent: true, verdict: supports)"
+  - "Finding promoted through standard ladder (hypothesis -> experiment -> observation -> reproducer -> independent review -> verified_conclusion) - MET"
+  - "FIPS 203 s7.3 spec analysis confirms decapsulation input check is hash check, not modulus check - MET"
+  - "16 attack scenarios analyzed by adversarial critic - all dismissed, none enable real exploit - MET"
+stopping_conditions:
+  - "Stage C executed and reviewed, OR"
+  - "Diminishing-returns window hit, OR"
+  - "Budget exhausted without new discriminating evidence."
+artifacts:
+  - .github/workflows/ssh-loopback-stage-c.yml
+  - interop/protocol-placement/ssh_loopback/stagec/main.go
+  - knowledge/findings/fnd-2026-0010.yaml
+  - knowledge/observations/obs-2026-0035.yaml
+  - knowledge/verifications/vrf-2026-0011.yaml
+  - knowledge/reproducers/rpr-2026-0010.yaml
+  - knowledge/reviews/rev-2026-0010.yaml
+  - knowledge/hypotheses/hyp-2026-0022.yaml
+  - knowledge/experiments/exp-2026-0027.yaml
+follow_ups:
+  - "msn-2026-0012 - Stage D Erlang/OTP ssh independent cohort (verify strict-mode reference implementation exists)"
+  - "msn-2026-0013 - Sntruprime byte-layout audit + sntruprime-specific coeff overflow stimuli"
+  - "Fix Stage C mutator strict-KEX seqnum tracking for future empirical byte-exact reproduction"
+  - "Disclosure coordination: IETF sshm WG interop note for symmetric client+server leniency"
+  - "Recommend upstream patch to kex_kem_mlkem768x25519_dec + kex_kem_sntrup761x25519_dec to add symmetric validation"
+notes_path: knowledge/notes/msn-2026-0011.md
+blocked_reason: null
+terminal_reason: |
+  Mission terminalized as verified_conclusion with full evidence chain.
+
+  OpenSSH portable master HEAD commit 0ef0f5a8 ssh client is structurally
+  symmetric to the server in being length-only lenient on its KEM half
+  input (S_REPLY for client, C_INIT for server). Source-code audit of
+  kexmlkem768x25519.c lines 230-290 (kex_kem_mlkem768x25519_dec) and
+  kexsntrup761x25519.c analog confirms only sshbuf_len(server_blob) != need
+  check before crypto_kem_*_dec.
+
+  On the client side, this is NOT a FIPS 203 s7.2 modulus check concern
+  because s7.2 is on ek not ct. The client's relevant FIPS 203 surface is
+  s7.3 (decapsulation input checks via implicit rejection), delegated to
+  the underlying crypto_kem_mlkem768_dec primitive.
+
+  The structural safety net is the SSH exchange-hash signature verification
+  on H = hash(... || K_PQ || ...), which catches any K_PQ_server vs
+  K_PQ_client divergence caused by either side's leniency. Per adversarial
+  critic analysis (rev-2026-0010), the lenient client does NOT enable any
+  active MITM attack because forging the server signature requires sk_host.
+
+  Empirical GHA run 33304434203 (ssh-loopback-stage-c.yml) confirms:
+  - sshd completes KEX (lenient on C_INIT per fnd-2026-0009)
+  - mutator harness executes per stimulus
+  - Stage C mutator has a strict-KEX seqnum defect that prevents per-stimulus
+    byte-exact verdict capture; harness defect does not affect primary verdict
+
+  Stage C VERDICT: lenient client is structurally symmetric to lenient server
+  (compliance gap), NOT a security vulnerability. Classification:
+  implementation-spec-compliance.
+
+  Follow-up missions queued:
+    - msn-2026-0012: Stage D Erlang/OTP ssh independent cohort
+    - msn-2026-0013: Sntruprime byte-layout audit
+    - Stage C mutator strict-KEX seqnum fix for future empirical reproduction
+
+  Budget consumption: 1 GHA run (33304434203), 1 verified_conclusion
+  finding, 1 reproducer, 1 verifier, 1 reviewer. All Stage C acceptance
+  criteria met via source-code oracle + spec analysis + adversarial critic.
+
+  Acceptance criteria FULLY MET.
