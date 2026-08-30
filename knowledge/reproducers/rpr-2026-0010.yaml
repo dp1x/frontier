@@ -1,0 +1,80 @@
+id: rpr-2026-0010
+type: reproducer
+status: reproduced
+created_at: "2026-08-30T07:40:00Z"
+updated_at: "2026-08-30T07:40:00Z"
+summary: "Reproducer for fnd-2026-0010 (msn-2026-0011) -- direct source-code reading of kexmlkem768x25519.c (kex_kem_mlkem768x25519_dec) at OpenSSH portable master HEAD commit 0ef0f5a8 demonstrates that the client-side decapsulation path performs ONLY a length check on the server S_REPLY before calling crypto_kem_mlkem768_dec. There is no 12-bit coefficient range check on the S_REPLY ciphertext because FIPS 203 s7.2 is defined for encapsulation keys (ek), not for ciphertexts. The client's FIPS-conformance surface for the SSH KEM is s7.3 (decapsulation input checks via implicit rejection), which the underlying crypto_kem_mlkem768_dec primitive is responsible for implementing. The structural safety net for the SSH handshake is the exchange-hash signature verification, not the FIPS 203 modulus check."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: reproducer
+    model: minimax-m3
+    tool: source-code byte-trace reproducer
+  sources:
+    - https://github.com/openssh/openssh-portable/blob/0ef0f5a839831c213f24e3f2ae434765c607fb50/kexmlkem768x25519.c
+    - https://github.com/openssh/openssh-portable/blob/0ef0f5a839831c213f24e3f2ae434765c607fb50/kexsntrup761x25519.c
+    - knowledge/findings/fnd-2026-0010.yaml
+  parent: msn-2026-0011
+  generation: 0
+links:
+  missions: [msn-2026-0011]
+  findings: [fnd-2026-0010]
+title: "RPR-2026-0010 - Reproducer for fnd-2026-0010 (Stage C client-side decapsulation parity audit)"
+reproduction_steps:
+  step_1:
+    command: "git clone https://github.com/openssh/openssh-portable.git"
+    purpose: "Fetch openssh-portable repository"
+  step_2:
+    command: "cd openssh-portable && git checkout 0ef0f5a8"
+    purpose: "Pin to the commit audited in fnd-2026-0009 + fnd-2026-0010"
+  step_3:
+    command: "sed -n '230,290p' kexmlkem768x25519.c"
+    purpose: "Read kex_kem_mlkem768x25519_dec body"
+    expected_output: |
+      /* kex_kem_mlkem768x25519_dec */
+      need = MLKEM768_CIPHERTEXTBYTES + CURVE25519_SIZE;
+      if (sshbuf_len(server_blob) != need) {
+          r = SSH_ERR_SIGNATURE_INVALID;
+          goto out;
+      }
+      ciphertext = sshbuf_ptr(server_blob);
+      server_pub = ciphertext + MLKEM768_CIPHERTEXTBYTES;
+      ...
+      if (crypto_kem_mlkem768_dec(shared_secret, ciphertext,
+          kex->mlkem768_client_key) != 0) {
+          r = SSH_ERR_INTERNAL_ERROR;
+          goto out;
+      }
+  step_4:
+    assertion: |
+      Between the length check (line ~234) and the call to
+      crypto_kem_mlkem768_dec (line ~265), there is NO call to a function
+      that validates the 12-bit coefficient range of the ML-KEM-768
+      ciphertext portion of server_blob. The s7.2 modulus check is
+      irrelevant here because s7.2 is on encapsulation keys (ek), not
+      ciphertexts; the ciphertext handling is governed by s7.3 (decaps
+      hash check via implicit rejection, performed inside crypto_kem_mlkem768_dec).
+  step_5:
+    cross_check: |
+      Compare against FIPS 203 s7.3 implicit-rejection mechanism (Algorithm 18
+      step 1): the decapsulation input check is H(c) vs dk's embedded hash,
+      NOT a 12-bit coefficient range check on the ciphertext. OpenSSH
+      portable's protocol layer correctly delegates this to the underlying
+      library function (crypto_kem_mlkem768_dec) which implements Algorithm 18.
+      The structural safety net at the SSH level is the exchange-hash
+      signature verification on H, which catches any K_PQ_server != K_PQ_client
+      mismatch via signature failure.
+verdict: |
+  The reproducer confirms fnd-2026-0010: OpenSSH portable is length-only
+  lenient on the client-side S_REPLY (same structural pattern as the
+  server-side C_INIT per fnd-2026-0009), but this is NOT a FIPS 203 s7.2
+  concern -- s7.2 is on ek, not ct. The relevant client-side check is
+  s7.3 implicit rejection inside crypto_kem_mlkem768_dec. The structural
+  safety net at the SSH protocol layer is the exchange-hash signature
+  verification, which catches the K_PQ divergence caused by the server's
+  leniency on C_INIT.
+expected_outputs:
+  reproducer_exit_code: 0
+  reproducer_wall_time_minutes: 5
+  reproducer_determinism: deterministic (no RNG, no network)

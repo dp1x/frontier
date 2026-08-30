@@ -1,0 +1,159 @@
+id: fnd-2026-0010
+type: finding
+status: verified_conclusion
+created_at: "2026-08-30T07:50:00Z"
+updated_at: "2026-08-30T07:50:00Z"
+summary: "OpenSSH portable master HEAD (commit 0ef0f5a839831c213f24e3f2ae434765c607fb50) ssh client performs ONLY a length check on the server S_REPLY portion of SSH_MSG_KEX_ECDH_REPLY (message 31) for both the mlkem768x25519-sha256 and sntrup761x25519-sha512 hybrid KEX cohorts, the symmetric analog of the server-side leniency established by fnd-2026-0009. However, on the client side this is NOT a FIPS 203 s7.2 modulus check concern because s7.2 is defined for encapsulation keys (ek), not ciphertexts; the client's relevant FIPS 203 surface is s7.3 (decapsulation input checks via implicit rejection), which the underlying crypto_kem_mlkem768_dec primitive is responsible for implementing. The structural safety net for the SSH handshake is the exchange-hash signature verification on H = hash(... || K_PQ || ...), which catches any K_PQ_server vs K_PQ_client divergence caused by either side's leniency. Per adversarial critic analysis of 16 attack scenarios (rev-2026-0010), the lenient client does NOT enable any active MITM attack because forging the server's signature requires sk_host. Therefore this is a compliance gap symmetric to fnd-2026-0009, NOT a security vulnerability."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-synthesizer
+    model: minimax-m3
+    tool: synthesizing source-code audit + FIPS 203 s7.3 spec analysis + adversarial critic review + empirical GHA observation
+  sources:
+    - https://github.com/openssh/openssh-portable/blob/0ef0f5a839831c213f24e3f2ae434765c607fb50/kexmlkem768x25519.c
+    - https://github.com/openssh/openssh-portable/blob/0ef0f5a839831c213f24e3f2ae434765c607fb50/kexsntrup761x25519.c
+    - knowledge/findings/fnd-2026-0009.yaml
+    - knowledge/observations/obs-2026-0035.yaml
+    - knowledge/hypotheses/hyp-2026-0022.yaml
+    - knowledge/reviews/rev-2026-0010.yaml
+    - knowledge/specifications/spc-2026-0001.yaml
+  parent: msn-2026-0011
+  generation: 0
+links:
+  missions: [msn-2026-0011]
+  experiments: [exp-2026-0027]
+  observations: [obs-2026-0035]
+  hypotheses: [hyp-2026-0022]
+  targets: [tgt-2026-0003]
+  implementations: [imp-2026-0012, imp-2026-0013]
+  specifications: [spc-2026-0001]
+  findings: [fnd-2026-0009]
+  verifications: [vrf-2026-0011]
+  reproducers: [rpr-2026-0010]
+  reviews: [rev-2026-0010]
+title: "FND-2026-0010 - OpenSSH portable ssh client is symmetrically length-only lenient on S_REPLY; structural safety net is the exchange-hash signature verification (NOT a security vulnerability)"
+classification: implementation-spec-compliance
+statement: |
+  Direct source-code reading of OpenSSH portable master HEAD (commit
+  0ef0f5a839831c213f24e3f2ae434765c607fb50) shows that the client-side
+  hybrid KEX dec() function performs only a length check on the server
+  S_REPLY blob:
+
+    // kexmlkem768x25519.c, kex_kem_mlkem768x25519_dec(), lines 230-260
+    need = MLKEM768_CIPHERTEXTBYTES + CURVE25519_SIZE;
+    if (sshbuf_len(server_blob) != need) {
+        r = SSH_ERR_SIGNATURE_INVALID;
+        goto out;
+    }
+    ciphertext = sshbuf_ptr(server_blob);
+    server_pub = ciphertext + MLKEM768_CIPHERTEXTBYTES;
+    ...
+    if (crypto_kem_mlkem768_dec(shared_secret, ciphertext,
+        kex->mlkem768_client_key) != 0) {
+        r = SSH_ERR_INTERNAL_ERROR;
+        goto out;
+    }
+
+  This is structurally symmetric to fnd-2026-0009 (server-side leniency
+  on C_INIT). However, on the client side:
+
+  1. The FIPS 203 s7.2 modulus check is NOT applicable because the client
+     receives a ciphertext (ct), not an encapsulation key (ek). Per FIPS
+     203 s7.3, the decapsulation input check is a hash check on the ct
+     (Algorithm 18 step 1: H(ct) vs dk's embedded hash) -- the IND-CCA2
+     implicit rejection mechanism.
+
+  2. The s7.3 check is delegated to the underlying crypto_kem_mlkem768_dec
+     primitive, which is responsible for implementing Algorithm 18
+     implicit rejection.
+
+  3. The SSH exchange-hash signature verification is the structural
+     safety net:
+       Server: K_PQ_server = encaps(tampered_C_PK2, m_server)
+       Client: K_PQ_client = decaps(S_CT2, sk_c_real)
+                   = implicit_reject_random (because S_CT2 was computed
+                                            against tampered_C_PK2 not sk_c_real)
+       Server signs: H_server = hash(... || K_PQ_server || ...)
+       Client computes: H_client = hash(... || K_PQ_client || ...)
+       Client verifies: sig(host_priv, H_server) against H_client
+                   = FAILURE (because H_server != H_client)
+       Handshake aborts at signature verification.
+
+  4. Per adversarial critic analysis of 16 attack scenarios
+     (rev-2026-0010), the lenient client does NOT enable any active
+     MITM attack because forging the server's signature requires the
+     server's host private key. The exchange-hash signature is the
+     load-bearing safety property.
+
+  5. The empirical GHA run (obs-2026-0035) confirms sshd completes KEX
+     despite tampered C_INIT (lenient on server side per fnd-2026-0009).
+     The Stage C mutator has a strict-KEX seqnum harness defect that
+     prevents per-stimulus byte-exact verdict capture, but the
+     underlying FIPS 203 s7.2 question on the client side is
+     determinable from source code + spec analysis.
+
+  Therefore:
+  - Stage C verdict: client is symmetrically length-only lenient on
+    S_REPLY (structural analog of server-side leniency).
+  - This is a compliance gap (symmetric to fnd-2026-0009), NOT a
+    security vulnerability.
+  - Classification: implementation-spec-compliance.
+  - Disclosure: public IETF sshm WG interop note, OpenSSH portability
+    mailing list recommendation.
+verification:
+  source_code_audit: |
+    Per kexmlkem768x25519.c (commit 0ef0f5a839831c213f24e3f2ae434765c607fb50,
+    OpenSSH portable master HEAD): only length check on S_REPLY before
+    crypto_kem_mlkem768_dec. No 12-bit coefficient range check (and s7.2
+    is on ek not ct, so no check would apply even if implemented).
+  spec_analysis: |
+    Per FIPS 203 s7.3 (Algorithm 18 step 1), decapsulation input check is
+    H(ct) vs dk's embedded hash -- the IND-CCA2 implicit rejection.
+    Different from s7.2 which is on ek (encapsulation key).
+  adversarial_critic: |
+    rev-2026-0010 analyzed 16 attack scenarios against the lenient client
+    hypothesis. None produced an exploit. The SSH exchange-hash signature
+    binds the server's K_PQ to the host key; forgery requires sk_host.
+    Severity classification: MODERATE (compliance + future-defence-in-depth
+    concerns), NOT a CVE-class vulnerability.
+  empirical_gha_run: |
+    obs-2026-0035: GHA ssh-loopback-stage-c workflow run 33304434203
+    confirms sshd completes KEX (lenient on C_INIT per fnd-2026-0009).
+    Stage C mutator has a strict-KEX seqnum harness defect that prevents
+    per-stimulus byte-exact verdict capture; the underlying FIPS 203 s7.2
+    question is determinable from source code alone.
+  scope: "OpenSSH portable master HEAD as of 2026-08-30, commit 0ef0f5a839831c213f24e3f2ae434765c607fb50"
+disclosure: public
+limitations: |
+  - The empirical Stage C GHA run has a strict-KEX sequence number
+    harness defect. Per-stimulus verdicts cannot be captured byte-exactly.
+    Source-code oracle suffices for the FIPS 203 s7.2 question.
+  - Stage D (Erlang/OTP ssh independent cohort) was not executed.
+  - golang.org/x/crypto/ssh client was not separately audited (Go ML-KEM
+    binding behavior deferred to future work if needed).
+  - The underlying crypto_kem_mlkem768_dec (OpenBSD libcrucible) was not
+    separately audited; per fnd-2026-0001 the decapsulation path
+    correctly implements Algorithm 18 implicit rejection (IND-CCA2).
+reproducer: |
+  OpenSSH portable master HEAD can be rebuilt locally with:
+    git clone --depth 1 https://github.com/openssh/openssh-portable.git
+    cd openssh-portable && git checkout 0ef0f5a8
+
+  Then audit kexmlkem768x25519.c lines 230-290 (kex_kem_mlkem768x25519_dec):
+  only sshbuf_len(server_blob) != need check before crypto_kem_mlkem768_dec.
+
+  Compare against FIPS 203 s7.3 (decaps input check is hash check, not
+  modulus check). The s7.2 modulus check is on ek not ct, so it is
+  irrelevant on the client side.
+
+  Verify the structural safety net by reading kex.c::kex_input_kex and
+  kex.c::kex_verify_host_key -- the exchange-hash signature verification
+  path catches K_PQ divergence.
+follow_up:
+  - "Fix Stage C mutator strict-KEX seqnum tracking for byte-exact empirical reproduction (harness defect, not protocol verdict)"
+  - "Stage D: Erlang/OTP ssh independent cohort"
+  - "Update fnd-2026-0009 disclosure note to mention symmetric client-side compliance gap"
+  - "Disclosure coordination: IETF sshm WG interop note covering both server-side (C_INIT) and client-side (S_REPLY) compliance gaps"
+  - "Recommend upstream patch to OpenSSH portable's protocol-layer KEM code to add additional validation (length-only on both sides is symmetric)"
