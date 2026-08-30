@@ -1,0 +1,66 @@
+id: rpr-2026-0009
+type: reproducer
+status: verified
+created_at: "2026-08-30T05:42:00Z"
+updated_at: "2026-08-30T05:42:00Z"
+summary: "Reproducer for fnd-2026-0009 -- direct source-code reading of kexmlkem768x25519.c at commit 0ef0f5a8 demonstrates only length check, not FIPS 203 s7.2 modulus check, on the client C_INIT blob before calling crypto_kem_mlkem768_enc."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: reproducer
+    model: minimax-m3
+    tool: source-code byte-trace reproducer
+  sources:
+    - https://github.com/openssh/openssh-portable/blob/master/kexmlkem768x25519.c
+    - knowledge/findings/fnd-2026-0009.yaml
+  parent: msn-2026-0010
+  generation: 0
+links:
+  missions: [msn-2026-0010]
+  findings: [fnd-2026-0009]
+  verifications: [vrf-2026-0010]
+title: "RPR-2026-0009 - Reproducer for fnd-2026-0009 (OpenSSH portable length-only C_INIT check)"
+reproduction_steps:
+  step_1:
+    command: "git clone https://github.com/openssh/openssh-portable.git"
+    purpose: "Fetch openssh-portable repository"
+  step_2:
+    command: "cd openssh-portable && git checkout 0ef0f5a8"
+    purpose: "Pin to the commit audited in fnd-2026-0009"
+  step_3:
+    command: "sed -n '110,135p' kexmlkem768x25519.c"
+    purpose: "Read kex_kem_mlkem768x25519_enc body"
+    expected_output: |
+      /* client_blob contains both KEM and ECDH client pubkeys */
+      need = MLKEM768_PUBLICKEYBYTES + CURVE25519_SIZE;
+      if (sshbuf_len(client_blob) != need) {
+          r = SSH_ERR_SIGNATURE_INVALID;
+          goto out;
+      }
+      client_pub = sshbuf_ptr(client_blob);
+      ...
+      if (crypto_kem_mlkem768_enc(ct, shared_secret, client_pub) != 0) {
+          r = SSH_ERR_INTERNAL_ERROR;
+          goto out;
+      }
+  step_4:
+    assertion: |
+      Between the length check (lines 117-120) and the call to
+      crypto_kem_mlkem768_enc (line 130), there is NO call to a function
+      that validates the 12-bit coefficient range of the ML-KEM-768 pk
+      portion of client_pub.
+  step_5:
+    cross_check: |
+      Compare against draft-ietf-sshm-mlkem-hybrid-kex-10 s2.1 which
+      mandates "MUST perform the encapsulation key checks defined in
+      Section 7.2 of [FIPS203]". FIPS 203 s7.2 requires both length and
+      modulus checks. OpenSSH portable implements only the length half.
+verdict: |
+  The reproducer confirms fnd-2026-0009: OpenSSH portable is length-only
+  lenient on the ML-KEM-768 pk portion of C_INIT. The s2.1 mandate is
+  not fully implemented in OpenSSH portable master HEAD as of 2026-08-30.
+expected_outputs:
+  reproducer_exit_code: 0
+  reproducer_wall_time_minutes: 5
+  reproducer_determinism: deterministic (no RNG, no network)

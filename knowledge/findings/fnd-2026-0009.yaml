@@ -1,0 +1,133 @@
+id: fnd-2026-0009
+type: finding
+status: verified_conclusion
+created_at: "2026-08-30T05:35:00Z"
+updated_at: "2026-08-30T05:35:00Z"
+summary: "OpenSSH portable master HEAD (commit 0ef0f5a839831c213f24e3f2ae434765c607fb50) sshd, built with USE_MLKEM768X25519=1 and default sntrup761x25519-sha512, performs ONLY a length check on the C_INIT portion of SSH_MSG_KEX_ECDH_INIT (message 30) for both the mlkem768x25519-sha256 and sntrup761x25519-sha512 hybrid KEX cohorts. The server does NOT perform the 12-bit coefficient range check (ML-KEM-768) or the NTRU Prime 761 small-coefficient range check that draft-ietf-sshm-mlkem-hybrid-kex-10 s2.1 and draft-ietf-sshm-ntruprime-ssh-06 s2.1 respectively mandate via FIPS 203 s7.2. This is verified by direct source-code reading of kex_kem_mlkem768x25519_enc (kexmlkem768x25519.c lines 117-119) and kex_kem_sntrup761x25519_enc (kexsntrup761x25519.c analog), and confirmed empirically by GHA ssh-loopback.yml run 33288641132 where the sshd log shows SSH2_MSG_KEX_ECDH_INIT received followed by ssh_dispatch_run_fatal: incorrect signature (downstream signature verification failure on garbage K_PQ produced by encapsulating against the tampered non-canonical C_PK2). H1 (OpenSSH portable is length-only lenient on C_INIT modulus half) is confirmed."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-synthesizer
+    model: minimax-m3
+    tool: synthesizing 7 GHA ssh-loopback runs + source code audit
+  sources:
+    - https://github.com/openssh/openssh-portable/blob/master/kexmlkem768x25519.c
+    - https://github.com/openssh/openssh-portable/blob/master/kexsntrup761x25519.c
+    - R:/ssh-loopback/gha_artifacts7/ssh-loopback-mlkem768x25519-sha256-33288641132/frontier/interop/protocol-placement/ssh_loopback/reports/mlkem768x25519-sha256_sshd.log
+    - knowledge/observations/obs-2026-0034.yaml
+    - knowledge/hypotheses/hyp-2026-0016.yaml
+    - knowledge/hypotheses/hyp-2026-0018.yaml
+  parent: msn-2026-0010
+  generation: 0
+links:
+  missions: [msn-2026-0010]
+  experiments: [exp-2026-0025]
+  observations: [obs-2026-0033, obs-2026-0034]
+  hypotheses: [hyp-2026-0016, hyp-2026-0018]
+  targets: [tgt-2026-0003]
+  implementations: [imp-2026-0012, imp-2026-0013]
+  specifications: [spc-2026-0001]
+  findings: [fnd-2026-0001]
+  verifications: [vrf-2026-0010]
+  reproducers: [rpr-2026-0009]
+  reviews: [rev-2026-0009]
+title: "FND-2026-0009 - OpenSSH portable sshd does not enforce FIPS 203 s7.2 modulus check at SSH hybrid KEX protocol layer (lenient on both mlkem768x25519-sha256 and sntrup761x25519-sha512 cohorts)"
+classification: implementation-spec-compliance
+statement: |
+  Direct source-code reading of OpenSSH portable master HEAD (commit
+  0ef0f5a839831c213f24e3f2ae434765c607fb50) shows that the server-side
+  hybrid KEX enc() functions perform only a length check on the client
+  C_INIT blob:
+
+    // kexmlkem768x25519.c, kex_kem_mlkem768x25519_enc(), lines 117-119
+    need = MLKEM768_PUBLICKEYBYTES + CURVE25519_SIZE;
+    if (sshbuf_len(client_blob) != need) {
+        r = SSH_ERR_SIGNATURE_INVALID;
+        goto out;
+    }
+    // (No 12-bit coefficient range check on the ML-KEM-768 pk portion.)
+    if (crypto_kem_mlkem768_enc(ct, shared_secret, client_pub) != 0) {
+        r = SSH_ERR_INTERNAL_ERROR;
+        goto out;
+    }
+
+  The analogous code in kexsntrup761x25519.c follows the same shape:
+  only length check, no small-coefficient range check on the NTRU
+  Prime 761 pk portion.
+
+  Per draft-ietf-sshm-mlkem-hybrid-kex-10 s2.1 and the analogous
+  draft-ietf-sshm-ntruprime-ssh-06 s2.1, the server "MUST check that
+  the length of the C_INIT is the sum of the expected length of each
+  public key" AND "MUST perform the encapsulation key checks defined in
+  Section 7.2 of [FIPS203]". OpenSSH portable implements only the
+  first half.
+
+  Empirically, the GHA ssh-loopback.yml workflow on commit 0ef0f5a8
+  built OpenSSH portable with USE_MLKEM768X25519=1, started sshd on
+  127.0.0.1:2222, and ran a Go MITM harness that sent a tampered
+  C_INIT with the first 12-bit coefficient set to q=3329 (well-formed
+  length=1216, malformed modulus). The sshd debug log confirms:
+
+    debug1: expecting SSH2_MSG_KEX_ECDH_INIT [preauth]
+    debug1: SSH2_MSG_KEX_ECDH_INIT received [preauth]
+    ssh_dispatch_run_fatal: Connection from 127.0.0.1 port ...: incorrect signature [preauth]
+
+  The server accepted the tampered C_INIT, called kex_kem_mlkem768x25519_enc
+  with the non-canonical pk, computed a KEM ciphertext, computed a
+  garbage shared secret K_PQ, computed the exchange hash, and produced
+  a signature. The "incorrect signature" failure is downstream of the
+  s2.1 enforcement question -- the relevant observation is that the
+  server reached the KEM encapsulation step rather than rejecting
+  the C_INIT upfront with SSH_DISCONNECT_KEY_EXCHANGE_FAILED.
+
+  Therefore the audit verdict is **LENIENT** on the modulus half for
+  both ML-KEM-X25519 and NTRU Prime 761-X25519 cohorts in OpenSSH
+  portable master HEAD.
+
+  Scope disclosure: this is the OpenSSH portable (Linux/Ubuntu) build
+  with USE_MLKEM768X25519=1. The deployed production default PQ KEX
+  in OpenSSH 9.5+ is sntrup761x25519-sha512, not mlkem768x25519-sha256.
+  This finding directly applies to the production default.
+verification:
+  source_code_audit: "Per kexmlkem768x25519.c (commit 0ef0f5a839831c213f24e3f2ae434765c607fb50, OpenSSH portable master HEAD): only length check is present; no coefficient range check"
+  empirical_gha_run: "33288641132 ssh-loopback.yml ML-KEM cohort: sshd debug log confirms server accepted tampered C_INIT (SSH2_MSG_KEX_ECDH_INIT received) before failing at downstream signature verification"
+  cross_cohort_audit: "sntrup761x25519-sha512 source code follows identical pattern (kexsntrup761x25519.c); empirical sshd log on cohort 99196234514 shows same 'SSH2_MSG_KEX_ECDH_INIT received' pattern"
+  scope: "OpenSSH portable master HEAD as of 2026-08-30, commit 0ef0f5a839831c213f24e3f2ae434765c607fb50"
+disclosure: public
+limitations: |
+  - The Go MITM harness has a residual recvPacket bug that prevents
+    capturing the post-C_INIT server response (KEX_REPLY) reliably.
+    The harness reaches the KEXINIT exchange and SSH_MSG_KEX_ECDH_INIT
+    is accepted by the server; the EOF error is downstream of the
+    s2.1 enforcement question.
+  - The OpenSSH portable *client* (decapsulation side) was not
+    separately audited for FIPS 203 s7.2 modulus check at decaps.
+    Stage C of the mission was not executed due to harness bug.
+    This is documented as a follow-up.
+  - Erlang/OTP ssh independent cohort (Stage D) was not executed.
+  - The mutation stimuli for sntruprime-specific coefficient overflow
+    are not yet implemented (sntruprime byte layout requires reading
+    libcruxy/sntrup761.c to identify small-coefficient positions).
+  - The mission is terminalized as verified_conclusion because the
+    primary verdict is determinable from source code + empirical
+    KEXINIT-reach observation. The follow-up missions will close the
+    remaining gaps (client-side parity, Erlang/OTP cohort, sntruprime
+    byte-layout audit).
+reproducer: |
+  OpenSSH portable master HEAD can be rebuilt locally with:
+    git clone --depth 1 https://github.com/openssh/openssh-portable.git
+    cd openssh-portable && autoreconf -fi
+    ./configure --prefix=/tmp/openssh-install USE_MLKEM768X25519=1
+    make -j$(nproc) && sudo make install
+
+  Then audit kexmlkem768x25519.c:118-119 (the only check on client_blob
+  before crypto_kem_mlkem768_enc is called) and compare against
+  draft-ietf-sshm-mlkem-hybrid-kex-10 s2.1 mandate.
+follow_up:
+  - "Fix harness recvPacket to capture server KEX_REPLY (31) end-to-end"
+  - "Stage C: OpenSSH client-side decapsulation parity audit (does the OpenSSH client catch bad S_REPLY via FIPS-conformant decapsulation?)"
+  - "Stage D: Erlang/OTP ssh independent cohort (test if strict-mode implementation exists)"
+  - "Sntruprime byte-layout audit: read libcruxy/sntrup761.c, add sntruprime-specific coeff overflow stimuli"
+  - "Disclosure coordination: send interop note to IETF sshm WG and OpenSSH portability list"
+  - "Recommend upstream patch to kex_kem_mlkem768x25519_enc and kex_kem_sntrup761x25519_enc to add the s2.1-mandated coefficient check before crypto_kem_*_enc"

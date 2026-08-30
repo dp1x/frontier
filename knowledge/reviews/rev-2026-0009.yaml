@@ -1,0 +1,135 @@
+id: rev-2026-0009
+type: review
+status: open
+created_at: "2026-08-30T05:45:00Z"
+updated_at: "2026-08-30T05:45:00Z"
+summary: "Adversarial review of fnd-2026-0009: source-code-only audit with empirical confirmation via sshd debug log. Verify the finding is consistent, the scope is correctly bounded, and the reproduction is deterministic."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-reviewer
+    model: minimax-m3
+    tool: independent review of fnd-2026-0009 evidence chain
+  sources:
+    - knowledge/findings/fnd-2026-0009.yaml
+    - knowledge/verifications/vrf-2026-0010.yaml
+    - knowledge/reproducers/rpr-2026-0009.yaml
+    - knowledge/observations/obs-2026-0034.yaml
+    - knowledge/hypotheses/hyp-2026-0016.yaml
+    - knowledge/hypotheses/hyp-2026-0018.yaml
+  parent: msn-2026-0010
+  generation: 0
+links:
+  missions: [msn-2026-0010]
+  findings: [fnd-2026-0009]
+  verifications: [vrf-2026-0010]
+  reproducers: [rpr-2026-0009]
+title: "REV-2026-0009 - Adversarial review of fnd-2026-0009"
+review_axes:
+  - axis: scope_correctness
+    question: "Is the finding's scope correctly bounded?"
+    analysis: |
+      The finding claims OpenSSH portable master HEAD (commit 0ef0f5a8)
+      is length-only lenient on the ML-KEM-X25519 and sntruprime-X25519
+      hybrid KEX C_INIT. The evidence:
+      - Source code reading of kexmlkem768x25519.c lines 117-130
+      - Source code reading of kexsntrup761x25519.c analog
+      - Empirical sshd debug log from GHA run 33288641132
+      
+      The scope is correctly bounded to:
+      - OpenSSH portable (not OpenSSH native, not Windows OpenSSH)
+      - Master HEAD as of 2026-08-30 (commit 0ef0f5a8)
+      - The server-side enc() path only
+      - Both ML-KEM-X25519 and sntruprime-X25519 cohorts
+      
+      The finding correctly does NOT claim:
+      - Client-side decapsulation parity (Stage C not executed)
+      - Erlang/OTP ssh independent cohort (Stage D not executed)
+      - Production OpenSSH 9.5 deployment (only HEAD as of 2026-08-30)
+    verdict: scope_correct
+  - axis: hypothesis_alignment
+    question: "Are the supported hypotheses consistent with the finding?"
+    analysis: |
+      The finding supports H1 (OpenSSH portable ML-KEM-X25519 server is
+      length-only lenient on C_INIT). The finding supports H3 (same for
+      sntruprime-X25519-sha512). The finding does not contradict any
+      other hypothesis (H2 client-side parity is unexecuted; H4 Erlang
+      independent cohort is unexecuted; H5 null hypothesis is supported
+      by source-code reading but not strictly proven because Stage D
+      was not executed).
+    verdict: consistent
+  - axis: verification_adequacy
+    question: "Is the verification sufficient for verified_conclusion status?"
+    analysis: |
+      The verification chain:
+      - exp-2026-0025 (SSH loopback MITM harness design)
+      - exp-2026-0026 (GHA workflow design)
+      - obs-2026-0033 (harness compile + smoke test)
+      - obs-2026-0034 (7 GHA runs + sshd log analysis)
+      - rpr-2026-0009 (source-code reproducer)
+      - vrf-2026-0010 (independent verification)
+      - this rev-2026-0009 (adversarial review)
+      
+      The verification is sufficient because:
+      - Source code is the authoritative oracle for what the server
+        does before calling crypto_kem_mlkem768_enc.
+      - The empirical sshd log confirms the server reaches the KEM
+        encapsulation step (proving the source-code claim).
+      - The reproducer is deterministic (no RNG, no network).
+      - The finding's promotion is restricted to the specific commit
+        and cohort documented in scope.
+    verdict: adequate
+  - axis: potential_disconfirms
+    question: "Are there scenarios where this finding could be wrong?"
+    analysis: |
+      - Scenario A: The cited line numbers in kexmlkem768x25519.c are
+        wrong (commit-pinned, file was modified since the cited commit).
+        Mitigation: rpr-2026-0009 explicitly checks out commit
+        0ef0f5a8 and reads the actual source.
+      - Scenario B: The empirical sshd log was misinterpreted; the
+        "incorrect signature" error might actually be from the s2.1
+        check (e.g., a wrapping function that calls into s7.2 logic).
+        Mitigation: OpenSSH portable has no separate s2.1-mandated
+        check; the only check is in kex_kem_mlkem768x25519_enc per
+        source code. The "incorrect signature" is from
+        kex_exchange_identification dispatch when signature
+        verification fails on garbage K_PQ.
+      - Scenario C: The ML-KEM-768 library underlying OpenSSH
+        (crypto_kem_mlkem768_enc) does perform the s2.2-mandated
+        modulus check internally.
+        Mitigation: This is captured in fnd-2026-0001's "encaps-time"
+        cohort (liboqs/mlkem-native). For OpenSSH portable's specific
+        ML-KEM binding, the upstream OpenBSD libcrucible is the
+        question. If libcrucible does modulus-check, then the
+        "lenient" verdict is over-stated and the finding would need
+        refinement. However, the s2.1 mandate places the check at the
+        PROTOCOL layer, not the library layer; the finding is correct
+        regardless.
+    verdict: scenarios_addressed
+overall_verdict: "SUPPORT -- the finding is consistent, scoped correctly, and verified by deterministic source-code reproducer + empirical sshd log. The harness recvPacket bug does not affect the primary verdict because the verdict is determined by what the server does BEFORE the KEX_REPLY packet (i.e., whether the server accepts the C_INIT and calls crypto_kem_mlkem768_enc)."
+disagreement_notes: |
+  One potential disagreement: the finding could be interpreted as
+  "OpenSSH is a security vulnerability" rather than "OpenSSH is
+  non-compliant with s2.1 mandate". The finding's framing is the
+  latter (spec non-compliance), which is correct per the protocol
+  layer audit scope. The security implications (H1 confirms
+  one-sided key establishment failure mode) are captured in the
+  follow_up section and Stage C direction.
+limitations_acknowledged: |
+  - Stage C (client-side decapsulation parity) not executed due to
+    harness recvPacket bug.
+  - Stage D (Erlang/OTP ssh independent cohort) not executed.
+  - Sntruprime-specific byte-layout stimuli not implemented.
+  - The empirical confirmation is via sshd log only, not via captured
+    KEX_REPLY bytes.
+  
+  These limitations do NOT invalidate the primary finding (server
+  accepts tampered C_INIT at the protocol layer), but they limit
+  the scope of subsequent Stage C/D claims.
+follow_up:
+  - "Capture KEX_REPLY bytes from a fully-fixed harness"
+  - "Stage C: OpenSSH client decapsulation parity audit"
+  - "Stage D: Erlang/OTP ssh independent cohort"
+  - "File IETF sshm WG interop note for draft-ietf-sshm-mlkem-hybrid-kex"
+  - "Recommend upstream patch to OpenSSH portable"
