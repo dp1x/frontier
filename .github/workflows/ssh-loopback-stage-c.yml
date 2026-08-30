@@ -1,0 +1,163 @@
+# Workflow: ssh-loopback-stage-c (msn-2026-0011)
+#
+# Builds OpenSSH portable + Go x/crypto/ssh client on GHA ubuntu-latest,
+# spawns the Stage C mutator harness (interop/protocol-placement/ssh_loopback/stagec.go)
+# between a real OpenSSH ssh client and a real OpenSSH sshd, and exercises
+# the per-stimulus matrix. Captures per-client per-stimulus verdict
+# (handshake_completed vs handshake_aborted_sigfail vs handshake_aborted_disconnect).
+#
+# Compute class: medium (per exp-2026-0027).
+# Permissions: contents: read only -- no secrets exposed.
+
+name: ssh-loopback-stage-c
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "interop/protocol-placement/ssh_loopback/**"
+      - "knowledge/**"
+      - "missions/active/msn-2026-0011.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  ssh-loopback-stage-c:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cohort:
+          - name: mlkem768x25519-sha256
+            kex_method: mlkem768x25519-sha256
+            build_flag: USE_MLKEM768X25519=1
+            ek_size: 1184
+        stimulus:
+          - control
+          - truncate_by_1
+          - coeff0_q
+          - coeff0_4095
+          - coeff255_4095
+          - cross_param_set
+    steps:
+      - name: Checkout frontier
+        uses: actions/checkout@v4
+        with:
+          path: frontier
+
+      - name: Install build dependencies
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf libssl-dev zlib1g-dev pkg-config
+
+      - name: Clone openssh-portable
+        run: |
+          set -euxo pipefail
+          cd /tmp
+          git clone --depth 1 https://github.com/openssh/openssh-portable.git
+          cd openssh-portable
+          echo "OPENSSH_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Build openssh-portable
+        run: |
+          set -euxo pipefail
+          cd /tmp/openssh-portable
+          autoreconf -fi
+          ./configure --prefix=/tmp/openssh-install ${{ matrix.cohort.build_flag }}
+          make -j"$(nproc)"
+          sudo make install
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Build Stage C mutator harness
+        run: |
+          set -euxo pipefail
+          cd "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback"
+          go build -tags stagec -o /tmp/ssh_loopback_stagec .
+
+      - name: Generate host keys
+        run: |
+          set -euxo pipefail
+          ssh-keygen -t ed25519 -f /tmp/ssh_host_ed25519_key -N '' -q
+          ssh-keygen -t ed25519 -f /tmp/client_ed25519_key -N '' -q
+          cat /tmp/client_ed25519_key.pub > /tmp/authorized_keys
+
+      - name: Start sshd on 127.0.0.1:2223 (upstream)
+        run: |
+          set -euxo pipefail
+          cat > /tmp/sshd_config <<EOF
+          Port 2223
+          ListenAddress 127.0.0.1
+          HostKey /tmp/ssh_host_ed25519_key
+          PasswordAuthentication no
+          PubkeyAuthentication yes
+          KexAlgorithms ${{ matrix.cohort.kex_method }}
+          Ciphers aes256-gcm@openssh.com
+          MACs hmac-sha2-512
+          LogLevel DEBUG3
+          AuthorizedKeysFile /tmp/authorized_keys
+          PidFile /tmp/sshd.pid
+          StrictModes no
+          EOF
+          /tmp/openssh-install/sbin/sshd -f /tmp/sshd_config -E /tmp/sshd.log
+          sleep 1
+          echo "sshd pid: $(cat /tmp/sshd.pid 2>/dev/null || echo NONE)"
+
+      - name: Run Stage C mutator (relays client -> mutated -> sshd)
+        run: |
+          set -euxo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports"
+          # Run mutator in background; it will block on first accept.
+          /tmp/ssh_loopback_stagec \
+            --mode mutator \
+            --cohort ${{ matrix.cohort.name }} \
+            --stimulus ${{ matrix.stimulus }} \
+            --listen 127.0.0.1:2222 \
+            --upstream 127.0.0.1:2223 \
+            --out /tmp/stage_c_mutator.log &
+          MUTATOR_PID=$!
+          sleep 1
+          # Spawn the real ssh client as the victim.
+          /tmp/openssh-install/bin/ssh \
+            -p 2222 \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o BatchMode=yes \
+            -o PreferredAuthentications=publickey \
+            -o ConnectTimeout=10 \
+            -o KexAlgorithms=${{ matrix.cohort.kex_method }} \
+            testuser@127.0.0.1 \
+            "echo handshake-success" \
+            > /tmp/ssh_stdout.log 2> /tmp/ssh_stderr.log
+          SSH_EXIT=$?
+          # Give mutator time to write result.
+          sleep 1
+          kill $MUTATOR_PID 2>/dev/null || true
+          echo "SSH_EXIT=$SSH_EXIT" > /tmp/ssh_exit.txt
+          cp /tmp/stage_c_mutator.log "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${COHORT}_${STIMULUS}_mutator.log" || true
+          cp /tmp/ssh_stdout.log "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${COHORT}_${STIMULUS}_client_stdout.log" || true
+          cp /tmp/ssh_stderr.log "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${COHORT}_${STIMULUS}_client_stderr.log" || true
+          cp /tmp/ssh_exit.txt "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${COHORT}_${STIMULUS}_client_exit.txt" || true
+          echo "stimulus=${{ matrix.stimulus }} ssh_exit=$SSH_EXIT" >> /tmp/stage_c_summary.tsv
+          cat /tmp/ssh_stderr.log | tail -n 5 >> "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${COHORT}_${STIMULUS}_client_stderr_tail.log"
+
+      - name: Capture sshd log
+        if: always()
+        run: |
+          set -euxo pipefail
+          cat /tmp/sshd.log > "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${{ matrix.cohort.name }}_${{ matrix.stimulus }}_sshd.log" || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ssh-loopback-stage-c-${{ matrix.cohort.name }}-${{ matrix.stimulus }}-${{ github.run_id }}
+          path: |
+            ${{ github.workspace }}/frontier/interop/protocol-placement/ssh_loopback/reports/
+          if-no-files-found: ignore
