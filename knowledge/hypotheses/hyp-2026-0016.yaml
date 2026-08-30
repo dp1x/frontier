@@ -1,0 +1,52 @@
+id: hyp-2026-0016
+type: hypothesis
+status: open
+created_at: "2026-08-30T04:50:00Z"
+updated_at: "2026-08-30T04:50:00Z"
+summary: H1 - OpenSSH portable mlkem768x25519-sha256 server enforces only the LENGTH half of FIPS 203 s7.2 on C_INIT (matching kexmlkem768x25519.c's sshbuf_len(client_blob) != need check) and silently encapsulates against non-canonical C_PK2 coefficients.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator-A
+    model: minimax-m3
+    tool: independent generator (synthesis of scout-protocol-interop-2026-08-30 §3 + fnd-2026-0001 placement taxonomy)
+  sources:
+    - knowledge/notes/scout-protocol-interop-2026-08-30.md
+    - knowledge/findings/fnd-2026-0001.yaml
+    - https://github.com/openssh/openssh-portable/blob/master/kexmlkem768x25519.c
+  parent: msn-2026-0010
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0003]
+  implementations: [imp-2026-0012]
+title: HYP-H1 - OpenSSH portable ML-KEM-X25519 server is length-only lenient on C_INIT
+statement: >
+  Per the read of kexmlkem768x25519.c (master HEAD), OpenSSH portable's
+  mlkem768x25519-sha256 server-side enc() path performs only the length
+  check `if (sshbuf_len(client_blob) != need)` before calling
+  crypto_kem_mlkem768_enc(). There is no 12-bit coefficient range check
+  on the C_PK2 portion of C_INIT.
+
+  Predicted wire verdict: server completes handshake and produces
+  S_REPLY for stimulus variants wire_coeff0_eq_q, wire_coeff0_eq_4095,
+  wire_coeff255_eq_4095, wire_cross_param_set. Server rejects only the
+  truncate_by_1 and append_1 length-half stimuli.
+
+  Falsifiable prediction: a tampered C_INIT with 12-bit coefficient =
+  3329 or 4095 in C_PK2 yields a completed handshake (server embeds
+  ciphertext S_REPLY); the client decapsulates against an invalid pk
+  with implementation-defined behavior.
+falsifiable_predictions:
+  - "Tampered C_INIT with coeff0=q produces completed handshake (server embeds S_REPLY)"
+  - "Tampered C_INIT with coeff255=4095 produces completed handshake"
+  - "Tampered C_INIT with cross-param-set body produces completed handshake"
+  - "Truncate-by-1 C_INIT (1215 B) produces SSH_MSG_DISCONNECT reason 3"
+disproof_attempts: []
+notes: |
+  This is the prior-art-implied answer based on kexmlkem768x25519.c
+  source. If true, the discovery lever for the mission is Stage C:
+  does the OpenSSH client (and Go x/crypto/ssh client) catch the bad
+  S_REPLY on decapsulation, or does it silently derive K_PQ from a
+  decapsulation against a non-canonical pk?

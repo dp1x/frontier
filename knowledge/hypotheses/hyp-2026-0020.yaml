@@ -1,0 +1,53 @@
+id: hyp-2026-0020
+type: hypothesis
+status: open
+created_at: "2026-08-30T04:50:00Z"
+updated_at: "2026-08-30T04:50:00Z"
+summary: H5 - The SSH draft -10 s2.1 'MUST' mandate for the encapsulation-key check is unenforceable in practice because the wire-format concatenation order (C_PK2 || C_PK1) means the server's structural framing cannot distinguish the KEM-pk boundaries without additional bookkeeping that no implementation has shipped. This explains why all server implementations are lenient.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: null-hypothesis-generator
+    model: minimax-m3
+    tool: independent generator (synthesis of scout-protocol-interop §9 H5)
+  sources:
+    - knowledge/notes/scout-protocol-interop-2026-08-30.md
+    - https://datatracker.ietf.org/doc/draft-ietf-sshm-mlkem-hybrid-kex/
+  parent: msn-2026-0010
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0003]
+title: HYP-H5 - Draft -10 s2.1 mandate is structurally unenforceable (null hypothesis)
+statement: >
+  Under the wire-format rule C_INIT = C_PK2 || C_PK1, the server cannot
+  distinguish where C_PK2 ends and C_PK1 begins without first parsing
+  the inner PKencodings. Each KEM has a fixed-length pk (ML-KEM-768 = 1184 B,
+  sntrup761 = 1031 B), so in principle the boundary is known. However, the
+  boundary is determined by the negotiated KEX method, not by the SSH binary
+  packet framing.
+
+  This means that to perform the s2.1 check, the server must:
+  1. Look up the negotiated KEX method's KEM-pk size.
+  2. Slice C_INIT into C_PK2 (first KEM-pk bytes) and C_PK1 (remaining X25519 bytes).
+  3. Run the coefficient range check on C_PK2.
+
+  No implementation has shipped step 3. This is the structural reason all
+  server implementations are length-only lenient.
+
+  Predicted wire verdict: ALL server cohorts (OpenSSH portable + Erlang/OTP)
+  are length-only lenient on modulus-half stimuli.
+
+  Falsifiable prediction: at least one cohort rejects wire_coeff0_eq_q
+  with SSH_DISCONNECT reason 3 (which would refute H5).
+falsifiable_predictions:
+  - "Erlang/OTP sshd is lenient on modulus-half stimuli (refuting H4, supporting H5)"
+  - "No other SSH implementation shipping hybrid PQ KEX performs the coefficient range check"
+disproof_attempts: []
+notes: |
+  The null hypothesis. If true, the audit's contribution is:
+  (a) end-to-end verification that the lenient reading is correlated,
+  (b) a documentation note to the IETF sshm WG recommending either
+      strict enforcement language or a wire-format refactor that
+      makes the boundary check trivially implementable.

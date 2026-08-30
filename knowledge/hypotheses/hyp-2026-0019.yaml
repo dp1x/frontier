@@ -1,0 +1,46 @@
+id: hyp-2026-0019
+type: hypothesis
+status: open
+created_at: "2026-08-30T04:50:00Z"
+updated_at: "2026-08-30T04:50:00Z"
+summary: H4 - Erlang/OTP ssh (independent Erlang cohort) implements a stricter reading of the SSH s2.1 mandate and rejects non-canonical C_PK2 at the protocol layer with SSH_DISCONNECT_KEY_EXCHANGE_FAILED; this is a positive interop note showing strict-mode implementations exist.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator-A
+    model: minimax-m3
+    tool: independent generator (synthesis of scout-protocol-interop §9 H4)
+  sources:
+    - knowledge/notes/scout-protocol-interop-2026-08-30.md
+    - https://github.com/erlang/otp/tree/master/lib/ssh
+  parent: msn-2026-0010
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0003]
+  implementations: [imp-2026-0014]
+title: HYP-H4 - Erlang/OTP ssh is strict on C_INIT modulus check (positive interop note)
+statement: >
+  Erlang/OTP ssh implements sshm-mlkem-hybrid-kex-10 s2.1 strictly:
+  before calling Encaps, it performs both the LENGTH check and a coefficient
+  range check on the KEM-pk portion of C_INIT.
+
+  Predicted wire verdict: SSH_DISCONNECT_KEY_EXCHANGE_FAILED (reason 3)
+  for both length-half and modulus-half stimuli.
+
+  Falsifiable prediction: Erlang/OTP sshd rejects wire_coeff0_eq_q
+  (and equivalent sntruprime stimuli) with SSH_MSG_DISCONNECT reason 3.
+
+  Stage D execution is gated on Stage A/B showing lenient OpenSSH result.
+  If H4 holds, the discovery is "interop note" rather than "security finding":
+  it documents that a strict implementation exists and is referenceable.
+falsifiable_predictions:
+  - "Erlang/OTP sshd rejects wire_coeff0_eq_q with SSH_DISCONNECT_KEY_EXCHANGE_FAILED"
+  - "Erlang/OTP sshd rejects NTRU Prime 761 small-coefficient overflow"
+  - "The rejection occurs before S_REPLY transmission (handshake abort at KEX_INIT)"
+disproof_attempts: []
+notes: |
+  Important to verify even if rejected: if Erlang/OTP is also lenient,
+  then the lenient reading is correlated across implementations and
+  the spec ambiguity claim is stronger.

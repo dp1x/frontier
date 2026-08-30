@@ -1,0 +1,56 @@
+id: hyp-2026-0017
+type: hypothesis
+status: open
+created_at: "2026-08-30T04:50:00Z"
+updated_at: "2026-08-30T04:50:00Z"
+summary: H2 - The OpenSSH portable mlkem768x25519-sha256 client decapsulation path rejects non-canonical pk (because OpenBSD-native ML-KEM embeds s7.2 by FIPS 203 conformance); however this rejection is triggered only on decapsulation, not on Encaps, so the danger is on the server side.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator-B
+    model: minimax-m3
+    tool: independent generator (synthesis of scout-protocol-interop §9 H2)
+  sources:
+    - knowledge/notes/scout-protocol-interop-2026-08-30.md
+    - knowledge/findings/fnd-2026-0001.yaml
+  parent: msn-2026-0010
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0003]
+  implementations: [imp-2026-0012]
+title: HYP-H2 - OpenSSH portable ML-KEM-X25519 client catches bad pk at decapsulation
+statement: >
+  OpenSSH portable's mlkem768x25519-sha256 *client* uses the underlying
+  crypto_kem_mlkem768_dec primitive (provided by OpenBSD libcrucible or
+  liboqs binding) to decapsulate the server's S_REPLY. If the underlying
+  library implements the FIPS 203 s7.2 modulus check at decaps time,
+  the client will reject the S_REPLY before deriving K_PQ.
+
+  Combined with H1, this means the SSH handshake failure mode is:
+  server silently encapsulates against non-canonical pk -> server's
+  S_REPLY is structurally well-formed but the underlying ciphertext
+  is meaningless to a strict client -> client aborts before deriving
+  shared key.
+
+  Predicted Stage C verdict: handshake aborts on client side after
+  S_REPLY is received; the server's wire verdict (completed handshake)
+  is the *primary* failure but the client's secondary check makes
+  the overall handshake fail-safe.
+
+  Falsifiable prediction: with the OpenSSH client peer, the handshake
+  fails after S_REPLY transmission. The Go golang.org/x/crypto/ssh
+  client may behave differently if it uses a different ML-KEM
+  implementation.
+falsifiable_predictions:
+  - "OpenSSH portable client aborts after S_REPLY when S_REPLY ciphertext is from a non-canonical pk encapsulation"
+  - "The server's S_REPLY is well-formed at the SSH packet layer (correct length, padding, MAC)"
+  - "Go golang.org/x/crypto/ssh client behavior is independent of OpenSSH client behavior (different ML-KEM binding)"
+disproof_attempts: []
+notes: |
+  Critical Stage C question. If true, the matrix result is "interop
+  note" grade (lenient server + strict client = handshake fails safely)
+  rather than "discovery" grade. If false (client also lenient), this
+  is a more serious finding because the handshake completes end-to-end
+  with both sides silently deriving keys from non-canonical inputs.

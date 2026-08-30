@@ -1,0 +1,142 @@
+# Workflow: ssh-loopback (msn-2026-0010)
+#
+# Builds OpenSSH portable with USE_MLKEM768X25519=1 on ubuntu-latest,
+# starts sshd, runs the Go MITM harness (interop/protocol-placement/ssh_loopback/main.go)
+# against the sshd for both mlkem768x25519-sha256 and sntrup761x25519-sha512 cohorts,
+# and uploads the per-cohort verdict reports as durable artifacts.
+#
+# Compute class: medium (per exp-2026-0026 design).
+# Permissions: contents: read only -- no secrets exposed.
+
+name: ssh-loopback
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "interop/protocol-placement/ssh_loopback/**"
+      - "knowledge/**"
+      - "missions/active/msn-2026-0010.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  ssh-loopback:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cohort:
+          - name: mlkem768x25519-sha256
+            kex_method: "mlkem768x25519-sha256"
+            build_flag: "USE_MLKEM768X25519=1"
+            ek_size: 1184
+          - name: sntrup761x25519-sha512
+            kex_method: "sntrup761x25519-sha512"
+            build_flag: ""
+            ek_size: 1031
+    steps:
+      - name: Checkout frontier
+        uses: actions/checkout@v4
+        with:
+          path: frontier
+
+      - name: Install build dependencies
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf libssl-dev zlib1g-dev pkg-config
+
+      - name: Clone openssh-portable
+        run: |
+          set -euxo pipefail
+          cd /tmp
+          git clone --depth 1 https://github.com/openssh/openssh-portable.git
+          cd openssh-portable
+          echo "OPENSSH_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "OPENSSH_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> "$GITHUB_ENV"
+          # Copy kex source files for cross-reference
+          mkdir -p "$GITHUB_WORKSPACE/openssh-portable-snapshot"
+          cp kexmlkem768x25519.c kexsntrup761x25519.c kex.c "$GITHUB_WORKSPACE/openssh-portable-snapshot/" || true
+
+      - name: Build openssh-portable
+        run: |
+          set -euxo pipefail
+          cd /tmp/openssh-portable
+          autoreconf -fi
+          ./configure --prefix=/tmp/openssh-install ${{ matrix.cohort.build_flag }}
+          make -j"$(nproc)"
+          sudo make install
+          /tmp/openssh-install/sbin/sshd -V 2>&1 || true
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Build ssh_loopback harness
+        run: |
+          set -euxo pipefail
+          cd "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback"
+          go build -o /tmp/ssh_loopback .
+
+      - name: Generate host key
+        run: |
+          set -euxo pipefail
+          ssh-keygen -t ed25519 -f /tmp/ssh_host_ed25519_key -N '' -q
+
+      - name: Start sshd
+        run: |
+          set -euxo pipefail
+          cat > /tmp/sshd_config <<EOF
+          Port 2222
+          ListenAddress 127.0.0.1
+          HostKey /tmp/ssh_host_ed25519_key
+          PasswordAuthentication no
+          PubkeyAuthentication yes
+          KexAlgorithms ${{ matrix.cohort.kex_method }}
+          Ciphers aes256-gcm@openssh.com
+          MACs hmac-sha2-512
+          LogLevel DEBUG3
+          AuthorizedKeysFile /tmp/authorized_keys
+          PidFile /tmp/sshd.pid
+          StrictModes no
+          EOF
+          /tmp/openssh-install/sbin/sshd -f /tmp/sshd_config -E /tmp/sshd.log
+          sleep 1
+          echo "sshd pid: $(cat /tmp/sshd.pid 2>/dev/null || echo NONE)"
+
+      - name: Generate client keypair
+        run: |
+          set -euxo pipefail
+          ssh-keygen -t ed25519 -f /tmp/client_ed25519_key -N '' -q
+          cat /tmp/client_ed25519_key.pub > /tmp/authorized_keys
+
+      - name: Run SSH loopback MITM harness
+        run: |
+          set -euxo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports"
+          cd "$GITHUB_WORKSPACE/frontier"
+          /tmp/ssh_loopback \
+            --cohort ${{ matrix.cohort.name }} \
+            --server-addr 127.0.0.1:2222 \
+            --out-tsv interop/protocol-placement/ssh_loopback/reports/${{ matrix.cohort.name }}_report.tsv \
+            --out-log interop/protocol-placement/ssh_loopback/reports/${{ matrix.cohort.name }}_console.log
+
+      - name: Capture sshd debug log
+        if: always()
+        run: |
+          set -euxo pipefail
+          cat /tmp/sshd.log > "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${{ matrix.cohort.name }}_sshd.log" || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ssh-loopback-${{ matrix.cohort.name }}-${{ github.run_id }}
+          path: |
+            ${{ github.workspace }}/frontier/interop/protocol-placement/ssh_loopback/reports/
+            ${{ github.workspace }}/openssh-portable-snapshot/
+          if-no-files-found: ignore

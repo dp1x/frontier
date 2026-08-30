@@ -1,0 +1,63 @@
+id: imp-2026-0012
+type: implementation
+status: pinned
+created_at: "2026-08-30T04:55:00Z"
+updated_at: "2026-08-30T04:55:00Z"
+summary: OpenSSH portable - mlkem768x25519-sha256 KEX (experimental, gated by USE_MLKEM768X25519=1). Per kexmlkem768x25519.c read, server enc() path performs only length check on C_INIT before calling crypto_kem_mlkem768_enc().
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: web_search + github source inspection (kexmlkem768x25519.c master HEAD)
+  sources:
+    - https://github.com/openssh/openssh-portable/blob/master/kexmlkem768x25519.c
+    - https://datatracker.ietf.org/doc/draft-ietf-sshm-mlkem-hybrid-kex/
+    - knowledge/findings/fnd-2026-0001.yaml
+  parent: msn-2026-0010
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0003]
+title: OpenSSH portable mlkem768x25519-sha256 (kexmlkem768x25519.c)
+library:
+  name: "openssh-portable"
+  vendor: "OpenBSD / OpenSSH portability team"
+  language: "C"
+  repository: "https://github.com/openssh/openssh-portable"
+  license: "BSD-2-Clause"
+version_pinning:
+  policy: "pin to a specific commit at mission-start time"
+  reference: "github.com/openssh/openssh-portable/commits/master (kexmlkem768x25519.c)"
+  notes: |
+    OpenSSH portable ML-KEM-X25519 support was removed in commit 62fb2b5
+    (2024-09-05) and re-added in commit 81ca145 (2026-06-14). The current
+    master HEAD implements draft-ietf-sshm-mlkem-hybrid-kex (latest
+    published draft, currently -10). Pin the exact commit when the
+    mission activates.
+independence:
+  lineage: "OpenBSD / OpenSSH portability team (Damien Miller, Markus Friedl)"
+  reuses: "OpenBSD libcrucible crypto library (ML-KEM-768 + X25519) OR system OpenSSL/liboqs binding depending on configure flags"
+  notes: |
+    The server enc() path:
+    1. Receives SSH_MSG_KEX_HYBRID_INIT containing C_INIT = C_PK2 || C_PK1
+       (1184-byte ML-KEM-768 pk || 32-byte X25519 pk).
+    2. Checks sshbuf_len(client_blob) != need; if mismatch returns
+       SSH_ERR_SIGNATURE_INVALID (the SSH-protocol rejection).
+    3. Otherwise calls crypto_kem_mlkem768_enc(ct, shared_secret, client_pub).
+    4. The underlying crypto_kem_mlkem768_enc is the OpenBSD-native
+       implementation (libcrucible) which may or may not perform the
+       FIPS 203 s7.2 modulus check.
+mlkem_support:
+  kats_included: "no public KAT vectors for OpenSSH mlkem768x25519"
+  hpke_integration: "no HPKE -- SSH KEX direct path"
+  protocol_modes: ["SSH hybrid KEX per draft-ietf-sshm-mlkem-hybrid-kex-10"]
+  kdfs: ["SHA-512 per SSH binary protocol"]
+  aeads: ["AES-256-GCM, AES-256-CTR, ChaCha20-Poly1305 (negotiated per SSH cipher suite)"]
+notes: |
+  Critical reading for the mission: per kexmlkem768x25519.c, the server
+  does NOT perform a 12-bit coefficient range check on C_PK2. This is
+  the prior-art-implied answer (H1) -- the audit must empirically
+  confirm whether the handshake completes end-to-end with a tampered
+  C_INIT.

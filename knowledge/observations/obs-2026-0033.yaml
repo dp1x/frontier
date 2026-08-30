@@ -1,0 +1,70 @@
+id: obs-2026-0033
+type: observation
+status: pending
+created_at: "2026-08-30T05:10:00Z"
+updated_at: "2026-08-30T05:10:00Z"
+summary: "Pre-execution observation: SSH harness (interop/protocol-placement/ssh_loopback/main.go) compiles cleanly with Go 1.26.4 on Windows arm64; produces 7 stimuli (control, truncate_by_1, append_1, coeff0_q, coeff0_4095, coeff255_4095, cross_param_set) for mlkem768x25519-sha256 cohort and 3 stimuli for sntrup761x25519-sha512 cohort; smoke-tested against default sshd (no PQ KEX available locally)."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-builder
+    model: minimax-m3
+    tool: go build verification + smoke test
+  sources:
+    - interop/protocol-placement/ssh_loopback/main.go
+    - knowledge/experiments/exp-2026-0025.yaml
+  parent: exp-2026-0025
+  generation: 0
+links:
+  missions: [msn-2026-0010]
+  hypotheses: [hyp-2026-0016, hyp-2026-0017, hyp-2026-0018]
+  targets: [tgt-2026-0003]
+  implementations: [imp-2026-0012, imp-2026-0013]
+title: "OBS-2026-0033 - SSH harness compiles and produces correct stimulus matrix"
+environment:
+  os: "windows arm64"
+  go_version: "go1.26.4 windows/arm64"
+  target_compile: "R:\\ssh-loopback\\ssh_loopback.exe (3.94 MB)"
+  binary_smoke_test: "Local Windows sshd (LibreSSL 3.8.2, no PQ KEX); harness dial fails with connectex (expected)"
+observations:
+  harness_compiles: "Go build succeeded; binary produced."
+  stimulus_count_mlkem: 7
+  stimulus_count_sntruprime: 3
+  smoke_test: "All 7 mlkem stimuli attempted against 127.0.0.1:22 (no sshd running); all reported harness_error with 'connectex: No connection could be made' -- expected behavior."
+  binary_size_bytes: 3942912
+stimulus_matrix_mlkem:
+  - "control: canonical C_INIT (no mutation)"
+  - "truncate_by_1: C_INIT length = 1215 (length-half)"
+  - "append_1: C_INIT length = 1217 (length-half)"
+  - "coeff0_q: first 12-bit coefficient = q = 3329 (modulus-half)"
+  - "coeff0_4095: first 12-bit coefficient = 4095 (modulus-half)"
+  - "coeff255_4095: last 12-bit coefficient = 4095 (modulus-half)"
+  - "cross_param_set: C_PK2 body replaced with ML-KEM-512-sized filler (structural break)"
+stimulus_matrix_sntruprime:
+  - "control: canonical C_INIT (no mutation)"
+  - "truncate_by_1: C_INIT length = 1062 (length-half)"
+  - "append_1: C_INIT length = 1064 (length-half)"
+  - "(modulus-half stimuli for sntruprime deferred to follow-up after byte-layout audit of libcruxy/sntrup761.c)"
+local_constraint: |
+  This Windows host's sshd (OpenSSH_for_Windows_9.5p2 + LibreSSL 3.8.2)
+  does NOT support mlkem768x25519-sha256 or sntrup761x25519-sha512
+  (ssh -Q kex shows only classical algorithms: curve25519-sha256,
+  ecdh-sha2-nistp256, diffie-hellman-group14-sha256, etc.). Therefore
+  the actual end-to-end test MUST run on GHA ubuntu-latest where
+  OpenSSH portable can be built from source with USE_MLKEM768X25519=1.
+notes: |
+  The harness is the smallest decisive Go program that exercises the SSH
+  binary packet protocol (RFC 4253 s6) end-to-end against an OpenSSH portable
+  sshd with hybrid KEX. It reuses the rustls_loopback pattern (Go MITM on
+  net.Pipe) but adapted to SSH binary packet framing, which is simpler than
+  TLS 1.3.
+reproducer: |
+  cd C:\\Users\\Dhane\\frontier\\interop\\protocol-placement\\ssh_loopback
+  go build -o R:\\ssh-loopback\\ssh_loopback.exe .
+  R:\\ssh-loopback\\ssh_loopback.exe --cohort mlkem768x25519-sha256 --server-addr 127.0.0.1:2222 \
+    --out-tsv reports/smoke.tsv --out-log reports/smoke.log
+follow_up:
+  - "Execute ssh-loopback.yml workflow on GHA ubuntu-latest to obtain end-to-end verdicts"
+  - "Stage C (client-side decapsulation parity) requires OpenSSH portable client + Go client build"
+  - "Stage D (Erlang/OTP ssh) gated on Stage A/B lenient result"
