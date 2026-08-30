@@ -475,9 +475,17 @@ func recvPacket(br *bufio.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(body) == 0 {
+		return nil, fmt.Errorf("empty packet body")
+	}
 	paddingLen := int(body[0])
 	if 1+paddingLen > len(body) {
-		return nil, fmt.Errorf("padding length %d exceeds packet body %d", paddingLen, len(body))
+		// Dump first 32 bytes hex for debugging.
+		preview := body
+		if len(preview) > 32 {
+			preview = preview[:32]
+		}
+		return nil, fmt.Errorf("padding length %d exceeds packet body %d (packetLen=%d, body=%x)", paddingLen, len(body), packetLen, preview)
 	}
 	payload := body[1 : 1+int(packetLen)-1-paddingLen]
 	return payload, nil
