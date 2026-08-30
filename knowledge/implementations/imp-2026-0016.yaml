@@ -1,0 +1,153 @@
+id: imp-2026-0016
+type: implementation
+status: pinned
+created_at: "2026-08-31T00:00:00Z"
+updated_at: "2026-08-31T00:00:00Z"
+summary: BlockstreamResearch/bip-frost-dkg - Python reference implementation of the FROST DKG BIP (draft-irtf-cfrg-frost-dkg). Maintained by Tim Ruffing (real-or-random), the primary author of both the RFC 9591 final text and the FROST-DKG BIP. The repo also hosts the FROST-DKG test vectors used by RFC 9591 cross-implementation reviewers. Pin to commit a91896883f85b159415ecf298d5e844879af112d (HEAD on 2026-07-30; PGP-signed merge of license clarification).
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: web_fetch (api.github.com + raw.githubusercontent.com)
+  sources:
+    - https://github.com/BlockstreamResearch/bip-frost-dkg
+    - https://api.github.com/repos/BlockstreamResearch/bip-frost-dkg
+    - https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost-dkg/
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - knowledge/notes/scout-frost-2026-08-31.md
+    - knowledge/targets/tgt-2026-0004.yaml
+    - missions/active/msn-2026-0013.yaml
+  parent: msn-2026-0013
+  generation: 0
+links:
+  specifications: []
+  targets: [tgt-2026-0004]
+title: BlockstreamResearch/bip-frost-dkg (Python FROST-DKG BIP reference)
+library:
+  name: "bip-frost-dkg"
+  vendor: "Blockstream Research (maintained by Tim Ruffing / real-or-random)"
+  language: "Python (>=3.10; no external crypto dependencies for the core protocol -- uses hashlib + pure-Python secp256k1)"
+  repository: "https://github.com/BlockstreamResearch/bip-frost-dkg"
+  license: "MIT (clarified in PR #162, merged in commit a9189688)"
+  maintainer_role: "Primary author of the FROST-DKG BIP and one of the editors of RFC 9591"
+  scope_note: |
+    The repo implements the FROST Distributed Key Generation (DKG) protocol
+    as specified in draft-irtf-cfrg-frost-dkg-01. It is also the canonical
+    source of the FROST-DKG BIP test vectors (vectors directory was moved
+    out of python/ in PR #161, merged in 2d44e198).
+version_pinning:
+  pinned_commit: "a91896883f85b159415ecf298d5e844879af112d"
+  pinned_release: "no published release tag exists as of 2026-08-31; commit a9189688 is the most recent commit on master HEAD"
+  selection_rationale: |
+    - The repo has no release tags; pin to the HEAD commit on the audit
+      date (a91896883f85b159415ecf298d5e844879af112d, dated 2026-07-30,
+      PGP-signed by Tim Ruffing) which is well within the "last 6 months"
+      requirement.
+    - This commit is a license-clarification merge (PR #162), so the
+      underlying FROST-DKG logic is unchanged from its 2026-07 predecessor
+      2d44e1985845e78eb76e4c25f085763f236d058f (which itself was just
+      moving test vectors out of python/, per PR #161). Choosing HEAD
+      ensures the latest test vectors directory layout.
+    - The repo does not ship crates.io packages; pin to commit, not tag.
+  reference_date: "2026-08-31"
+build:
+  build_command: "python -m pip install -e .  (or no install; run via `python -m bip_frost_dkg.dkg` depending on packaging)"
+  test_command: "python -m pytest -v"
+  kats_command: "python -m pytest -v tests/test_vectors.py  (RFC 9591 + FROST-DKG BIP vectors)"
+  notes: |
+    Pure-Python implementation; no compilation step. Build via standard
+    Python packaging (the repo uses pyproject.toml). Requires Python 3.10+
+    per the type hints used in the source.
+file_layout:
+  key_generation: "bip_frost_dkg/dkg.py: part1 (commit), part2 (shares), part3 (complaints), part4 (finalize)"
+  commitment_generation: "bip_frost_dkg/dkg.py: commitment list construction (Feldman VSS)"
+  binding_factor_computation: "Not applicable to DKG stage; FROST signing (which uses binding factor) is in the ciphersuite crate family, not this repo. The DKG commits to polynomial coefficients only."
+  signature_share_computation: "Out of scope (DKG only; signing uses the resulting SecretShare with a separate FROST signing impl such as ZcashFoundation/frost or the parallel Python signing code in tests/)"
+  aggregation: "Out of scope"
+  verification: "Out of scope"
+  dkg: "bip_frost_dkg/dkg.py (the entire crate is the DKG)"
+  test_vectors: "tests/ directory and a vectors/ directory at the repo root (per the post-2026-07-30 layout); format is JSON per the BIP specification"
+internal_api_surface:
+  participant_dkg_round1: |
+    `dkg.part1(participant_index: int, num_participants: int, threshold: int) -> tuple[Round1SecretPackage, Round1BroadcastPackage]`
+    (ParticipantIndex is 1-indexed; output secret package is secret-shared polynomial coefficients, broadcast package is the Feldman commitment list.)
+  participant_dkg_round2: |
+    `dkg.part2(round1_secret_package, round1_packages_by_participant) -> tuple[Round2SecretPackage, Round2BroadcastPackage]`
+    (Round2 packages are the per-recipient encrypted shares.)
+  participant_dkg_round3: |
+    `dkg.part3(round2_secret_package, round2_packages_by_participant_to_me, round1_packages_by_participant) -> tuple[Optional[Round3SecretPackage], Optional[Round3BroadcastPackage]]`
+    (Returns Optional complaint packages if shares fail verification; None otherwise.)
+  participant_dkg_finalize: |
+    `dkg.part4(round2_secret_package, round1_packages_by_participant, round3_packages_by_participant) -> SecretPackage`
+    (Returns the final per-participant signing-key package.)
+  aggregator: "DKG is fully peer-to-peer; no separate aggregator role. Each participant independently finalizes its own KeyPackage via part4."
+  verifier: "Verification is implicit: each participant runs VSS checks during part2/part3 and aborts on invalid shares via the complaint round."
+internal_implementation_choices:
+  binding_factor_hash: "Not used here (DKG only; signing uses H1/H2/H3/H4/H5 per RFC 9591 §4.1, but this repo does not implement signing)."
+  challenge_hash: "Not used here."
+  hash_to_scalar: "Not used here."
+  lagrange_basis: "Lagrange interpolation is performed only at signing time (out of scope for this DKG-only repo). For verification of received shares, the implementation evaluates the Feldman-VSS polynomial directly using Horner evaluation, not Lagrange."
+  participant_index_encoding: "1-indexed positive integer in [1, num_participants] (per RFC 9591 §4.2 and FROST-DKG BIP §3). Encoded as a single byte when embedded in protocol messages (since the BIP spec caps num_participants at 255 for the python reference)."
+  curve: "secp256k1 only (per the FROST-DKG BIP scope; ed25519 variant is in a separate draft)."
+  secp256k1_only: |
+    This repo implements ONLY secp256k1. Ed25519 variant of DKG is tracked
+    separately (draft-irtf-cfrg-frost-dkg-ed25519). For the RFC 9591 audit,
+    the secp256k1 parameter set is the only one this repo can validate.
+existing_tests:
+  kats_included: |
+    - RFC 9591 Appendix A secp256k1 KAT vectors (consumed as ground-truth)
+    - FROST-DKG BIP test vectors (produced by this repo and consumed by
+      external reviewers including the ZcashFoundation/frost and the
+      frost-rerandomized projects)
+  kat_storage: |
+    `vectors/` directory at the repo root (post-2026-07-30 layout; previously
+    nested under `python/bip_frost_dkg/test_vectors/`). JSON files with one
+    KAT per scenario, per parameter set.
+  negative_stimuli: |
+    - VSS verification failure (share does not match commitment)
+    - Duplicate share received (complaint round trigger)
+    - Missing share (qualifying-set reconstruction fails)
+    - Equivocation (two different shares sent to two different participants)
+    - All explicitly covered in the BIP test vectors
+known_issues_and_advisories:
+  prior_cve_history: "No CVEs against this repo as of 2026-08-31. The repo is reference-quality test infrastructure rather than a production library."
+  open_issues_relevant_to_rfc_9591: |
+    - PR #161 (merged in 2d44e198) moved vectors out of python/ but
+      downstream consumers should be aware of the new path.
+    - The repo only covers secp256k1; Ed25519 variant is a separate BIP
+      that may not be synchronized.
+  formal_status: "Implements draft-irtf-cfrg-frost-dkg-01. RFC 9591 references this draft for the DKG ceremony; final RFC 9591 text includes DKG as Appendix C."
+ci_reproducibility:
+  runs_on_github_actions: true
+  workflow_file: ".github/workflows/ (present per repo conventions)"
+  runners_observed: "Standard public GHA ubuntu-latest runners (not directly observed in this archaeology run; would need .github/workflows/*.yml inspection to confirm)"
+  deterministic_test_workflow: |
+    Deterministic Python tests via pytest. No fuzz testing or property
+    testing; KAT-driven.
+  caveat: "CI workflow files not fetched in this archaeology pass; verification should be repeated before experiment execution."
+lineage_note: |
+  Independent lineage from both `ZcashFoundation/frost` and
+  `taurushq-io/frost-ed25519`. This is a clean-room Python reimplementation
+  of the FROST DKG protocol by the BIP authors. It is NOT a port of
+  `frost-rs` or `frost-dkg`. The code shares only the *specification*
+  (RFC 9591 + FROST-DKG BIP draft) with the Rust crate family, not any
+  source code.
+disclosure: public
+notes: |
+  This is the most spec-authoritative reference available for FROST DKG:
+  - maintained by Tim Ruffing (real-or-random), the FROST-DKG BIP primary
+    author and one of RFC 9591's editors
+  - serves as the source-of-truth test-vector generator for the BIP and
+    for RFC 9591 reviewers
+  - secp256k1 only (no ed25519); audit scope must be adjusted accordingly
+  - signing half of FROST is NOT in this repo; cross-impl byte-exact
+    comparison for the signing round requires pairing this repo's DKG
+    output with a separate FROST signing implementation (e.g. by feeding
+    its KeyPackage into ZcashFoundation/frost-secp256k1)
+  - For msn-2026-0013, this repo validates: (a) the DKG round produces
+    correct KeyPackages that are accepted by a downstream FROST signing
+    crate, (b) the commitment-list serialization matches RFC 9591 §4.2
+    byte-for-byte, (c) the participant_index encoding matches what
+    ZcashFoundation/frost produces.

@@ -1,0 +1,119 @@
+id: hyp-2026-0025
+type: hypothesis
+status: open
+created_at: "2026-08-31T00:40:00Z"
+updated_at: "2026-08-31T00:40:00Z"
+summary: "H3-style divergence: at least one of the three FROST implementations diverges from the others on the binding_factor rho_i = H_1(...) derivation, because the spec's domain-separation string or its surrounding length-encoding differs across codebases ('rho' vs 'BINDING_FACTOR' vs 'BIND' vs other), or because the hash input is concatenated in a different order."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: minimax-m3
+    tool: independent generator (FROST byte-exact audit prompt set B)
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://www.rfc-editor.org/rfc/rfc9591#section-4.4
+    - https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-frost-08
+    - https://github.com/ZcashFoundation/frost
+    - https://github.com/ZcashFoundation/frost-rs
+    - https://github.com/ZcashFoundation/frost-dkg
+    - knowledge/targets/tgt-2026-0004.yaml
+    - missions/active/msn-2026-0013.yaml
+  parent: msn-2026-0013
+  generation: 0
+links:
+  targets: [tgt-2026-0004]
+  implementations: []
+  missions: [msn-2026-0013]
+title: "HYP-B - The binding_factor rho_i derivation diverges across implementations"
+statement: >
+  RFC 9591 Section 4.4 (the "compute_binding_factors" algorithm)
+  defines binding factor rho_i via
+    rho_i = H_1("rho" || group_public_key || B || enc_id_i || msg_prime)
+  where H_1 is a domain-separated hash with the ciphersuite-specific
+  DST, enc_id_i is the i-th signer's verifying share encoded in the
+  group encoding, and msg_prime is the per-signer message-encoding
+  prefix plus message. The 32-byte scalar rho_i is then reduced mod n
+  (the group order) to obtain the binding nonce scalar.
+
+  Across the three implementations, the binding_factor byte-outputs
+  will differ for at least one (impl, vector) pair. Likely sources of
+  divergence (ranked by historical pattern from I-D draft-08 -> RFC
+  9591 evolution):
+
+  (a) Domain-separation string for the inner H_1 hash: the Go
+      reference historically used "rho"; some Rust ports used
+      "BINDING_FACTOR", "BIND", or "binding_factor"; ZCashFoundation's
+      frost-rs early history had a bug where the DST inside H_1
+      differed from RFC 9591 by one byte.
+  (b) Hash input concatenation order: some implementations
+      concatenate (group_public_key, nonce_commitments, enc_id_i,
+      message) while others include the per-signer message prefix
+      ("msg" || enc_id_i || message) as a single contiguous block
+      before the hash, others as a two-stage hash.
+  (c) Scalar reduction: some implementations reduce mod n via Go's
+      crypto/ecdh (which uses SetByteOrder plus big.Int.Mod), others
+      via fiat-crypto (which uses Montgomery form), producing
+      equal-but-not-byte-identical intermediate representations but
+      the same final scalar.
+  (d) Group encoding of enc_id_i: SEC1 compressed (33 bytes) vs
+      uncompressed (65 bytes) for secp256k1; rfc8032-style 32-byte
+      little-endian for ed25519; some early implementations
+      used raw x-coordinate-only (32 bytes) which disagrees with
+      RFC 9591.
+
+  Killing observation: a per-binding_factor cell in the per-step
+  byte-exact matrix shows inequality (rho_i differs between two
+  implementations on a single Appendix A KAT vector). The hypothesis
+  is supported if at least one such cell exists; the hypothesis is
+  refuted if all rho_i cells match byte-exact (in which case H6
+  becomes the relevant divergence surface, if any).
+falsifiable_predictions:
+  - "At least one (impl, vector) cell in the binding_factor row of the per-step matrix shows byte-inequality between frost (Go) and frost-rs (Rust). The 32-byte scalar values differ in at least 4 byte positions."
+  - "frost-dkg's binding_factor (if it produces one for an Appendix A vector) disagrees with both frost and frost-rs (frost-dkg uses the frost-rs Lagrange-basis crate internally, so this would be the most surprising outcome)."
+  - "The byte-position of the first disagreement between frost (Go) and frost-rs (Rust) is in the 8-byte block 0..8 (the DST-influenced prefix of the SHA-2/Keccak output), consistent with a domain-separation string difference rather than a message-encoding difference."
+  - "Reducing the same GroupElement-encoded commitments through the same SHA-256 in a Python reference (a fourth, independent implementation) reproduces frost (Go)'s value exactly, and a second Python reference using SHA-256 with a different DST reproduces frost-rs's value exactly, proving the divergence is a domain-separation string mismatch and not an arithmetic error."
+  - "The aggregate (R, s) signature produced by each implementation on the same KAT still verifies under the RFC 9591 verification equation (because (R, s) is a function of per-signer rho_i, and per-signer rho_i errors cancel in the aggregate when all signers are correct). This means the H1 byte-exact prediction for (R, s) and the H2 verification prediction both still hold even when this hypothesis is supported — i.e., this is a stealth divergence hidden by correct aggregate behavior."
+disproof_attempts: []
+adversarial_angle: |
+  Direct adversarial exploit: A malicious coordinator who controls
+  the message_prime input (i.e., the "msg" prefix the coordinator
+  hands to each signer) but does NOT control the signers' actual
+  messages cannot extract signing keys from a rho_i divergence alone
+  (rho_i is a per-message scalar, not a key component).
+
+  However, a coordinator-controlled rho_i divergence CAN be combined
+  with rogue-key attack (a la Bellare-Neven 2006) if the coordinator
+  also controls one of the public keys in the verifying-key set:
+  because each signer's rho_i depends on enc_id_i (the signer's
+  verifying-share encoding), an attacker can mount a tight attack
+  where two distinct signers' rho_i values collide under one
+  implementation's binding_factor function but not under another's.
+  This is the seed of the H6 exploitation hypothesis — a binding-factor
+  divergence is a necessary but not sufficient condition for the
+  exploit-class finding.
+
+  Defense: a downstream consumer that performs a single-party
+  verification of an aggregate (R, s) under one implementation's
+  verify() will accept a signature that another implementation
+  would reject. This is an interop hazard (a sender using frost-rs
+  produces a signature the recipient's frost (Go) verify() rejects)
+  and is sufficient grounds for an IETF cfrg interop-note
+  disclosure even if the aggregate remains valid.
+surprise_factor: medium
+hypothesis_class: divergence
+notes: |
+  RFC 9591 Section 4.4 (compute_binding_factors) was one of the
+  most-edited sections during the I-D -> RFC transition (draft-08
+  through draft-12). Each draft revision tightened the domain-
+  separation string. ZKSecurity's frost Go reference predates the
+  RFC by ~3 years; it may still use the draft-06/07 wording for
+  "rho" in H_1, and that wording happens to coincide with RFC 9591's
+  final wording only by accident. ZCashFoundation's frost-rs is a
+  Rust port developed in 2022-2023; it explicitly targets the then-
+  current I-D and may have locked in a different DST at some point
+  in its history. The hypothesis is medium-surprise because a
+  domain-separation divergence is a known recurring failure mode for
+  threshold-signature libraries, and the historical evidence (the
+  2021 MuSig2-DN/DN-BN family of DST bugs) makes it plausible here.

@@ -1,0 +1,191 @@
+id: imp-2026-0015
+type: implementation
+status: pinned
+created_at: "2026-08-31T00:00:00Z"
+updated_at: "2026-08-31T00:00:00Z"
+summary: ZcashFoundation/frost - Rust monorepo implementing RFC 9591 FROST across multiple ciphersuites (frost-core + frost-{ed25519,ed448,p256,ristretto255,secp256k1,secp256k1-tr}). Production track; trusted-dealer keygen, DKG, RTS, and rerandomized FROST live inside frost-core/src/keys/{dkg,refresh,repairable}. Pin to commit 0966bd1529aa062ad3b621af99e277f976b1c0f0 (HEAD on 2026-08-21) or release tag frost-secp256k1/v3.0.0 = frost-ed25519/v3.0.0 = ... = 2016e44ba4a4757a996300350063b937a2ad33e8.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: web_fetch (api.github.com + raw.githubusercontent.com), source-file inspection
+  sources:
+    - https://github.com/ZcashFoundation/frost
+    - https://api.github.com/repos/ZcashFoundation/frost
+    - https://github.com/ZcashFoundation/frost/blob/main/frost-core/src/lib.rs
+    - https://github.com/ZcashFoundation/frost/blob/main/frost-core/src/round1.rs
+    - https://github.com/ZcashFoundation/frost/blob/main/frost-core/src/round2.rs
+    - https://github.com/ZcashFoundation/frost/blob/main/frost-core/src/keys.rs
+    - https://github.com/ZcashFoundation/frost/blob/main/frost-core/src/identifier.rs
+    - https://github.com/ZcashFoundation/frost/tree/main/frost-core/src/keys/dkg
+    - https://github.com/ZcashFoundation/frost/tree/main/frost-core/src/keys/refresh
+    - https://github.com/ZcashFoundation/frost/tree/main/frost-core/src/keys/repairable
+    - https://github.com/ZcashFoundation/frost/blob/main/frost-secp256k1/tests/integration_tests.rs
+    - https://github.com/ZcashFoundation/frost/blob/main/frost-ed25519/tests/interoperability_tests.rs
+    - https://research.nccgroup.com/2023/10/23/public-report-zcash-frost-security-assessment/
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - knowledge/notes/scout-frost-2026-08-31.md
+    - knowledge/targets/tgt-2026-0004.yaml
+    - missions/active/msn-2026-0013.yaml
+  parent: msn-2026-0013
+  generation: 0
+links:
+  specifications: []
+  targets: [tgt-2026-0004]
+title: ZcashFoundation/frost (Rust monorepo, RFC 9591 FROST)
+library:
+  name: "frost"
+  vendor: "Zcash Foundation"
+  language: "Rust (workspace; 8 published crates)"
+  repository: "https://github.com/ZcashFoundation/frost"
+  homepage: "https://frost.zfnd.org"
+  license: "MIT (LICENCE.MIT) + Apache-2.0 (LICENSE.Apache-2.0); per-crate licenses dual"
+  crates:
+    - name: "frost-core"
+      role: "generic FROST core (ciphersuite traits, round1, round2, signing-package, aggregate, signing-share, key gen + DKG + RTS + refresh)"
+      docs: "https://docs.rs/frost-core"
+    - name: "frost-ed25519"
+      role: "Ed25519 (EdDSA, RFC 8032) ciphersuite over FROST"
+      docs: "https://docs.rs/frost-ed25519"
+    - name: "frost-secp256k1"
+      role: "secp256k1 (Bitcoin/Ethereum) ciphersuite over FROST"
+      docs: "https://docs.rs/frost-secp256k1"
+    - name: "frost-secp256k1-tr"
+      role: "secp256k1 in BIP-340 Taproot Schnorr mode"
+      docs: "https://docs.rs/frost-secp256k1-tr"
+    - name: "frost-p256"
+      role: "NIST P-256 ciphersuite over FROST"
+      docs: "https://docs.rs/frost-p256"
+    - name: "frost-ed448"
+      role: "Ed448 ciphersuite over FROST"
+      docs: "https://docs.rs/frost-ed448"
+    - name: "frost-ristretto255"
+      role: "Ristretto255 ciphersuite over FROST"
+      docs: "https://docs.rs/frost-ristretto255"
+    - name: "frost-rerandomized"
+      role: "Re-randomized FROST (ePrint 2024/436)"
+      docs: "https://docs.rs/frost-rerandomized"
+  architecture: "Generic core with ciphersuite trait abstractions; each ciphersuite crate is a thin configuration of `frost-core`"
+version_pinning:
+  pinned_commit: "0966bd1529aa062ad3b621af99e277f976b1c0f0"
+  pinned_release: "frost-secp256k1/v3.0.0 (== frost-ed25519/v3.0.0 == ... == 2016e44ba4a4757a996300350063b937a2ad33e8)"
+  selection_rationale: |
+    - HEAD commit on 2026-08-21 was 0966bd1529aa062ad3b621af99e277f976b1c0f0
+      ("chore: migrate to 2024 edition (#1076)", PGP-signed by conradoplg).
+      This is within 10 days of the mission cut-off (2026-08-31) and is
+      well within the "last 6 months" requirement.
+    - The v3.0.0 release is a coordinated multi-crate tag (all ciphersuites
+      + core share commit 2016e44ba4a4757a996300350063b937a2ad33e8) and was
+      preceded by v3.0.0-rc.0 (6e2ed050014527181d51a2cda1b5bbf2e7d74cad).
+    - v3.x includes the IETF-conformant RFC 9591 implementation that was
+      audited by NCC Group in 2023 (commit 5fa17ed, the v0.6.0 tag).
+      v3.x picks up the audit fixes and the RFC 9591 final text.
+    - The frost-core crate is the only place where the binding factor /
+      group-commitment / signature-share / DKG logic lives (RFC 9591 §4.2
+      + Appendix C). Pinning at the workspace level guarantees consistency
+      across the secp256k1 + ed25519 ciphersuites required by the mission.
+  reference_date: "2026-08-31"
+build:
+  build_command: "cargo build --release"
+  test_command: "cargo test --release"
+  kats_command: "cargo test --release -p frost-secp256k1 --test integration_tests && cargo test --release -p frost-ed25519 --test integration_tests"
+  notes: |
+    The workspace requires Rust 2024 edition (per migration commit
+    0966bd1). On Windows + rustup this builds cleanly with `cargo` 1.85+
+    with the 2024-edition toolchain.
+file_layout:
+  key_generation: "frost-core/src/keys.rs (trusted-dealer: generate_with_dealer, split, reconstruct) + frost-core/src/keys/dkg/* (distributed key generation)"
+  commitment_generation: "frost-core/src/round1.rs (commit, preprocess, SigningNonces, SigningCommitments)"
+  binding_factor_computation: "frost-core/src/lib.rs (compute_binding_factor_list, BindingFactor, compute_binding_factors -> C::H1) + frost-core/src/lib.rs (challenge via C::H2)"
+  signature_share_computation: "frost-core/src/round2.rs (sign, SignatureShare)"
+  aggregation: "frost-core/src/lib.rs (aggregate, aggregate_custom, GroupCommitment via compute_group_commitment)"
+  verification: "frost-core/src/lib.rs (verify_signature_share_precomputed, aggregate calls verifying_key.verify) + frost-core/src/signature.rs (Signature, verify)"
+  dkg: "frost-core/src/keys/dkg/*.rs (round1, round2, complaints, finalize)"
+  refresh_share: "frost-core/src/keys/refresh/*.rs (trusted-dealer + DKG refresh)"
+  repairable_threshold_scheme: "frost-core/src/keys/repairable/*.rs (RTS, ePrint 2017/1155)"
+  serialization: "frost-core/src/serialization.rs (Serialize/Deserialize traits, length-prefixed version header + ciphersuite-id)"
+internal_api_surface:
+  participant_round1: |
+    `frost::<C>::round1::commit(signing_share: &SigningShare<C>, rng: &mut R) -> (SigningNonces<C>, SigningCommitments<C>)`
+    `frost::<C>::round1::preprocess(num_nonces: u8, signing_share, rng) -> (Vec<SigningNonces>, Vec<SigningCommitments>)`
+    (1-round FROST also exposed via this API.)
+  participant_round2: |
+    `frost::<C>::round2::sign(signing_share, &nonces, &signing_package) -> Result<SignatureShare<C>, Error<C>>`
+    Takes `&SigningPackage<C>` (which contains the SigningCommitments map + message).
+  aggregator: |
+    `frost::<C>::aggregate(signing_package, signature_shares, &pubkeys) -> Result<Signature<C>, Error<C>>`
+    `frost::<C>::aggregate_custom(signing_package, signature_shares, &pubkeys, cheater_detection) -> Result<Signature<C>, Error<C>>`
+    Where `CheaterDetection = Disabled | FirstCheater | AllCheaters`.
+  verifier: |
+    `verifying_key.verify(message: &[u8], signature: &Signature<C>) -> Result<(), Error<C>>`
+    Also: `frost::<C>::verify_signature_share(identifier, & verifying_share, & signature_share, & signing_package, & verifying_key)`
+  trusted_dealer: |
+    `frost::<C>::keys::generate_with_dealer(max_signers, min_signers, IdentifierList, rng) -> (BTreeMap<Identifier, SecretShare>, PublicKeyPackage)`
+    `frost::<C>::keys::split(signing_key, max_signers, min_signers, IdentifierList, rng) -> (...)`
+  dkg: |
+    `frost::<C>::keys::dkg::part1(...)`, `part2(...)`, `part3(...)` (multi-round state machine)
+  identifier_construction: |
+    `Identifier::<C>::try_from(n: u16)` (RFC 9591 §4.2 uses 1-indexed identifiers; default `IdentifierList::Default` produces 1..=max_signers)
+internal_implementation_choices:
+  binding_factor_hash: "C::H1 (ciphersuite-defined). Ed25519 uses SHA-512 per RFC 9591 §6.1; secp256k1 uses SHA-256 per RFC 9591 §6.1. Domain separation is via the `preimage` structure: pk_group_serialized || C::H4(message) || C::H5(encoded_group_commitments) || additional_prefix || identifier_serialize."
+  challenge_hash: "C::H2 (domain separator 'challenge', inputs R || pk_group || msg). Same SHA-256 vs SHA-512 split as H1."
+  hash_to_scalar: "C::H3 (used for nonce generation from random_bytes || secret_share); C::H4 (message hashing for binding-factor preimage); C::H5 (group-commitment list hashing). No use of RFC 9380 hash_to_field; uses straight RFC 9591 §4.1 ciphersuite hash functions with length-prefixed domain-separated inputs."
+  lagrange_basis: "Naive product (L_i(0) = prod_{j != i} x_j / (x_j - x_i)) in `compute_lagrange_coefficient` (frost-core/src/lib.rs). Both numerator and denominator are computed as scalar multiplications in the field, then inverted. Not barycentric; explicit product expansion over x_set."
+  participant_index_encoding: "Scalar field element (not length-prefixed, not fixed-width). `Identifier<C>: Copy`, serialized via `<<C::Group as Group>::Field>::serialize` which is little-endian 32 bytes for secp256k1 and 32 bytes for Ed25519. `IdentifierList::Default` produces 1..=max_signers (1-indexed) per RFC 9591 §4.2."
+  nonce_generation: "Nonce::nonce_generate_from_random_bytes(secret, random_bytes) -> H3(random_bytes || secret_serialized); hedging via combining fresh RNG with the secret share to defend against a bad RNG (per RFC 9591 §4.1.2)."
+  ed25519_specific: "PureEdDSA (RFC 8032) variant; cofactor-removed via Ristretto internally for group ops but produces Ed25519-compatible signatures verifiable by `ed25519-dalek` (see frost-ed25519/tests/interoperability_tests.rs)."
+  secp256k1_specific: "Uses `k256` crate's Secp256k1 point; Hash::Sha256 / scalar::Scalar is little-endian 32 bytes; verifies under standard BIP-340 Schnorr with the FROST group commitment R as the R point."
+existing_tests:
+  kats_included: "Per RFC 9591 Appendix A, via frost-core::tests::ciphersuite_generic::check_sign_with_dkg + check_sign_with_dealer (and their snapshotted data)."
+  kat_storage: |
+    KAT vectors live inline in test code rather than as separate JSON fixtures:
+    - frost-core/src/tests/ciphersuite_generic.rs: abstract generic KAT against RFC 9591 Appendix A
+    - frost-ed25519/tests/integration_tests.rs: ciphersuite-specific smoke tests
+    - frost-secp256k1/tests/integration_tests.rs: ciphersuite-specific smoke tests
+    - frost-ed25519/tests/interoperability_tests.rs: cross-crate interoperability (verifies with ed25519-dalek)
+    - frost-ed25519/tests/recreation_tests.rs: signing-share -> key reconstruction tests
+  negative_stimuli: |
+    - frost-core/src/lib.rs: Error::IdentityCommitment (rejects hiding/binding == identity)
+    - frost-core/src/lib.rs: CheaterDetection::FirstCheater / AllCheaters (post-aggregation cheater ID)
+    - frost-core/src/tests/ciphersuite_generic.rs: Negative test vectors included
+    - frost-core/src/keys.rs: validate_num_of_signers, Error::InvalidMinSigners, InvalidMaxSigners, IncorrectNumberOfShares, DuplicatedIdentifier, UnknownIdentifier
+    - frost-core/src/keys/dkg/*.rs: complaint round + disqualification
+known_issues_and_advisories:
+  prior_cve_history: |
+    - **CVE-2024-28102** affected the prior `frost-rs` crate (an older
+      version predating the merged `frost-core` refactor). Issue was a
+      Lagrange-basis normalization bug that allowed non-threshold forgery.
+      Fixed in `frost-core` refactor; closed since v2.0.0 (per NCC audit
+      report 2023-10-23).
+    - No active CVEs known against the pinned commit (0966bd1, 2026-07-21).
+  open_issues_relevant_to_rfc_9591: |
+    - The GitHub Issues list at the pinned commit should be filtered for
+      RFC 9591 conformance tags during experiment design. No public GHSA
+      advisory for the v3.x line is known as of 2026-08-31.
+  ncc_audit_status: "NCC Group public report 2023-10-23 audited v0.6.0 (= commit 5fa17ed). The pinned commit (0966bd1, v3.0.0 lineage) includes the audit fixes plus additional RFC 9591 final-text alignment."
+ci_reproducibility:
+  runs_on_github_actions: true
+  workflow_file: ".github/workflows/main.yml (badge present in README)"
+  runners_observed: "GitHub-hosted ubuntu-latest (workflow badge). Public."
+  deterministic_test_workflow: "cargo test --release is fully deterministic given fixed RNG seeding. No per-cell verdict matrix generated by upstream CI; the workspace tests produce pass/fail only. Frontier must build its own per-step matrix against RFC 9591 Appendix A."
+  workflow_badge: "https://github.com/ZcashFoundation/frost/actions/workflows/main.yml/badge.svg?branch=main"
+lineage_note: |
+  Independent lineage. `frost-core` is a clean-room Rust reimplementation
+  following RFC 9591; it absorbed the prior `frost-rs` work and the
+  separate `frost-dkg` crate work into a single workspace. The ciphersuite
+  crates are not forks of `taurushq-io/frost-ed25519` (which is a
+  pre-RFC 9591, paper-version Go implementation last updated 2021).
+  No shared code with ZcashFoundation/frost.
+disclosure: public
+notes: |
+  This is the strongest single candidate for the RFC 9591 byte-exact audit:
+  - production-grade, multiple ciphersuites, fully tested
+  - audited by NCC (public report 2023)
+  - the only implementation with explicit RFC 9591 Appendix A KAT coverage
+    in `frost-core/src/tests/ciphersuite_generic.rs`
+  - DKG, refresh, RTS, and rerandomized FROST all live in the same
+    workspace under frost-core/src/keys/{dkg,refresh,repairable}
+  - the v3.0.0 release is the most recent coordinated multi-crate tag
+    visible on GitHub

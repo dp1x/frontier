@@ -1,0 +1,100 @@
+id: msn-2026-0014
+type: mission
+status: pending
+created_at: "2026-08-31T06:00:00Z"
+updated_at: "2026-08-31T06:00:00Z"
+summary: Build a clean-room Python reference implementation of RFC 9591 §4.2 (Lagrange basis), §4.4 (binding factor), §5.1 (commit), §5.2 (sign), §5.3 (aggregate) for both secp256k1_sha256 and ed25519_sha512 ciphersuites, derived exclusively from the RFC 9591 text + standard primitives (SHA-256/512 + secp256k1/ed25519 curve arithmetic). The clean-room implementation must NOT consult ZcashFoundation/frost source code or its self-generated tests/helpers/vectors.json. Verify byte-exact match against RFC 9591 Appendix E.5 (secp256k1) and E.1 (ed25519) expected per-step outputs. This is the independent oracle that elevates fnd-2026-0012 from hypothesis (current status) to verified_conclusion per rev-2026-0013's adjustment recommendation.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: mission-activator
+    model: minimax-m3
+    tool: "activating msn-2026-0014 from rev-2026-0013 partial_support verdict"
+  sources:
+    - knowledge/findings/fnd-2026-0012.yaml
+    - knowledge/reviews/rev-2026-0013.yaml
+    - knowledge/hypotheses/hyp-2026-0027.yaml
+    - knowledge/specifications/spc-2026-0003.yaml
+    - knowledge/observations/obs-2026-0037.yaml
+    - knowledge/observations/obs-2026-0038.yaml
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://www.rfc-editor.org/rfc/rfc9591#appendix-E.1
+    - https://www.rfc-editor.org/rfc/rfc9591#appendix-E.5
+    - https://www.rfc-editor.org/rfc/rfc9380
+  parent: msn-2026-0013
+  generation: 1
+links:
+  specifications: [spc-2026-0003]
+  targets: [tgt-2026-0004]
+  hypotheses: [hyp-2026-0027]
+  implementations: []
+  findings: [fnd-2026-0012]
+title: "msn-2026-0014 - Clean-room Python RFC 9591 reference implementation (independent oracle for fnd-2026-0012 promotion)"
+objective: >
+  Build a clean-room Python reference implementation of RFC 9591 §4.4 compute_binding_factors
+  + §5.1 commit + §5.2 sign + §5.3 aggregate for both secp256k1_sha256 and ed25519_sha512
+  ciphersuites. The implementation must be derived exclusively from the RFC 9591 text + standard
+  primitives (SHA-256/512 + secp256k1/ed25519 curve arithmetic via a standard library like
+  coincurve/PyNaCl). It must NOT consult ZcashFoundation/frost source code or its self-generated
+  tests/helpers/vectors.json. Verify byte-exact match against RFC 9591 Appendix E.5 (secp256k1)
+  and E.1 (ed25519) expected per-step outputs.
+
+  The outcome either (a) promotes fnd-2026-0012 from hypothesis to verified_conclusion (if the
+  clean-room implementation reproduces RFC 9591 Appendix E byte-exactly, providing the first
+  independent RFC 9591 KAT verification on record), or (b) characterizes the
+  normatively-silent parameters in RFC 9591 (if the clean-room implementation diverges on
+  some inputs, identifying which specific choices are RFC-ambiguous).
+domain: cryptography
+scope: >
+  Clean-room Python implementation of RFC 9591 §4.4 + §5.1 + §5.2 + §5.3 for both
+  ciphersuites. Byte-exact verification of per-step outputs against RFC 9591 Appendix
+  E.5 (secp256k1) and E.1 (ed25519) expected values. Aggregate verification under
+  RFC 9591 §5.1.6 (ed25519 cofactored) and Appendix B (prime_order_verify).
+
+  Out of scope: DKG ceremony; FROST-2; BLS threshold; MuSig2; performance/timing
+  measurements; fuzz testing.
+constraints:
+  - Implementation must be clean-room: derived exclusively from RFC 9591 text + standard primitives. No consultation of ZcashFoundation/frost source or test vectors.
+  - Python source code committed to crypto/frost-cross-impl/cleanroom/.
+  - Per-step outputs compared byte-exact against RFC 9591 Appendix E.5 and E.1.
+  - All builds in env-scrubbed scratch via local Windows host + GHA ubuntu-latest.
+  - Disclosure: public, interop-note class (not CVE-class unless an exploit-class divergence surfaces).
+desired_evidence_level: verified
+candidate_targets: [tgt-2026-0004]
+dependencies:
+  - fnd-2026-0012
+  - rev-2026-0013
+compute:
+  expected_class: lightweight
+  notes: "Pure Python + standard curve libraries (coincurve for secp256k1, PyNaCl/ed25519 for ed25519). Local Windows host + GHA ubuntu-latest. Total wall-clock budget ~5 min."
+budget:
+  max_attempts: 4
+  max_independent_reviews: 1
+  max_compute_runs: 6
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Clean-room Python implementation committed to crypto/frost-cross-impl/cleanroom/."
+  - "Implementation derives inputs exclusively from RFC 9591 text + standard primitives. No consultation of ZcashFoundation/frost source or test vectors."
+  - "secp256k1_sha256 byte-exact verification: all P1 + P3 per-step outputs (hiding_nonce_commitment, binding_nonce_commitment, binding_factor, sig_share) match RFC 9591 Appendix E.5 expected values byte-exactly."
+  - "secp256k1_sha256 aggregate verification: aggregate (R, z) matches RFC 9591 Appendix E.5 expected values byte-exactly (R=0205b6d0..., z=c65dde84...)."
+  - "ed25519_sha512 byte-exact verification: all P1 + P3 per-step outputs match RFC 9591 Appendix E.1 expected values byte-exactly."
+  - "ed25519_sha512 aggregate verification: aggregate (R, z) matches RFC 9591 Appendix E.1 expected values byte-exactly."
+  - "Aggregate verification under RFC 9591 §5.1.6 (ed25519 cofactored) and Appendix B (prime_order_verify) using the clean-room reference: aggregate (R, z) verifies byte-exactly."
+  - "Source-code reproducer pinned to clean-room implementation commit."
+  - "Adversarial review by non-synthesizer role SUPPORTS the finding."
+  - "Finding promoted through the standard ladder: hypothesis -> experiment -> observation -> reproducer -> independent review -> verified."
+stopping_conditions:
+  - "All Appendix E.5 + E.1 per-step outputs + aggregate verifications executed and reviewed, OR"
+  - "Diminishing-returns window hit (2 consecutive runs with no new verdict), OR"
+  - "Budget exhausted without new discriminating evidence."
+artifacts: []
+follow_ups:
+  - "If byte-exact match: fnd-2026-0012 promoted from hypothesis to verified_conclusion. Disclosure: IETF cfrg WG interop note for first independent RFC 9591 KAT verification on record."
+  - "If divergence: characterize the normatively-silent parameter that caused divergence; document the failure mode as informative research."
+  - "Compare clean-room output against ZcashFoundation/frost's vectors.json per-step outputs (which diverged from RFC Appendix E.5) to identify which specific byte positions diverged and what the divergence characterizes."
+  - "Extend clean-room implementation to additional ciphersuites (ristretto255, Ed448, P-256) per RFC 9591 §6.2-§6.4 KAT vectors."
+notes_path: knowledge/notes/msn-2026-0014.md
+blocked_reason: null
+terminal_reason: null

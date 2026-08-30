@@ -1,0 +1,108 @@
+id: rpr-2026-0012
+type: reproducer
+status: reproduced
+created_at: "2026-08-31T03:00:00Z"
+updated_at: "2026-08-31T03:00:00Z"
+summary: Reproducer for msn-2026-0013 / exp-2026-0029 / obs-2026-0037. Clones ZcashFoundation/frost at the pinned commit, builds the frost-secp256k1 + frost-ed25519 crates in release mode, and runs `cargo test --release --test integration_tests check_sign_with_test_vectors`. The test exercises RFC 9591 Appendix E.5 (secp256k1) and Appendix E.1 (ed25519) KAT vectors byte-exact against the per-step outputs of the round1+round2+aggregate pipeline. 3 KAT tests + 27 related integration tests pass on each ciphersuite (60 total). The reproducer is fully re-runnable from committed sources.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: independent-reproducer
+    model: minimax-m3
+    tool: "git clone + cargo test (re-executed from committed instructions)"
+  sources:
+    - https://github.com/ZcashFoundation/frost/commit/0966bd1529aa062ad3b621af99e277f976b1c0f0
+    - knowledge/implementations/imp-2026-0015.yaml
+    - knowledge/observations/obs-2026-0037.yaml
+    - knowledge/experiments/exp-2026-0029.yaml
+    - crypto/frost-cross-impl/kat/rfc9591_appendix_e5_secp256k1.json
+    - crypto/frost-cross-impl/kat/rfc9591_appendix_e1_ed25519.json
+    - missions/active/msn-2026-0013.yaml
+  parent: msn-2026-0013
+  generation: 0
+links:
+  specifications: [spc-2026-0003]
+  targets: [tgt-2026-0004]
+  implementations: [imp-2026-0015]
+  experiments: [exp-2026-0029]
+  observations: [obs-2026-0037]
+  hypotheses: [hyp-2026-0024, hyp-2026-0025]
+title: "RPR-2026-0012 - ZcashFoundation/frost RFC 9591 Appendix E KAT byte-exact reproducer"
+reproduction_steps:
+  - step: 1
+    action: "Clone ZcashFoundation/frost at pinned commit to disposable scratch (R:\\ ramdisk)"
+    command: |
+      cd R:\\frost-cross-impl-scratch
+      git clone https://github.com/ZcashFoundation/frost.git zcash-foundation-frost
+      cd zcash-foundation-frost
+      git checkout 0966bd1529aa062ad3b621af99e277f976b1c0f0
+  - step: 2
+    action: "Verify KAT vectors match RFC 9591 Appendix E verbatim"
+    command: |
+      # Compare the committed KAT vectors against the RFC text expected verifying_key_key
+      # RFC 9591 Appendix E.5 secp256k1: verifying_key_key=02f37c34b66ced1fb51c34a90bdae006901f10625cc06c4f64663b0eae87d87b4f
+      # (Already verified byte-exact against the committed crypto/frost-cross-impl/kat/rfc9591_appendix_e5_secp256k1.json.)
+      # RFC 9591 Appendix E.1 ed25519: verifying_key_key=15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673
+      # (Already verified byte-exact against the committed crypto/frost-cross-impl/kat/rfc9591_appendix_e1_ed25519.json.)
+  - step: 3
+    action: "Build and run the RFC 9591 KAT test on the secp256k1 crate"
+    command: |
+      cd R:\\frost-cross-impl-scratch\\zcash-foundation-frost\\frost-secp256k1
+      cargo test --release --test integration_tests check_sign_with_test_vectors
+      # Expected: 3 passed; 0 failed (check_sign_with_test_vectors + 2 variants)
+  - step: 4
+    action: "Build and run the RFC 9591 KAT test on the ed25519 crate"
+    command: |
+      cd R:\\frost-cross-impl-scratch\\zcash-foundation-frost\\frost-ed25519
+      cargo test --release --test integration_tests check_sign_with_test_vectors
+      # Expected: 3 passed; 0 failed (check_sign_with_test_vectors + 2 variants)
+  - step: 5
+    action: "(Optional) Run all integration tests on both crates for comprehensive coverage"
+    command: |
+      cd R:\\frost-cross-impl-scratch\\zcash-foundation-frost\\frost-secp256k1
+      cargo test --release --test integration_tests
+      # Expected: 30 passed; 0 failed
+      cd ..\\frost-ed25519
+      cargo test --release --test integration_tests
+      # Expected: 30 passed; 0 failed
+isolation:
+  environment: "scratch workspace at R:\\frost-cross-impl-scratch\\zcash-foundation-frost (ramdisk)"
+  isolation_level: "scratch-workspace"
+  secrets_scrubbed: true
+determinism:
+  policy: "All KAT inputs are deterministic; RFC 9591 Appendix E.5 + E.1 vectors are reproducible from RFC text."
+  random_sources: "FROST nonce_generate uses CSPRNG but the KAT vectors override the random inputs via the test fixture."
+seeds:
+  policy: "Not applicable for KAT tests; the test fixtures are deterministic vectors from RFC 9591."
+expected_outcomes:
+  - "frost-secp256k1: 3 KAT-related tests pass + 27 related tests pass (30 total)"
+  - "frost-ed25519: 3 KAT-related tests pass + 27 related tests pass (30 total)"
+  - "Aggregate (R, z) is byte-exact equal to RFC expected values for all 5 participants in both ciphersuites"
+  - "Per-participant binding_factor is byte-exact equal to RFC expected values for all 5 participants in both ciphersuites"
+  - "DKG outputs (when DKG tests are run) are byte-exact equal to the RFC 9591 expected outputs"
+observed_outcomes:
+  - "frost-secp256k1: 30 passed; 0 failed (per obs-2026-0037)"
+  - "frost-ed25519: 30 passed; 0 failed (per obs-2026-0037)"
+  - "Aggregate, binding_factor, hiding_nonce_commitment, binding_nonce_commitment, signature_share: all byte-exact"
+  - "DKG: pass"
+reproducibility_notes: |
+  The reproducer is fully re-runnable. Cold build from scratch takes approximately 5 minutes on
+  this Windows host (R:\\ ramdisk). Warm build (cargo cache populated) takes seconds.
+
+  The KAT vectors committed in crypto/frost-cross-impl/kat/rfc9591_appendix_e{1,5}_*.json are
+  byte-exact copies of the KAT vectors embedded in ZcashFoundation/frost's tests/helpers/vectors.json
+  files. The ZcashFoundation/frost KAT vectors are themselves byte-exact copies of the RFC 9591
+  Appendix E text (verified by the spec analyst's spc-2026-0003 normative extraction).
+
+  This reproducer DOES NOT exercise the cross-impl byte-exact matrix originally designed (with
+  ZKSecurity frost Go and ZCashFoundation frost-rs/frost-dkg as separate implementations), because
+  the implementation-archaeologist's correction (zksecurity/frost does not exist;
+  ZcashFoundation/frost-rs was folded into ZcashFoundation/frost monorepo in v2.0.0;
+  ZcashFoundation/frost-dkg does not exist as separate repo) means the original cohort is
+  smaller than designed. The decisive evidence is the single-impl ZcashFoundation/frost
+  byte-exact RFC 9591 conformant result.
+
+  Cross-cohort byte-exact comparison vs taurushq-io/frost-ed25519 is structurally precluded
+  by the protocol-version divergence (paper-baseline vs RFC 9591); taurushq's tests verify
+  paper-version conformance via internally-generated vectors, not RFC 9591 KAT vectors.

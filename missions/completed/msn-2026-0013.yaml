@@ -1,0 +1,151 @@
+id: msn-2026-0013
+type: mission
+status: inconclusive-after-budget
+created_at: "2026-08-31T00:00:00Z"
+updated_at: "2026-08-31T06:00:00Z"
+summary: "FROST (RFC 9591) cross-implementation byte-exact nonce-binding-tag audit. Cohort (corrected by implementation archaeologist 2026-08-31): ZcashFoundation/frost (Rust, RFC 9591 conformant), BlockstreamResearch/bip-frost-dkg (Rust, DKG-only), taurushq-io/frost-ed25519 (Go, pre-RFC paper baseline). Per-step byte-exact differential on RFC 9591 Appendix A KAT vectors (secp256k1 + ed25519) plus 8 negative stimuli (nonce reuse, off-curve R, s outside [1,n-1], threshold dropout, etc.)."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: mission-activator
+    model: minimax-m3
+    tool: activating msn-2026-0013 from scout-frost-2026-08-31.md
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://github.com/ZcashFoundation/frost
+    - https://github.com/BlockstreamResearch/bip-frost-dkg
+    - https://github.com/taurushq-io/frost-ed25519
+    - https://ia.cr/2020/852
+    - knowledge/notes/scout-frost-2026-08-31.md
+    - knowledge/targets/tgt-2026-0004.yaml
+    - knowledge/implementations/imp-2026-0015.yaml
+    - knowledge/implementations/imp-2026-0016.yaml
+    - knowledge/implementations/imp-2026-0017.yaml
+    - knowledge/findings/fnd-2026-0007.yaml
+    - knowledge/findings/fnd-2026-0008.yaml
+    - missions/completed/msn-2026-0008.yaml
+  parent: msn-2026-0008
+  generation: 1
+links:
+  specifications: [spc-2026-0003]
+  targets: [tgt-2026-0004]
+  hypotheses: [hyp-2026-0024, hyp-2026-0025, hyp-2026-0026]
+  implementations: [imp-2026-0015, imp-2026-0016, imp-2026-0017]
+  experiments: [exp-2026-0029]
+  observations: []
+  findings: []
+  reviews: [rev-2026-0012]
+title: FROST (RFC 9591) cross-implementation byte-exact nonce-binding-tag audit
+objective: >
+  Determine whether the FROST (Flexible Round-Optimized Schnorr
+  Threshold, RFC 9591) implementations ZcashFoundation/frost (Rust
+  monorepo, RFC 9591 conformant), BlockstreamResearch/bip-frost-dkg
+  (Rust DKG-only ceremony reference), and taurushq-io/frost-ed25519
+  (Go pre-RFC paper baseline) produce byte-exact identical per-step
+  outputs (commitments, binding factors, binding nonces, signature
+  shares, aggregate (R, s)) on RFC 9591 Appendix A test vectors for
+  both secp256k1 and ed25519 parameter sets, and whether they agree on
+  the correct accept/reject verdict for 8 negative stimuli (nonce reuse,
+  off-curve R, s outside [1, n-1], threshold dropout, etc.).
+domain: cryptography
+scope: >
+  RFC 9591 Appendix A test vectors (secp256k1 + ed25519 parameter sets);
+  per-step byte-exact differential across all three implementations;
+  8 negative stimuli per implementation; per-cell verdict TSV; aggregate
+  verification under the RFC 9591 verification equation.
+
+  Cohort correction (per implementation-archaeologist imp-2026-0015/0016/0017):
+  - The original scout references to "zksecurity/frost" and
+    "ZcashFoundation/frost-dkg" (separate repo) are incorrect. The actual
+    cohort is ZcashFoundation/frost (unified monorepo), BlockstreamResearch/
+    bip-frost-dkg (DKG-only), and taurushq-io/frost-ed25519 (pre-RFC).
+  - Taurushq-io/frost-ed25519 implements the paper version (Komlo et al.
+    ePrint 2020/852), NOT RFC 9591; expected divergences are
+    conformance-equivalent, not bugs.
+
+  Out of scope: FROST-2 (Round-Optimized-Threshold, ePrint 2024/1835);
+  threshold-BLS; MuSig2; DKG ceremony audit beyond the BlockstreamResearch
+  crate's own self-tests; performance / timing measurements; fuzz testing
+  of the protocols; rogue-key attack surface (addressed in hyp-2026-0026
+  but out of scope for the byte-exact matrix).
+constraints:
+  - All builds in env-scrubbed scratch via local Windows host + GHA ubuntu-latest.
+  - Pin every implementation to a specific commit/version at mission start.
+  - Decision surface is per-step byte-exact match/divergence + per-cell accept/reject verdict.
+  - Disclosure: public, interop-note class (not CVE-class unless an exploit-class divergence surfaces).
+desired_evidence_level: independently-reviewed
+candidate_targets: [tgt-2026-0004]
+dependencies:
+  - fnd-2026-0007
+  - fnd-2026-0008
+compute:
+  expected_class: lightweight
+  notes: "Local Windows host (Go + Rust toolchains) for primary matrix; GHA ubuntu-latest for cross-platform reproducibility."
+budget:
+  max_attempts: 6
+  max_independent_reviews: 1
+  max_compute_runs: 4
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "All three target implementations (ZcashFoundation/frost Rust, BlockstreamResearch/bip-frost-dkg Rust, taurushq-io/frost-ed25519 Go) successfully built and pinned to specific commit/version per imp-2026-0015/0016/0017."
+  - "RFC 9591 Appendix A KAT vectors extracted and committed to crypto/frost-cross-impl/kat/."
+  - "Per-step byte-exact matrix executed: >= 3 secp256k1 vectors + >= 3 ed25519 vectors, per-step outputs (hiding_nonce_commitment, binding_nonce_commitment, binding_factor, binding_nonce, signature_share, aggregate (R, s)) per vector = >= 108 byte-exact cells."
+  - "All 8 negative stimuli executed across all 3 implementations = >= 24 cells with deterministic per-cell accept/reject verdict."
+  - "Aggregate verification step: for every (impl, vector) pair, the produced (R, s) verifies under the RFC 9591 verification equation using a reference single-party verifier."
+  - "Source-code reproducer pinned to specific commit/version per implementation."
+  - "Adversarial review by non-synthesizer role SUPPORTS the finding (per rev-2026-0012 partial_support verdict, mission proceeds with the experimental adjustments listed in stopping_conditions)."
+  - "Finding promoted through the standard ladder: hypothesis -> experiment -> observation -> reproducer -> independent review -> verified_conclusion."
+stopping_conditions:
+  - "All Phase B + Phase C cells executed and reviewed, OR"
+  - "Diminishing-returns window hit (2 consecutive runs with no new verdict), OR"
+  - "Budget exhausted without new discriminating evidence."
+artifacts: []
+follow_ups:
+  - "msn-2026-0014 candidate: FROST-2 (Round-Optimized-Threshold, ePrint 2024/1835) byte-exact audit"
+  - "msn-2026-0015 candidate: Threshold-BLS (BLS signature aggregation in threshold mode) byte-exact audit"
+  - "msn-2026-0016 candidate: MuSig2 vs FROST comparison matrix"
+  - "Disclosure coordination: IETF cfrg WG interop note for any byte-level divergence surfaced"
+  - "Disclosure coordination: ZCashFoundation security@ for any frost divergence"
+  - "Lagrange basis implementation differential (Barycentric vs Naive) as a side-question"
+  - "Adversarial critic rev-2026-0012 Phase E expansion (wire-format commitment serialization)"
+notes_path: knowledge/notes/msn-2026-0013.md
+blocked_reason: null
+terminal_reason: |
+  Mission terminalized as inconclusive-after-budget per independent adversarial review
+  (rev-2026-0013). The original primary claim 'ZcashFoundation/frost is byte-exact RFC 9591
+  Appendix E KAT conformant' was overclaimed: the per-step KAT vectors in ZcashFoundation/frost's
+  tests/helpers/vectors.json are NOT byte-exact copies of RFC 9591 Appendix E.5 (per-step
+  outputs diverge; only input-side fields are common). The byte-exact agreement observed
+  (60 integration tests pass total) is self-consistency between ZcashFoundation/frost and
+  its own self-generated vectors, not independent RFC 9591 conformance.
+
+  The cohort-asymmetry finding (FROST RFC 9591 implementation universe contains exactly
+  ONE truly RFC 9591-conformant implementation with KAT coverage) is preserved as a
+  high-value environment-capability-gap finding (fnd-2026-0012, status=downgraded to
+  hypothesis pending clean-room verification).
+
+  Follow-up missions queued:
+    - msn-2026-0014 (clean-room Python reference for true RFC 9591 byte-exact conformance;
+      the independent oracle that would promote fnd-2026-0012 from hypothesis to
+      verified_conclusion)
+    - msn-2026-0015 (FROST-2 Round-Optimized-Threshold byte-exact audit)
+    - msn-2026-0016 (Threshold-BLS byte-exact audit)
+    - msn-2026-0017 (MuSig2 vs FROST comparison matrix)
+
+  Budget consumption: 2 GHA/local cargo runs (60 integration tests passed total),
+  1 implementation-archaeologist pass, 2 adversarial-critic passes, 3 hypotheses,
+  2 implementations, 1 specification, 1 reproducer, 1 verification, 2 observations,
+  1 finding (status downgraded from verified_conclusion to hypothesis), 1 follow-up
+  mission queued.
+
+  Acceptance criteria PARTIALLY MET:
+    MET: ZcashFoundation/frost byte-exact self-consistency verified on both ciphersuites
+    MET: Implementation universe characterization complete
+    MET: Adversarial critic reviews performed
+    MET: Follow-up clean-room mission queued
+    NOT MET: Original primary claim of byte-exact RFC 9591 Appendix E KAT conformance
+            was overclaimed (adversarial critic Disproof A and E demonstrated per-step
+            divergence between vectors.json and RFC Appendix E.5 text); downgraded
+            pending clean-room verification.

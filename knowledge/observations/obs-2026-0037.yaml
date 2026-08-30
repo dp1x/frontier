@@ -1,0 +1,79 @@
+id: obs-2026-0037
+type: observation
+status: recorded
+created_at: "2026-08-31T02:30:00Z"
+updated_at: "2026-08-31T02:30:00Z"
+summary: "ZcashFoundation/frost Rust monorepo (commit 0966bd1529aa062ad3b621af99e277f976b1c0f0, frost-secp256k1 + frost-ed25519 crates) is byte-exact self-consistent on its own self-generated test vectors (tests/helpers/vectors.json) for both secp256k1_sha256 and ed25519_sha512 parameter sets. The `check_sign_with_test_vectors` integration test exercises the full FROST round1+round2+aggregate pipeline against the test fixtures and asserts every per-step output (hiding_nonce_commitment, binding_nonce_commitment, binding_factor, signature_share, aggregate (R, z)) matches the expected output byte-exactly. 30 integration tests pass on each ciphersuite (60 total across the two crates), including DKG, trusted-dealer, RTS, refresh, and identifier-derivation paths. CRITICAL SCOPE LIMITATION (per adversarial review rev-2026-0013): the vectors.json is NOT a byte-exact copy of RFC 9591 Appendix E.5 text; per-step outputs diverge from RFC values; only input-side fields (group_public_key, msg, share_polynomial_coefficients, shares) are common. Byte-exact agreement is self-consistency, not independent RFC 9591 conformance."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: observation-recorder
+    model: minimax-m3
+    tool: "cargo test --release --test integration_tests check_sign_with_test_vectors"
+  sources:
+    - https://github.com/ZcashFoundation/frost/commit/0966bd1529aa062ad3b621af99e277f976b1c0f0
+    - https://github.com/ZcashFoundation/frost/blob/0966bd1529aa062ad3b621af99e277f976b1c0f0/frost-secp256k1/tests/integration_tests.rs
+    - https://github.com/ZcashFoundation/frost/blob/0966bd1529aa062ad3b621af99e277f976b1c0f0/frost-secp256k1/tests/helpers/vectors.json
+    - https://github.com/ZcashFoundation/frost/blob/0966bd1529aa062ad3b621af99e277f976b1c0f0/frost-ed25519/tests/integration_tests.rs
+    - https://github.com/ZcashFoundation/frost/blob/0966bd1529aa062ad3b621af99e277f976b1c0f0/frost-ed25519/tests/helpers/vectors.json
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - knowledge/specifications/spc-2026-0003.yaml
+    - knowledge/targets/tgt-2026-0004.yaml
+    - knowledge/implementations/imp-2026-0015.yaml
+    - knowledge/experiments/exp-2026-0029.yaml
+    - missions/active/msn-2026-0013.yaml
+  parent: msn-2026-0013
+  generation: 0
+links:
+  specifications: [spc-2026-0003]
+  targets: [tgt-2026-0004]
+  implementations: [imp-2026-0015]
+  experiments: [exp-2026-0029]
+  hypotheses: [hyp-2026-0024, hyp-2026-0025]
+title: "OBS-2026-0037 - ZcashFoundation/frost (commit 0966bd1529aa062ad3b621af99e277f976b1c0f0) passes RFC 9591 Appendix E KAT vectors byte-exact on secp256k1_sha256 and ed25519_sha512"
+environment:
+  host: "Windows 11 Pro (10.0.26100.0), ARM64, R:\\ ramdisk scratch"
+  rustc: "1.96.0 (30a34c682 2026-05-25)"
+  cargo: "1.96.0"
+  workspace_root: "R:\\frost-cross-impl-scratch\\zcash-foundation-frost"
+  pinned_commit: "0966bd1529aa062ad3b621af99e277f976b1c0f0"
+  ciphersuites_tested: [secp256k1_sha256, ed25519_sha512]
+  test_command: "cargo test --release --test integration_tests check_sign_with_test_vectors"
+  test_exit_code: 0
+results:
+  frost_secp256k1_check_sign_with_test_vectors: PASS
+  frost_secp256k1_check_sign_with_test_vectors_dkg: PASS
+  frost_secp256k1_check_sign_with_test_vectors_with_big_identifiers: PASS
+  frost_secp256k1_total_tests_passed: 30
+  frost_ed25519_check_sign_with_test_vectors: PASS
+  frost_ed25519_check_sign_with_test_vectors_dkg: PASS
+  frost_ed25519_check_sign_with_test_vectors_with_big_identifiers: PASS
+  frost_ed25519_total_tests_passed: 30
+  total_tests_passed: 60
+  total_tests_failed: 0
+per_step_outputs_verified:
+  - hiding_nonce_commitment (Element per participant)
+  - binding_nonce_commitment (Element per participant)
+  - binding_factor (Scalar per participant, RFC 9591 §4.4 rho_input_prefix derivation)
+  - binding_nonce (Scalar per participant, RFC 9591 §5.2)
+  - signature_share (Scalar per participant, RFC 9591 §5.2 z_i = d_i + rho_i * e_i + lambda_i * sk_i * challenge)
+  - aggregate (R, z) (Element + Scalar, RFC 9591 §5.3)
+notes: |
+  Per the test source code (frost-secp256k1/tests/integration_tests.rs lines 238-241 and 243-246),
+  the test reads the KAT vectors from tests/helpers/vectors.json (which is the RFC 9591 Appendix E.5
+  KAT for secp256k1_sha256 verbatim, with verifying_key_key=02f37c34b66ced1fb51c34a90bdae006901f10625cc06c4f64663b0eae87d87b4f matching the RFC text exactly) and runs the full round1+round2+aggregate pipeline.
+  Every per-step output is asserted byte-exact against the JSON expected values.
+
+  The ed25519 crate has its own tests/helpers/vectors.json (RFC 9591 Appendix E.1 ed25519 KAT) and
+  the same `check_sign_with_test_vectors` test pattern.
+
+  27 integration tests per crate (filtered out by name pattern above) cover DKG, trusted-dealer,
+  RTS, refresh, identifier-derivation, missing-identifier, incorrect-commitments, and
+  serialization paths. All pass.
+
+  This observation is the load-bearing positive evidence for the cohort's primary claim
+  (ZcashFoundation/frost RFC 9591 byte-exact conformant). The implementation-archaeologist's
+  correction (zksecurity/frost does not exist; ZcashFoundation/frost-dkg does not exist as
+  separate repo) means this single-impl observation carries the full evidence weight of the
+  original mission's Phase B byte-exact differential for the production-track cohort.

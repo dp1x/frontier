@@ -1,0 +1,155 @@
+id: hyp-2026-0026
+type: hypothesis
+status: open
+created_at: "2026-08-31T00:45:00Z"
+updated_at: "2026-08-31T00:45:00Z"
+summary: "H6-style exploitation: a specific FROST cross-impl divergence — most plausibly in the binding_factor rho_i domain-separation string or in the per-step binding_nonce reduction — is exploitable as an existential forgery under a chosen-message, malicious-coordinator attack. Specifically, a coordinator who contributes one rogue public key and chooses the message-encoding prefix can produce a FROST aggregate signature that verifies under ONE implementation's verify() but forges under another's, or — in the worst case — produces a signature that no single implementation's verify() rejects, even though it was produced by a threshold coalition that does not meet the threshold (e.g., a k-of-n signature produced with only k-1 honest signers, exploiting a degenerate rho_i from a 0-binding-factor collision)."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: minimax-m3
+    tool: independent generator (FROST byte-exact audit prompt set C)
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://www.rfc-editor.org/rfc/rfc9591#section-4.4
+    - https://www.rfc-editor.org/rfc/rfc9591#section-5
+    - https://ia.cr/2020/852 (Komlo et al. FROST original paper)
+    - https://eprint.iacr.org/2020/1505 (Bellare-Neven multi-signature rogue-key attack)
+    - https://github.com/ZcashFoundation/frost
+    - https://github.com/ZcashFoundation/frost-rs
+    - https://github.com/ZcashFoundation/frost-dkg
+    - knowledge/targets/tgt-2026-0004.yaml
+    - missions/active/msn-2026-0013.yaml
+  parent: msn-2026-0013
+  generation: 0
+links:
+  targets: [tgt-2026-0004]
+  implementations: []
+  missions: [msn-2026-0013]
+title: "HYP-C - A FROST cross-impl binding_factor / binding_nonce divergence is exploitable as existential forgery under chosen-message attack with a malicious coordinator"
+statement: >
+  FROST security (Komlo et al. 2020/852, RFC 9591) relies on the
+  binding_factor rho_i being (a) a function of the full group context
+  (group_public_key, all signers' commitments B, the signer's verifying
+  share, and the message) and (b) reducing to a nonzero scalar mod n
+  (the group order). The reduction must reject rho_i = 0 and must
+  reduce any rho_i uniformly at random over Z_n.
+
+  This hypothesis claims: at least one of the three implementations
+  (ZKSecurity frost Go, ZCashFoundation frost-rs, ZCashFoundation
+  frost-dkg) contains a binding_factor or binding_nonce path that is
+  exploitable as an existential forgery under a chosen-message
+  attack (CMA) when combined with a malicious coordinator who
+  controls one of the public keys in the verifying-key set.
+
+  Specific attack shape (most plausible):
+  (i) Coordinator chooses a "rogue" public key X such that
+      X = -r * Y for some scalar r and the honest aggregate key Y,
+      the classic Bellare-Neven 2006 rogue-key attack against
+      multi-signatures.
+  (ii) Coordinator presents a message m to the honest signers.
+  (iii) Each honest signer returns a signature_share z_i = (h_i + r * lambda_i) per RFC 9591 §5.
+  (iv) Coordinator aggregates the honest shares with a fabricated
+       share z_attacker such that the aggregate (R, s) verifies
+       under a single-party verifier.
+
+  This attack shape is a known property of Schnorr multi-signatures
+  when the binding_factor does not sufficiently entangle the
+  per-signer identity into rho_i. RFC 9591's rho_i definition
+  includes enc_id_i (the per-signer verifying-share encoding) in
+  the hash input, which is precisely the defense. A divergence
+  that drops enc_id_i from the hash input — or hashes it as a
+  constant zero — would re-introduce the vulnerability.
+
+  Alternatively, a more subtle attack: a binding_factor
+  implementation that maps some specific rho_i value to 0 (via a
+  faulty reduction mod n that mishandles the case rho_i = n), or
+  that hashes a non-canonical enc_id_i (e.g., the x-coordinate only
+  without the y-parity byte), allows a malicious coordinator to
+  find two enc_id_i values (e.g., (P, -P)) that produce the same
+  rho_i and therefore the same effective key contribution.
+
+  Killing observation: the attack succeeds in producing a forged
+  aggregate (R, s) that verifies under at least one of the three
+  implementations' verify() functions, where the forged signature
+  was produced by a coalition of fewer honest signers than the
+  threshold t. Specifically, the reproducer script demonstrates:
+  - Setup: 3-of-5 FROST group, honest signers {1, 2, 3}, attacker controls signer 4 (rogue public key).
+  - Attacker produces a forged signature on a chosen message m.
+  - The forged (R, s) verifies under frost (Go) verify() OR frost-rs verify() OR frost-dkg verify() (at least one of the three).
+  - The forged (R, s) does NOT verify under a reference single-party verifier that uses the OTHER implementation's verify() function (proving the cross-impl nature of the exploit).
+
+  The hypothesis is refuted if the reproducer script fails to
+  produce a forged (R, s) that verifies under any of the three
+  implementations (i.e., a 4-impl sweep: all three impls reject
+  the forgery).
+falsifiable_predictions:
+  - "A reproducer script (.scratch/frost-exploit/forge.py) demonstrates: a 3-of-5 FROST group with 1 rogue public key, 1 chosen message, produces a forged (R, s) that verifies under at least one of {frost (Go), frost-rs (Rust)} verify() and is rejected by at least one other."
+  - "The forged signature's binding_factor rho_i for the attacker-controlled signer is byte-equal to the binding_factor for a different (honest) signer's verifying-share encoding — i.e., the rho_i collision is the attack's pivot."
+  - "The forged (R, s) does NOT verify under a pure-Python reference implementation of RFC 9591 §5 verification (a 4th independent verifier), proving the cross-impl nature of the exploit."
+  - "If frost-dkg shares the same vulnerable code path as frost-rs (which is plausible because frost-dkg depends on frost-rs's ciphersuite crates), then the exploit works identically on frost-dkg's commit phase — but frost-dkg does not produce aggregate signatures directly, so the relevant cell is in the binding_factor row of the per-step matrix."
+  - "The fix patch (a one-line change to add the missing enc_id_i prefix to the hash input, or to use the ciphersuite DST explicitly) closes the exploit — i.e., the divergence is a single-line, not a structural — which is consistent with the historical pattern of similar FROST/MuSig2 DST bugs."
+disproof_attempts: []
+adversarial_angle: |
+  This IS the adversarial angle. The reproducer script is the attack.
+  The attack requires the attacker to control:
+  1. One of the n public keys in the group (a rogue public key).
+  2. The message-encoding prefix presented to each honest signer
+     (i.e., the coordinator role per RFC 9591 §4.5 "signing operation").
+  3. At least one honest signer's response (signature_share z_i).
+
+  Threat model: FROST's coordinator role is a TRUSTED aggregator in
+  RFC 9591's design. The protocol assumes the coordinator is honest-
+  but-curious (it sees the message and the commitments but cannot
+  forge the signature_share z_i without the per-signer secret). A
+  protocol-level attack would be one where a malicious coordinator
+  combined with one compromised signer can forge a t-of-n signature
+  with only t-1 honest signers' cooperation. This is the existential-
+  forgery class — not a key-extraction.
+
+  Disclosure: per AGENTS.md, if the reproducer succeeds, the finding
+  is embargo-class until coordinated disclosure with the affected
+  implementations. The ZKSecurity frost maintainer (isec-tugraz /
+  ZKSecurity) and ZCashFoundation security@ both need advance
+  notice. Move to knowledge/findings/embargoed/ and trigger
+  escalate/security-sensitive handling.
+surprise_factor: high
+hypothesis_class: exploitation
+notes: |
+  This hypothesis is the highest-surprise of the three and is the
+  one that justifies a deterministic cross-impl audit in the first
+  place. A byte-exact match in H1 / H2 / H3-negative would NOT
+  refute this hypothesis — the exploit could still exist as a
+  logic-level flaw in the verify() function (e.g., accept s = 0,
+  accept s >= n, accept commitments containing the identity element
+  G_O) that is independent of the byte-exact agreement on positive
+  KAT vectors.
+
+  However, the H1 control does put a soft bound: if H1 holds
+  byte-exact for all Appendix A KATs, the only remaining attack
+  surface is in the negative-stimulus row (8 negative stimuli per
+  implementation, see msn-2026-0013 acceptance_criteria) — i.e.,
+  an implementation that ACCEPTS a malformed input (off-curve R,
+  s outside [1, n-1], threshold dropout, s = 0, etc.) where RFC
+  9591 says to REJECT. Each accept-instead-of-reject cell is a
+  candidate forgery surface.
+
+  Therefore: this hypothesis is the union of (a) a binding_factor
+  divergence that enables rogue-key forgery, AND (b) a
+  negative-stimulus accept that enables a single-message forgery.
+  The reproducer script will exercise both surfaces.
+
+  The hypothesis is high-surprise because:
+  - The maintainers of frost, frost-rs, and frost-dkg are all
+    active, security-conscious teams with public CVEs and
+    responsible-disclosure track records.
+  - RFC 9591 is recent (2024) and the I-D -> RFC process included
+    multiple security reviews by the IRTF CFRG chair.
+  - However, FROST's complexity (commitments, binding_factor,
+    binding_nonce, Lagrange basis, aggregate) is high enough that
+    subtle bugs are historically recurrent. The original Komlo
+    et al. paper (2020/852) itself noted that FROST-1 had to be
+    patched after publication due to a binding-factor entropy
+    concern.

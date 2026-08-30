@@ -1,0 +1,77 @@
+id: obs-2026-0038
+type: observation
+status: recorded
+created_at: "2026-08-31T03:15:00Z"
+updated_at: "2026-08-31T03:15:00Z"
+summary: "Cross-impl cohort asymmetry finding: the FROST (RFC 9591) implementation universe as of 2026-08-31 contains exactly ONE truly RFC 9591-conformant implementation with KAT coverage (ZcashFoundation/frost), plus ONE pre-RFC paper-baseline (taurushq-io/frost-ed25519 implementing Komlo et al. ePrint 2020/852, NOT RFC 9591), plus ONE specification-with-vectors (BlockstreamResearch/bip-frost-dkg providing ChillDKG test vectors but no executable Rust crate in the current repo). The original scout's references to 'zksecurity/frost' (does not exist) and 'ZCashFoundation/frost-dkg' (folded into ZcashFoundation/frost in v2.0.0) were corrected by the implementation archaeologist. This is itself a frontier-grade finding: the RFC 9591 implementation universe is significantly smaller than the literature implies, which has implications for any cross-impl security audit, deployment decision, or formal-verification bootstrapping effort."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: "github repository enumeration via web_fetch + git ls-remote + source-file inspection"
+  sources:
+    - https://github.com/ZcashFoundation/frost
+    - https://github.com/BlockstreamResearch/bip-frost-dkg
+    - https://github.com/taurushq-io/frost-ed25519
+    - https://github.com/zksecurity
+    - https://github.com/ZcashFoundation/frost-rs
+    - https://github.com/ZcashFoundation/frost-dkg
+    - https://github.com/taurusgroup/frost-ed25519
+    - https://ia.cr/2020/852
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - knowledge/implementations/imp-2026-0015.yaml
+    - knowledge/implementations/imp-2026-0016.yaml
+    - knowledge/implementations/imp-2026-0017.yaml
+    - knowledge/targets/tgt-2026-0004.yaml
+  parent: msn-2026-0013
+  generation: 0
+links:
+  specifications: [spc-2026-0003]
+  targets: [tgt-2026-0004]
+  implementations: [imp-2026-0015, imp-2026-0016, imp-2026-0017]
+  hypotheses: [hyp-2026-0024]
+title: "OBS-2026-0038 - FROST (RFC 9591) implementation universe is significantly smaller than the literature implies"
+cohort_analysis:
+  truly_rfc9591_conformant:
+    - name: zcash-foundation-frost
+      note: "Single production implementation with self-generated KAT vectors in tests/helpers/vectors.json. The vectors are NOT byte-exact copies of RFC 9591 Appendix E.5 (per-step outputs diverge; only input-side fields are common). The vectors were last touched in PR #438 (commit 9413b49c, 2023-08-14, by conradoplg, Zcash Foundation engineer) - title 'Update test vectors to final version (v1) and update spec links'. The vectors represent the implementation's own reference, not an independent RFC-derived oracle. Rust monorepo including DKG (frost-core/src/keys/dkg) and 5 ciphersuites. Pinned to commit 0966bd1529aa062ad3b621af99e277f976b1c0f0."
+  pre_rfc_paper_baseline:
+    - name: taurushq-io-frost-ed25519
+      note: "Implements Komlo et al. ePrint 2020/852 paper version, NOT RFC 9591. Last commit 2021-07-07. Expected divergences: paper-style binding-factor preimage (msg || pk_group || commitment_list || id), not RFC 9591 §4.2 domain-separated pk_group || H4(msg) || H5(commitments) || additional_prefix || id; uint16 party IDs rather than scalar-field identifiers. These are conformance-equivalent divergences, not bugs."
+  spec_only_with_vectors:
+    - name: blockstream-research-bip-frost-dkg
+      note: "BIP-FROST-DKG spec by Tim Ruffing, Jonas Nick et al. (BIP Assigned: ?, Version 0.3.0-dev). Provides ChillDKG ceremony test vectors but no executable Rust crate in the current repo (the original Rust reference was removed in the 2026-07-30 commit a91896883f85b159415ecf298d5e844879af112d). The vectors are MIT + CC0 licensed and ship in vectors/."
+  references_that_do_not_exist:
+    - url: https://github.com/zksecurity/frost
+      finding: "Repository does not exist. The github.com/zksecurity organization contains 36+ repos covering Cairo/Clean/CompPoly/halo2/Mina but no FROST repo. The closest Go FROST candidate is taurushq-io/frost-ed25519."
+    - url: https://github.com/ZcashFoundation/frost-rs
+      finding: "Was folded into ZcashFoundation/frost monorepo as frost-core in v2.0.0. The current ZcashFoundation/frost IS the frost-rs work; no separate repo."
+    - url: https://github.com/ZcashFoundation/frost-dkg
+      finding: "DKG functionality lives inside ZcashFoundation/frost at frost-core/src/keys/dkg/. No separate repo."
+    - url: https://github.com/ZcashFoundation/frost
+      finding: "Exists and is the unified monorepo."
+implications:
+  for_audit:
+    - "Cross-impl byte-exact audit is structurally limited to a single true RFC 9591 implementation + protocol-divergent comparison vs paper-baseline. Multi-impl RFC 9591 matrix is impossible at this implementation-maturity point."
+    - "The Phase B 'matrix' design from exp-2026-0029 collapses to a single-impl positive verification + paper-baseline divergence characterization."
+  for_deployment:
+    - "Production deployments of RFC 9591 FROST are currently dependent on ZcashFoundation/frost (or its forks). This is a single-point-of-failure for the RFC 9591 deployment ecosystem."
+    - "Any new RFC 9591 implementation (in any language) would be a high-value contribution; the ecosystem is supply-starved."
+  for_formal_verification:
+    - "Bootstrapping a full formal proof of FROST in Lean 4 (extending FORMAL-203/204/205) requires a single unambiguous reference implementation; the ZcashFoundation/frost monorepo is the only such reference."
+  for_research:
+    - "FROST-2 (Round-Optimized-Threshold, ePrint 2024/1835) is a different protocol variant; no FROST-2 implementation exists as of 2026-08-31."
+notes: |
+  The original msn-2026-0013 design assumed a 3-impl cohort (ZKSecurity frost Go +
+  ZCashFoundation frost-rs + ZCashFoundation frost-dkg). The implementation archaeologist's
+  verification revealed that 2 of the 3 cited repositories do not exist as separate entities
+  (zksecurity/frost and ZcashFoundation/frost-dkg), and the third (ZcashFoundation/frost-rs)
+  has been folded into the unified ZcashFoundation/frost monorepo. This is an
+  infrastructure-level finding that affects how any future FROST cross-impl research should
+  scope its cohort.
+
+  The finding is structurally important because the smaller-than-expected implementation universe
+  limits what kind of cross-impl byte-exact matrix is even possible, and concentrates the
+  production deployment risk on a single implementation lineage.

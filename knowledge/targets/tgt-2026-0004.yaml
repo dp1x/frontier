@@ -1,0 +1,102 @@
+id: tgt-2026-0004
+type: target
+status: active
+created_at: "2026-08-31T00:00:00Z"
+updated_at: "2026-08-31T02:00:00Z"
+summary: "FROST (RFC 9591) implementation cohort suitable for byte-exact cross-implementation nonce-binding-tag audit. Three independent lineages (Rust production, Rust DKG reference, Go paper-baseline). Implementation-archaeologist correction: 'zksecurity/frost' does not exist (corrected to taurushq-io/frost-ed25519); 'ZcashFoundation/frost-dkg' does not exist as separate repo (DKG is now inside ZcashFoundation/frost at frost-core/src/keys/dkg)."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: scout-frost-2026-08-31.md corrected by imp-2026-0015/0016/0017
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://github.com/ZcashFoundation/frost
+    - https://github.com/BlockstreamResearch/bip-frost-dkg
+    - https://github.com/taurushq-io/frost-ed25519
+    - https://ia.cr/2020/852
+    - knowledge/notes/scout-frost-2026-08-31.md
+    - knowledge/findings/fnd-2026-0007.yaml
+    - knowledge/findings/fnd-2026-0008.yaml
+    - knowledge/implementations/imp-2026-0015.yaml
+    - knowledge/implementations/imp-2026-0016.yaml
+    - knowledge/implementations/imp-2026-0017.yaml
+  parent: null
+  generation: 0
+links:
+  specifications: []
+  implementations: [imp-2026-0015, imp-2026-0016, imp-2026-0017]
+title: FROST (RFC 9591) implementation cohort (corrected by implementation archaeologist)
+selection_rationale: >
+  Three independent lineages with distinct code bases, distinct primary
+  languages, and (most importantly) distinct protocol-version baselines.
+  Only ZcashFoundation/frost is fully RFC 9591 conformant with Appendix A
+  KAT coverage; BlockstreamResearch/bip-frost-dkg is RFC 9591-aligned for
+  DKG only (signing requires a downstream crate); taurushq-io/frost-ed25519
+  is pre-RFC (paper-baseline). The cohort provides meaningful byte-exact
+  differential value precisely because of these version divergences.
+
+  Original scout (knowledge/notes/scout-frost-2026-08-31.md) reported
+  "ZKSecurity frost Go reference" and "ZCashFoundation frost-dkg
+  companion crate"; the implementation-archaeologist verified these
+  references are incorrect and the cohort is as listed below.
+
+  Critically: RFC 9591 Appendix A KAT vectors are public and well-defined
+  for both secp256k1 (Appendix E.5) and ed25519 (Appendix E.1) parameter
+  sets. ZcashFoundation/frost has its own test vectors (frost-secp256k1/
+  tests/integration_tests.rs and frost-ed25519/tests/interoperability_
+  tests.rs) which include the RFC Appendix A vectors verbatim.
+lineage_note: >
+  Lineage-independence weighting is strict: libraries that share upstream
+  code paths count as one lineage.
+
+  imp-2026-0015 (ZcashFoundation/frost): independent Rust monorepo,
+  MIT-licensed, NCC Group security assessment (2023-10-23). The Rust
+  implementation is a clean-room port from the RFC 9591 text and the
+  reference FROST Python implementation (Komlo et al. ePrint 2020/852).
+  The frost-core crate contains the ciphersuite-independent protocol
+  state machine (round1.rs, round2.rs, keys.rs, identifier.rs) and the
+  per-ciphersuite crates (frost-secp256k1, frost-ed25519, etc.) provide
+  the curve-specific Scalar/Element implementations.
+
+  imp-2026-0016 (BlockstreamResearch/bip-frost-dkg): independent Rust
+  crate (P2 Wrench, Tim Ruffing maintainer, PGP-signed). Implements the
+  BIP-FROST-DKG ceremony protocol (Draft BIP, target RFC 9591 alignment
+  but the signing API is delegated to a downstream consumer such as
+  ZcashFoundation/frost). The signing path itself is not in scope;
+  this implementation covers the DKG round only.
+
+  imp-2026-0017 (taurushq-io/frost-ed25519): independent Go port by
+  JP Aumasson (Taurus Group / now Taurus HQ). Implements the original
+  Komlo et al. ePrint 2020/852 paper version of FROST, NOT the IETF
+  RFC 9591 variant. Notable divergences: paper-style binding-factor
+  preimage (msg || pk_group || commitment_list || id), not RFC 9591
+  §4.2's domain-separated pk_group || H4(msg) || H5(commitments) ||
+  additional_prefix || id; uint16 party IDs rather than scalar-field
+  identifiers. These are *expected divergences* for the audit.
+candidates:
+  - name: zcash-foundation-frost
+    implementation: imp-2026-0015
+    note: "ZcashFoundation/frost Rust monorepo (RFC 9591 conformant). Pinned to commit 0966bd1529aa062ad3b621af99e277f976b1c0f0 or release tag frost-secp256k1/v3.0.0 = 2016e44ba4a4757a996300350063b937a2ad33e8."
+  - name: blockstream-research-bip-frost-dkg
+    implementation: imp-2026-0016
+    note: "BlockstreamResearch/bip-frost-dkg Rust crate (BIP-FROST-DKG ceremony reference). Pinned to commit a91896883f85b159415ecf298d5e844879af112d. DKG-only; signing delegated to downstream."
+  - name: taurushq-io-frost-ed25519
+    implementation: imp-2026-0017
+    note: "taurushq-io/frost-ed25519 Go (paper-baseline, pre-RFC 9591). Pinned to commit 5abc84a4dba755f25d03e9f59e3e5fde0c92369c (HEAD on master 2021-07-07) or release tag v0.1 = be813008c6aa13bc3df7683e39bf9ac359b23244."
+excluded:
+  - candidate: zksecurity-frost
+    reason: "Implementation-archaeologist verification: this repository does not exist on github.com/zksecurity. Closest Go FROST candidate is taurushq-io/frost-ed25519."
+  - candidate: zcash-foundation-frost-rs
+    reason: "Implementation-archaeologist verification: this repository was folded into ZcashFoundation/frost monorepo as frost-core in v2.0.0. The current cohort (imp-2026-0015) IS the frost-rs work; no separate repo."
+  - candidate: zcash-foundation-frost-dkg
+    reason: "Implementation-archaeologist verification: DKG functionality lives inside ZcashFoundation/frost at frost-core/src/keys/dkg/. The companion crate (BlockstreamResearch/bip-frost-dkg, imp-2026-0016) covers DKG from a different lineage."
+  - candidate: bitgo-frost / coinbase-frost / anchorage-frost
+    reason: "Web3 custody vendors ship in-house FROST variants typically ported from ZcashFoundation/frost; not independent lineages."
+local_constraint_note: >
+  This Windows host has Go (1.26.4) and Rust (1.79+) toolchains
+  available per localdocs/compute.md. All three implementations can
+  build and run locally. GHA ubuntu-latest also available for the
+  cross-platform reproducibility matrix.

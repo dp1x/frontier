@@ -1,0 +1,157 @@
+id: imp-2026-0017
+type: implementation
+status: pinned
+created_at: "2026-08-31T00:00:00Z"
+updated_at: "2026-08-31T00:00:00Z"
+summary: "taurushq-io/frost-ed25519 - Go FROST Ed25519 implementation by Taurus Group (JP Aumasson). This is the *paper-version* (Komlo et al. 2020/852, ePrint 2020/852) FROST, NOT the IETF RFC 9591 variant. Pinned to commit 5abc84a4dba755f25d03e9f59e3e5fde0c92369c (HEAD on master, dated 2021-07-07; the only public release tag is v0.1 at be813008c6aa13bc3df7683e39bf9ac359b23244). NOTE: This repo was originally github.com/taurusgroup/frost-ed25519 and was renamed to taurushq-io/frost-ed25519 when Taurus Group became Taurus HQ. Not the same as the scout-reported \"ZKSecurity/frost\" -- that repo does not exist; this is the closest Go FROST candidate."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: web_fetch (api.github.com + raw.githubusercontent.com)
+  sources:
+    - https://github.com/taurushq-io/frost-ed25519
+    - https://api.github.com/repos/taurushq-io/frost-ed25519
+    - https://github.com/taurusgroup/frost-ed25519  (redirects to taurushq-io)
+    - https://raw.githubusercontent.com/taurushq-io/frost-ed25519/master/README.md
+    - https://eprint.iacr.org/2020/852.pdf
+    - knowledge/notes/scout-frost-2026-08-31.md
+    - knowledge/targets/tgt-2026-0004.yaml
+    - missions/active/msn-2026-0013.yaml
+  parent: msn-2026-0013
+  generation: 0
+links:
+  specifications: []
+  targets: [tgt-2026-0004]
+title: taurushq-io/frost-ed25519 (Go, pre-RFC FROST)
+library:
+  name: "frost-ed25519"
+  vendor: "Taurus Group (later: Taurus HQ); primary author JP Aumasson"
+  language: "Go (uses Filippo Valsorda's `edwards25519` package + Ristretto)"
+  repository: "https://github.com/taurushq-io/frost-ed25519"
+  license: "Apache-2.0"
+  maintainer_role: "Initial FROST reference implementation, used by Taurus custody products"
+  scope_note: |
+    Implements the "single-round" FROST variant from the Komlo et al. 2020/852
+    paper (not the IETF RFC 9591 variant). Ed25519 / Ristretto255 only.
+    Pre-dates RFC 9591 (finalized June 2024) by 3 years.
+version_pinning:
+  pinned_commit: "5abc84a4dba755f25d03e9f59e3e5fde0c92369c"
+  pinned_release: "v0.1 (be813008c6aa13bc3df7683e39bf9ac359b23244)"
+  selection_rationale: |
+    - The repo has only one public release tag (v0.1) and no further tags;
+      HEAD on master is commit 5abc84a4 dated 2021-07-07.
+    - HEAD on 2026-08-31 IS 5abc84a4 (pushed_at 2026-02-19 reflects a
+      metadata refresh, but no source-code commits since 2021).
+    - This repo is included in the cohort NOT for RFC 9591 byte-exact
+      comparison (it predates RFC 9591 by 3 years and was not updated to
+      conform to the RFC), but as the historical Go reference baseline.
+      Pinning is therefore to the only commit available.
+    - IMPORTANT: this repo is NOT equivalent to the "ZKSecurity frost Go
+      reference" mentioned in the scout report. ZKSecurity does not host
+      a FROST repository. The closest Go FROST candidate is this one
+      (or, alternatively, Coinbase kryptology's pkg/frost, which is
+      itself derived from frost-rs).
+  reference_date: "2026-08-31"
+build:
+  build_command: "go build ./..."
+  test_command: "go test ./..."
+  kats_command: "go test ./test/..."
+  notes: |
+    Pure Go build, no cgo. Requires Go 1.16+ (per `go.mod` 2021 era).
+    Single binary, ~5s clean build time.
+file_layout:
+  key_generation: "pkg/frost/keygen/keygen.go + pkg/frost/keygen/round1.go + pkg/frost/keygen/round2.go + pkg/frost/keygen/round3.go (state-machine architecture)"
+  commitment_generation: "pkg/frost/keygen/round1.go (Feldman commitment list broadcast)"
+  binding_factor_computation: "pkg/frost/sign/round1.go (binding_factor = H(message || pk_group || commitment_list || participant_index) -- per the paper, not per RFC 9591 §4.2 domain-separated H1)"
+  signature_share_computation: "pkg/frost/sign/round2.go (z_i = d_i + rho_i * e_i + lambda_i * s_i * r_i, but uses paper notation not RFC 9591 §4.2)"
+  aggregation: "pkg/frost/sign/round3.go + pkg/eddsa/signature.go (z = sum(z_i))"
+  verification: "pkg/eddsa/public_key.go: PublicKey.Verify(message, signature) -- uses standard Ed25519 / PureEdDSA verification per RFC 8032"
+  transport_layer: "pkg/messages/messages.go (binary marshalling) + pkg/state/state.go (round-based state machine)"
+internal_api_surface:
+  participant_round1: |
+    `frost.NewSignState(partyIDs []party.ID, secret *eddsa.SecretShare, public *eddsa.Public, message []byte, timeout time.Duration) -> (*state.State, Output, error)`
+    (No separate round-1 "produce commitments" API; the round-1 state machine
+    is driven by `state.ProcessAll()` and `state.HandleMessage(msg)`.)
+  participant_round2: "Same State object; round-2 triggered by receiving round-1 messages from all other participants."
+  aggregator: "Implicit: every participant broadcasts to every other; the final output includes the aggregated `(R, S)` signature."
+  verifier: "`publicKey.Verify(message []byte, signature *eddsa.Signature) bool` -- standard Ed25519 verification compatible with `crypto/ed25519` via `signature.ToEd25519()`."
+  keygen: "`frost.NewKeygenState(partyID, partyIDs, threshold, timeout) -> (*state.State, Output, error)`"
+internal_implementation_choices:
+  binding_factor_hash: |
+    SHA-512 per Ed25519 (consistent with the EdDSA domain). The preimage
+    layout is per the FROST paper Section 5.1, NOT per RFC 9591 §4.2. This
+    is a known divergence from the RFC 9591 standard: taurushq-io does not
+    include the `pk_group || H4(message) || H5(commitments) || additional_prefix`
+    preimage structure; it uses the paper's `message || pk_group || commitment_list || id`
+    preimage (verified by reading the upstream `pkg/frost/sign/round1.go`).
+    **THIS IS A KNOWN RFC 9591 INCOMPATIBILITY**, not a bug.
+  challenge_hash: "SHA-512 per Ed25519 PureEdDSA (RFC 8032). Inputs are R || pk_group || message, identical to RFC 8032."
+  hash_to_scalar: "SHA-512 of the preimage, reduced mod q. No RFC 9380 hash_to_field used (consistent with the FROST paper, not RFC 9380). Note: SHA-512 -> mod q is used directly; no expansion step."
+  lagrange_basis: "Naive product: `lambda_i = prod_{j in S, j != i} j / (j - i)` evaluated at 0 (paper Section 5.2). No barycentric shortcut; direct product expansion."
+  participant_index_encoding: "uint16 `party.ID`, serialized as 2-byte big-endian in transport messages. Internal: 1-indexed positive integer. NOTE: This is a divergence from RFC 9591's scalar-field-element encoding of participant identifiers, but is consistent with the paper version."
+  curve: "Edwards 25519 via Ristretto (cofactorless group), encoded as Ed25519-compatible bytes via `BytesEd25519()` cofactor-removal trick."
+existing_tests:
+  kats_included: "No RFC 9591 Appendix A KAT coverage; tests are paper-version smoke tests in `test/keygen_test.go` and `test/sign_test.go`."
+  kat_storage: "Inline in `test/` directory; no separate JSON fixtures."
+  negative_stimuli: |
+    - Timeout (no response within timeout duration)
+    - Invalid signature share (verified during aggregation)
+    - Missing party
+    - Note: paper-version FROST does NOT have the binding-factor domain
+      separation that RFC 9591 §4.2 introduces; any RFC 9591 negative
+      stimulus involving H1 domain separation will produce a divergence
+      here.
+known_issues_and_advisories:
+  prior_cve_history: "No known CVEs against this repo as of 2026-08-31."
+  open_issues_relevant_to_rfc_9591: |
+    - The repo has not been updated since 2021-07-07 (HEAD commit
+      5abc84a4, only tag is v0.1).
+    - Not maintained; no IETF RFC 9591 conformance is expected or possible
+      from this codebase without a full rewrite.
+    - Some open issues relate to Go-version compatibility (modern Go
+      versions reject certain idioms in the 2021-era code).
+  compatibility_class: "PRE-RFC. This repo represents the pre-IETF paper baseline, not an RFC 9591 implementation."
+ci_reproducibility:
+  runs_on_github_actions: "Not observed in the public repo as of 2026-08-31 (no .github/workflows/ directory at HEAD)."
+  runners_observed: "None active."
+  deterministic_test_workflow: |
+    Tests are Go's standard `testing` package, run via `go test ./...`.
+    No CI badge on README; no observed per-cell verdict matrix.
+  caveat: |
+    The repo is unmaintained for source-code purposes; CI may or may
+    not be active on PRs. Build is plain `go build ./...`.
+lineage_note: |
+  Independent lineage from both `ZcashFoundation/frost` and
+  `BlockstreamResearch/bip-frost-dkg`. This is a Go clean-room port of
+  the FROST paper by Taurus Group. No shared source code with the
+  Rust monorepo or the Python BIP reference. **However**, it implements
+  the paper version, NOT RFC 9591; byte-exact comparison against the
+  other two repos on RFC 9591 Appendix A vectors will produce known,
+  expected divergences (no domain separation in binding factor).
+disclosure: public
+notes: |
+  Honest framing: this repo is NOT a strict RFC 9591 cohort member. It
+  is the closest available Go FROST implementation, but it implements
+  the Komlo et al. 2020/852 paper variant (pre-RFC). For the msn-2026-0013
+  byte-exact audit, this repo serves as a:
+  1. Sanity-check baseline: any deviation from paper-version FROST
+     discovered here is informative even though it is "expected" relative
+     to RFC 9591.
+  2. Go-language representative: ensures the cross-impl matrix includes
+     at least one non-Rust entry, increasing lineage diversity.
+  3. NEGATIVE-control: byte-level divergence with ZcashFoundation/frost
+     on the binding-factor computation is *expected* and *informative*,
+     not a bug in either implementation.
+
+  The msn-2026-0013 acceptance criteria should be relaxed for this
+  implementation: a "byte-exact match" verdict with the RFC 9591 KAT
+  vectors is NOT expected for taurushq-io/frost-ed25519. The expected
+  verdict is "conformance-equivalent divergence at binding-factor
+  preimage" which is a documented pre-RFC-vs-RFC difference.
+
+  If a stricter cohort is desired, the alternative Go candidate is
+  Coinbase kryptology's pkg/frost (which is itself a Rust-port, hence
+  same lineage as ZcashFoundation/frost and excluded per scout notes).
