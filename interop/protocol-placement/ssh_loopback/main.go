@@ -55,8 +55,9 @@ import (
 const (
 	sshMsgDisconnect       = 1
 	sshMsgKexinit          = 20
-	sshMsgKexHybridInit    = 30 // draft-ietf-sshm-mlkem-hybrid-kex-10 s2.1
-	sshMsgKexHybridReply   = 31
+	sshMsgKexHybridInit    = 30 // OpenSSH uses SSH2_MSG_KEX_ECDH_INIT for hybrid KEX too
+	sshMsgKexHybridReply   = 31 // SSH2_MSG_KEX_ECDH_REPLY
+	sshMsgNewKeys          = 21
 	sshDisconnectKeyExFailed = 3
 
 	mlkem768EKSize    = 1184
@@ -311,41 +312,47 @@ func runOne(cohort string, stim Stimulus, serverAddr string, ekSize, cInitSize i
 	res.ServerMsg = uint8(resp[0])
 	res.Verdict = classify(resp, ekSize, cohort, &res)
 
-	// Extract disconnect reason if applicable.
-	if len(resp) > 1 && resp[0] == sshMsgDisconnect {
-		res.DisconnectReason = binary.BigEndian.Uint32(resp[1:5])
-	}
-	// Extract S_REPLY first bytes if applicable.
-	if len(resp) > 0 && resp[0] == sshMsgKexHybridReply {
-		// S_REPLY starts after the host key blob and exchange hash; for a
-		// pure discrimination oracle, capture the first 8 bytes of the
-		// post-header ciphertext as fingerprint.
-		res.HandshakeCompleted = true
-		// Approximate: skip K_S blob (variable length) and H (64 bytes SHA-512).
-		// For brevity we just hash the first 8 bytes of the packet.
-		if len(resp) > 8 {
-			res.SReplyFirstBytes = hex.EncodeToString(resp[:8])
-		}
-	}
-	// clientPriv is used to sign the exchange hash if the handshake completes
-	// (we don't actually need to verify, just to make the client-side message
-	// structurally complete). Silence unused-variable.
+	// classify() handles DISCONNECT-reason and S_REPLY-first-bytes extraction.
+	// clientPriv is unused (kept for symmetry with prior experiments).
 	_ = clientPriv
 	return res
 }
 
 // classify returns the verdict based on the server's first response packet.
+//
+// SSH MSG IDs:
+//   1  = SSH_MSG_DISCONNECT     (strict enforcement -- server rejected C_INIT)
+//   20 = SSH_MSG_KEXINIT        (unexpected -- re-negotiation)
+//   21 = SSH_MSG_NEWKEYS        (lenient -- server completed KEX with our C_INIT)
+//   31 = SSH_MSG_KEX_ECDH_REPLY (lenient -- server encapsulated, sent reply)
+//
+// Per draft-ietf-sshm-mlkem-hybrid-kex-10 s2.1, OpenSSH should reject
+// non-canonical C_INIT with SSH_MSG_DISCONNECT reason 3 (KEY_EXCHANGE_FAILED)
+// before sending KEX_ECDH_REPLY. We classify lenient when the server
+// sends 21 or 31, strict when it sends 1, dangerous otherwise.
 func classify(resp []byte, ekSize int, cohort string, res *result) string {
 	if len(resp) == 0 {
 		return "dangerous"
 	}
 	switch resp[0] {
 	case sshMsgDisconnect:
+		// Extract reason code (uint32 at offset 1).
+		if len(resp) >= 5 {
+			res.DisconnectReason = binary.BigEndian.Uint32(resp[1:5])
+		}
 		return "strict"
 	case sshMsgKexHybridReply:
+		// Server encapsulated against our C_INIT and sent reply -- lenient.
+		res.HandshakeCompleted = true
+		if len(resp) > 8 {
+			res.SReplyFirstBytes = hex.EncodeToString(resp[:8])
+		}
+		return "lenient"
+	case sshMsgNewKeys:
+		// Server moved to NEWKEYS without sending KEX_REPLY (rare).
+		res.HandshakeCompleted = true
 		return "lenient"
 	case sshMsgKexinit:
-		// Server re-sent KEXINIT -- unexpected
 		return "dangerous"
 	default:
 		return "dangerous"
