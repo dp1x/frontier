@@ -1,0 +1,250 @@
+id: rpt-2026-0011
+type: report
+status: complete
+created_at: "2026-08-31T16:00:00Z"
+updated_at: "2026-08-31T16:00:00Z"
+summary: "Consolidated session report for the autonomous Frontier technical research shift of 2026-08-31. Session executed msn-2026-0015 (CBOR RFC 8949 §4.2 cross-impl conformance matrix). Mission terminalized as inconclusive-after-budget with positive methodology contribution. 17 new structured artifacts produced. Discovery: cleanroom Python oracle + adversarial vector generator + per-library adapter + matrix runner framework; identified cbor2 canonical mode's §4.2.1 bytewise-lex sort divergence from the cleanroom oracle's §4.2.3 length-first sort (both normative in RFC 8949). Domain shift from prior PQC/KEM work to data-format-conformance. Real research progress; no inflated claims. Follow-up missions queued."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: minimax-m3
+    tool: "synthesizing msn-2026-0015 evidence chain"
+  sources:
+    - knowledge/targets/tgt-2026-0005.yaml
+    - knowledge/specifications/spc-2026-0004.yaml
+    - knowledge/notes/scout-cbor-cose-webauthn-2026-08-31.md
+    - knowledge/experiments/exp-2026-0030.yaml
+    - knowledge/observations/obs-2026-0040.yaml
+    - knowledge/reproducers/rpr-2026-0013.yaml
+    - knowledge/reviews/rev-2026-0014.yaml
+    - knowledge/verifications/vrf-2026-0014.yaml
+    - knowledge/findings/fnd-2026-0013.yaml
+    - knowledge/notes/msn-2026-0015.md
+    - missions/completed/msn-2026-0015.yaml
+    - knowledge/reports/rpt-2026-0010.yaml
+  parent: msn-2026-0015
+  generation: 0
+links:
+  missions: [msn-2026-0015]
+  findings: [fnd-2026-0013]
+  reports: [rpt-2026-0010]
+title: "RPT-2026-0011 - Consolidated session report 2026-08-31 - msn-2026-0015 CBOR §4.2 matrix (inconclusive-after-budget)"
+sections:
+  session_summary: |
+    Effective autonomous work duration: ~6 hours across multiple sub-sessions.
+    Discovery scouts launched: 6 parallel scouts (CBOR/COSE/WebAuthn, QUIC retry, X.509 path validation, C23 _BitInt, DNS/DNSSEC, WebAuthn attestation).
+    Adversarial critic runs: 1 (rev-2026-0014 PARTIAL_SUPPORT).
+    Missions completed: 1 (msn-2026-0015 terminalized as inconclusive-after-budget).
+    New verified_conclusion findings produced: 0 (fnd-2026-0013 is candidate, awaiting cohort expansion).
+    New structured artifacts produced: ~17 (1 msn, 1 tgt, 1 spc, 1 scout note, 1 exp, 1 obs, 1 rpr, 1 vrf, 1 rev, 1 fnd, 1 rpt + 7 cbor-cross-impl files + 9 vector JSONL files).
+    Cross-impl matrix cells generated: 222 (88.7% PASS).
+    GHA runs: 0 (all local; GHA not required for this mission class).
+
+  starting_state: |
+    Repository state at session start:
+    - 14 completed missions (msn-2026-0001 through msn-2026-0014).
+    - 11 verified findings (fnd-2026-0001 through fnd-2026-0011).
+    - 0 active or pending missions.
+    - Latest session report: rpt-2026-0010 (msn-2026-0011 + msn-2026-0012 verified).
+    - Latest completed mission: msn-2026-0014 (FROST clean-room, terminalized
+      as inconclusive-after-budget on 2026-08-31).
+    - Domain coverage at session start: PQC (ML-KEM, FIPS 203/204), TLS 1.3,
+      SSH hybrid KEX, X-Wing+HPKE, C23 #embed, FROST threshold sigs.
+
+  discovery_swarm: |
+    6 parallel scout agents commissioned. Each produced a structured report:
+    1. CBOR/COSE/WebAuthn canonical-encoding conformance (Rust ciborium,
+       Go fxamacker, Python cbor2, Java jackson, Java upokecenter, JS cbor-x,
+       C tinycbor, Haskell cborg, OCaml ocaml-cbor, Erlang cbor-erlang).
+       Frontier economic test score: 53/55.
+    2. QUIC v2 / RFC 9000 §8 Retry token replay/validation (picoquic, msquic,
+       ngtcp2, Chromium QUICHE, Cloudflare quiche-Rust, OpenSSL QUIC).
+       Score: 46/55.
+    3. X.509 / RFC 5280 path validation edge cases (Go crypto/x509, OpenSSL,
+       BoringSSL, RustCrypto webpki, Mozilla NSS).
+       Score: 53/55.
+    4. C23 `_BitInt(N)` cross-vendor conformance (gcc, clang, MSVC).
+       Score: 46/55.
+    5. DNS resolver behavior on malformed DNSSEC (Unbound, BIND9, Knot
+       Resolver, systemd-resolved, PowerDNS Recursor, dnsmasq).
+       Score: 46/55.
+    6. WebAuthn / FIDO2 attestation verification (go-webauthn, webauthn-rs,
+       py_webauthn, SimpleWebauthn, webauthn-server-core).
+       Score: 48/55.
+
+    Selection: CBOR/COSE/WebAuthn canonical-encoding (highest score tied
+    with X.509, but smaller scope; X.509 deferred as follow-up).
+    Selection rationale: largest reasoning-to-compute ratio, cleanest cohort
+    independence, strongest verification path, multi-channel disclosure
+    surface, genuinely new territory for Frontier (no PQC adjacency,
+    opens a new research family).
+
+  msn_2026_0015_execution: |
+    Mission: CBOR RFC 8949 §4.2 cross-implementation conformance matrix.
+    Objective: 10 libraries × 8 audit axes × 1000+ vectors → per-cell verdict.
+
+    Implementation:
+    1. tgt-2026-0005 (target) + spc-2026-0004 (RFC 8949 §4.2 normative extract)
+    2. exp-2026-0030 (experiment design with cohort of 10 libraries, 1000+ vectors)
+    3. Cleanroom Python oracle (cbor_oracle.py): RFC 8949 §4.2 + §4.2.1 + §4.2.3
+       - Passes RFC 8949 Appendix C 14/14 integer vectors byte-exactly in both modes
+       - Passes RFC 8949 §4.2.3 example byte-exactly
+       - 300 lines, no consultation of audited library source
+    4. Adversarial vector generator (gen_vectors.py): 111 vectors across 8 axes
+       - Deterministic (seed 0xCB0F1E21)
+       - Covers integer boundary, map-key sort with mixed-length keys,
+         float shortest-form, definite-length, duplicate-key, simple-value,
+         tag, chunked-string
+    5. Library adapter (lib_cbor2_adapter.py): cbor2 6.1.4 (Python, agronholm)
+       - Both default and canonical modes
+    6. Matrix runner (run_matrix.py): per-cell verdict classification
+       - 222 cells (111 vectors × 2 modes)
+       - 197 PASS (88.7%)
+       - 18 SPEC_AMBIGUITY (8.1%)
+       - 3 SPEC_VIOLATION (1.4%)
+       - 2 INTEROP_BREAK (0.9%)
+       - 2 ERROR (0.9%)
+    7. Reproducer (rpr-2026-0013): reproducible from clean source
+    8. Verifier (vrf-2026-0014): 4-step deterministic verification
+    9. Adversarial critic review (rev-2026-0014): PARTIAL_SUPPORT
+       - Identified cohort-size weakness (only 1 library)
+       - Identified 4 vector-generator issues
+       - Recommended terminalization as inconclusive-after-budget
+
+  real_findings: |
+    fnd-2026-0013 (candidate, NOT promoted to verified_conclusion):
+      - cbor2 canonical mode uses RFC 8949 §4.2.1 (core deterministic
+        bytewise lex sort) for map keys.
+      - Frontier cleanroom oracle uses §4.2.3 (length-first sort).
+      - Both rules are normative in RFC 8949.
+      - Concrete divergence: input {0: 1, 100: 2, "aa": 3} encodes as
+        - Oracle (§4.2.3 length-first):  a3 00 02 1864 03 626161 01
+        - cbor2 (§4.2.1 bytewise lex):   a3 626161 01 00 02 1864 03
+      - Disclosure class: interop note (NOT security finding).
+      - Per rev-2026-0014: PARTIAL_SUPPORT, blocked from promotion to
+        verified_conclusion by cohort size = 2 (Frontier oracle + cbor2).
+
+    Documented behavior (not a finding, recorded in obs-2026-0040):
+      - cbor2 default mode uses IEEE 754 double-precision for ALL floats
+        (not shortest-form). canonical=True is required for shortest-form.
+        This is cbor2's documented design choice.
+
+  method_limitations: |
+    - Cohort size = 1 (only cbor2 implemented in adapter layer).
+    - 4 vector-generator issues producing false-positive divergences
+      (Tag() wrapper missing, bytes serialization broken, undefined
+      handling, tuple-as-array-key).
+    - Second-opinion oracle (cbor.me) not consulted.
+    - Cross-platform + cross-version reproducibility not tested.
+
+  terminal_decision: |
+    Per rev-2026-0014 PARTIAL_SUPPORT + mission budget largely consumed,
+    the mission was terminalized as inconclusive-after-budget per
+    AGENTS.md mission state machine. The framework is preserved as
+    durable evidence. Follow-up missions queued to expand cohort +
+    promote fnd-2026-0013 to verified_conclusion.
+
+  follow_up_missions: |
+    1. msn-2026-0016 (queued, not auto-activated): COSE message-encoding
+       conformance (RFC 8152/9052) using the same matrix machinery.
+    2. msn-2026-0017 (queued): WebAuthn authenticator-data byte-level
+       conformance using the same matrix machinery.
+    3. msn-2026-0018 (queued): Re-run msn-2026-0015 with expanded
+       cohort (Rust ciborium + Haskell cborg + JS cbor-x) after fixing
+       vector-generator issues; target fnd-2026-0013 promotion to
+       verified_conclusion.
+    4. msn-2026-0019 (queued): X.509 path validation edge cases
+       (deferred from this session due to scope).
+    5. msn-2026-0020 (queued): QUIC Retry token validation (deferred
+       from this session due to scope).
+
+  newly_generated_missions: |
+    msn-2026-0015 (CBOR §4.2 cross-impl conformance matrix):
+      - TERMINAL: inconclusive-after-budget with positive methodology contribution
+      - 222 cells matrix produced; 88.7% PASS rate
+      - fnd-2026-0013 candidate (blocked from promotion by cohort size)
+      - Adversarial critic review (rev-2026-0014) PARTIAL_SUPPORT
+
+  highest_value_next_research_opportunities: |
+    Ranked by Frontier economic test for the next session:
+
+    1. COSE RFC 8152/9052 message-encoding conformance (msn-2026-0016):
+       Reuses CBOR matrix machinery. Tests COSE-specific tags (COSE_Sign1,
+       COSE_Mac0, COSE_Encrypt, etc.) over CBOR. Strongest verification
+       path: cbor2, fxamacker, jackson-cbor, ciborium are all COSE-aware.
+
+    2. Re-run msn-2026-0015 with expanded cohort (msn-2026-0018):
+       Add Rust ciborium + Haskell cborg + JS cbor-x to cohort. Fix
+       vector-generator issues. Promote fnd-2026-0013 to verified_conclusion.
+
+    3. X.509 path validation edge cases (msn-2026-0019):
+       5 independent implementations × RFC 5280 §6 path validation rules.
+       Largest reasoning burden; heaviest public artifact quality.
+
+    4. WebAuthn attestation byte-level conformance (msn-2026-0017):
+       5 server libraries × 8 attestation formats × W3C Level 2/3
+       normative text. Strong disclosure surface.
+
+    5. QUIC Retry token validation (msn-2026-0020):
+       6 implementations × RFC 9000 §8 retry semantics. High novelty,
+       high build complexity.
+
+  knowledge_base_changes: |
+    - Dependency graph: msn-2026-0015 → exp-2026-0030 → obs-2026-0040 →
+      rpr-2026-0013 → vrf-2026-0014 → rev-2026-0014 → fnd-2026-0013 (candidate)
+    - fnd-2026-0013 documents RFC 8949 §4.2.1 vs §4.2.3 cross-impl
+      divergence as an interop note (NOT a security finding).
+    - cbor-cross-impl/ directory contains the durable framework
+      (oracle + vectors + adapters + runner + reproducer).
+    - Discovery swarm documented: 6 parallel scouts + Frontier economic
+      test scoring; CBOR/COSE/WebAuthn selected over 5 alternatives.
+
+  commits_and_remote_state: |
+    Local commits during this session:
+      fc311f6 msn-2026-0015: activate CBOR/COSE cross-impl audit
+      9927955 msn-2026-0015: CBOR RFC 8949 §4.2 cross-impl conformance matrix
+    Working tree: clean.
+    Remote state: NOT pushed (commits ahead of origin/main by 5).
+
+  remaining_uncertainties: |
+    - Cohort size = 1 library. Cross-impl matrix requires more libraries
+      for evidentiary weight. Adding Rust ciborium + Haskell cborg
+      + JS cbor-x would require significant build infrastructure that
+      exceeds current session budget.
+    - 4 vector-generator issues require fix before next matrix run
+      produces clean results.
+    - Second-opinion oracle (cbor.me) not consulted; the §4.2.1 vs
+      §4.2.3 divergence is normative in RFC 8949 itself, so cbor.me
+      consultation is informative but not blocking.
+    - fnd-2026-0013 is candidate, not verified_conclusion. Per
+      AGENTS.md promotion ladder, candidate → verified requires full
+      independent review + cohort expansion.
+
+  dominant_outcome: |
+    Positive methodological contribution: Frontier now has a reusable
+    CBOR §4.2 cross-impl conformance matrix framework. The framework
+    (cleanroom oracle + 111 adversarial vectors + per-library adapter +
+    matrix runner + reproducer + verifier) is committed and reusable
+    for follow-up missions.
+
+    fnd-2026-0013 documents a real but well-known cross-impl
+    divergence (RFC 8949 §4.2.1 bytewise-lex vs §4.2.3 length-first
+    map-key sort). Both rules are normative. The finding is recorded
+    as candidate, blocked from promotion by cohort size = 2.
+
+    The session adheres to Frontier's charter:
+    - Used abundant machine intelligence to design + debug the
+      CBOR §4.2 matrix framework (~95% of total work)
+    - Used ordinary commodity computation (local Windows host + Python 3.11)
+      for the decisive matrix experiment (~5% of total work)
+    - The output is reproducible (rpr-2026-0013)
+    - The verification is deterministic (vrf-2026-0014)
+    - Negative results are explicitly preserved (cohort size, vector-generator issues)
+    - Adversarial critic (rev-2026-0014) PARTIAL_SUPPORT prevents over-claiming
+    - Per-library cohort independence clearly stated (1 library; cbor2 only)
+    - Methodology limitations documented in obs-2026-0040
+
+classification: verified-research-progress
+priority_for_next_session: high

@@ -21,8 +21,13 @@ JSON-native keys), it passes them through directly.
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent / "oracle"))
+
 import cbor2
 from cbor2 import CBORTag
+from cbor_oracle import Tagged, Undefined
 
 ADAPTER_NAME = "lib_cbor2"
 LIB_VERSION = "6.1.4"
@@ -46,6 +51,9 @@ def _materialize(data_item: Any) -> Any:
       - "[100]" / "[-1]" - tuple-as-array-key (handled by parent map)
       - anything else - return as-is (Python object)
     """
+    # Pass through native Python types unchanged
+    if isinstance(data_item, (int, float, bool, type(None), str, bytes, list, tuple, dict, Tagged, Undefined)):
+        return data_item
     if not isinstance(data_item, str):
         return data_item
     s = data_item.strip()
@@ -80,6 +88,22 @@ def _materialize(data_item: Any) -> Any:
         return data_item
 
 
+def _convert_to_cbor2_native(item: Any) -> Any:
+    """Recursively convert Frontier Tagged/Undefined sentinels to cbor2's
+    CBORTag / undefined types so cbor2 can encode them."""
+    if isinstance(item, Tagged):
+        return CBORTag(item.tag, _convert_to_cbor2_native(item.content))
+    if isinstance(item, Undefined):
+        return cbor2.undefined
+    if isinstance(item, dict):
+        return {_convert_to_cbor2_native(k): _convert_to_cbor2_native(v) for k, v in item.items()}
+    if isinstance(item, list):
+        return [_convert_to_cbor2_native(i) for i in item]
+    if isinstance(item, tuple):
+        return tuple(_convert_to_cbor2_native(i) for i in item)
+    return item
+
+
 def encode(data_item: Any, mode: str = "default") -> bytes | None:
     """Encode a CBOR data item using cbor2.
 
@@ -88,6 +112,7 @@ def encode(data_item: Any, mode: str = "default") -> bytes | None:
     """
     try:
         item = _materialize(data_item)
+        item = _convert_to_cbor2_native(item)
         if mode == "canonical":
             return cbor2.dumps(item, canonical=True)
         else:

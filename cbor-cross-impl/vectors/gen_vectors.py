@@ -114,7 +114,7 @@ def gen_map_key_sort_vectors():
     vectors.append({
         "axis": "map_key_sort",
         "vector_id": "map_rfc_4_2_3_example",
-        "data_item": "{100:1, 'z':1, 'aa':1, 10:1, -1:1, False:1, [100]:1, [-1]:1}",
+        "data_item": m2,
         "description": "RFC 8949 §4.2.3 length-first ordering example",
         "oracle_deterministic_hex": encode_deterministic(m2).hex(),
         "oracle_canonical_hex": encode_canonical(m2).hex(),
@@ -361,7 +361,7 @@ def gen_tag_shortest_form_vectors():
             vectors.append({
                 "axis": "tag_shortest_form",
                 "vector_id": f"tag_{tag}_int1",
-                "data_item_repr": f"Tag({tag}, 1)",
+                "data_item": tagged_value,
                 "description": f"tag {tag} around integer 1",
                 "oracle_deterministic_hex": det,
                 "oracle_canonical_hex": can,
@@ -377,7 +377,7 @@ def gen_tag_shortest_form_vectors():
         vectors.append({
             "axis": "tag_shortest_form",
             "vector_id": "tag_nested_1_around_1_around_100",
-            "data_item_repr": "Tag(1, Tag(1, 100))",
+            "data_item": nested,
             "description": "nested tag 1 around tag 1 around 100",
             "oracle_deterministic_hex": det,
             "oracle_canonical_hex": can,
@@ -393,7 +393,7 @@ def gen_tag_shortest_form_vectors():
         vectors.append({
             "axis": "tag_shortest_form",
             "vector_id": "bignum_2^64",
-            "data_item_repr": "Tag(2, bytes)",
+            "data_item": bignum,
             "description": "bignum tag 2 around 2^64 (RFC 8949 §3.4.3 example)",
             "oracle_deterministic_hex": det,
             "oracle_canonical_hex": can,
@@ -486,7 +486,9 @@ class _DataItemEncoder(json.JSONEncoder):
         if isinstance(obj, tuple):
             return {"__type__": "tuple", "items": list(obj)}
         if isinstance(obj, Tag):
-            return {"__type__": "tag", "tag": obj.tag, "content_repr": repr(obj.content)}
+            return {"__type__": "tag", "tag": obj.tag, "content": obj.content}
+        if isinstance(obj, Undefined):
+            return {"__type__": "undefined"}
         if isinstance(obj, complex):
             return {"__type__": "complex", "value": str(obj)}
         return super().default(obj)
@@ -506,7 +508,10 @@ class _DataItemEncoder(json.JSONEncoder):
                         pairs.append([_convert(k), _convert(v)])
                     return {"__type__": "dict_int_keys", "pairs": pairs}
                 return {k: _convert(v) for k, v in obj.items()}
-            if isinstance(obj, (list, tuple)):
+            if isinstance(obj, tuple):
+                # Tuples need explicit type marker so the decoder can reconstruct
+                return {"__type__": "tuple", "items": [_convert(i) for i in obj]}
+            if isinstance(obj, list):
                 return [_convert(i) for i in obj]
             if isinstance(obj, bool):
                 return {"__type__": "bool", "value": obj}
@@ -520,13 +525,15 @@ def _decode_data_item(obj):
         if obj["__type__"] == "bytes":
             return bytes.fromhex(obj["hex"])
         if obj["__type__"] == "tag":
-            return Tag(obj["tag"], _decode_data_item(obj.get("content_repr")))
+            return Tag(obj["tag"], _decode_data_item(obj.get("content")))
         if obj["__type__"] == "tuple":
             return tuple(_decode_data_item(i) for i in obj["items"])
         if obj["__type__"] == "dict_int_keys":
             return {_decode_data_item(k): _decode_data_item(v) for k, v in obj["pairs"]}
         if obj["__type__"] == "bool":
             return obj["value"]
+        if obj["__type__"] == "undefined":
+            return Undefined()
     if isinstance(obj, list):
         return [_decode_data_item(i) for i in obj]
     if isinstance(obj, dict):
