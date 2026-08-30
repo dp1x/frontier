@@ -58,13 +58,16 @@ def _decode_data_item_recursive(obj):
                 return bytes.fromhex(obj["hex"])
             if obj["__type__"] == "tag":
                 from cbor_oracle import Tagged
-                return Tagged(obj["tag"], _decode_data_item_recursive(obj.get("content_repr")))
+                return Tagged(obj["tag"], _decode_data_item_recursive(obj.get("content")))
             if obj["__type__"] == "tuple":
                 return tuple(_decode_data_item_recursive(i) for i in obj["items"])
             if obj["__type__"] == "dict_int_keys":
                 return {_decode_data_item_recursive(k): _decode_data_item_recursive(v) for k, v in obj["pairs"]}
             if obj["__type__"] == "bool":
                 return obj["value"]
+            if obj["__type__"] == "undefined":
+                from cbor_oracle import Undefined
+                return Undefined()
         return {k: _decode_data_item_recursive(v) for k, v in obj.items()}
     if isinstance(obj, list):
         return [_decode_data_item_recursive(i) for i in obj]

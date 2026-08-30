@@ -208,6 +208,20 @@ class Tagged:
         return f"Tag({self.tag}, {self.content!r})"
 
 
+class Undefined:
+    """Sentinel for CBOR simple value 'undefined' (RFC 8949 §3.3)."""
+    __slots__ = ()
+
+    def __eq__(self, other):
+        return isinstance(other, Undefined)
+
+    def __hash__(self):
+        return hash("Undefined")
+
+    def __repr__(self):
+        return "Undefined()"
+
+
 def _encode_deterministic_value(value: Any, canonical: bool) -> bytes:
     """Encode a single CBOR data item in deterministic (or canonical) mode.
 
@@ -225,8 +239,8 @@ def _encode_deterministic_value(value: Any, canonical: bool) -> bytes:
         return _encode_simple_value(True)
     if value is None:
         return _encode_simple_value(None)
-    if isinstance(value, str) and value == "undefined":
-        return _encode_simple_value("undefined")
+    if isinstance(value, Undefined):
+        return _encode_simple_header(SIMPLE_UNDEFINED)
     if isinstance(value, bool):
         # bool is subclass of int; check before int
         raise CborValueError(f"unsupported value: {value!r}")
