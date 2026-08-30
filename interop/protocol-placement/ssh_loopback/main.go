@@ -308,9 +308,14 @@ func runOne(cohort string, stim Stimulus, serverAddr string, ekSize, cInitSize i
 		res.Error = fmt.Sprintf("recv response: %v", err)
 		return res
 	}
+	// Also try to read at most 4 more bytes to peek if there's a follow-up packet
+	// (some servers send KEX_REPLY then immediately USERAUTH_FAILURE on auth;
+	// this is debug instrumentation).
 	res.WireBytesObserved = len(resp)
 	res.ServerMsg = uint8(resp[0])
 	res.Verdict = classify(resp, ekSize, cohort, &res)
+	fmt.Fprintf(os.Stderr, "DEBUG %s/%s: msg=%d verdict=%s wire=%d\n",
+		cohort, stim.Name, res.ServerMsg, res.Verdict, res.WireBytesObserved)
 
 	// classify() handles DISCONNECT-reason and S_REPLY-first-bytes extraction.
 	// clientPriv is unused (kept for symmetry with prior experiments).
