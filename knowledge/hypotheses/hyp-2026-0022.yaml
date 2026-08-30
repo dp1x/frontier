@@ -1,0 +1,94 @@
+id: hyp-2026-0022
+type: hypothesis
+status: open
+created_at: "2026-08-30T07:05:00Z"
+updated_at: "2026-08-30T07:05:00Z"
+summary: "H6 - OpenSSH portable ssh client kex_kem_mlkem768x25519_dec (and sntrup761x25519_dec) call crypto_kem_mlkem768_dec directly on the server S_REPLY ciphertext without a 12-bit coefficient range check on the ciphertext. The decapsulation will fail naturally on garbage because the s2.2 implicit rejection mechanism produces a deterministic shared secret, but the SHARED SECRET is structurally meaningless. The key question: does the client abort before USERAUTH, or does it derive keys from garbage and proceed?"
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator-C
+    model: minimax-m3
+    tool: independent generator (synthesis of Stage C client-side concern)
+  sources:
+    - knowledge/notes/msn-2026-0010.md
+    - knowledge/findings/fnd-2026-0009.yaml
+    - knowledge/hypotheses/hyp-2026-0017.yaml
+  parent: msn-2026-0011
+  generation: 0
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0003]
+  implementations: [imp-2026-0012, imp-2026-0013]
+title: HYP-H6 - OpenSSH portable client decaps path is also length-only lenient
+statement: >
+  Per the architecture of OpenSSH portable's hybrid KEX, the client-side
+  decapsulation path kex_kem_mlkem768x25519_dec receives S_REPLY from the
+  server, splits it into (KEM ciphertext, server X25519 pub, server ed25519
+  signature), and calls crypto_kem_mlkem768_dec with the KEM ciphertext.
+  There is no 12-bit coefficient check on the KEM ciphertext (FIPS 203 s7.3
+  requires a hash-based check; s7.2's encapsulation key check is irrelevant
+  on decaps because the input is a ciphertext, not an encapsulation key).
+
+  However, the structural situation is asymmetric: the server's enc() path
+  takes a non-canonical C_PK2 and produces a structurally well-formed but
+  cryptographically meaningless ciphertext. When the client decapsulates
+  that ciphertext, the implicit rejection in FIPS 203 s7.3 (Algorithm 18)
+  returns a random-looking shared secret. The client will:
+
+  1. Derive K_PQ from the garbage decaps (32 bytes pseudorandom).
+  2. Compute the exchange hash H = hash(various || K_PQ || ...).
+  3. Verify the server's signature on H using the server host key.
+  4. The server signed H using its private key over the *server's* view of
+     K_PQ (computed by encapping against the tampered pk). The client's
+     view of K_PQ is different (decaps against garbage ciphertext yields
+     implicit-rejection random).
+  5. Therefore signature verification MUST FAIL on the client side.
+
+  The actual flow:
+  - Server encapsulates against tampered C_PK2 -> produces KEM ct S
+  - Server derives K_PQ_server = enc(tampered_C_PK2, m)
+  - Server signs H_server = hash(... || K_PQ_server || S_X || ...)
+  - Server sends S_REPLY = (S, S_X, sig(H_server, hostkey))
+  - Client receives S_REPLY, decapsulates S -> K_PQ_client (different from K_PQ_server due to implicit rejection)
+  - Client computes H_client = hash(... || K_PQ_client || S_X || ...)
+  - Client verifies sig(H_server, hostkey) against H_client
+  - Signature FAILS -> handshake aborts at NEWKEYS / USERAUTH stage
+
+  Predicted Stage C verdict: OpenSSH client appears to abort, BUT the
+  root cause is signature failure on garbage K_PQ (NOT FIPS 203 s7.2
+  modulus check). The handshake does NOT complete end-to-end; it fails
+  at signature verification. This is observationally indistinguishable
+  from "client is strict at decaps" but is mechanically a different
+  failure mode.
+
+  SECURITY IMPLICATION: there is NO direct confidentiality/integrity
+  breach because the signature verification catches the K_PQ mismatch.
+  The ssh client never reaches USERAUTH; it never sends a USERAUTH
+  request with garbage keys. So while the server is length-only lenient,
+  the signature-verification on the exchange hash is the actual safety
+  net.
+falsifiable_predictions:
+  - "OpenSSH portable client aborts after S_REPLY when S_REPLY is from tampered C_INIT"
+  - "The client-side abort is NOT due to FIPS 203 s7.2 modulus check but due to signature verification failure"
+  - "If the server's signature verification fails (e.g., host key mismatch), the client aborts at the same point for unrelated reasons"
+disproof_attempts: []
+notes: |
+  The Stage C verdict is therefore ALMOST CERTAINLY strict (handshake
+  aborts) but the FAILURE MECHANISM is signature failure, NOT FIPS 203
+  s7.2 modulus check.
+
+  This is observationally equivalent to "client is FIPS-conformant" but
+  mechanically a different guarantee. The actual safety net is the
+  exchange-hash signature, not the FIPS 203 s7.2 check.
+
+  Stage C must therefore distinguish between:
+    A. Client aborts because crypto_kem_mlkem768_dec rejects garbage
+       (would require a non-FIPS-conformant library)
+    B. Client aborts because signature verification fails on garbage
+       K_PQ (the actual mechanism)
+    C. Client completes the handshake (would require signature
+       verification to be skipped, which is a separate finding)
+
+  The empirical test must distinguish (A) vs (B) vs (C).

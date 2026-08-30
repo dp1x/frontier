@@ -1,0 +1,149 @@
+id: exp-2026-0027
+type: experiment
+status: designed
+created_at: "2026-08-30T07:05:00Z"
+updated_at: "2026-08-30T07:05:00Z"
+summary: "Stage C client-side decapsulation parity audit. Build OpenSSH portable + Go x/crypto/ssh client binaries on GHA ubuntu-latest, exercise them against the same harness as exp-2026-0025 (lenient server with tampered C_INIT), and capture per-client per-stimulus verdict (strict / lenient / dangerous). Diagnose and fix the recvPacket EOF bug from exp-2026-0026. Add positive + negative controls so harness defects cannot masquerade as protocol behavior."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: minimax-m3
+    tool: designing Stage C harness fix + control matrix
+  sources:
+    - knowledge/experiments/exp-2026-0025.yaml
+    - knowledge/experiments/exp-2026-0026.yaml
+    - knowledge/observations/obs-2026-0034.yaml
+    - knowledge/notes/msn-2026-0010.md
+    - interop/protocol-placement/ssh_loopback/main.go
+  parent: msn-2026-0011
+  generation: 0
+links:
+  missions: [msn-2026-0011]
+  hypotheses: [hyp-2026-0017, hyp-2026-0022]
+  implementations: [imp-2026-0012, imp-2026-0013]
+title: "EXP-2026-0027 - Stage C OpenSSH client-side decapsulation parity matrix"
+design:
+  objective: |
+    Determine whether OpenSSH portable ssh client (and Go x/crypto/ssh client)
+    catches non-canonical C_PK2 via FIPS-conformant decapsulation of the server
+    S_REPLY when the server is lenient on C_INIT.
+
+  harness_fix:
+    root_cause_hypothesis: |
+      The exp-2026-0026 harness's recvPacket returns EOF after sending C_INIT
+      because:
+      1. The server's signature verification fails on garbage K_PQ (from encap
+         against non-canonical C_PK2), so the server sends SSH_MSG_DISCONNECT
+         with reason 2 (SSH_DISCONNECT_PROTOCOL_ERROR) before sending KEX_REPLY.
+      2. Or: the server sends KEX_REPLY then immediately closes the connection
+         (signature failure aborts before NEWKEYS).
+      3. The harness's recvPacket either times out or reads the DISCONNECT
+         packet but classifies it incorrectly.
+
+    chosen_fix:
+      approach: "MitM-in-the-middle (MITMf) approach: instead of expecting the server's KEX_REPLY, expect SSH_MSG_DISCONNECT first; if disconnect observed, classify as either strict-or-signature-failure; if KEX_REPLY observed, classify as lenient-with-sig-success; if neither within timeout, classify as dangerous."
+      code_location: "interop/protocol-placement/ssh_loopback/main.go (extend with stage_c mode)"
+      new_arguments:
+        - "--stage {server,client}"
+        - "--client-mode {openssh,go}"
+      new_behavior: |
+        Stage=client: spawn the ssh client as a subprocess against the sshd
+        (no MITM). Capture client exit code, stderr, and stdout. Compare against
+        control (canonical sshd) and negative control (sshd that drops
+        connection).
+
+  client_test_matrix:
+    matrix_layout: "clients x stimuli x verdicts"
+    clients:
+      - id: openssh-portable-ssh
+        binary: "ssh (built from openssh-portable master HEAD with USE_MLKEM768X25519=1)"
+        cohort: [mlkem768x25519-sha256, sntrup761x25519-sha512]
+        command: "/tmp/openssh-install/bin/ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o PreferredAuthentications=publickey testuser@127.0.0.1 'echo handshake-success'"
+        verdict_signals:
+          strict: "exit code != 0 with 'Connection closed by remote' or 'signature verification failed' or 'key exchange failed'"
+          lenient: "exit code 0 with 'handshake-success' on stdout"
+          dangerous: "exit code != 0 with no useful error, or hang"
+
+      - id: go-x-crypto-ssh
+        binary: "go build -o /tmp/ssh_client . (from interop/protocol-placement/ssh_loopback/client/)"
+        cohort: [mlkem768x25519-sha256]
+        command: "/tmp/ssh_client --server-addr 127.0.0.1:2222 --cohort mlkem768x25519-sha256"
+        verdict_signals:
+          strict: "exit code != 0 with 'kex: failure' or 'signature' or 'protocol error'"
+          lenient: "exit code 0"
+          dangerous: "exit code != 0 with no useful error, or hang"
+
+    stimuli_server_side:
+      - control
+      - truncate_by_1
+      - append_1
+      - coeff0_q
+      - coeff0_4095
+      - coeff255_4095
+      - cross_param_set
+
+  controls:
+    positive_control:
+      name: "canonical_handshake"
+      setup: "sshd with canonical C_INIT, ssh client connects, expects 'handshake-success'"
+      expected_verdict: "lenient (handshake succeeds)"
+      purpose: "verify harness produces expected positive result in happy path"
+
+    negative_control_signature:
+      name: "tampered_signature"
+      setup: "sshd with canonical C_INIT but server signature is corrupted after KEX"
+      expected_verdict: "strict (client aborts with 'signature verification failed')"
+      purpose: "verify harness detects signature-failure-induced abort"
+
+    negative_control_disconnect:
+      name: "early_disconnect"
+      setup: "sshd sends SSH_MSG_DISCONNECT reason 2 immediately after KEXINIT"
+      expected_verdict: "strict (client aborts)"
+      purpose: "verify harness detects early-disconnect-induced abort"
+
+    test_control_self_consistency:
+      name: "two_runs_same_verdict"
+      setup: "run same (client, stimulus) twice in same GHA job"
+      expected_verdict: "identical"
+      purpose: "verify harness is deterministic"
+
+  execution:
+    runtime: GHA ubuntu-latest
+    isolation: github-runner
+    env_scrubbed: true
+    network: minimal (loopback only)
+    secrets_exposed: false
+    expected_gha_runs: 5-7 (1 per matrix combination + 2 controls + 1 self-consistency)
+
+  artifact_outputs:
+    per_run:
+      - "interop/protocol-placement/ssh_loopback/reports/<cohort>_<client>_<stimulus>_verdict.tsv"
+      - "interop/protocol-placement/ssh_loopback/reports/<cohort>_<client>_<stimulus>_ssh_stderr.log"
+      - "interop/protocol-placement/ssh_loopback/reports/<cohort>_<client>_<stimulus>_sshd.log"
+    summary:
+      - "interop/protocol-placement/ssh_loopback/reports/stage_c_summary.tsv"
+      - "interop/protocol-placement/ssh_loopback/reports/stage_c_console.log"
+
+  decision_surface:
+    - strict: client aborts before USERAUTH (handshake fails safely)
+    - lenient: client completes handshake with garbage keys (dangerous - security finding)
+    - dangerous: client hangs or crashes
+
+  acceptance:
+    - "Stage C matrix executed with at least 2 clients (OpenSSH + Go) and at least 4 stimuli"
+    - "All 3 controls pass (positive: lenient, negative-sig: strict, negative-disconnect: strict)"
+    - "Self-consistency: two identical runs produce identical verdicts"
+    - "Per-client per-stimulus verdict recorded with attribution"
+    - "Verdict classified as strict / lenient / dangerous with reasoning"
+
+compute:
+  expected_class: medium
+  location: github-actions
+  isolation: github-runner
+  notes: "GHA ubuntu-latest; ~5-7 GHA runs expected for full Stage C matrix + controls"
+risks:
+  - "OpenSSH portable ssh client may take 30+ seconds to timeout if hung; need generous timeout"
+  - "Go x/crypto/ssh client may not yet ship mlkem768x25519-sha256 support in golang.org/x/crypto (check before relying on it)"
+  - "If both clients abort due to signature failure, the result is observationally indistinguishable from strict (false positive for strict)"
