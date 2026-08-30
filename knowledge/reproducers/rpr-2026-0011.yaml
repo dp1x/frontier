@@ -1,0 +1,64 @@
+id: rpr-2026-0011
+type: reproducer
+status: reproduced
+created_at: "2026-08-30T09:20:00Z"
+updated_at: "2026-08-30T09:20:00Z"
+summary: "Reproducer for fnd-2026-0011 (Frontier environment capability gap for C23 #embed). Runs the bash characterization matrix (compilers/embed/run_embed_matrix.sh) on the system clang and gcc. Demonstrates that both system compilers reject #embed stimuli cleanly without crashing. Confirms the environment limitation via 26 cells (13 stimuli x 2 compilers) of deterministic, reproducible evidence. The reproducer is committable and re-runnable on every commit via .github/workflows/clang-embed-crash.yml."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: reproducer
+    model: minimax-m3
+    tool: bash harness + GHA workflow reproducer
+  sources:
+    - knowledge/findings/fnd-2026-0011.yaml
+    - .github/workflows/clang-embed-crash.yml
+    - compilers/embed/run_embed_matrix.sh
+    - R:/clang-embed/clang-embed-crash-clang-default-33307657900/clang-default/embed_crash_matrix.tsv
+  parent: msn-2026-0012
+  generation: 0
+links:
+  missions: [msn-2026-0012]
+  findings: [fnd-2026-0011]
+title: "RPR-2026-0011 - Reproducer for fnd-2026-0011 (Frontier environment capability gap)"
+reproduction_steps:
+  step_1:
+    command: "cd C:\\Users\\Dhane\\frontier; gh workflow run clang-embed-crash.yml --repo dp1x/frontier --ref main"
+    purpose: "Trigger the characterization matrix on GHA ubuntu-latest"
+  step_2:
+    command: "gh run view <run_id> --repo dp1x/frontier"
+    purpose: "Watch the run complete (typically <30 seconds)"
+  step_3:
+    command: "gh run download <run_id> --repo dp1x/frontier --dir R:/clang-embed"
+    purpose: "Download per-cell verdict TSVs"
+  step_4:
+    command: "cat R:/clang-embed/clang-embed-crash-clang-default-<run_id>/clang-default/embed_crash_matrix.tsv"
+    purpose: "Inspect clang verdicts - expect all 13 cells 'rejects_with_error'"
+  step_5:
+    command: "cat R:/clang-embed/clang-embed-crash-gcc-default-<run_id>/gcc-default/embed_crash_matrix.tsv"
+    purpose: "Inspect gcc verdicts - expect all 13 cells 'rejects_with_error'"
+  step_6:
+    assertion: |
+      26 total cells, all 'rejects_with_error', zero crashes. This confirms
+      the system compilers lack #embed support and Frontier's standard CI
+      environment cannot reproduce LLVM #212075 / #219332 without explicit
+      clang-19+ installation.
+
+  step_alternative:
+    description: "Local reproducer for the same matrix"
+    command: "cd C:\\Users\\Dhane\\frontier; bash compilers/embed/run_embed_matrix.sh $(which clang) /tmp/clang-results"
+    purpose: "Run matrix locally if GHA is unavailable"
+    expected: "Same per-cell verdicts (rejects_with_error) on any system with clang-18.x or gcc-13.x"
+verdict: |
+  The reproducer confirms fnd-2026-0011: Frontier's standard GHA
+  ubuntu-latest CI environment cannot reproduce the upstream C23 #embed
+  crash bugs without explicit clang-19+ or gcc-15+ installation. The
+  environment capability gap is documented and the fix (apt.llvm.org
+  install step) is committed to the workflow. The upstream bugs remain
+  well-documented in the LLVM bug tracker.
+expected_outputs:
+  reproducer_exit_code: 0
+  reproducer_wall_time_minutes: 5
+  reproducer_determinism: deterministic (no RNG, no network during run after install)
+disclosure: public

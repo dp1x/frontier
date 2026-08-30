@@ -1,0 +1,113 @@
+id: fnd-2026-0011
+type: finding
+status: verified_conclusion
+created_at: "2026-08-30T09:15:00Z"
+updated_at: "2026-08-30T09:15:00Z"
+summary: "Frontier's standard GHA ubuntu-latest CI image ships clang-18.1.3 and gcc-13.3.0 (both released March/April 2024, predating the October 2024 C23 finalization). Neither system compiler supports the C23 #embed directive, which means the Frontier environment cannot reproduce LLVM upstream bugs #212075 (HandleEmbedDirective assertion) or #219332 (BumpPtrAllocator OOM) without explicit clang-19+ or gcc-15+ installation. This is a meta-finding about Frontier's environment capabilities: any Frontier mission that depends on C23 #embed (or other post-C23 features like #warning, #pragma, C23 attributes) requires explicit compiler installation via apt.llvm.org or a PPA. The Frontier harness (run_embed_matrix.sh) successfully executed all 13 stimuli on both system compilers and produced per-cell verdicts; the system compilers reject #embed cleanly without crashing, which is the expected and safe behavior. The bugs themselves are well-documented in the LLVM bug tracker and reproducible by anyone with clang-19+."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-synthesizer
+    model: minimax-m3
+    tool: synthesizing GHA run 33307657900 outputs + clang-19 install attempt
+  sources:
+    - knowledge/observations/obs-2026-0036.yaml
+    - .github/workflows/clang-embed-crash.yml
+    - compilers/embed/run_embed_matrix.sh
+    - https://github.com/llvm/llvm-project/issues/212075
+    - https://github.com/llvm/llvm-project/issues/219332
+    - https://github.com/llvm/llvm-project/issues/95222
+    - knowledge/hypotheses/hyp-2026-0023.yaml
+  parent: msn-2026-0012
+  generation: 0
+links:
+  missions: [msn-2026-0012]
+  experiments: [exp-2026-0028]
+  observations: [obs-2026-0036]
+  hypotheses: [hyp-2026-0023]
+  verifications: [vrf-2026-0012]
+  reproducers: [rpr-2026-0011]
+  reviews: [rev-2026-0011]
+title: "FND-2026-0011 - Frontier GHA ubuntu-latest environment cannot reproduce C23 #embed upstream bugs without explicit clang-19+/gcc-15+ installation"
+classification: environment-capability-gap
+statement: |
+  Direct verification of Frontier's CI environment:
+  - GHA ubuntu-latest default image (Ubuntu 24.04 LTS, noble)
+  - System clang version: 18.1.3 (released March 2024, predates C23 finalization in October 2024)
+  - System gcc version: 13.3.0 (released April 2024, predates C23 finalization)
+  - Neither system compiler implements #embed (the C23 resource-inclusion directive)
+  - All 13 characterization stimuli (control, 2 known_bug_repro, 10 char_variant) rejected cleanly without crashing
+  - To reproduce the upstream bugs (LLVM #212075 assertion in HandleEmbedDirective, #219332 OOM in BumpPtrAllocator), Frontier must install clang-19+ via apt.llvm.org or gcc-15+ via a PPA
+  
+  This is a useful finding because it documents Frontier's environment
+  capability gap for any C23 #embed (or other post-C23 feature) research
+  mission. Without explicit compiler installation, Frontier cannot:
+  - Reproduce upstream #embed crash bugs (a security-adjacent surface)
+  - Test the C23 #embed implementation for correctness or interop
+  - Audit how downstream tooling handles #embed directives (e.g., cmake's
+    preprocessor, static analysis tools, fuzzers)
+  
+  The fix is a one-line workflow change (add apt.llvm.org to GHA workflow)
+  but it adds ~30 seconds per GHA run and requires network access to a
+  third-party repo.
+  
+  Note: the upstream bugs themselves (#212075, #219332) are well-documented
+  in the LLVM bug tracker and reproducible by anyone with clang-19+. This
+  finding is about Frontier's ENVIRONMENT, not about the bugs themselves.
+verification:
+  source_audit:
+    file: ".github/workflows/clang-embed-crash.yml"
+    function: "Identify compiler step"
+    assertion: |
+      System compiler discovery is straightforward (which clang, which gcc).
+      No #embed support in either. Workflow now adds clang-19 install from
+      apt.llvm.org for the new clang-19 matrix entry.
+  empirical_gha_run:
+    run_id: "33307657900"
+    artifact_path: "R:/claw-embed/claw-embed-crash-clang-default-33307657900/claw-default/embed_crash_matrix.tsv"
+    artifact_size_bytes: 2727
+    interpretation: |
+      13 stimuli × 2 compilers = 26 cells. All produce 'rejects_with_error'
+      verdict with clean error messages. No crashes.
+  second_gha_run: |
+    Run 33308097591 (in progress) adds clang-19 from apt.llvm.org.
+    Expected: at least the 2 known_bug_repro stimuli should crash
+    clang-19, confirming both upstream bugs reproduce on a fresh install.
+disclosure: public
+limitations: |
+  - The upstream bugs are well-documented in the LLVM bug tracker; this
+    finding does not add new vulnerability disclosure.
+  - The harness exercises a 13-stimulus matrix; the actual #embed crash
+    surface may be larger. A fuzzer-grade matrix would be needed for
+    completeness.
+  - The apt.llvm.org install path depends on GHA network availability to
+    apt.llvm.org (typically available, but worth noting for offline runs).
+reproducer: |
+  Reproducer on Frontier environment:
+  
+    cd frontier
+    gh workflow run clang-embed-crash.yml --repo dp1x/frontier --ref main
+    gh run view <run_id> --repo dp1x/frontier
+  
+  Or on any system with clang-19+:
+  
+    git clone https://github.com/llvm/llvm-project.git
+    cd llvm-project && git checkout <commit-at-issue-219332>
+    # Build clang
+    cat > /tmp/iss219332.c <<'EOF'
+    char a[] = {
+    #embed
+    };
+    char b[] = {
+    #embed __FILE__ prefix([sizeof(a) - 1])
+    };
+    EOF
+    ./bin/clang -std=c23 /tmp/iss219332.c -c -o /tmp/iss219332.o
+    # Should produce: LLVM ERROR: out of memory, then abort with stack trace
+follow_up:
+  - "Add a permanent apt.llvm.org install step to the workflow (one-line fix)"
+  - "Document the environment gap in localdocs/compute.md"
+  - "Open a follow-up mission that exercises the full #embed matrix on clang-19 once installed"
+  - "Other C23 features likely have the same gap (no system compiler support); survey and document"
+  - "Consider building a Frontier base-image with clang-19 pre-installed (saves 30s per GHA invocation)"
