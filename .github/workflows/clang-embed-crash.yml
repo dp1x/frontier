@@ -1,8 +1,10 @@
 # Workflow: clang-embed-crash (msn-2026-0012)
 #
-# Builds clang from upstream main on GHA ubuntu-latest, runs the
-# characterization matrix (exp-2026-0028), and produces a per-variant
-# verdict TSV. Also cross-tests with GCC 15 if installed.
+# Runs the C23 #embed crash characterization matrix on the system-preinstalled
+# clang and gcc on GHA ubuntu-latest. Each compiler executes the bash
+# harness (compilers/embed/run_embed_matrix.sh) which exercises the minimal
+# reproducers for LLVM issues #212075 and #219332 plus a 10-variant
+# characterization matrix.
 #
 # Compute class: medium (per exp-2026-0028).
 # Permissions: contents: read only -- no secrets exposed.
@@ -29,40 +31,23 @@ jobs:
       matrix:
         compiler:
           - name: clang-default
-            install: "apt-get install -y clang"
+            bin: clang
           - name: gcc-default
-            install: "apt-get install -y gcc"
+            bin: gcc
     steps:
       - name: Checkout frontier
         uses: actions/checkout@v4
         with:
           path: frontier
 
-      - name: Identify compiler (use system default; skip apt install if unavailable)
+      - name: Identify compiler
         id: id
         run: |
           set -euxo pipefail
-          # ubuntu-latest already has clang and gcc preinstalled
-          if [ "${{ matrix.compiler.name }}" = "clang-default" ]; then
-            CLANG_BIN=$(which clang || echo clang)
-          else
-            CLANG_BIN=$(which gcc || echo gcc)
-          fi
+          CLANG_BIN="${{ matrix.compiler.bin }}"
+          which "$CLANG_BIN" || echo "not found"
+          "$CLANG_BIN" --version | head -n1
           echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"
-          $CLANG_BIN --version
-
-      - name: Identify compiler (use system default; skip apt install if unavailable)
-        id: id
-        run: |
-          set -euxo pipefail
-          # ubuntu-latest already has clang and gcc preinstalled
-          if [ "${{ matrix.compiler.name }}" = "clang-default" ]; then
-            CLANG_BIN=$(which clang || echo clang)
-          else
-            CLANG_BIN=$(which gcc || echo gcc)
-          fi
-          echo "CLANG_BIN=$CLANG_BIN" >> "$GITHUB_OUTPUT"
-          $CLANG_BIN --version
 
       - name: Run characterization matrix
         run: |
@@ -75,7 +60,8 @@ jobs:
 
       - name: Capture compiler version
         run: |
-          ${{ steps.id.outputs.CLANG_BIN }} --version \
+          set -euxo pipefail
+          "${{ steps.id.outputs.CLANG_BIN }}" --version \
             > "$GITHUB_WORKSPACE/frontier/compilers/embed/reports/${{ matrix.compiler.name }}_compiler_version.txt" 2>&1 || true
 
       - name: Upload artifacts
