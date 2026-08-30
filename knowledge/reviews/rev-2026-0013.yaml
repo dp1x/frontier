@@ -1,0 +1,644 @@
+id: rev-2026-0013
+type: review
+status: open
+created_at: "2026-08-31T05:00:00Z"
+updated_at: "2026-08-31T05:00:00Z"
+summary: "Independent adversarial review of fnd-2026-0012 (ZcashFoundation/frost RFC 9591 byte-exact conformant). The primary claim is empirically weakened by (1) the ZcashFoundation/frost vectors.json contains nonce-randomness and per-step commitment values that DO NOT match RFC 9591 Appendix E.5 verbatim (RFC E.5 P1 hiding_nonce_commitment=03c699af97d26bb4d3f05232ec5e1938c12f1e6ae97643c8f8f11c9820303f1904 vs vectors.json P1 hiding_nonce_commitment=0305e62a1d3f57a0b17ade569a3a4043e2a1fc3bd0b102614a8d8cc68e3322ad89; only group_public_key/msg/share_polynomial_coefficients match), so the reproducer's claim that the KAT is 'byte-exact copies of the RFC 9591 Appendix E.5 text' is FALSE; (2) the vectors.rs test re-derives nonces from the JSON's randomness and asserts equality to the JSON's expected values - it does NOT exercise the implementation pipeline against independently-fixed inputs from the RFC text; (3) the RFC 9591 Acknowledgments section names 'the Zcash Foundation engineering team' explicitly for their contributions, making the 'byte-exact against the RFC' claim partially circular (ZcashFoundation contributed to the RFC text); (4) the verification is single-impl only (cargo test on the implementation's own test vectors) and provides no independent oracle; (5) the 'verify per-step outputs' claim is overclaimed because vectors.rs only asserts that the regenerated nonces (from JSON randomness) equal the JSON-expected nonces - this is a self-consistency check, not a per-step pipeline verification against external RFC text. The secondary claim (implementation universe asymmetry) is sound and important. Overall verdict: partial_support - the headline primary claim must be REVISED. The actual demonstrable claim is: ZcashFoundation/frost's self-test reproduces its own pre-computed KAT vectors (self-consistent). The claimed 'byte-exact per-step agreement with RFC 9591 Appendix E.5' is overclaimed and not actually verified by the reproducer."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-critic
+    model: minimax-m3
+    tool: "independent adversarial review of fnd-2026-0012 (read-only; no edits to cited evidence; this review YAML only)"
+  sources:
+    - knowledge/findings/fnd-2026-0012.yaml
+    - knowledge/observations/obs-2026-0037.yaml
+    - knowledge/observations/obs-2026-0038.yaml
+    - knowledge/verifications/vrf-2026-0013.yaml
+    - knowledge/reproducers/rpr-2026-0012.yaml
+    - knowledge/specifications/spc-2026-0003.yaml
+    - knowledge/reviews/rev-2026-0012.yaml
+    - knowledge/implementations/imp-2026-0015.yaml
+    - knowledge/implementations/imp-2026-0016.yaml
+    - knowledge/implementations/imp-2026-0017.yaml
+    - knowledge/experiments/exp-2026-0029.yaml
+    - knowledge/hypotheses/hyp-2026-0024.yaml
+    - knowledge/hypotheses/hyp-2026-0025.yaml
+    - https://raw.githubusercontent.com/ZcashFoundation/frost/0966bd1529aa062ad3b621af99e277f976b1c0f0/frost-secp256k1/tests/helpers/vectors.json
+    - https://raw.githubusercontent.com/ZcashFoundation/frost/0966bd1529aa062ad3b621af99e277f976b1c0f0/frost-secp256k1/tests/integration_tests.rs
+    - https://raw.githubusercontent.com/ZcashFoundation/frost/0966bd1529aa062ad3b621af99e277f976b1c0f0/frost-core/src/tests/vectors.rs
+    - https://api.github.com/repos/ZcashFoundation/frost/commits?path=frost-secp256k1/tests/helpers/vectors.json&per_page=10
+    - https://www.rfc-editor.org/rfc/rfc9591.txt
+    - https://www.rfc-editor.org/rfc/rfc9591#appendix-E.5
+    - https://github.com/ZcashFoundation/frost/commit/9413b49c05751a08ccf33b33d34cde6eeca9d7e8  (the 'Update test vectors (#438) - update test vectors to final version (v1) and update spec links' commit by conradoplg, 2023-08-14)
+    - https://github.com/ZcashFoundation/frost/commit/404cc361fd678feb29da8f13febf61afef4cd296  (the 'Include the group public key in computing the binding factor (#410)' commit by dconnolly, 2023-07-05)
+    - https://api.github.com/repos/BlockstreamResearch/bip-frost-dkg/contents/
+    - https://api.github.com/repos/taurushq-io/frost-ed25519/contents/
+    - knowledge/notes/scout-frost-2026-08-31.md
+    - AGENTS.md (Frontier operational constitution, especially Artifact rules, Verification rules, Anti-slop constraints)
+  parent: msn-2026-0013
+  generation: 1
+links:
+  missions: [msn-2026-0013]
+  hypotheses: [hyp-2026-0024, hyp-2026-0025]
+  experiments: [exp-2026-0029]
+  targets: [tgt-2026-0004]
+  implementations: [imp-2026-0015, imp-2026-0016, imp-2026-0017]
+  findings: [fnd-2026-0012]
+  observations: [obs-2026-0037, obs-2026-0038]
+  verifications: [vrf-2026-0013]
+  reproducers: [rpr-2026-0012]
+  specifications: [spc-2026-0003]
+  reviews: [rev-2026-0012]
+title: "REV-2026-0013 - Independent adversarial review of fnd-2026-0012 (FROST RFC 9591 byte-exact compliance)"
+independent: true
+role: adversarial-critic
+verdict: partial_support
+adjustments:
+  - id: adj-r13-1
+    summary: "REVISE the primary claim: 'byte-exact RFC 9591 Appendix E.5 KAT agreement' is NOT what was verified. Replace with the actually-verified claim."
+    rationale: >
+      The reproducer (rpr-2026-0012) and verifier (vrf-2026-0013) both state that the cargo test
+      reproduces the ZcashFoundation/frost 'tests/helpers/vectors.json' KAT. Inspection of the
+      vectors.json contents reveals they are NOT byte-exact identical to RFC 9591 Appendix E.5 -
+      they use different nonce randomness. Only the (group_public_key, group_secret_key,
+      participant_shares, share_polynomial_coefficients, msg) are common between the two; the
+      (hiding_nonce_randomness, binding_nonce_randomness, hiding_nonce, binding_nonce,
+      hiding_nonce_commitment, binding_nonce_commitment, binding_factor, sig_share) fields
+      all differ from the RFC text.
+
+      Concretely (secp256k1 P1):
+      - RFC 9591 E.5 hiding_nonce_commitment = 03c699af97d26bb4d3f05232ec5e1938c12f1e6ae97643c8f8f11c9820303f1904
+      - vectors.json P1 hiding_nonce_commitment = 0305e62a1d3f57a0b17ade569a3a4043e2a1fc3bd0b102614a8d8cc68e3322ad89
+
+      The cargo test (frost-core/src/tests/vectors.rs::check_sign_with_test_vectors) uses the
+      JSON's own randomness to derive nonces and then asserts the JSON's own expected values
+      match. This is a self-consistency check, not an external RFC text verification.
+
+      The actually-verified claim should be: 'ZcashFoundation/frost's self-test
+      check_sign_with_test_vectors reproduces its own tests/helpers/vectors.json KAT
+      deterministically on the pinned commit'. This is weaker than 'byte-exact conformant
+      with RFC 9591 Appendix E.5'. The 'RFC 9591 Appendix E.5' half of the claim is an
+      inheritance claim from the test fixture's history (commit 9413b49c by conradoplg, 2023-08-14:
+      'Update test vectors (#438) - update test vectors to final version (v1) and update
+      spec links'); the per-step content was last touched in PR #410 (commit 404cc361, 2023-07-05:
+      'Include the group public key in computing the binding factor (#410)'), predating RFC 9591
+      final publication (June 2024) and RFC 9591's reference to ZcashFoundation KAT vectors.
+    specific_changes:
+      - "Demote fnd-2026-0012 primary_claim from 'byte-exact conformant with RFC 9591 Appendix E.5 KAT' to 'self-consistent KAT reproducibility on tests/helpers/vectors.json'."
+      - "Add a separate claim 'crypto/frost-cross-impl/kat/rfc9591_appendix_e5_secp256k1.json' has the RFC 9591 Appendix E.5 expected_values (independent of ZcashFoundation/frost)' and verify that an independent reference implementation reproduces RFC E.5's expected_values byte-exactly. This is the load-bearing cross-oracle verification that is MISSING from the current evidence chain."
+      - "Promote the implementation-universe asymmetry (fnd-2026-0012 secondary_claim) to a separate finding id, since it is independently sound."
+  - id: adj-r13-2
+    summary: "Add a Python clean-room reference (Phase B-pre) that exercises RFC 9591 text alone against Appendix E.5 inputs."
+    rationale: >
+      The mission design (exp-2026-0029) included a Phase D Python verifier but for the AGGREGATE
+      verification step only, not for the per-step RFC text reproduction. The byte-exact claim
+      requires a clean-room Python implementation of RFC 9591 §4.2/§4.4/§5.2/§5.3 that takes the
+      RFC E.5 (group_secret_key, share_polynomial_coefficients, participant_shares, msg,
+      hiding_nonce_randomness, binding_nonce_randomness) and reproduces the RFC E.5 per-step
+      expected_outputs byte-exactly. If such a Python ref reproduces RFC E.5 byte-exactly, the
+      RFC KAT is independently grounded and the matrix is informative. If it diverges, the
+      ZcashFoundation/frost vectors.json is the de-facto reference and the byte-exact claim
+      collapses to 'ZcashFoundation/frost agrees with itself' (still useful, but much weaker).
+    specific_changes:
+      - "Create a new mission msn-2026-XXXX (or extend msn-2026-0013) with objective 'clean-room Python implementation of RFC 9591 §4.2/§4.4/§5.2/§5.3 for secp256k1_sha256 + ed25519_sha512, byte-exact reproduction of RFC 9591 Appendix E.5 per-step expected outputs from public inputs only'."
+      - "If the Python clean-room reproduces RFC E.5 byte-exactly: promote fnd-2026-0012 to supports with new evidence chain (RFC text → Python ref → byte-exact match against RFC E.5 expected_outputs → ZcashFoundation/frost agrees with same expected_outputs → cross-oracle confirmation)."
+      - "If the Python clean-room diverges from RFC E.5: revise primary_claim and report the divergence as a separate fnd-2026-XXXX finding ('RFC 9591 Appendix E.5 vectors are ZcashFoundation/frost-derived; independent reproduction requires regenerating KAT from clean-room reference')."
+  - id: adj-r13-3
+    summary: "Annotate the lineage overlap with the RFC 9591 final text."
+    rationale: >
+      The reproducer's note (rpr-2026-0012) states 'The KAT vectors committed in
+      crypto/frost-cross-impl/kat/rfc9591_appendix_e{1,5}_*.json are byte-exact copies of the KAT
+      vectors embedded in ZcashFoundation/frost's tests/helpers/vectors.json files. The
+      ZcashFoundation/frost KAT vectors are themselves byte-exact copies of the RFC 9591
+      Appendix E text (verified by the spec analyst's spc-2026-0003 normative extraction).'
+
+      This claim is FALSE for the per-step fields (see adj-r13-1). The reproducer's note
+      appears to have been written without actually diff'ing the per-step field values; only
+      the input-side fields (group_public_key, group_secret_key, msg, share_polynomial_coefficients,
+      participant_shares) match between RFC E.5 and vectors.json, while all randomness and
+      commitment-output fields diverge.
+
+      Additionally, RFC 9591's Acknowledgments section names 'the Zcash Foundation engineering
+      team' explicitly for their contributions. This means the ZcashFoundation KAT vectors are
+      almost certainly the source from which the RFC E.5 vectors were derived (or vice versa),
+      making the byte-exact match between ZcashFoundation/frost and the RFC a CONFIRMATION of
+      self-consistency, not an INDEPENDENT VERIFICATION.
+    specific_changes:
+      - "Update rpr-2026-0012 reproducibility_notes to reflect the empirical divergence in per-step fields between vectors.json and RFC 9591 Appendix E.5."
+      - "Add a 'lineage_origin' annotation per KAT field distinguishing 'common with RFC E.5' (inputs) from 'ZcashFoundation/frost-specific' (per-step outputs)."
+      - "Cite RFC 9591 Acknowledgments in the lineage note."
+  - id: adj-r13-4
+    summary: "Demote fnd-2026-0012 primary_claim from 'verified_conclusion' to a more conservative status pending adj-r13-1/2/3."
+    rationale: >
+      Per AGENTS.md 'Promotion to verified requires the deterministic pipeline (frontier.validate
+      + frontier.promotion) plus an independent review by a non-synthesizer role.' This review
+      (rev-2026-0013) is the independent non-synthesizer review, and it does not support
+      promotion. The evidence chain has three structural gaps: (a) the 'byte-exact RFC E.5'
+      claim is empirically false on the per-step fields, (b) the verification is single-impl
+      self-consistency (no independent oracle), (c) the verification is via the implementation's
+      own test (cargo test is the implementation's self-test, not an external oracle). Until
+      adj-r13-1/2/3 are satisfied, the primary claim should not have status 'verified_conclusion'.
+    specific_changes:
+      - "Set fnd-2026-0012.status to a conservative value (e.g., 'pending_independent_oracle' or 'claim_revised') until the clean-room Python reference is constructed and the cross-oracle verification is performed."
+      - "If the Python clean-room is constructed and reproduces RFC E.5 byte-exactly AND ZcashFoundation/frost's implementation reproduces the same expected_outputs byte-exactly via an independent harness (not cargo test), then promote to 'verified_conclusion' with the full cross-oracle evidence chain."
+  - id: adj-r13-5
+    summary: "Promote the secondary claim (implementation universe asymmetry) to a separate finding."
+    rationale: >
+      obs-2026-0038 and fnd-2026-0012 secondary_claim are independently sound: the FROST RFC 9591
+      implementation universe is genuinely smaller than the literature implies, with significant
+      implications for cross-impl security audits, deployment decisions, and formal-verification
+      bootstrapping. This is a separate, well-supported finding from the byte-exact RFC
+      conformance claim (which is partially weakened per adj-r13-1).
+    specific_changes:
+      - "Create fnd-2026-XXXX titled 'RFC 9591 implementation universe is significantly smaller than the literature implies (single-impl RFC 9591 cohort + pre-RFC paper baseline + spec-only with vectors)'. Link to obs-2026-0038 and imp-2026-0015/0016/0017. Status: 'verified_conclusion' (independent of the byte-exact claim, since the cohort enumeration is verifiable from GitHub repository enumeration alone)."
+  - id: adj-r13-6
+    summary: "Narrow the AGENTS.md 'verified_conclusion' promotion for positive single-impl claims."
+    rationale: >
+      AGENTS.md says: 'A finding cannot become verified without: experiment + observation +
+      reproducer + independent review (non-synthesizer role, adversarial pass) + verification
+      by deterministic means. Enforced by code, not honor system.'
+
+      The current fnd-2026-0012 evidence chain is experiment + observation + reproducer +
+      verification by deterministic means (cargo test). The independent review was originally
+      rev-2026-0012 (status 'open', verdict 'partial_support' for the original 3-impl design
+      before the cohort collapsed to 1-impl). Now rev-2026-0013 (this review) provides the
+      second independent review for the revised 1-impl positive claim.
+
+      However, the AGENTS.md promotion ladder is designed for findings with both (a) experiment
+      + observation + reproducer + verification, AND (b) adversarial independent review that
+      SUPPORTS the finding. This review (rev-2026-0013) does NOT support fnd-2026-0012 as
+      currently stated; it supports a REVISED narrower claim. Until the revisions in adj-r13-1
+      through adj-r13-5 are applied, the finding's status 'verified_conclusion' is premature.
+    specific_changes:
+      - "Until adj-r13-1 through adj-r13-5 are resolved, fnd-2026-0012 status should be 'pending_independent_oracle' (or equivalent), NOT 'verified_conclusion'."
+      - "The Frontier codebase (frontier.promotion) should NOT promote fnd-2026-0012 to 'verified_conclusion' without an independent cross-oracle verification."
+disproof_attempts:
+  - id: disproof-A
+    name: "KAT circularity: vectors.json does NOT contain RFC 9591 Appendix E.5 verbatim (per-step fields diverge)"
+    target_hypothesis: hyp-2026-0024 / fnd-2026-0012 primary_claim
+    method: >
+      Direct inspection of:
+      (1) https://raw.githubusercontent.com/ZcashFoundation/frost/0966bd1529aa062ad3b621af99e277f976b1c0f0/frost-secp256k1/tests/helpers/vectors.json
+      (2) https://www.rfc-editor.org/rfc/rfc9591.txt Appendix E.5
+      (3) https://www.rfc-editor.org/rfc/rfc9591#appendix-E.5
+
+      Compare byte-by-byte on every field. Identify which fields are common vs which diverge.
+
+      Common (input-side):
+      - group_secret_key = 0d004150d27c3bf2a42f312683d35fac7394b1e9e318249c1bfe7f0795a83114
+      - group_public_key = 02f37c34b66ced1fb51c34a90bdae006901f10625cc06c4f64663b0eae87d87b4f
+      - share_polynomial_coefficients[1] = fbf85eadae3058ea14f19148bb72b45e4399c0b16028acaf0395c9b03c823579
+      - participant_shares[1] = 08f89ffe80ac94dcb920c26f3f46140bfc7f95b493f8310f5fc1ea2b01f4254c
+      - participant_shares[2] = 04f0feac2edcedc6ce1253b7fab8c86b856a797f44d83d82a385554e6e401984
+      - participant_shares[3] = 00e95d59dd0d46b0e303e500b62b7ccb0e555d49f5b849f5e748c071da8c0dbc
+      - message = 74657374
+
+      Divergent (per-step fields):
+      - P1 hiding_nonce_randomness:  RFC E.5 = 7ea5ed09af19f6ff21040c07ec2d2adbd35b759da5a401d4c99dd26b82391cb2
+                                    vectors.json = bda8e748e599187762cff956f03dc6ea13fc8e04491a0427b7e6e78600f41c52
+      - P1 hiding_nonce:             RFC E.5 = 841d3a6450d7580b4da83c8e618414d0f024391f2aeb511d7579224420aa81f0
+                                    vectors.json = 09764379667f9a9fa61928947bd925a7f162b21886b750d3b11c226d16b32f58
+      - P1 hiding_nonce_commitment:  RFC E.5 = 03c699af97d26bb4d3f05232ec5e1938c12f1e6ae97643c8f8f11c9820303f1904
+                                    vectors.json = 0305e62a1d3f57a0b17ade569a3a4043e2a1fc3bd0b102614a8d8cc68e3322ad89
+      - P1 binding_nonce_commitment: RFC E.5 = 02fa2aaccd51b948c9dc1a325d77226e98a5a3fe65fe9ba213761a60123040a45e
+                                    vectors.json = 03b634c2aed7f85b8eec22e97e5f916ab43a3518821480e15da2af7cffcb060a30
+      - P1 binding_factor_input:     DIFFERENT in encoding (RFC E.5 ends with ...0e5d48010000...00000001;
+                                    vectors.json ends with ...ce6efac09a6513540fcfac8df6fa81b3f4d9ced4be2474894308232dc0be75dbf81f5a103579a8236310000000000000000000000000000000000000000000000000000000000000001)
+      - P1 binding_factor:           RFC E.5 = 3e08fe561e075c653cbfd46908a10e7637c70c74f0a77d5fd418d1a750c739ec6
+                                    vectors.json = 9bee5aef4012de4b94c9fc1a9a9572181079e293bf1d7545a5af0ef86f824a91
+      - P1 sig_share:                RFC E.5 = c4fce1775a1e141fb579944166eab0d65eefe7b98d480a569bbbfcb14f91c197
+                                    vectors.json = ca54b18d7449377cfa680760a5770b9e64e201f7ea36b068effeca5fce2155e5
+      - Final aggregate sig:         RFC E.5 = 0205b6d04d3774c8929413e3c76024d54149c372d57aae62574ed74319b5ea14d0c65dde8492a7471437e6c2fe3da49b90d23f642b5c6dbe7e36089f096dd97324
+                                    vectors.json = 024c1ad4e031872661fa6ebd05dfc7fb30db08b38d79f0edbc82051ae931381bc6a46881e25c7989d3816eae32074f1ab0d49ee908a59713ed5284c6bade7cfb02
+
+      (Note: the divergence pattern is consistent: same group_public_key + different
+      hiding_nonce_randomness → different hiding_nonce → different hiding_nonce_commitment →
+      different binding_factor_input → different binding_factor → different sig_share → different
+      aggregate sig. This is exactly what you would expect if the two vectors use different
+      nonce randomness inputs while otherwise following the same RFC 9591 protocol.)
+
+      Therefore the reproducer's claim that 'The ZcashFoundation/frost KAT vectors are
+      themselves byte-exact copies of the RFC 9591 Appendix E text' is FALSE on the per-step
+      fields. They use the same inputs (group_secret_key, group_public_key, share_polynomial,
+      shares, msg) but DIFFERENT randomness and therefore DIFFERENT per-step outputs.
+
+      Further inspection of vectors.rs (frost-core/src/tests/vectors.rs) confirms the test
+      uses the JSON's own hiding_nonce_randomness and binding_nonce_randomness to regenerate
+      nonces (via Nonce::nonce_generate_from_random_bytes), then asserts equality to the
+      JSON's own expected hiding_nonce, binding_nonce, hiding_nonce_commitment,
+      binding_nonce_commitment, binding_factor, and sig_share fields. The test does NOT take
+      any randomness from RFC 9591 Appendix E.5; it takes randomness from the JSON.
+    evidence:
+      - "vectors.json P1 hiding_nonce_commitment = 0305e62a1d3f57a0b17ade569a3a4043e2a1fc3bd0b102614a8d8cc68e3322ad89"
+      - "RFC 9591 E.5 P1 hiding_nonce_commitment = 03c699af97d26bb4d3f05232ec5e1938c12f1e6ae97643c8f8f11c9820303f1904"
+      - "vectors.rs::check_sign_with_test_vectors calls Nonce::nonce_generate_from_random_bytes(secret, &hiding_nonce_randomness) — uses JSON's randomness, not RFC's"
+      - "The reproducer rpr-2026-0012 reproducibility_notes erroneously claims byte-exact match on per-step fields; this is empirically false."
+    concrete_deduction: >
+      The ZcashFoundation/frost cargo test 'check_sign_with_test_vectors' is a self-test that
+      verifies the implementation reproduces its own pre-computed KAT (tests/helpers/vectors.json).
+      It does NOT verify that the implementation reproduces RFC 9591 Appendix E.5 per-step
+      outputs. The vectors.json uses different randomness from RFC E.5 and therefore has
+      different per-step outputs.
+
+      The fnd-2026-0012 primary claim 'byte-exact conformant with RFC 9591 Appendix E.5 KAT
+      vectors for both secp256k1_sha256 (Appendix E.5) and ed25519_sha512 (Appendix E.1)
+      parameter sets' is therefore OVERCLAIMED. What was actually verified is
+      'ZcashFoundation/frost's self-test reproduces its own tests/helpers/vectors.json KAT
+      deterministically on the pinned commit'.
+    verdict: >
+      Disproof A is CONCRETE and empirically established by direct file inspection. The KAT
+      vectors in vectors.json are NOT byte-exact copies of RFC 9591 Appendix E.5; they use the
+      same inputs but different randomness. The 'byte-exact conformant with RFC 9591 Appendix E.5'
+      half of the primary claim is FALSE as currently verified.
+
+  - id: disproof-B
+    name: "Lineage overlap: RFC 9591 Acknowledgments names Zcash Foundation explicitly; vectors.json was updated to match the RFC KAT."
+    target_hypothesis: hyp-2026-0024 (KAT legitimacy)
+    method: >
+      Search RFC 9591 Acknowledgments section and vectors.json git history.
+
+      (1) RFC 9591 Acknowledgments (verbatim from rfc9591.txt): 'This document was improved
+      based on input and contributions by the Zcash Foundation engineering team. In addition,
+      the authors of this document would like to thank Isis Lovecruft, Alden Torres, T. Wilson-
+      Brown, and Conrado Gouvea for their input and contributions.'
+
+      (2) Conrado Gouvea (conradoplg) is the Zcash Foundation engineer who authored PR #438
+      (commit 9413b49c05751a08ccf33b33d34cde6eeca9d7e8, 2023-08-14, PGP-signed):
+      'Update test vectors (#438) - update test vectors to final version (v1) and update
+      spec links'. This commit updated tests/helpers/vectors.json to align with the RFC
+      9591 final-text test vectors (group_public_key + group_secret_key + msg + share
+      polynomial) but kept the ZcashFoundation/frost-specific per-step randomness.
+
+      (3) Earlier commit 404cc361fd678feb29da8f13febf61afef4cd296 (2023-07-05 by dconnolly,
+      PGP-signed): 'Include the group public key in computing the binding factor (#410)'.
+      This is the PR that introduced the current KAT per-step values.
+
+      Combined: ZcashFoundation contributed significantly to RFC 9591 (acknowledged in
+      Acknowledgments), AND the vectors.json was last touched to align with RFC 9591 final
+      inputs. The RFC E.5 inputs (group_public_key, group_secret_key, share_polynomial,
+      shares, msg) are common with vectors.json BY DESIGN — they were coordinated between
+      ZcashFoundation and the RFC authors. This means:
+      - The byte-exact agreement on input fields is CIRCULAR by construction.
+      - The per-step outputs diverge because ZcashFoundation kept its own randomness for
+        the test fixture.
+      - The fact that the implementation correctly maps inputs → per-step outputs (using
+        ZcashFoundation's own randomness) does NOT prove it would correctly map RFC E.5's
+        different randomness → RFC E.5's different per-step outputs.
+    evidence:
+      - "RFC 9591.txt Acknowledgments section names Zcash Foundation engineering team and Conrado Gouvea (conradoplg) specifically."
+      - "commit 9413b49c05751a08ccf33b33d34cde6eeca9d7e8 by conradoplg, 2023-08-14, 'Update test vectors (#438) - update test vectors to final version (v1) and update spec links'"
+      - "commit 404cc361fd678feb29da8f13febf61afef4cd296 by dconnolly, 2023-07-05, 'Include the group public key in computing the binding factor (#410)'"
+    concrete_deduction: >
+      The ZcashFoundation/frost ↔ RFC 9591 Appendix E.5 byte-exact agreement on input fields is
+      CIRCULAR (both come from the same coordinated ZcashFoundation↔IETF source). The
+      per-step output agreement CANNOT be verified by the cargo test alone, because cargo test
+      exercises the implementation against vectors.json (ZcashFoundation's own randomness), not
+      against RFC E.5 (IETF's randomness). To verify byte-exact per-step agreement with RFC E.5
+      requires a SEPARATE test that takes RFC E.5's randomness as input and checks RFC E.5's
+      expected per-step outputs. No such test was run.
+    verdict: >
+      Disproof B is CONCRETE and empirically established. The RFC 9591 ↔ ZcashFoundation/frost
+      input agreement is CIRCULAR by construction (RFC Acknowledgments explicitly names
+      Zcash Foundation; commit history shows coordinated updates). The per-step agreement
+      CANNOT be verified by the current reproducer because cargo test uses vectors.json's
+      randomness, not RFC E.5's randomness.
+
+  - id: disproof-C
+    name: "Harness tautology: vectors.rs is a self-test, not an external oracle."
+    target_hypothesis: vrf-2026-0013 (cargo test is independent verification)
+    method: >
+      Read frost-core/src/tests/vectors.rs::check_sign_with_test_vectors source code. The
+      function:
+      (1) Parses vectors.json (the implementation's own test fixture).
+      (2) For each participant, computes Nonce::nonce_generate_from_random_bytes using
+          the JSON's hiding_nonce_randomness and binding_nonce_randomness.
+      (3) Asserts the regenerated hiding_nonce == JSON's hiding_nonce.
+      (4) Asserts the regenerated binding_nonce == JSON's binding_nonce.
+      (5) Asserts NonceCommitment::from(hiding_nonce) == JSON's hiding_nonce_commitment.
+      (6) Asserts NonceCommitment::from(binding_nonce) == JSON's binding_nonce_commitment.
+      (7) Calls signing_package.binding_factor_preimages(&verifying_key, &[]) and asserts
+          the preimage == JSON's binding_factor_input.
+      (8) Calls compute_binding_factor_list and asserts the binding factor == JSON's
+          binding_factor.
+      (9) Calls frost::round2::sign and asserts the generated signature share == JSON's
+          sig_share.
+      (10) Calls frost::aggregate and asserts the group_signature.serialize() == JSON's
+           signature_bytes (final_output.sig).
+
+      All 'expected' values come from vectors.json. All 'actual' values are generated by the
+      implementation under test from vectors.json's randomness inputs. There is NO external
+      oracle; the test compares the implementation's outputs to the implementation's pre-computed
+      expected values. This is a TAUTOLOGY: the implementation passes the test if and only if it
+      faithfully executes the RFC 9591 protocol with vectors.json's specific randomness. This
+      demonstrates self-consistency, not RFC 9591 conformance.
+    evidence:
+      - "frost-core/src/tests/vectors.rs lines 234-285 (per-step nonce regeneration and assertion)"
+      - "frost-core/src/tests/vectors.rs lines 287-300 (binding factor preimage + factor assertion)"
+      - "frost-core/src/tests/vectors.rs lines 302-330 (round2 sign + aggregate)"
+      - "All 'expected' values are JSON.parse(include_str!('../tests/helpers/vectors.json'))"
+    concrete_deduction: >
+      The cargo test is a self-test that verifies the implementation's pipeline is internally
+      consistent with the JSON fixture. It does not compare the implementation's outputs against
+      any external, independently-derived reference. The verification (vrf-2026-0013) calling
+      'cargo test --release --test integration_tests check_sign_with_test_vectors' twice and
+      observing identical pass output is a reproducibility check on a self-test, not an
+      independent verification against RFC 9591 Appendix E.5.
+    verdict: >
+      Disproof C is CONCRETE and empirically established. The verification method is
+      tautological (self-test of the implementation's own pre-computed expected values).
+
+  - id: disproof-D
+    name: "Single-impl structural limit: AGENTS.md requires independent verification, but only 1-impl positive verification is available."
+    target_hypothesis: AGENTS.md verification ladder application
+    method: >
+      Per AGENTS.md: 'A finding cannot become verified without: experiment + observation +
+      reproducer + independent review (non-synthesizer role, adversarial pass) + verification
+      by deterministic means.' The original mission design (3-impl matrix) provided independent
+      verification via cross-impl byte-exact agreement. The implementation-archaeologist's
+      correction (zksecurity/frost does not exist; ZcashFoundation/frost-rs folded into
+      ZcashFoundation/frost in v2.0.0; ZcashFoundation/frost-dkg does not exist as separate
+      repo) reduced the cohort to 1-impl.
+
+      Taurushq-io/frost-ed25519 implements the paper version (Komlo et al. ePrint 2020/852),
+      NOT RFC 9591. Its binding-factor derivation uses paper preimage
+      (msg || pk_group || commitment_list || id) rather than RFC 9591 §4.2 domain-separated
+      preimage (pk_group || H4(msg) || H5(commitments) || additional_prefix || id). This is
+      a CONFORMANCE-EQUIVALENT divergence, NOT a bug, but it means taurushq CANNOT verify
+      RFC 9591 byte-exact (its binding_factor won't match RFC E.5's binding_factor).
+
+      BlockstreamResearch/bip-frost-dkg is a Python reference for the FROST-DKG BIP (DKG
+      ceremony only), NOT for FROST signing. The repo contains /python/ and /vectors/
+      directories but does NOT implement the round1/round2 signing half of FROST (which is
+      what RFC 9591 §5 specifies). So it cannot verify RFC 9591 signing either.
+
+      Conclusion: there is exactly ONE RFC 9591-conformant implementation with KAT coverage
+      in the universe as of 2026-08-31. AGENTS.md promotion ladder for positive conformance
+      findings typically relies on multi-impl evidence (e.g., 'two independent implementations
+      agree → likely correct'). Single-impl positive verification is structurally weaker.
+    evidence:
+      - "AGENTS.md: 'A finding cannot become verified without: experiment + observation + reproducer + independent review (non-synthesizer role, adversarial pass) + verification by deterministic means.'"
+      - "imp-2026-0017 internal_implementation_choices.binding_factor_hash explicitly notes the paper-vs-RFC divergence."
+      - "imp-2026-0016 scope_note explicitly states the repo is DKG-only; signing is out of scope."
+      - "obs-2026-0038 implementation_universe_analysis confirms 1 truly RFC 9591-conformant implementation."
+    concrete_deduction: >
+      The current positive evidence chain is structurally single-impl. AGENTS.md requires
+      independent review SUPPORTS the finding for promotion; this review (rev-2026-0013)
+      gives partial_support with substantial revisions required, NOT supports. Per AGENTS.md
+      promotion rules, the finding should not be 'verified_conclusion' without addressing
+      the structural limit (e.g., by adding a clean-room Python reference per adj-r13-2).
+    verdict: >
+      Disproof D is CONCRETE. The structural limit (single-impl) is acknowledged in the
+      evidence chain itself (obs-2026-0038, fnd-2026-0012 notes). AGENTS.md's promotion rules
+      are not satisfied by a single-impl self-test.
+
+  - id: disproof-E
+    name: "RFC 9591 Appendix E.5 KAT ambiguity: KAT exercises both inputs and per-step outputs, but only some fields are 'verified'."
+    target_hypothesis: fnd-2026-0012 claim of 'every per-step output byte-exact match'
+    method: >
+      RFC 9591 Appendix E.5 provides:
+      - 5 input fields (group_secret_key, group_public_key, share_polynomial_coefficients[1],
+        participant_shares[1,2,3], message)
+      - Per-participant per-step outputs (P1 and P3 only):
+        - hiding_nonce_randomness
+        - binding_nonce_randomness
+        - hiding_nonce
+        - binding_nonce
+        - hiding_nonce_commitment
+        - binding_nonce_commitment
+        - binding_factor_input
+        - binding_factor
+      - Per-participant sig_share (P1 and P3)
+      - Final aggregate (R, z)
+
+      Total: 2 participants × 8 round-one outputs + 2 sig_shares + 1 aggregate = 19 per-step
+      values to verify per ciphersuite (× 2 ciphersuites = 38 per-step values total).
+
+      Of these, the reproducer (rpr-2026-0012) and verification (vrf-2026-0013) claim
+      'every per-step output byte-exact match' based on cargo test passing. But the cargo
+      test:
+      (a) Does NOT compare ZcashFoundation/frost's outputs against RFC E.5 expected_outputs.
+          It compares ZcashFoundation/frost's outputs against vectors.json's expected_outputs
+          (which differ from RFC E.5's expected_outputs per disproof-A).
+      (b) Does NOT exercise the implementation pipeline against independently-fixed randomness
+          (vectors.json's randomness is hardcoded; the test merely regenerates from it).
+
+      Therefore the 'per-step byte-exact' claim is overclaimed: it is per-step self-consistent
+      against vectors.json, not per-step byte-exact against RFC E.5.
+    evidence:
+      - "RFC 9591 Appendix E.5 lists ~19 per-step output values per ciphersuite"
+      - "vectors.rs uses JSON's pre-computed randomness to regenerate per-step values; assertion is to JSON's pre-computed expected values"
+    concrete_deduction: >
+      The claim 'every per-step output byte-exact match' is overclaimed. The actually-verified
+      claim is 'every per-step output byte-exact match against vectors.json expected values',
+      which is self-consistency, not RFC 9591 conformance.
+    verdict: >
+      Disproof E is CONCRETE and empirically established. The 'per-step byte-exact' claim is
+      overclaimed because the verification is against vectors.json, not RFC 9591 Appendix E.5.
+
+  - id: disproof-F
+    name: "Reproducibility of the experiment: rpr-2026-0012 is re-runnable but not cross-platform verified."
+    target_hypothesis: rpr-2026-0012 reproducibility
+    method: >
+      Inspect rpr-2026-0012's isolation and environment sections:
+      - host: Windows 11 Pro (10.0.26100.0), ARM64
+      - rustc: 1.96.0 (30a34c682 2026-05-25)
+      - cargo: 1.96.0
+      - workspace_root: R:\\frost-cross-impl-scratch\\zcash-foundation-frost
+      - pinned_commit: 0966bd1529aa062ad3b621af99e277f976b1c0f0
+
+      The reproducer is documented as 'fully re-runnable from committed sources' but only
+      documented as having been executed ONCE (rpr-2026-0012 itself), with the verification
+      (vrf-2026-0013) being a second run. There is NO documented cross-platform reproducibility
+      (e.g., no Linux x86_64 run, no macOS run, no GHA runner run).
+
+      Additionally, the reproducibility_notes mention 'The KAT vectors committed in
+      crypto/frost-cross-impl/kat/rfc9591_appendix_e{1,5}_*.json are byte-exact copies of
+      the KAT vectors embedded in ZcashFoundation/frost's tests/helpers/vectors.json files.'
+      This claim is FALSE per disproof-A: the per-step fields differ.
+
+      The reproducer is technically re-runnable (cargo test on a pinned commit), but the
+      underlying claim of 'byte-exact against RFC 9591 Appendix E.5' is not actually verified
+      by the reproducer, so even successful re-runs would only reproduce the self-consistency
+      result, not an RFC 9591 conformance result.
+    evidence:
+      - "rpr-2026-0012 environment: single Windows 11 ARM64 host; no documented cross-platform runs"
+      - "vrf-2026-0013 method: cargo test re-executed twice on the same host with the same toolchain"
+      - "Reproducibility_notes incorrectly claim byte-exact match between vectors.json and RFC E.5 (per disproof-A)"
+    concrete_deduction: >
+      The reproducer is re-runnable as a self-test, but the underlying 'RFC 9591 Appendix E.5
+      byte-exact' claim is not actually verified by the reproducer. Even successful cross-
+      platform re-runs would only confirm that ZcashFoundation/frost's self-test reproduces
+      vectors.json deterministically across platforms, not that ZcashFoundation/frost is
+      RFC 9591 Appendix E.5 byte-exact conformant.
+    verdict: >
+      Disproof F is CONCRETE. Reproducibility is technically achievable, but the reproducer
+      does not actually verify the claimed RFC 9591 Appendix E.5 byte-exact conformance
+      (only the self-consistency of vectors.json reproduction). Reproducing the self-consistency
+      result is not the same as reproducing the RFC 9591 conformance result.
+counter_hypotheses:
+  - id: counter-H1
+    name: "Byte-exact KAT agreement is circular (ZcashFoundation/frost ↔ RFC 9591)"
+    statement: >
+      The byte-exact agreement between ZcashFoundation/frost and RFC 9591 Appendix E.5 KAT
+      vectors is CIRCULAR because both come from the same coordinated ZcashFoundation↔IETF
+      source. The headline finding is confirmatory of self-consistency, not independent
+      verification.
+    falsifiable: >
+      Falsifiable if (a) a third independent reference implementation (e.g., clean-room Python)
+      reproduces RFC 9591 Appendix E.5 per-step outputs byte-exactly using only RFC text +
+      RFC E.5 public inputs, AND (b) ZcashFoundation/frost's implementation produces the same
+      per-step outputs byte-exactly when run against the third reference's independently-
+      regenerated inputs.
+    status: >
+      EMPIRICALLY UNFALSIFIED by current evidence. Per disproof-A, the vectors.json per-step
+      fields differ from RFC E.5; per disproof-B, the lineage overlap is established via
+      RFC 9591 Acknowledgments naming Zcash Foundation. The hypothesis stands: the current
+      evidence does NOT establish that the byte-exact agreement is independently grounded.
+
+  - id: counter-H2
+    name: "RFC 9591 Appendix E.5 KAT does not directly verify per-step outputs in the implementation's self-test"
+    statement: >
+      The implementation's self-test (cargo test check_sign_with_test_vectors) verifies
+      self-consistency against vectors.json (with its own randomness), NOT RFC 9591
+      Appendix E.5 (with RFC's randomness). The per-step byte-exact claim against RFC E.5
+      is therefore overclaimed.
+    falsifiable: >
+      Falsifiable if (a) the reproducer is revised to run a SEPARATE test that feeds RFC E.5's
+      (hiding_nonce_randomness, binding_nonce_randomness) into ZcashFoundation/frost's
+      pipeline and asserts the outputs match RFC E.5's expected_outputs byte-exactly. If that
+      separate test passes, the per-step claim is grounded in RFC E.5; if it fails, the
+      per-step claim is overclaimed.
+    status: >
+      EMPIRICALLY SUPPORTED by disproof-A and disproof-E. The hypothesis stands.
+
+  - id: counter-H3
+    name: "Taurushq-io/frost-ed25519 paper-baseline classification is incorrect; it may be RFC 9591 conformant in some subset"
+    statement: >
+      Taurushq-io/frost-ed25519 may be RFC 9591 conformant in some subset of operations
+      (e.g., the signature_share aggregation and the final Ed25519 verification, both of
+      which use RFC 8032 / standard Ed25519 verification), even though its binding-factor
+      derivation diverges.
+    falsifiable: >
+      Falsifiable if taurushq-io/frost-ed25519's test suite explicitly verifies RFC 9591
+      KAT vectors. Inspection of test/keygen_test.go and test/sign_test.go would resolve this.
+    status: >
+      PARTIALLY FALSIFIED. Inspection of taurushq-io/frost-ed25519's test directory shows
+      only generic keygen_test.go and sign_test.go (paper-version smoke tests); there is no
+      RFC 9591 Appendix A/E KAT testing. So taurushq is correctly classified as pre-RFC
+      paper-baseline for the binding-factor surface. However, the aggregate (R, z) might
+      still verify under RFC 8032 even if the binding factor derivation diverged (because
+      Ed25519 verification is RFC 8032-based regardless). A clean-room RFC 9591 ↔ taurushq
+      comparison on the aggregate (R, z) only (not on per-step binding_factor) could be
+      informative. As of this review, the taurushq classification is sound.
+
+  - id: counter-H4
+    name: "BlockstreamResearch/bip-frost-dkg 'no executable Rust crate' claim is incorrect"
+    statement: >
+      The claim that BlockstreamResearch/bip-frost-dkg has 'no executable Rust crate' is
+      incorrect; there is an executable reference implementation somewhere in the repo.
+    falsifiable: >
+      Falsifiable if the repo can be cargo test'd. Inspection of the repo (GitHub API
+      contents listing) shows /python/ directory with Python implementation; no Cargo.toml
+      or Rust source at HEAD.
+    status: >
+      FALSIFIED. The repo has a Python reference implementation (not Rust) per the
+      contents listing. The implementation-archaeologist's correction ('no executable Rust
+      crate in the current repo') is correct for Rust but the repo does have a Python
+      reference implementation. This refines but does not refute the secondary claim:
+      BlockstreamResearch/bip-frost-dkg provides a Python DKG reference + test vectors,
+      NOT a Rust signing crate.
+overall_verdict: >
+  PARTIAL SUPPORT.
+
+  The secondary claim (FROST RFC 9591 implementation universe is significantly smaller
+  than the literature implies; exactly 1 truly RFC 9591-conformant implementation + 1 pre-RFC
+  paper baseline + 1 spec-with-vectors Python reference) is SOUND and well-supported by
+  GitHub repository enumeration alone. This claim deserves independent finding promotion
+  (adj-r13-5).
+
+  The primary claim (ZcashFoundation/frost byte-exact conformant with RFC 9591 Appendix E.5
+  KAT vectors) is PARTIALLY OVERCLAIMED. The evidence chain has three structural gaps:
+  (1) The vectors.json per-step fields do NOT match RFC 9591 Appendix E.5 verbatim; only
+      the input-side fields are common. The reproducer's note (rpr-2026-0012) incorrectly
+      claims 'byte-exact copies of the RFC 9591 Appendix E text' on the per-step fields.
+  (2) The verification method (cargo test check_sign_with_test_vectors) is a self-test
+      that regenerates nonces from vectors.json's randomness and asserts equality to
+      vectors.json's expected values. It is NOT an independent oracle verification against
+      RFC 9591 Appendix E.5.
+  (3) RFC 9591 Acknowledgments names 'the Zcash Foundation engineering team' explicitly,
+      establishing a lineage overlap between RFC 9591 KAT vectors and ZcashFoundation/frost
+      KAT vectors. The byte-exact agreement on input fields is CIRCULAR by construction.
+
+  The actually-verified claim is: 'ZcashFoundation/frost's self-test
+  check_sign_with_test_vectors reproduces its own tests/helpers/vectors.json KAT
+  deterministically on the pinned commit 0966bd1529aa062ad3b621af99e277f976b1c0f0 across
+  both secp256k1 and ed25519 ciphersuites.' This is weaker than 'byte-exact conformant
+  with RFC 9591 Appendix E.5'.
+
+  Per AGENTS.md promotion rules ('A finding cannot become verified without: experiment +
+  observation + reproducer + independent review + verification by deterministic means'), this
+  independent review gives PARTIAL SUPPORT pending the revisions in adj-r13-1 through adj-r13-5.
+
+  The strongest follow-up action is adj-r13-2: build a clean-room Python implementation of
+  RFC 9591 §4.2/§4.4/§5.2/§5.3 for secp256k1_sha256 + ed25519_sha512, feed it the public RFC
+  E.5 (group_secret_key, share_polynomial_coefficients, participant_shares, msg,
+  hiding_nonce_randomness, binding_nonce_randomness), and check byte-exact match against RFC
+  E.5's expected per-step outputs. If the Python ref matches RFC E.5 byte-exactly, the RFC
+  KAT is independently grounded, and the cross-oracle claim (Python ref + ZcashFoundation/frost
+  both reproduce RFC E.5) becomes evidence-grade. If the Python ref diverges from RFC E.5,
+  the headline finding should be revised to 'ZcashFoundation/frost's self-test reproduces its
+  own pre-computed KAT; no independent RFC 9591 conformance claim'.
+
+  Anti-slop note: this review does NOT recommend abandoning the mission. The cohort
+  discovery (secondary claim) is genuinely valuable. The byte-exact question (primary claim)
+  can be resolved with a moderate-compute follow-up (a few hundred lines of Python + a
+  few hours of computation). The follow-up is bounded and informative either way.
+
+disagreement_notes: >
+  This review disagrees with fnd-2026-0012's status='verified_conclusion' for the primary
+  claim. The claim is well-motivated but empirically overclaimed on three points
+  (per-step fields divergence, harness tautology, lineage overlap). The secondary claim
+  (implementation universe asymmetry) is sound.
+
+  The previous adversarial review (rev-2026-0012) raised the KAT circularity concern in
+  disproof-A and disproof-B at a design level; this review (rev-2026-0013) raises it at
+  an empirical level by directly comparing the actual vectors.json contents against the
+  actual RFC 9591 Appendix E.5 contents and demonstrating divergence on the per-step fields.
+  This is a STRONGER form of the same concern.
+
+  AGENTS.md requires independent review SUPPORTS the finding for promotion to
+  'verified_conclusion'. This review does NOT support the primary claim as currently
+  stated; it supports a REVISED narrower claim. Until adj-r13-1/2/3 are applied, the
+  primary claim's 'verified_conclusion' status is premature per AGENTS.md promotion rules.
+
+limitations_acknowledged: |
+  - Disproof-A is based on direct file inspection of vectors.json and RFC 9591 Appendix E.5.
+    It is a deterministic byte-comparison and is therefore conclusive. However, the divergence
+    may be intentional (ZcashFoundation/frost's test fixture predates RFC 9591's final KAT
+    and was intentionally kept on its own randomness for regression testing). The point is
+    that the KAT used in the cargo test is NOT the RFC 9591 Appendix E.5 KAT, regardless of
+    intent.
+  - Disproof-C (harness tautology) is structural: vectors.rs::check_sign_with_test_vectors
+    is by construction a self-test. There is no external oracle in the test itself.
+    Whether this constitutes 'verification by deterministic means' per AGENTS.md depends
+    on interpretation. The Frontier evidence chain (experiment + observation + reproducer
+    + verification) treats it as verification, but the verification is tautological in
+    the sense that it only verifies self-consistency with the implementation's own
+    pre-computed expected values.
+  - The Python clean-room follow-up (adj-r13-2) was not executed in this review; it is
+    recommended as a bounded follow-up mission. The review's conclusions hold without
+    the Python ref (the primary claim is overclaimed regardless); the Python ref would
+    either confirm or revise the conclusions.
+  - Taurushq and BlockstreamResearch inspections are at HEAD/master only; commit history
+    was not exhaustively examined. Taurushq has been unmaintained since 2021-07-07, so
+    commit history beyond HEAD is moot for current RFC 9591 conformance claims.
+follow_up:
+  - "Build a clean-room Python reference implementation of RFC 9591 §4.2/§4.4/§5.2/§5.3 for secp256k1_sha256 + ed25519_sha512 (use the existing BlockstreamResearch/bip-frost-dkg vectors/ directory as a source of cross-check data). Reproduce RFC E.5 + E.1 per-step expected outputs byte-exactly from public RFC E.5 + E.1 inputs. If successful, this becomes the independent oracle."
+  - "If the Python ref matches RFC E.5 byte-exactly: revise rpr-2026-0012 to (a) replace 'cargo test' with a Python-ref-driven check, (b) report both ZcashFoundation/frost's match against RFC E.5 AND Python ref's match against RFC E.5 as independent oracles."
+  - "If the Python ref diverges from RFC E.5: report the divergence as fnd-2026-XXXX ('RFC 9591 Appendix E.5 vectors are ZcashFoundation/frost-derived; the ZcashFoundation/frost KAT is the de-facto reference, not an independent oracle')."
+  - "Create fnd-2026-XXXX (per adj-r13-5) for the secondary claim: 'RFC 9591 implementation universe is significantly smaller than the literature implies (1 truly conformant + 1 pre-RFC paper baseline + 1 spec-with-vectors Python reference)'. Status: 'verified_conclusion' (verifiable from GitHub repository enumeration alone)."
+  - "Examine the other RFC 9591 ciphersuite test vectors (E.2 Ed448, E.3 ristretto255, E.4 P-256) for similar self-test-only patterns; same disproof may apply to frost-ed448, frost-ristretto255, frost-p256."
+  - "Coordinate with IETF cfrg WG: if the per-step vectors.json ↔ RFC E.5 divergence is confirmed to be intentional (ZcashFoundation kept its own randomness), this is a documentation note for future I-D test vectors (i.e., explicitly state whether the RFC KAT was generated FROM the ZcashFoundation/frost test fixture or independently)."
+  - "Coordinate with ZcashFoundation: if ZcashFoundation is willing to add a test case that uses RFC E.5's randomness and asserts RFC E.5's expected outputs byte-exactly (in addition to the existing vectors.json test), this would close the cross-oracle gap and provide the missing independent verification."

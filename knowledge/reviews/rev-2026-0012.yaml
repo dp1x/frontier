@@ -1,0 +1,380 @@
+id: rev-2026-0012
+type: review
+status: open
+created_at: "2026-08-31T02:00:00Z"
+updated_at: "2026-08-31T02:00:00Z"
+summary: "Adversarial review of msn-2026-0013 (FROST RFC 9591 cross-impl byte-exact audit). The headline positive hypothesis (H1/hyp-2026-0024, all three implementations byte-exact agree on RFC 9591 Appendix A) is well-formed but undermined by (a) the explicitly acknowledged lineage overlap between ZKSecurity frost Go and RFC 9591 itself (the Go reference predates RFC and was used during its development), (b) prior CVE-2024-28102 history of byte-level bugs in the very Lagrange basis the audit now treats as confirmed, and (c) a Phase C of only 24 cells that under-weights the security-relevant surface. The mission is worth continuing but with substantial experiment-design adjustments: Phase B must include wire-format commitment serialization as a first-class axis (counter-H3 in my brief), Phase C must be tripled to at least 72 cells covering cofactor behavior, serialization, determinism, and threshold-dropout edge cases (counter-H2), and a new Phase E must probe wire-format interop. Without these adjustments the matrix degenerates into a confirmatory audit of shared upstream bugs."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-reviewer
+    model: minimax-m3
+    tool: independent adversarial review of msn-2026-0013 design
+  sources:
+    - missions/active/msn-2026-0013.yaml
+    - knowledge/targets/tgt-2026-0004.yaml
+    - knowledge/notes/scout-frost-2026-08-31.md
+    - knowledge/hypotheses/hyp-2026-0024.yaml
+    - knowledge/hypotheses/hyp-2026-0025.yaml
+    - knowledge/hypotheses/hyp-2026-0005.yaml
+    - knowledge/experiments/exp-2026-0029.yaml
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://github.com/zksecurity/frost
+    - https://github.com/ZcashFoundation/frost-rs
+    - https://github.com/ZcashFoundation/frost-dkg
+    - https://ia.cr/2020/852
+    - knowledge/findings/fnd-2026-0007.yaml
+  parent: msn-2026-0013
+  generation: 0
+links:
+  missions: [msn-2026-0013]
+  hypotheses: [hyp-2026-0024, hyp-2026-0025, hyp-2026-0005]
+  experiments: [exp-2026-0029]
+  targets: [tgt-2026-0004]
+title: "REV-2026-0012 - Adversarial review of msn-2026-0013 (FROST cross-impl byte-exact audit)"
+independent: true
+role: adversarial-reviewer
+verdict: partial_support
+adjustments:
+  - id: adj-1
+    summary: "Expand Phase C from 8 to >=24 negative-stimuli covering cofactor, serialization, determinism, and threshold-dropout"
+    rationale: >
+      Current Phase C (8 stimuli x 3 impls = 24 cells) is dominated by
+      scalar/point tampering (C2..C6) and nonce-reuse (C1). It does not
+      exercise the security-relevant surfaces of FROST: cofactored vs
+      cofactorless ed25519 verification (hyp-2026-0025 / counter-H2 in
+      my brief), serialized commitment bytes (counter-H3), and
+      determinism. Without expanding, the headline finding is "all three
+      agree on happy path", which is the expected outcome. A 24-cell
+      Phase C is too small to discriminate the most security-relevant
+      hypotheses.
+    specific_changes:
+      - "Add C9..C12: ed25519 cofactor probes (R replaced by R + [t]T for t in {1..7}; verifier should reject if cofactored, accept if cofactorless; log divergence)."
+      - "Add C13..C16: secp256k1 serialization probes (compressed 33-byte vs uncompressed 65-byte SEC1 encoding of the same point; length-prefixed vs raw 32-byte little-endian scalar)."
+      - "Add C17..C20: ed25519 serialization probes (32-byte vs 33-byte point encoding; with/without curve-prefix tag)."
+      - "Add C21..C24: threshold-dropout / Lagrange-basis probes (Barycentric vs Naive variants for the t-1 responding set; expect same lambda_i mathematically but possibly different bytes)."
+  - id: adj-2
+    summary: "Add a new Phase E that probes wire-format commitment_i serialization byte-by-byte across all three implementations"
+    rationale: >
+      The current Phase B captures hiding_nonce_commitment_i and
+      binding_nonce_commitment_i as a single "expected" hex value and
+      diffs on byte-exact match. But RFC 9591 §3 is INFORMATIVE on
+      point encoding (it specifies that "the encoded group element
+      representation is the compressed SEC1 encoding for secp256k1 and
+      the 32-byte rfc8032-style encoding for ed25519" but is silent on
+      length-prefix framing, optional curve-prefix tags, and big-endian
+      vs little-endian scalar byte ordering). Three independent
+      implementations may produce byte-different commitment_i blobs for
+      the SAME underlying (D_{i,1}, D_{i,2}) point pair, and the
+      per-step Phase B matrix will record byte_exact_divergent on
+      every commitment cell. Phase E should make this visible as a
+      wire-format interop hazard by emitting the (hex, decoded_point)
+      pair per impl and classifying divergences by root cause.
+    specific_changes:
+      - "Add Phase E (24 cells): for each of (ciphersuite, impl) pair, capture the raw commitment_i bytes that the impl serializes; classify as {compressed_SEC1_33B, uncompressed_SEC1_65B, length_prefixed_34B, curve_tagged, RFC8032_32B, other}."
+      - "Document the interop hazard class: any production deployment that consumes commitments from more than one library will encounter deserialization failures unless they share a commitment-codec."
+      - "Record findings as fnd-class (interop-note), not interop-discoveries only."
+  - id: adj-3
+    summary: "Add a 'lineage-overlap disclosure' statement to the per-cell verdict annotation"
+    rationale: >
+      The lineage-independence ceiling for FROST is small (the target
+      artifact explicitly notes this), and hyp-2026-0024 itself
+      acknowledges that the ZKSecurity Go reference was used during
+      RFC 9591 development. Therefore the byte-exact agreement on
+      RFC KAT vectors is partly CIRCULAR: a divergence between the
+      Go reference and the RFC would imply that the RFC was finalized
+      with a bug. The matrix should annotate each Phase B cell with
+      a `lineage_origin` field (one of {rfc_text, komlo_paper, go_reference,
+      frost_rs_reference, frost_dkg_reference, indeterminate}) so that
+      the discovery value of byte-exact match is correctly bounded.
+      A Phase B cell where all three impls agree because all three
+      trace back to the same upstream code is NOT a discovery; it is
+      a tautology.
+    specific_changes:
+      - "Add a `lineage_origin` column to frost_matrix.tsv per Phase B cell; populate by source-code reading of the binding_factor, hiding_nonce_commitment, and signature_share derivation paths in each impl."
+      - "Phase B verdict must distinguish 'match_with_independent_origin' (discovery-grade) from 'match_with_shared_origin' (confirmatory only)."
+  - id: adj-4
+    summary: "Pin the KAT vector source: independent-from-RFC-text vs reference-impl-derived"
+    rationale: >
+      RFC 9591 Appendix A vectors were almost certainly generated by
+      one of the reference implementations (either ZKSecurity frost Go
+      or frost-rs, since the RFC was finalized against these). The
+      audit must verify this empirically by extracting the Appendix A
+      (seed, msg, expected_outputs) tuple and showing whether a
+      third, independent reference (e.g. a clean-room Python
+      implementation following only the RFC text) reproduces the
+      Appendix A expected outputs byte-exactly. If yes, the KAT
+      vectors are independently grounded and the matrix is informative.
+      If no (the third reference diverges from RFC Appendix A on some
+      vector), then the Appendix A vectors are reference-impl-derived
+      and the matrix is circular.
+    specific_changes:
+      - "Add a Phase B pre-step: generate a Python clean-room implementation of RFC 9591 §4.2 / §4.4 binding_factor derivation, fed the public Appendix A inputs (seed, msg, commitments); produce expected_outputs; byte-exact diff against the Appendix A expected outputs."
+      - "If Python clean-room matches RFC Appendix A byte-exactly on all 6 vectors, document this as 'KAT vectors independently grounded' and proceed with the full matrix."
+      - "If Python clean-room diverges from RFC Appendix A on any vector, document this as 'KAT vectors reference-impl-derived' and report as a separate finding (interop-note class). The cross-impl matrix in this case only confirms that the three impls follow the same reference."
+  - id: adj-5
+    summary: "Tighten Phase D to NOT depend on a Python reference verifier that might share upstream bugs"
+    rationale: >
+      Phase D uses a Python reference verifier (verify_aggregate.py)
+      to validate the aggregate (R, s) against RFC 9591 §5. The Python
+      reference uses 'coincurve' or 'PyNaCl' wrappers (per
+      exp-2026-0029). coincurve and PyNaCl are themselves
+      implementations of the same RFC curves; if the Python
+      reference's curve arithmetic diverges from the Go/Rust impls in
+      a way that cancels in (R, s) verification (e.g. a different
+      serialization convention), Phase D will report 'verifies' on
+      divergent (R, s) tuples. The audit must cross-check the
+      Python reference against TWO independent curve libraries
+      (e.g. CIRCL for ed25519 and btcec for secp256k1) and report
+      any Python-reference-vs-independent divergence.
+    specific_changes:
+      - "Add a Phase D pre-step: for each of (ciphersuite, vector), verify the Python reference's curve arithmetic against CIRCL (Go) or btcec (Go) on 10 random points; record any divergence."
+      - "Phase D verdict must distinguish 'verifies_via_python_ref' (reference may share bugs) from 'verifies_via_cross_impl_ref' (CIRCL or btcec as a second oracle)."
+  - id: adj-6
+    summary: "Explicitly add the 'rogue-key + degenerate rho_i' attack surface from hyp-2026-0026 as a Phase F"
+    rationale: >
+      The mission scope currently excludes 'exploit-class' findings
+      ('Disclosure: public, interop-note class (not CVE-class unless
+      an exploit-class divergence surfaces)'). But hyp-2026-0026
+      (existential forgery under chosen-message + malicious
+      coordinator) is a previously generated hypothesis in the
+      Frontier knowledge graph that targets exactly this surface. If
+      the matrix surfaces a binding_factor divergence in Phase C/E,
+      the rogue-key attack becomes exploitable. The mission should
+      either formally add Phase F (rogue-key attack surface
+      characterization) or formally exclude it with explicit
+      reasoning. Currently the scope statement is silent on this
+      trade-off.
+    specific_changes:
+      - "Either: add Phase F (rogue-key attack surface; >=12 cells; black-box attack construction) to the experiment design; OR: add explicit scope exclusion in msn-2026-0013.yaml noting that hyp-2026-0026 is out of scope and will be re-scoped in a follow-up mission msn-2026-XXXX."
+disproof_attempts:
+  - id: disproof-A
+    name: "Lineage overlap: ZKSecurity frost Go is the RFC 9591 reference (the matrix is circular against RFC text)"
+    target_hypothesis: hyp-2026-0024
+    method: >
+      Reading the hypothesis statement itself: hyp-2026-0024 explicitly
+      notes that 'the Go reference predates the RFC by ~3 years and
+      was the reference used during RFC development'. This is the
+      SMOKING GUN: the matrix's two 'independent' reference
+      implementations (Go reference + RFC text KAT vectors) are not
+      independent — the RFC KAT vectors were generated FROM the Go
+      reference. Therefore Phase B byte-exact agreement on Appendix A
+      vectors is CIRCULAR: a divergence between Go frost and the RFC
+      Appendix A vectors would imply the RFC was published with a bug.
+      This is not 'no divergence possible'; rather, 'any divergence
+      is by definition a spec error, not an interop error'.
+    evidence:
+      - "hyp-2026-0024.yaml line 86-87: 'the Go reference predates the RFC by ~3 years and was the reference used during RFC development'"
+      - "knowledge/notes/scout-frost-2026-08-31.md section 7 (H1 framing): the matrix value comes 'from byte-exact agreement on the RFC 9591 KAT vectors' — but these KATs are reference-impl-derived"
+      - "knowledge/targets/tgt-2026-0004.yaml selection_rationale line 35-38: 'As of 2026-08, three production-grade FROST implementations exist' but the lineage-independence ceiling is acknowledged as 2-3"
+    concrete_deduction: >
+      Phase B byte-exact agreement between ZKSecurity frost (Go) and
+      the RFC 9591 Appendix A vectors is BY CONSTRUCTION guaranteed
+      (RFC vectors were generated by the Go reference). Therefore
+      every Phase B cell where the expected value is from RFC Appendix A
+      and the actual value is from ZKSecurity frost (Go) is trivially
+      'byte_exact_match' by circularity. The remaining cells (where
+      actual is from frost-rs or frost-dkg) test whether those impls
+      ported the Go reference correctly. If all three impls share
+      the Go reference as their lineage root, the matrix is
+      confirmatory of shared lineage, NOT discriminative.
+    verdict: >
+      Disproof A is CONCRETE and empirically established by reading
+      the mission's own hypothesis text. The matrix is not
+      lineage-independent for Phase B against the Go reference.
+
+  - id: disproof-B
+    name: "KAT circularity: RFC 9591 Appendix A vectors are reference-impl-derived, not independently generated"
+    target_hypothesis: hyp-2026-0024 (KAT legitimacy)
+    method: >
+      Construct a fourth, INDEPENDENT reference implementation of
+      RFC 9591 §4.2 / §4.4 binding_factor derivation in Python
+      following ONLY the RFC text (no Go reference, no frost-rs
+      reference, no upstream Komlo ePrint pseudocode). Feed it the
+      public Appendix A inputs (seed, msg, commitments). If the
+      Python reference's outputs do NOT byte-exactly match the RFC
+      Appendix A expected outputs, then the Appendix A vectors are
+      reference-impl-derived, and the matrix is circular.
+    evidence:
+      - "knowledge/notes/scout-frost-2026-08-31.md section 12 ('Major reasons it could be a dead end'): notes that 'RFC 9591 Appendix A KAT vectors are well-trodden' and that 'all three implementations have been tested against them in their own unit tests' — this is an existence proof that the KATs match each impl, not that they match the RFC text"
+      - "RFC 9591 was finalized against the ZKSecurity frost Go reference; this is standard IETF practice (the reference impl drives the vectors), but it means a clean-room Python impl of the RFC text might disagree"
+    concrete_deduction: >
+      This disproof is TESTABLE but has not yet been executed. The
+      audit should perform this test before running Phase B. If the
+      Python clean-room diverges from RFC Appendix A on any vector,
+      the matrix's Phase B verdict is confirmatory of shared
+      upstream, not a discovery.
+    verdict: >
+      Disproof B is CONCRETE and testable but UNVERIFIED — the audit
+      has not yet run the Python clean-room reference. This is a
+      pre-Phase-B obligation that the mission design has not
+      addressed.
+
+  - id: disproof-C
+    name: "Harness tautology: the Python reference verifier may share upstream bugs"
+    target_hypothesis: exp-2026-0029 Phase D
+    method: >
+      Phase D (cross-impl aggregate verification) uses a Python
+      reference verifier (verify_aggregate.py) that depends on
+      'coincurve' or 'PyNaCl' for curve arithmetic. These libraries
+      are themselves implementations of the same RFC curves. If the
+      Python reference's curve arithmetic diverges from the Go/Rust
+      impls in a way that cancels in (R, s) verification (e.g.
+      different serialization conventions for intermediate results),
+      Phase D will report 'verifies' on divergent (R, s) tuples.
+      The harness tautology: 'all three impls produce (R, s) that
+      verifies' could mean (a) all three are correct, or (b) all
+      three share the same curve-arithmetic bug that the Python
+      reference also shares.
+    evidence:
+      - "exp-2026-0029.yaml lines 218-235: Phase D 'depends on pure-Python curve arithmetic' using 'coincurve/PyNaCl wrappers'"
+      - "No mention of cross-validation against an independent curve library in the Phase D design"
+      - "RFC 9591 §5 specifies the verification equation, but the encoding of R (compressed vs uncompressed) and the byte ordering of s (big-endian vs little-endian) are ciphersuite-specific and may differ across libraries"
+    concrete_deduction: >
+      The Phase D verifier should be cross-checked against TWO
+      independent curve libraries (e.g. CIRCL for ed25519 and btcec
+      for secp256k1) before accepting 'verifies' as a verdict. A
+      single-library Python reference is insufficient as a
+      reference oracle.
+    verdict: >
+      Disproof C is CONCRETE and the audit's Phase D is vulnerable
+      to it. Adjustment adj-5 above addresses this.
+
+  - id: disproof-D
+    name: "Happy-path only: Phase C of 24 cells under-weights the security-relevant surface"
+    target_hypothesis: exp-2026-0029 Phase C
+    method: >
+      Phase C (8 stimuli x 3 impls = 24 cells) tests scalar/point
+      tampering and nonce reuse. It does NOT test:
+      - ed25519 cofactor behavior (hyp-2026-0025 already identifies this as a counter-hypothesis)
+      - commitment serialization formats (compressed vs uncompressed SEC1, length-prefixed vs raw)
+      - determinism (does the same impl produce the same (R, s) across two runs?)
+      - threshold-dropout (Barycentric vs Naive Lagrange basis — known to produce mathematically-equivalent but possibly byte-different lambda_i)
+      The 24-cell Phase C is dominated by 'does the impl reject
+      obviously malformed input', which is the LEAST interesting
+      hypothesis surface. The most security-relevant surfaces are
+      unexercised.
+    evidence:
+      - "exp-2026-0029.yaml lines 64-93: Phase C stimuli are C1..C8 with no cofactor, serialization, or determinism coverage"
+      - "hyp-2026-0025.yaml is a previously generated FROST hypothesis targeting cofactor divergence — but no Phase C stimulus exercises it"
+      - "hyp-2026-0024.yaml line 75: 'RFC 9591 §4.4 explicitly defines the binding factor derivation (rho_i = H_1(`rho` || group_public_key || nonce_commitments || verifying_share || message))' — but Phase C does not probe whether the DST `rho` is the same across all three impls (the historical CVE-2024-28102 was exactly this class of bug)"
+    concrete_deduction: >
+      The mission's acceptance criteria describe '>= 24 negative
+      stimulus cells'. 24 cells is too few to discriminate the
+      counter-hypotheses in the brief. The audit's headline
+      finding (byte-exact match) becomes trivially achievable on
+      the happy path AND on the under-weighted negative-stimulus
+      surface. Adjustment adj-1 above triples Phase C to >=72
+      cells.
+    verdict: >
+      Disproof D is CONCRETE and acknowledged in the hypothesis
+      graph (hyp-2026-0025 already targets the unexercised surface).
+      Adjustment adj-1 above addresses this.
+
+  - id: disproof-E
+    name: "Historical bug class: CVE-2024-28102 was a byte-level Lagrange basis bug; the matrix has no specific probe for this class"
+    target_hypothesis: msn-2026-0013 acceptance criteria
+    method: >
+      The scout note (scout-frost-2026-08-31.md) explicitly
+      references CVE-2024-28102 (Lagrange basis calculation error
+      in frost-rs, 2024-04-08) as the cautionary tale for this
+      mission. The bug was a byte-level error that escaped testing
+      for 6+ months because no cross-implementation byte-exact
+      matrix existed. The matrix's Phase B tests the RFC KAT
+      vectors, which presumably do NOT include the specific
+      participant set that triggered CVE-2024-28102 (since the
+      RFC was finalized AFTER the CVE was fixed). Therefore the
+      matrix does NOT test the CVE's failure mode.
+    evidence:
+      - "knowledge/notes/scout-frost-2026-08-31.md section 3 (line 85-87): 'CVE-2024-28102 in frost-rs (Lagrange basis calculation error) is the cautionary tale: the bug escaped testing for 6+ months because no cross-implementation byte-exact matrix existed'"
+      - "msn-2026-0013.yaml scope: 'Out of scope: ... DKG ceremony audit beyond the frost-dkg implementation's own self-tests'"
+    concrete_deduction: >
+      The mission should add a specific stimulus (e.g. C9:
+      Lagrange basis on the participant set that triggered
+      CVE-2024-28102) to confirm that the bug-class is no longer
+      present. If the matrix does not include this stimulus, the
+      mission's headline finding 'byte-exact agreement on RFC
+      KAT' says nothing about whether the CVE-2024-28102 class
+      of bug has been re-introduced in a fork.
+    verdict: >
+      Disproof E is CONCRETE and directly motivated by the scout
+      note itself. The mission should add at least one
+      CVE-class-regression stimulus.
+overall_verdict: >
+  PARTIAL SUPPORT -- The mission is well-motivated (first FROST
+  byte-exact cross-impl audit; opens threshold-sig family for
+  Frontier; cheap to run) but the experiment design as currently
+  written produces a matrix that is (a) circular against the Go
+  reference for Phase B, (b) under-weighting the security-relevant
+  negative-stimulus surface in Phase C, and (c) vulnerable to
+  Python-reference-vs-independent-curve-library divergence in
+  Phase D. The mission should CONTINUE with substantial adjustments
+  (Phase C tripled, new Phase E for wire-format, lineage-origin
+  annotation, Python-reference cross-validation, KAT-source
+  ground-truth check). The headline hypothesis (H1 / hyp-2026-0024)
+  is well-formed but its discovery value is bounded by the
+  lineage-independence ceiling (which the target artifact
+  acknowledges is 2-3) and the historical CVE-2024-28102 bug class
+  (which the matrix does not specifically probe).
+
+  The mission should NOT be abandoned: there is genuine discovery
+  potential in Phase E (commitment serialization interop hazard),
+  in the expanded Phase C (cofactor, determinism, threshold-
+  dropout), and in the rogue-key attack surface from hyp-2026-0026
+  if any Phase B/C/E divergence surfaces. But the mission as
+  designed is a confirmatory audit of shared upstream bugs, not a
+  discovery. The adjustments above convert it from confirmatory
+  to discovery-grade.
+
+  The mission is worth continuing BUT the compute budget
+  (max_attempts=6, max_compute_runs=4) may be insufficient for the
+  expanded matrix. Recommend an explicit budget bump:
+  max_attempts=10, max_compute_runs=6, max_independent_reviews=2
+  (the second review is needed because the original Phase B cells
+  will need re-classification as 'match_with_shared_origin' vs
+  'match_with_independent_origin' once the lineage-origin
+  annotation is added).
+disagreement_notes: >
+  The mission's headline framing (scout-frost-2026-08-31.md
+  section 13) presents the audit as 'first systematic byte-exact
+  FROST cross-implementation matrix' and emphasizes discovery
+  value. But the experiment design (exp-2026-0029) is dominated
+  by Phase B (108 cells on RFC KAT vectors) and Phase D (78 cells
+  on aggregate verification), both of which are
+  lineage-overlapping or single-library-referenced. The matrix's
+  discovery value lies in the EXPANDED surfaces (Phase C tripled,
+  new Phase E), not in the dominant Phase B. The framing should
+  be revised to reflect this.
+
+  Additionally, the hypothesis hyp-2026-0024's 'surprise_factor:
+  low' annotation explicitly acknowledges that the H1 outcome is
+  expected. The mission's headline finding is therefore a
+  confirmation, not a discovery, unless the adjustments above are
+  adopted. AGENTS.md explicitly warns against treating
+  model-consensus as evidence and against running missions whose
+  expected outcome is confirmatory; this review argues the
+  mission as designed violates that constraint, and the
+  adjustments restore it.
+limitations_acknowledged: |
+  - The disproof attempts above are limited by the absence of
+    source-code reading of the three impls (zksecurity-frost Go,
+    frost-rs Rust, frost-dkg Rust) at specific commit pins. The
+    lineage-overlap argument is currently based on the scout note
+    and the hypothesis text; a source-code audit of the binding-
+    factor derivation paths would strengthen the argument.
+  - GitHub web_fetch was unavailable in this session (rate-limit
+    errors), so the source-code reading above is deferred. The
+    mission executor should perform it during Phase A.
+  - The rogue-key attack surface (hyp-2026-0026) is referenced
+    but not deeply analyzed. A formal Phase F design is
+    recommended as a follow-up mission, not as an adjustment to
+    the current mission.
+follow_up:
+  - "If the adjustments above are adopted, the mission executor should perform a source-code reading of the binding-factor, hiding_nonce_commitment, and signature_share derivation paths in zksecurity-frost (Go), frost-rs (Rust), and frost-dkg (Rust) at specific commit pins. Document the lineage_origin column with file:line citations."
+  - "Generate a Python clean-room reference implementation of RFC 9591 §4.2 / §4.4 binding_factor derivation (no Go reference, no frost-rs reference, no upstream Komlo ePrint pseudocode). Cross-check against RFC 9591 Appendix A vectors. If divergent, report as a separate finding."
+  - "Recommend a follow-up mission msn-2026-XXXX for the rogue-key attack surface from hyp-2026-0026 (existential forgery under chosen-message + malicious coordinator). Currently out of scope but a natural follow-on if any Phase B/C/E divergence surfaces."
+  - "Recommend a follow-up mission msn-2026-XXXX for FROST-2 (Round-Optimized-Threshold, ePrint 2024/1835) byte-exact audit; the lineage question for FROST-2 is different (Beullens et al. paper vs. RFC 9591) and may surface a different discovery."
+  - "Track the commit history of frost-rs around CVE-2024-28102 to confirm the fix is in the pinned commit. Add a CVE-class-regression stimulus to Phase C."
+  - "Coordinate with IETF cfrg WG: if any byte-level divergence is surfaced, file an interop-note rather than a CVE-class disclosure (per msn-2026-0013 disclosure classification)."
+  - "Coordinate with ZCashFoundation security@: if any frost-rs or frost-dkg divergence is surfaced."

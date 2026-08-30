@@ -1,0 +1,177 @@
+id: spc-2026-0003
+type: specification
+status: current
+created_at: '2026-08-31T00:30:00Z'
+updated_at: '2026-08-31T01:00:00Z'
+summary: RFC 9591 - FROST (Flexible Round-Optimized Schnorr Threshold) for Two-Round Schnorr Signatures. IRTF CFRG informational, June 2024.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: specification-analyst
+    model: minimax-m3
+    tool: web_fetch (https://www.rfc-editor.org/rfc/rfc9591) + manual curation
+  sources:
+  - https://www.rfc-editor.org/rfc/rfc9591
+  - https://datatracker.ietf.org/info/rfc9591
+  - https://ia.cr/2020/852
+  - knowledge/notes/scout-frost-2026-08-31.md
+  - knowledge/targets/tgt-2026-0004.yaml
+  - missions/active/msn-2026-0013.yaml
+  parent: null
+  generation: 0
+links:
+  targets:
+  - tgt-2026-0004
+  implementations: []
+  hypotheses: []
+title: FROST (RFC 9591) - Flexible Round-Optimized Schnorr Threshold Signatures
+specifications:
+- id: spc-rfc9591
+  url: https://www.rfc-editor.org/rfc/rfc9591
+  title: The Flexible Round-Optimized Schnorr Threshold (FROST) Protocol for Two-Round Schnorr Signatures
+  status: informational (IRTF CFRG, June 2024)
+normative_extractions: "    normative_clauses:\n      - section: \"3.1\"\n        text: \"Prime-order group abstraction G with operations (Order, Identity, RandomScalar, ScalarMult, ScalarBaseMult, SerializeElement,\
+  \ DeserializeElement, SerializeScalar, DeserializeScalar). DeserializeElement MUST fail if the result is the identity element; ciphersuite-specific input validation steps are specified in §6. (https://www.rfc-editor.org/rfc/rfc9591#section-3.1)\"\
+  \n      - section: \"3.2\"\n        text: \"Cryptographic hash function H (random-oracle model). Distinct domain-separated hashes H1, H2, H3 map byte strings to Scalars; H4, H5 are H with distinct domain\
+  \ separators. Ciphersuite-specific instantiation in §6. (https://www.rfc-editor.org/rfc/rfc9591#section-3.2)\"\n      - section: \"4.1\"\n        text: \"nonce_generate(secret): random_bytes = random_bytes(32);\
+  \ secret_enc = G.SerializeScalar(secret); return H3(random_bytes || secret_enc). Fresh 32-byte CSPRNG sample ensures nonce-reuse probability ≤ 2^-128 up to 2^64 signings per participant. (https://www.rfc-editor.org/rfc/rfc9591#section-4.1)\"\
+  \n      - section: \"4.2\"\n        text: \"derive_interpolating_value(L, x_i): returns numerator/denominator over the x-coordinates L of the threshold subgroup, omitting x_i. Errors 'invalid parameters'\
+  \ if x_i not in L or any x_j repeats in L. (https://www.rfc-editor.org/rfc/rfc9591#section-4.2)\"\n      - section: \"4.3\"\n        text: \"encode_group_commitment_list(commitment_list): for each (i,\
+  \ hiding_nonce_commitment, binding_nonce_commitment), append SerializeScalar(i) || SerializeElement(hiding_nonce_commitment) || SerializeElement(binding_nonce_commitment) (no length-prefix; ciphersuite-fixed\
+  \ widths). List MUST be sorted ascending by identifier. participants_from_commitment_list extracts identifiers; binding_factor_for_participant linear-scans a (id, factor) list. (https://www.rfc-editor.org/rfc/rfc9591#section-4.3)\"\
+  \n      - section: \"4.4\"\n        text: \"compute_binding_factors(group_public_key, commitment_list, msg): group_public_key_enc = SerializeElement(group_public_key); msg_hash = H4(msg); encoded_commitment_hash\
+  \ = H5(encode_group_commitment_list(commitment_list)); rho_input_prefix = group_public_key_enc || msg_hash || encoded_commitment_hash; for each (identifier, _, _) in commitment_list, binding_factor =\
+  \ H1(rho_input_prefix || SerializeScalar(identifier)). Returns list of (identifier, binding_factor). commitment_list MUST be sorted ascending by identifier. (https://www.rfc-editor.org/rfc/rfc9591#section-4.4)\"\
+  \n      - section: \"4.5\"\n        text: \"compute_group_commitment(commitment_list, binding_factor_list): group_commitment = Identity(); for each (id, hiding_nonce_commitment, binding_nonce_commitment),\
+  \ bf = binding_factor_for_participant(binding_factor_list, id); binding_nonce = ScalarMult(binding_nonce_commitment, bf); group_commitment += hiding_nonce_commitment + binding_nonce. Naive O(N) algorithm;\
+  \ multi-exp optimization NOT RECOMMENDED. (https://www.rfc-editor.org/rfc/rfc9591#section-4.5)\"\n      - section: \"4.6\"\n        text: \"compute_challenge(group_commitment, group_public_key, msg):\
+  \ challenge_input = SerializeElement(group_commitment) || SerializeElement(group_public_key) || msg; challenge = H2(challenge_input). The raw msg is appended (NOT H4(msg) here); FROST does NOT pre-hash\
+  \ messages. (https://www.rfc-editor.org/rfc/rfc9591#section-4.6)\"\n      - section: \"5.1\"\n        text: \"commit(sk_i): hiding_nonce = nonce_generate(sk_i); binding_nonce = nonce_generate(sk_i); hiding_nonce_commitment\
+  \ = ScalarBaseMult(hiding_nonce); binding_nonce_commitment = ScalarBaseMult(binding_nonce); returns (nonces, comms). The two nonce_generate invocations MUST use distinct fresh randomness. The nonce pair\
+  \ MUST NOT be used in more than one sign() invocation. (https://www.rfc-editor.org/rfc/rfc9591#section-5.1)\"\n      - section: \"5.2\"\n        text: \"sign(identifier, sk_i, group_public_key, nonce_i,\
+  \ msg, commitment_list): binding_factor_list = compute_binding_factors(...); binding_factor = binding_factor_for_participant(...); group_commitment = compute_group_commitment(...); participant_list =\
+  \ participants_from_commitment_list(...); lambda_i = derive_interpolating_value(participant_list, identifier); challenge = compute_challenge(group_commitment, group_public_key, msg); (hiding_nonce, binding_nonce)\
+  \ = nonce_i; sig_share = hiding_nonce + (binding_nonce * binding_factor) + (lambda_i * sk_i * challenge). Returns sig_share. Each participant MUST delete nonce+commitment after sign and MUST NOT reuse.\
+  \ Input validation: commitment_list MUST be deserialized per DeserializeElement; abort on failure; verify own identifier+commitments appear in commitment_list. (https://www.rfc-editor.org/rfc/rfc9591#section-5.2)\"\
+  \n      - section: \"5.3\"\n        text: \"aggregate(commitment_list, msg, group_public_key, sig_shares): recompute binding_factor_list and group_commitment identically to §5.2; z = 0; for each z_i in\
+  \ sig_shares, z = z + z_i; return (group_commitment, z). The Coordinator MUST validate each sig_share via DeserializeScalar before aggregating (abort on failure). Coordinator SHOULD verify (R=group_commitment,\
+  \ z) under group_public_key before publishing. MAY verify each share individually via verify_signature_share (defined in §5.3) to identify misbehaving participants. (https://www.rfc-editor.org/rfc/rfc9591#section-5.3)\"\
+  \n      - section: \"5.4\"\n        text: \"Identifiable Abort: FROST does not provide robustness; all participants must complete honestly for a valid signature. Coordinator SHOULD abort on invalid output.\
+  \ Identifying misbehaving participants: use verify_signature_share. Mechanism for acting on misbehaving participants is out of scope. (https://www.rfc-editor.org/rfc/rfc9591#section-5.4)\"\n      - section:\
+  \ \"6.1\"\n        text: \"FROST(Ed25519, SHA-512). contextString = 'FROST-ED25519-SHA512-v1'. Group: edwards25519, Ne=32, Ns=32. Order = l = 2^252 + 27742317777372353535851937790883648493. H=SHA-512.\
+  \ H1(m) = H('FROST-ED25519-SHA512-v1' || 'rho' || m) mod l (little-endian reduction). H2(m) = H(m) mod l (NO context separator - RFC 8032 compatibility). H3(m) = H('FROST-ED25519-SHA512-v1' || 'nonce'\
+  \ || m) mod l. H4(m) = H('FROST-ED25519-SHA512-v1' || 'msg' || m). H5(m) = H('FROST-ED25519-SHA512-v1' || 'com' || m). SerializeScalar outputs little-endian 32 bytes with top three bits set to zero (top-bit\
+  \ mask). DeserializeElement validates not identity AND in prime-order subgroup (cofactored check via n*P = I). Verification: per RFC 8032 §5.1.7 with MUST-check cofactored equation [8][z]B = [8]R + [8][c]PK.\
+  \ (https://www.rfc-editor.org/rfc/rfc9591#section-6.1)\"\n      - section: \"6.2\"\n        text: \"FROST(ristretto255, SHA-512). contextString = 'FROST-RISTRETTO255-SHA512-v1'. Group: ristretto255, Ne=32,\
+  \ Ns=32. Order = l (same as Ed25519). H=SHA-512. H1(m) = H(contextString || 'rho' || m) mapped to Scalar per RFC 9496 §4.4. H2(m) = H(contextString || 'chal' || m) mapped to Scalar per RFC 9496 §4.4.\
+  \ H3(m) = H(contextString || 'nonce' || m). H4(m) = H(contextString || 'msg' || m). H5(m) = H(contextString || 'com' || m). Signature verification per Appendix B (prime_order_verify). (https://www.rfc-editor.org/rfc/rfc9591#section-6.2)\"\
+  \n      - section: \"6.3\"\n        text: \"FROST(Ed448, SHAKE256). contextString = 'FROST-ED448-SHAKE256-v1'. Group: edwards448, Ne=57, Ns=57. Order = 2^446 - 13818066809895115352007386748515426880336692474882178609894547503885.\
+  \ H=SHAKE256 114 bytes. H1(m), H3(m), H4(m), H5(m) follow contextString||'rho'/'nonce'/'msg'/'com' pattern. H2(m) = H('SigEd448' || 0x00 || 0x00 || m) mod order (RFC 8032 compatibility; omits contextString).\
+  \ Verification per RFC 8032 §5.2.7 with cofactored equation [4][z]B = [4]R + [4][c]PK. (https://www.rfc-editor.org/rfc/rfc9591#section-6.3)\"\n      - section: \"6.4\"\n        text: \"FROST(P-256, SHA-256).\
+  \ contextString = 'FROST-P256-SHA256-v1'. Group: P-256 (secp256r1), Ne=33, Ns=32. Order = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551. H=SHA-256. H1, H2, H3 = hash_to_field(m, 1)\
+  \ (RFC 9380 §5.2) using expand_message_xmd with SHA-256, DST = contextString || 'rho' / 'chal' / 'nonce' respectively, F = Scalar field, p = G.Order(), m=1, L=48. H4(m) = H(contextString || 'msg' || m).\
+  \ H5(m) = H(contextString || 'com' || m). Verification per Appendix B. (https://www.rfc-editor.org/rfc/rfc9591#section-6.4)\"\n      - section: \"6.5\"\n        text: \"FROST(secp256k1, SHA-256). contextString\
+  \ = 'FROST-secp256k1-SHA256-v1'. Group: secp256k1, Ne=33, Ns=32. Order = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141. H=SHA-256. H1, H2, H3 = hash_to_field(m, 1) using expand_message_xmd\
+  \ with SHA-256, DST = contextString || 'rho' / 'chal' / 'nonce' respectively, F = Scalar field, p = G.Order(), m=1, L=48. H4(m) = H(contextString || 'msg' || m). H5(m) = H(contextString || 'com' || m).\
+  \ Verification per Appendix B (prime_order_verify). (https://www.rfc-editor.org/rfc/rfc9591#section-6.5)\"\n      - section: \"6.6\"\n        text: \"Ciphersuite requirements: (1) H1/H2/H3 outputs close\
+  \ to uniform; (2) all hash functions MUST be domain-separated with per-suite contextString EXCEPT Ed25519 H2 (compat with RFC 8032); (3) prime-order group, Deserialize* functions MUST output members of\
+  \ their respective sets or fail; (4) canonical signature encoding explicitly specified. (https://www.rfc-editor.org/rfc/rfc9591#section-6.6)\"\n      - section: \"7.1\"\n        text: \"Side-channel mitigations:\
+  \ ScalarMult, ScalarBaseMult, SerializeScalar, DeserializeScalar SHOULD be constant-time. (https://www.rfc-editor.org/rfc/rfc9591#section-7.1)\"\n      - section: \"7.3\"\n        text: \"Nonce Reuse\
+  \ Attacks: random_bytes in nonce_generate MUST be sampled uniformly at random; the Coordinator MAY further hedge by tracking participant nonce commitments per group key. (https://www.rfc-editor.org/rfc/rfc9591#section-7.3)\"\
+  \n      - section: \"7.4\"\n        text: \"Protocol Failures: implementations MUST abort on verification check failure or transport failure; otherwise behavior unspecified. (https://www.rfc-editor.org/rfc/rfc9591#section-7.4)\"\
+  \n      - section: \"7.5\"\n        text: \"Coordinator-less variant: each participant performs commit() and broadcasts commitment; in round 2 each participant performs sign() and broadcasts sig_share;\
+  \ each participant runs verify_signature_share then aggregate directly. (https://www.rfc-editor.org/rfc/rfc9591#section-7.5)\"\n      - section: \"7.6\"\n        text: \"Input Message Hashing: FROST signatures\
+  \ do NOT pre-hash message inputs; if an application pre-hashes, it MUST use a collision-resistant hash and SHOULD use a prefix different from H4 (e.g., H(contextString || 'Quux-pre-hash' || m)). (https://www.rfc-editor.org/rfc/rfc9591#section-7.6)\"\
+  \n      - section: \"7.7\"\n        text: \"Input Message Validation: RECOMMENDED that applications validate input messages so participants do not act as signing oracles for arbitrary messages (e.g.,\
+  \ syntactically-valid transactions). (https://www.rfc-editor.org/rfc/rfc9591#section-7.7)\"\n      - section: \"Appendix A\"\n        text: \"Canonical signature encoding: struct { opaque R_encoded[Ne];\
+  \ opaque z_encoded[Ns]; } Signature, where R_encoded = SerializeElement(R), z_encoded = SerializeScalar(z). (https://www.rfc-editor.org/rfc/rfc9591#appendix-A)\"\n      - section: \"Appendix B\"\n   \
+  \     text: \"prime_order_sign(msg, sk): r = RandomScalar(); R = ScalarBaseMult(r); PK = ScalarBaseMult(sk); c = H2(SerializeElement(R) || SerializeElement(PK) || msg); z = r + c*sk; return (R, z). prime_order_verify(msg,\
+  \ sig=(R,z), PK): c = H2(SerializeElement(R) || SerializeElement(PK) || msg); l = ScalarBaseMult(z); r = R + ScalarMult(PK, c); return l == r. Note: assumes R and PK already validated as prime-order group\
+  \ members. (https://www.rfc-editor.org/rfc/rfc9591#appendix-B)\"\n      - section: \"Appendix E\"\n        text: \"Test vectors are PUBLIC and contained verbatim in the RFC text (NOT in external files).\
+  \ Five vectors, one per ciphersuite: E.1 FROST(Ed25519, SHA-512), E.2 FROST(Ed448, SHAKE256), E.3 FROST(ristretto255, SHA-512), E.4 FROST(P-256, SHA-256), E.5 FROST(secp256k1, SHA-256). All vectors use\
+  \ MAX_PARTICIPANTS=3, MIN_PARTICIPANTS=2, NUM_PARTICIPANTS=2, participant_list={1,3}, message=hex 74657374 (ASCII 'test'). Per-vector outputs include: per-participant hiding_nonce_randomness, binding_nonce_randomness,\
+  \ hiding_nonce, binding_nonce, hiding_nonce_commitment, binding_nonce_commitment, binding_factor_input (rho_input_prefix || SerializeScalar(id)), binding_factor; per-participant sig_share; aggregate sig=(R_encoded\
+  \ || z_encoded). (https://www.rfc-editor.org/rfc/rfc9591#appendix-E)\"\n      - section: \"Appendix E.5\"\n        text: \"FROST(secp256k1, SHA-256) KAT (verbatim hex): group_secret_key=0d004150d27c3bf2a42f312683d35fac7394b1e9e318249c1bfe7f0795a83114;\
+  \ group_public_key=02f37c34b66ced1fb51c34a90bdae006901f10625cc06c4f64663b0eae87d87b4f; message=74657374; share_polynomial_coefficients[1]=fbf85eadae3058ea14f19148bb72b45e4399c0b16028acaf0395c9b03c823579;\
+  \ P1 share=08f89ffe80ac94dcb920c26f3f46140bfc7f95b493f8310f5fc1ea2b01f4254c; P2 share=04f0feac2edcedc6ce1253b7fab8c86b856a797f44d83d82a385554e6e401984; P3 share=00e95d59dd0d46b0e303e500b62b7ccb0e555d49f5b849f5e748c071da8c0dbc.\
+  \ P1 round-one: hiding_nonce_randomness=7ea5ed09af19f6ff21040c07ec2d2adbd35b759da5a401d4c99dd26b82391cb2, binding_nonce_randomness=47acab018f116020c10cb9b9abdc7ac10aae1b48ca6e36dc15acb6ec9be5cdc5, hiding_nonce=841d3a6450d7580b4da83c8e618414d0f024391f2aeb511d7579224420aa81f0,\
+  \ binding_nonce=8d2624f532af631377f33cf44b5ac5f849067cae2eacb88680a31e77c79b5a80, hiding_nonce_commitment=03c699af97d26bb4d3f05232ec5e1938c12f1e6ae97643c8f8f11c9820303f1904, binding_nonce_commitment=02fa2aaccd51b948c9dc1a325d77226e98a5a3fe65fe9ba213761a60123040a45e,\
+  \ binding_factor=3e08fe561e075c653cbfd46908a10e7637c70c74f0a77d5fd418d1a750c739ec6. P3 round-one: hiding_nonce_randomness=e6cc56ccbd0502b3f6f831d91e2ebd01c4de0479e0191b66895a4ffd9b68d544, binding_nonce_randomness=7203d55eb82a5ca0d7d83674541ab55f6e76f1b85391d2c13706a89a064fd5b9,\
+  \ hiding_nonce=2b19b13f193f4ce83a399362a90cdc1e0ddcd83e57089a7af0bdca71d47869b2, binding_nonce=7a443bde83dc63ef52dda354005225ba0e553243402a4705ce28ffaafe0f5b98, hiding_nonce_commitment=03077507ba327fc074d2793955ef3410ee3f03b82b4cdc2370f71d865beb926ef6,\
+  \ binding_nonce_commitment=02ad53031ddfbbacfc5fbda3d3b0c2445c8e3e99cbc4ca2db2aa283fa68525b135, binding_factor=93f79041bb3fd266105be251adaeb5fd7f8b104fb554a4ba9a0becea48ddbfd7. P1 sig_share=c4fce1775a1e141fb579944166eab0d65eefe7b98d480a569bbbfcb14f91c197;\
+  \ P3 sig_share=0160fd0d388932f4826d2ebcd6b9eaba734f7c71cf25b4279a4ca2581e47b18d. Aggregate sig: R_encoded=0205b6d04d3774c8929413e3c76024d54149c372d57aae62574ed74319b5ea14d0 (33 bytes, compressed SEC1),\
+  \ z_encoded=c65dde8492a7471437e6c2fe3da49b90d23f642b5c6dbe7e36089f096dd97324 (32 bytes little-endian). (https://www.rfc-editor.org/rfc/rfc9591#appendix-E.5)\"\n      - section: \"Appendix E.1\"\n    \
+  \    text: \"FROST(Ed25519, SHA-512) KAT (verbatim hex): group_secret_key=7b1c33d3f5291d85de664833beb1ad469f7fb6025a0ec78b3a790c6e13a98304; group_public_key=15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673;\
+  \ message=74657374; share_polynomial_coefficients[1]=178199860edd8c62f5212ee91eff1295d0d670ab4ed4506866bae57e7030b204; P1 share=929dcc590407aae7d388761cddb0c0db6f5627aea8e217f4a033f2ec83d93509; P2 share=a91e66e012e4364ac9aaa405fcafd370402d9859f7b6685c07eed76bf409e80d;\
+  \ P3 share=d3cb090a075eb154e82fdb4b3cb507f110040905468bb9c46da8bdea643a9a02. P1 hiding_nonce_commitment=b5aa8ab305882a6fc69cbee9327e5a45e54c08af61ae77cb8207be3d2ce13de3; P1 binding_nonce_commitment=67e98ab55aa310c3120418e5050c9cf76cf387cb20ac9e4b6fdb6f82a469f932;\
+  \ P1 binding_factor=f2cb9d7dd9beff688da6fcc83fa89046b3479417f47f55600b106760eb3b5603; P3 hiding_nonce_commitment=cfbdb165bd8aad6eb79deb8d287bcc0ab6658ae57fdcc98ed12c0669e90aec91; P3 binding_nonce_commitment=7487bc41a6e712eea2f2af24681b58b1cf1da278ea11fe4e8b78398965f13552;\
+  \ P3 binding_factor=b087686bf35a13f3dc78e780a34b0fe8a77fef1b9938c563f5573d71d8d7890f. P1 sig_share=001719ab5a53ee1a12095cd088fd149702c0720ce5fd2f29dbecf24b7281b603; P3 sig_share=bd86125de990acc5e1f13781d8e32c03a9bbd4c53539bbc106058bfd14326007.\
+  \ Aggregate sig: R_encoded=36282629c383bb820a88b71cae937d41f2f2adfcc3d02e55507e2fb9e2dd3cbe (32 bytes), z_encoded=bd9d2b0844e49ae0f3fa935161e1419aab7b47d21a37ebeae1f17d4987b3160b (32 bytes little-endian).\
+  \ (https://www.rfc-editor.org/rfc/rfc9591#appendix-E.1)\"\n      - section: \"Appendix C\"\n        text: \"Trusted Dealer Key Generation: trusted_dealer_keygen outputs (participant_private_keys, group_public_key,\
+  \ vss_commitment); shares for i=1..MAX_PARTICIPANTS via Shamir over MIN_PARTICIPANTS-degree polynomial. vss_commitment[j] = ScalarBaseMult(coeffs[j]); vss_verify(share_i, vss_commitment) checks S_i =\
+  \ ScalarBaseMult(sk_i) == sum_j ScalarMult(vss_commitment[j], i^j). NOT used in msn-2026-0013 audit scope (out of scope: DKG ceremony audit). (https://www.rfc-editor.org/rfc/rfc9591#appendix-C)\""
+rfc9591_summary:
+  parameter_sets:
+    secp256k1_sha256: 'Section 6.5: FROST(secp256k1, SHA-256). Order=0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141. Ne=33, Ns=32. H=SHA-256. H1/H2/H3 use hash_to_field with expand_message_xmd,
+      DST=contextString||suffix.'
+    ed25519_sha512: 'Section 6.1: FROST(Ed25519, SHA-512). contextString=FROST-ED25519-SHA512-v1. Order=l=2^252+27742317777372353535851937790883648493. H1(m)=H(contextString||rho||m) mod l. H2(m)=H(m) mod
+      l (NO context separator - RFC 8032 compatibility). H3(m)=H(contextString||nonce||m) mod l. H4(m)=H(contextString||msg||m). H5(m)=H(contextString||com||m). SerializeScalar outputs little-endian 32
+      bytes with top three bits set to zero. DeserializeElement validates NOT identity AND prime-order subgroup (cofactored check via n*P=I). Verification: per RFC 8032 §5.1.7 with MUST-check cofactored
+      equation [8][z]B=[8]R+[8][c]PK.'
+    ristretto255_sha512: 'Section 6.2: FROST(ristretto255, SHA-512). contextString=FROST-RISTRETTO255-SHA512-v1. Scalar-from-uniform per RFC 9496 §4.4.'
+    ed448_shake256: 'Section 6.3: FROST(Ed448, SHAKE256). contextString=FROST-ED448-SHAKE256-v1. H2 omits contextString (RFC 8032 compatibility). Co-factor=4.'
+    p256_sha256: 'Section 6.4: FROST(P-256, SHA-256). DST=contextString||suffix. H1/H2/H3 use hash_to_field per RFC 9380 §5.2.'
+  commit_step: 'Section 5.1 commit(sk_i): hiding_nonce = nonce_generate(sk_i); binding_nonce = nonce_generate(sk_i); hiding_nonce_commitment = ScalarBaseMult(hiding_nonce); binding_nonce_commitment = ScalarBaseMult(binding_nonce);
+    returns (nonces, comms).'
+  group_commitment: 'Section 4.5: group_commitment = sum(identity + hiding_nonce_commitment + ScalarMult(binding_nonce_commitment, binding_factor)). Naive O(N) algorithm; multi-exp optimization NOT RECOMMENDED.'
+  binding_factor: 'Section 4.4 compute_binding_factors(group_public_key, commitment_list, msg): group_public_key_enc = SerializeElement(group_public_key); msg_hash = H4(msg); encoded_commitment_hash = H5(encode_group_commitment_list(commitment_list));
+    rho_input_prefix = group_public_key_enc || msg_hash || encoded_commitment_hash; for each (identifier, _, _) in commitment_list, binding_factor = H1(rho_input_prefix || SerializeScalar(identifier)).
+    commitment_list MUST be sorted ascending by identifier.'
+  challenge: 'Section 4.6 compute_challenge(group_commitment, group_public_key, msg): challenge_input = SerializeElement(group_commitment) || SerializeElement(group_public_key) || msg; challenge = H2(challenge_input).
+    Raw msg is appended (NOT H4(msg) here); FROST does NOT pre-hash messages.'
+  signature_share: 'Section 5.2: z_i = hiding_nonce + (binding_nonce * binding_factor) + (lambda_i * sk_i * challenge). Order: d first, rho*e second, lambda*sk*challenge third.'
+  aggregate: 'Section 5.3 aggregate(commitment_list, msg, group_public_key, sig_shares): z = sum(z_i); return (group_commitment, z). Coordinator MUST validate each sig_share via DeserializeScalar before
+    aggregating.'
+  verify: 'Appendix B prime_order_verify(msg, sig=(R,z), PK): c = H2(SerializeElement(R) || SerializeElement(PK) || msg); l = ScalarBaseMult(z); r = R + ScalarMult(PK, c); return l == r.'
+  lagrange_basis: 'Section 4.2 derive_interpolating_value(L, x_i): returns numerator/denominator over x-coordinates L of threshold subgroup, omitting x_i. Errors invalid_parameters if x_i not in L or x_j
+    repeats.'
+  negative_stimulus_behavior:
+    nonce_reuse: 'Section 7.3: Coordinator MAY track nonce commitments per group key; no MUST-level per-impl rejection. Behavior-gap data.'
+    off_curve_R: 'Section 3.1/6: DeserializeElement MUST fail on identity; prime-order subgroup check required for Ed25519 (cofactored).'
+    z_outside_range: DeserializeScalar rejects z>n-1. prime_order_verify gives final accept/reject.
+    threshold_dropout: 'Section 5.4: FROST does not provide robustness; implementation MAY retry.'
+    duplicate_commitment_id: 'Section 4.2: derive_interpolating_value errors invalid_parameters on duplicate x_j.'
+    identity_R: 'Section 3.1: SerializeElement raises on identity input; DeserializeElement raises on identity output.'
+    wrong_context_string: Section 6.6 requires per-suite contextString. Implementations dropping contextString produce different binding_factor values - silent KAT failure.
+    un_cofactored_ed25519: Section 6.1 MUST use [8]-cofactored equation [8][z]B=[8]R+[8][c]PK.
+  kat_vectors:
+    count_per_ciphersuite: 1
+    location: RFC 9591 Appendix E (in RFC text, not external files)
+    secp256k1_kat_E5: 'group_secret_key=0d004150d27c3bf2a42f312683d35fac7394b1e9e318249c1bfe7f0795a83114; group_public_key=02f37c34b66ced1fb51c34a90bdae006901f10625cc06c4f64663b0eae87d87b4f; message=74657374;
+      P1 share=08f89ffe80ac94dcb920c26f3f46140bfc7f95b493f8310f5fc1ea2b01f4254c; P2 share=04f0feac2edcedc6ce1253b7fab8c86b856a797f44d83d82a385554e6e401984; P3 share=00e95d59dd0d46b0e303e500b62b7ccb0e555d49f5b849f5e748c071da8c0dbc;
+      P1 hiding_nonce_commitment=03c699af97d26bb4d3f05232ec5e1938c12f1e6ae97643c8f8f11c9820303f1904; P1 binding_nonce_commitment=02fa2aaccd51b948c9dc1a325d77226e98a5a3fe65fe9ba213761a60123040a45e; P1 binding_factor=3e08fe561e075c653cbfd46908a10e7637c70c74f0a77d5fd418d1a750c739ec6;
+      P3 hiding_nonce_commitment=03077507ba327fc074d2793955ef3410ee3f03b82b4cdc2370f71d865beb926ef6; P3 binding_nonce_commitment=02ad53031ddfbbacfc5fbda3d3b0c2445c8e3e99cbc4ca2db2aa283fa68525b135; P3 binding_factor=93f79041bb3fd266105be251adaeb5fd7f8b104fb554a4ba9a0becea48ddbfd7;
+      P1 sig_share=c4fce1775a1e141fb579944166eab0d65eefe7b98d480a569bbbfcb14f91c197; P3 sig_share=0160fd0d388932f4826d2ebcd6b9eaba734f7c71cf25b4279a4ca2581e47b18d. Aggregate sig: R_encoded=0205b6d04d3774c8929413e3c76024d54149c372d57aae62574ed74319b5ea14d0
+      (33 bytes, compressed SEC1), z_encoded=c65dde8492a7471437e6c2fe3da49b90d23f642b5c6dbe7e36089f096dd97324 (32 bytes little-endian).'
+    ed25519_kat_E1: 'group_secret_key=7b1c33d3f5291d85de664833beb1ad469f7fb6025a0ec78b3a790c6e13a98304; group_public_key=15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673; message=74657374;
+      P1 share=929dcc590407aae7d388761cddb0c0db6f5627aea8e217f4a033f2ec83d93509; P2 share=a91e66e012e4364ac9aaa405fcafd370402d9859f7b6685c07eed76bf409e80d; P3 share=d3cb090a075eb154e82fdb4b3cb507f110040905468bb9c46da8bdea643a9a02;
+      P1 hiding_nonce_commitment=b5aa8ab305882a6fc69cbee9327e5a45e54c08af61ae77cb8207be3d2ce13de3; P1 binding_nonce_commitment=67e98ab55aa310c3120418e5050c9cf76cf387cb20ac9e4b6fdb6f82a469f932; P1 binding_factor=f2cb9d7dd9beff688da6fcc83fa89046b3479417f47f55600b106760eb3b5603;
+      P3 hiding_nonce_commitment=cfbdb165bd8aad6eb79deb8d287bcc0ab6658ae57fdcc98ed12c0669e90aec91; P3 binding_nonce_commitment=7487bc41a6e712eea2f2af24681b58b1cf1da278ea11fe4e8b78398965f13552; P3 binding_factor=b087686bf35a13f3dc78e780a34b0fe8a77fef1b9938c563f5573d71d8d7890f;
+      P1 sig_share=001719ab5a53ee1a12095cd088fd149702c0720ce5fd2f29dbecf24b7281b603; P3 sig_share=bd86125de990acc5e1f13781d8e32c03a9bbd4c53539bbc106058bfd14326007. Aggregate sig: R_encoded=36282629c383bb820a88b71cae937d41f2f2adfcc3d02e55507e2fb9e2dd3cbe
+      (32 bytes), z_encoded=bd9d2b0844e49ae0f3fa935161e1419aab7b47d21a37ebeae1f17d4987b3160b (32 bytes little-endian).'
+  ambiguities:
+  - 'AMB-1: identifier encoding into binding_factor_input is SerializeScalar(identifier) with no explicit length-prefix (length=Ns, ciphersuite-fixed). Implementations might accidentally length-prefix producing
+    byte-different inputs but mathematically-equivalent binding_factor Scalar outputs. Likely site for byte-exact divergence.'
+  - 'AMB-2: commitment_list sort comparator not specified for identifiers outside scalar field range.'
+  - 'AMB-3: per-impl nonce-reuse detection has no MUST.'
+  - 'AMB-4: aggregate z range vs per-share z range not distinguished.'
+  - 'AMB-5: threshold dropout is out-of-spec; no MUST-level handling.'
+  - 'AMB-6: Ed25519 MUST use [8]-cofactored verification - per-impl implementation varies.'
+  - 'AMB-7: Ed25519 H2 omits contextString (high-likelihood divergence source).'
+  - 'AMB-8: only 1 KAT per ciphersuite (msn-2026-0013 requires >= 3; remaining must come from fixed-seed harness).'
+  - 'AMB-9: lambda_i caching across distinct participant subsets (whether to recompute or cache).'
+  - 'AMB-10: ristretto255 Scalar-from-uniform routine is non-trivial; implementations may differ.'
+full_normative_text_excerpts: See the per-section analysis in rfc9591_summary above. The complete normative text was extracted from https://www.rfc-editor.org/rfc/rfc9591 on 2026-08-31 covering sections
+  3 (cryptographic dependencies), 4 (helper functions), 5 (two-round signing), 6 (ciphersuites), 7 (security), Appendix A (canonical encoding), Appendix B (prime-order sign/verify), Appendix E (KAT vectors).
+  10 ambiguities preserved verbatim per AGENTS.md anti-slop constraint.

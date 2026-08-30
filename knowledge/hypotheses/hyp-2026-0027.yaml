@@ -1,0 +1,112 @@
+id: hyp-2026-0027
+type: hypothesis
+status: open
+created_at: "2026-08-31T05:30:00Z"
+updated_at: "2026-08-31T05:30:00Z"
+summary: "H8 (clean-room oracle) - A pure-Python clean-room implementation of RFC 9591 §4.4 compute_binding_factors + §5.1 commit + §5.2 sign + §5.3 aggregate (using a standard curve library like coincurve for secp256k1, PyNaCl/ed25519 for ed25519, and SHA-256/512) produces per-step outputs byte-exactly equal to RFC 9591 Appendix E.5 (secp256k1) and Appendix E.1 (ed25519) expected values. The clean-room implementation derives inputs exclusively from the RFC 9591 text + the ciphersuite primitives, without consulting ZcashFoundation/frost source code or its self-generated tests/helpers/vectors.json."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: minimax-m3
+    tool: "follow-up to msn-2026-0013 adversarial review rev-2026-0013"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://www.rfc-editor.org/rfc/rfc9591#appendix-E.1
+    - https://www.rfc-editor.org/rfc/rfc9591#appendix-E.5
+    - knowledge/findings/fnd-2026-0012.yaml
+    - knowledge/reviews/rev-2026-0013.yaml
+    - knowledge/specifications/spc-2026-0003.yaml
+    - knowledge/observations/obs-2026-0037.yaml
+    - knowledge/observations/obs-2026-0038.yaml
+  parent: msn-2026-0013
+  generation: 1
+links:
+  specifications: [spc-2026-0003]
+  targets: [tgt-2026-0004]
+  implementations: []
+  findings: [fnd-2026-0012]
+title: "HYP-H8 - Clean-room Python RFC 9591 reference produces RFC 9591 Appendix E byte-exact outputs"
+statement: >
+  A clean-room Python implementation of RFC 9591 §4.4 compute_binding_factors (the
+  binding factor derivation: rho_input_prefix = SerializeElement(group_public_key)
+  || H4(msg) || H5(encode_group_commitment_list(commitment_list)); for each
+  (identifier, _, _) in commitment_list, binding_factor = H1(rho_input_prefix ||
+  SerializeScalar(identifier))), plus §5.1 commit, §5.2 sign (with the §4.2 Lagrange
+  basis derive_interpolating_value), and §5.3 aggregate, when fed the RFC 9591
+  Appendix E.5 inputs (group_public_key, message, share_polynomial_coefficients,
+  shares) and using SHA-256/SHA-512 primitives + secp256k1/ed25519 curve arithmetic
+  via a standard library (NOT consulting the ZcashFoundation/frost source code), will
+  produce per-step outputs byte-exactly equal to the RFC 9591 Appendix E.5 (secp256k1)
+  and E.1 (ed25519) expected values:
+
+  secp256k1 (Appendix E.5):
+    P1 hiding_nonce_commitment = 03c699af97d26bb4d3f05232ec5e1938c12f1e6ae97643c8f8f11c9820303f1904
+    P1 binding_nonce_commitment = 02fa2aaccd51b948c9dc1a325d77226e98a5a3fe65fe9ba213761a60123040a45e
+    P1 binding_factor = 3e08fe561e075c653cbfd46908a10e7637c70c74f0a77d5fd418d1a750c739ec6
+    P1 sig_share = c4fce1775a1e141fb579944166eab0d65eefe7b98d480a569bbbfcb14f91c197
+    P3 hiding_nonce_commitment = 03077507ba327fc074d2793955ef3410ee3f03b82b4cdc2370f71d865beb926ef6
+    P3 binding_nonce_commitment = 02ad53031ddfbbacfc5fbda3d3b0c2445c8e3e99cbc4ca2db2aa283fa68525b135
+    P3 binding_factor = 93f79041bb3fd266105be251adaeb5fd7f8b104fb554a4ba9a0becea48ddbfd7
+    P3 sig_share = 0160fd0d388932f4826d2ebcd6b9eaba734f7c71cf25b4279a4ca2581e47b18d
+    Aggregate R = 0205b6d04d3774c8929413e3c76024d54149c372d57aae62574ed74319b5ea14d0
+    Aggregate z = c65dde8492a7471437e6c2fe3da49b90d23f642b5c6dbe7e36089f096dd97324
+
+  ed25519 (Appendix E.1):
+    P1 hiding_nonce_commitment = b5aa8ab305882a6fc69cbee9327e5a45e54c08af61ae77cb8207be3d2ce13de3
+    P1 binding_nonce_commitment = 67e98ab55aa310c3120418e5050c9cf76cf387cb20ac9e4b6fdb6f82a469f932
+    P1 binding_factor = f2cb9d7dd9beff688da6fcc83fa89046b3479417f47f55600b106760eb3b5603
+    P1 sig_share = 001719ab5a53ee1a12095cd088fd149702c0720ce5fd2f29dbecf24b7281b603
+    P3 hiding_nonce_commitment = cfbdb165bd8aad6eb79deb8d287bcc0ab6658ae57fdcc98ed12c0669e90aec91
+    P3 binding_nonce_commitment = 7487bc41a6e712eea2f2af24681b58b1cf1da278ea11fe4e8b78398965f13552
+    P3 binding_factor = b087686bf35a13f3dc78e780a34b0fe8a77fef1b9938c563f5573d71d8d7890f
+    P3 sig_share = bd86125de990acc5e1f13781d8e32c03a9bbd4c53539bbc106058bfd14326007
+    Aggregate R = 36282629c383bb820a88b71cae937d41f2f2adfcc3d02e55507e2fb9e2dd3cbe
+    Aggregate z = bd9d2b0844e49ae0f3fa935161e1419aab7b47d21a37ebeae1f17d4987b3160b
+
+  Killing observation: a single byte-different per-step output between the clean-room
+  Python implementation and the RFC 9591 Appendix E expected values refutes the
+  hypothesis. (Note: nonce randomness is not specified by RFC; the clean-room Python
+  must derive nonces deterministically from the RFC text's commitments only, not
+  from any pre-supplied randomness; this requires careful reading of §5.1 commit to
+  determine the canonical deterministic-nonce approach used in the Appendix E vectors.)
+
+falsifiable_predictions:
+  - "All 7 P1 per-step outputs (hiding_nonce_commitment, binding_nonce_commitment, binding_factor, sig_share) on secp256k1 are byte-exactly equal to RFC 9591 Appendix E.5 expected values."
+  - "All 7 P3 per-step outputs on secp256k1 are byte-exactly equal to RFC 9591 Appendix E.5 expected values."
+  - "Aggregate (R, z) on secp256k1 is byte-exactly equal to RFC 9591 Appendix E.5 expected values (R=0205b6d0..., z=c65dde84...)."
+  - "All P1 + P3 per-step outputs + aggregate on ed25519 are byte-exactly equal to RFC 9591 Appendix E.1 expected values."
+  - "The aggregate (R, z) on both ciphersuites verifies under the RFC 9591 §5.1.6 (ed25519 MUST use [8]-cofactored equation) or Appendix B (prime_order_verify) verification equation using a reference single-party verifier."
+
+disproof_attempts: []
+adversarial_angle: |
+  The clean-room implementation must not import ZcashFoundation/frost source code or
+  use its self-generated test vectors. The implementation derives inputs only from the
+  RFC 9591 text and the standard primitives (SHA-256/SHA-512 + secp256k1/ed25519
+  curve arithmetic). If the implementation produces byte-exact equal outputs to RFC
+  Appendix E, this is independent evidence that RFC 9591 Appendix E KAT vectors are
+  consistent with the RFC text — and therefore the ZcashFoundation/frost vectors.json
+  divergence from RFC Appendix E represents a pre-RFC-final-state capture of the test
+  vectors, not a corruption.
+
+  If the clean-room implementation produces byte-different outputs, this either (a)
+  indicates the RFC text is ambiguous at the per-step level (low likelihood given RFC
+  finalization), or (b) the clean-room implementation made a different but
+  RFC-conformant choice on a normative-silent parameter (e.g., nonce derivation).
+
+surprise_factor: high
+hypothesis_class: positive-conformance-claim-with-independent-oracle
+notes: |
+  This hypothesis is the independent oracle that would elevate fnd-2026-0012 from
+  hypothesis (current status) back to verified_conclusion, per the rev-2026-0013
+  adjustment recommendation. The clean-room Python implementation in <500 LOC is
+  achievable in <1 day of work; the byte-exact diff against RFC 9591 Appendix E is
+  the decisive verification. The compute is lightweight (a Python script + a curve
+  library), making this a natural next-mission for msn-2026-0014.
+
+  If HYP-H8 holds, the resulting matrix is the first independent RFC 9591 KAT
+  verification on record (no prior artifact exists that demonstrates a clean-room
+  implementation reproducing RFC 9591 Appendix E byte-exactly). If HYP-H8 fails, the
+  failure mode itself is informative (it characterizes the normatively-silent
+  parameters in RFC 9591).

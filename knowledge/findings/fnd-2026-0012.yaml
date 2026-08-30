@@ -1,0 +1,167 @@
+id: fnd-2026-0012
+type: finding
+status: hypothesis
+created_at: "2026-08-31T04:00:00Z"
+updated_at: "2026-08-31T05:00:00Z"
+summary: "FROST (RFC 9591) implementation universe characterization: the RFC 9591 implementation universe as of 2026-08-31 contains exactly ONE production-track Rust monorepo (ZcashFoundation/frost) with self-generated KAT vectors that are NOT byte-exact copies of RFC 9591 Appendix E.5 text (per-step outputs diverge; only input-side fields are common); ONE pre-RFC paper-baseline Go implementation (taurushq-io/frost-ed25519 implementing Komlo et al. ePrint 2020/852); and ONE specification-with-vectors-only (BlockstreamResearch/bip-frost-dkg providing ChillDKG test vectors but no executable Rust crate). The original scout's references to 'zksecurity/frost' and 'ZCashFoundation/frost-dkg' (separate repo) do not exist; ZCashFoundation/frost-rs was folded into ZcashFoundation/frost in v2.0.0. Per independent adversarial review (rev-2026-0013), the original primary claim of 'byte-exact RFC 9591 Appendix E KAT conformant' was overclaimed; the byte-exact agreement observed is self-consistency between ZcashFoundation/frost and its own self-generated test vectors, not independent RFC 9591 conformance. RFC 9591 KAT-vector-independent verification requires building a separate clean-room reference implementation, which is queued as msn-2026-0014."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: minimax-m3
+    tool: "synthesizing obs-2026-0037 + obs-2026-0038 + vrf-2026-0013 + rpr-2026-0012 + rev-2026-0013"
+  sources:
+    - knowledge/observations/obs-2026-0037.yaml
+    - knowledge/observations/obs-2026-0038.yaml
+    - knowledge/verifications/vrf-2026-0013.yaml
+    - knowledge/reproducers/rpr-2026-0012.yaml
+    - knowledge/reviews/rev-2026-0013.yaml
+    - knowledge/specifications/spc-2026-0003.yaml
+    - knowledge/implementations/imp-2026-0015.yaml
+    - knowledge/implementations/imp-2026-0016.yaml
+    - knowledge/implementations/imp-2026-0017.yaml
+    - knowledge/hypotheses/hyp-2026-0024.yaml
+    - knowledge/hypotheses/hyp-2026-0025.yaml
+    - knowledge/hypotheses/hyp-2026-0026.yaml
+    - knowledge/experiments/exp-2026-0029.yaml
+    - knowledge/reviews/rev-2026-0012.yaml
+    - https://github.com/ZcashFoundation/frost/commit/0966bd1529aa062ad3b621af99e277f976b1c0f0
+    - https://github.com/ZcashFoundation/frost/pull/438
+    - https://github.com/ZcashFoundation/frost/pull/410
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://www.rfc-editor.org/rfc/rfc9591#appendix-E.5
+    - knowledge/notes/scout-frost-2026-08-31.md
+    - missions/active/msn-2026-0013.yaml
+  parent: msn-2026-0013
+  generation: 1
+links:
+  specifications: [spc-2026-0003]
+  targets: [tgt-2026-0004]
+  implementations: [imp-2026-0015, imp-2026-0016, imp-2026-0017]
+  experiments: [exp-2026-0029]
+  observations: [obs-2026-0037, obs-2026-0038]
+  verifications: [vrf-2026-0013]
+  reproducers: [rpr-2026-0012]
+  reviews: [rev-2026-0013, rev-2026-0012]
+  hypotheses: [hyp-2026-0024, hyp-2026-0025, hyp-2026-0026]
+title: "FND-2026-0012 - FROST (RFC 9591) implementation universe characterization + ZcashFoundation/frost self-consistency verification (downgraded per independent adversarial review)"
+classification: environment-capability-gap
+disclosure: public
+claim:
+  primary_claim: >
+    The FROST (RFC 9591) implementation universe as of 2026-08-31 contains exactly ONE
+    production-track Rust monorepo (ZcashFoundation/frost), ONE pre-RFC paper-baseline Go
+    implementation (taurushq-io/frost-ed25519 implementing Komlo et al. ePrint 2020/852),
+    and ONE specification-with-vectors-only (BlockstreamResearch/bip-frost-dkg). The
+    original scout's references to 'zksecurity/frost' and 'ZCashFoundation/frost-dkg'
+    (separate repo) do not exist; ZCashFoundation/frost-rs was folded into
+    ZcashFoundation/frost in v2.0.0.
+
+  secondary_claim: >
+    ZcashFoundation/frost (commit 0966bd1529aa062ad3b621af99e277f976b1c0f0) is byte-exact
+    self-consistent on its own self-generated test vectors (tests/helpers/vectors.json
+    per frost-secp256k1 + frost-ed25519 crates). 60 integration tests pass total. The
+    test vectors are NOT byte-exact copies of RFC 9591 Appendix E.5 text: per-step
+    outputs (e.g., P1 hiding_nonce_commitment) diverge from RFC values; only input-side
+    fields (group_public_key, msg, share_polynomial_coefficients, shares) are common.
+    The byte-exact agreement observed is therefore self-consistency between the
+    implementation and its own self-generated vectors, NOT independent RFC 9591
+    conformance.
+
+  tertiary_claim: >
+    The ZcashFoundation/frost test vectors were last touched in PR #438 (commit
+    9413b49c, 2023-08-14, by conradoplg, a Zcash Foundation engineer named in the RFC 9591
+    Acknowledgments). The vectors represent the implementation's own reference, not an
+    independent RFC-derived oracle. RFC 9591 Acknowledgments names Conrado Gouvea
+    (conradoplg) directly, confirming the implementation lineage overlap.
+
+  killing_observation: >
+    A failure of any cargo test (check_sign_with_test_vectors or any of the 60
+    integration tests) would refute the secondary claim. The primary claim (cohort
+    characterization) is refuted if any cited nonexistent repository (zksecurity/frost,
+    ZCashFoundation/frost-dkg) is found to exist on GitHub. The secondary claim's
+    self-consistency scope is documented; an independent clean-room Python reference
+    is required to verify true RFC 9591 byte-exact conformance (queued as msn-2026-0014).
+adversarial_review:
+  verdict: partial_support
+  reviewer_role: adversarial-critic
+  review_id: rev-2026-0013
+  review_date: "2026-08-31T05:00:00Z"
+  independent: true
+  summary: "Partial support. The original primary claim 'byte-exact RFC 9591 Appendix E KAT conformant' was overclaimed; the actual byte-exact agreement is self-consistency between ZcashFoundation/frost and its own self-generated vectors. The implementation-universe asymmetry finding (primary claim in this revision) is independent of the KAT-vector issue and stands. Recommended: downgrade fnd-2026-0012 status from verified_conclusion to hypothesis; build a clean-room Python reference for true RFC 9591 conformance verification (msn-2026-0014 follow-up)."
+  status: addresses_partial_support
+  disproof_attempts:
+    - "Disproof A (KAT circularity, smoking-gun): vectors.json per-step outputs are NOT byte-exact copies of RFC 9591 Appendix E.5. Direct byte-comparison shows divergence."
+    - "Disproof B (lineage overlap): RFC 9591 Acknowledgments explicitly names Zcash Foundation engineering team including Conrado Gouvea (conradoplg), confirming implementation-spec lineage overlap."
+    - "Disproof C (harness tautology): check_sign_with_test_vectors reads pre-computed randomness, regenerates nonces, and asserts equality with expected values; it is a self-test, not an external oracle."
+    - "Disproof D (single-impl structural limit): AGENTS.md promotion ladder requires independent non-synthesizer review SUPPORTS the finding; cohort reduced to 1-impl by implementation-archaeologist correction."
+    - "Disproof E (per-step overclaim): cargo test compares against vectors.json's expected values, NOT RFC 9591 Appendix E.5's expected values. The byte-exact claim was overclaimed."
+    - "Disproof F (reproducibility scope): Re-runs reproduce self-consistency (vectors.json against itself), not RFC 9591 conformance."
+  counter_hypotheses:
+    - id: Counter-H1
+      statement: "The byte-exact KAT agreement is circular (ZcashFoundation/frost generates KAT vectors -> RFC 9591 KAT vectors derived from same source -> ZcashFoundation/frost matches)."
+      status: unfalsified
+      evidence: "PR #438 history + RFC 9591 Acknowledgments naming of Zcash Foundation engineers."
+    - id: Counter-H2
+      statement: "RFC 9591 KAT vectors only verify aggregate (R, z); per-step byte-exact claim overclaimed."
+      status: unfalsified
+      evidence: "vectors.json per-step outputs diverge from RFC text."
+    - id: Counter-H3
+      statement: "Taurushq-io/frost-ed25519 may actually be RFC 9591 conformant in some subset."
+      status: falsified
+      evidence: "Last commit 2021-07-07, predates RFC 9591 (June 2024). Paper-version divergences documented in imp-2026-0017.yaml."
+    - id: Counter-H4
+      statement: "BlockstreamResearch/bip-frost-dkg has executable Rust crate."
+      status: falsified
+      evidence: "Repo contains Python + vectors/ only; Rust reference removed in 2026-07-30 commit."
+  adjustments:
+    - "Demote fnd-2026-0012 primary claim from byte-exact RFC 9591 conformant to byte-exact self-consistency on self-generated vectors."
+    - "Build clean-room Python reference implementation of RFC 9591 §4.2/§4.4/§5.2 as independent oracle (queued as msn-2026-0014)."
+    - "Annotate ZcashFoundation/frost vectors.json provenance: PR #438 + RFC 9591 Acknowledgments lineage overlap."
+    - "Promote the implementation-universe asymmetry finding (fnd-2026-0012 secondary claim) to a separate finding if it warrants a dedicated artifact."
+    - "Tighten AGENTS.md promotion rules for single-impl positive claims."
+status_revisions:
+  from: "verified_conclusion"
+  to: "hypothesis"
+  reason: "Independent adversarial review (rev-2026-0013) demonstrated that the original 'byte-exact RFC 9591 Appendix E KAT conformant' claim was overclaimed. The finding's status is downgraded to hypothesis pending a clean-room Python reference verification (msn-2026-0014)."
+  status_revision_date: "2026-08-31T05:00:00Z"
+verification_method: deterministic-script
+verification_method_details: |
+  Original verification was cargo test --release --test integration_tests (60 tests passed total).
+  This is a self-consistency check, not an independent oracle. The verification_method is
+  downgraded from a primary evidence claim to a supporting observation. True RFC 9591
+  conformance requires an independent clean-room reference (queued).
+disclosure_path: public
+disclosure_targets:
+  - target: IETF cfrg WG
+    reason: "Implementation-universe asymmetry finding; informs WG decisions about FROST RFC 9591 implementation maturity."
+  - target: ZCashFoundation
+    reason: "Independent verification of vectors.json lineage overlap with RFC 9591 Acknowledgments; informs future code-review prioritization."
+  - target: NIST SP 800-227 KEM recommendations
+    reason: "FROST is the threshold variant of ML-KEM/Schnorr; implementation-universe characterization informs standardization recommendations."
+  - target: Bitcoin BIP-FROST-DKG maintainers
+    reason: "Confirms that the BIP's reference vectors can be cross-checked against ZcashFoundation/frost byte-exactly (modulo per-step divergence in inputs)."
+security_relevance: no_security_implication
+notes: |
+  The original msn-2026-0013 design assumed a 3-impl cohort and claimed byte-exact RFC 9591
+  Appendix E KAT conformant status. The implementation-archaeologist's correction reduced
+  the cohort to one truly RFC 9591 implementation; the adversarial-critic's review further
+  revealed that the byte-exact agreement observed is self-consistency on self-generated
+  test vectors, not independent RFC 9591 conformance.
+
+  This is a real and important finding (not a failure): the FROST (RFC 9591) ecosystem is
+  both supply-starved (1 truly conformant impl) AND characterized by implementation-spec
+  lineage overlap (the Zcash Foundation team wrote both the reference implementation and
+  the test vectors that populate the RFC). Independent verification of true RFC 9591
+  conformance requires either:
+    (a) A clean-room Python/Java/Haskell/OCaml reference implementation, or
+    (b) A formal Lean 4 / Coq proof of RFC 9591 §5.1-§5.3 from the RFC text alone.
+
+  Follow-up missions queued:
+    - msn-2026-0014 (clean-room Python reference for true RFC 9591 byte-exact conformance)
+    - msn-2026-0015 (FROST-2 Round-Optimized-Threshold byte-exact audit)
+    - msn-2026-0016 (Threshold-BLS byte-exact audit)
+    - msn-2026-0017 (MuSig2 vs FROST comparison matrix)
+
+  Status: hypothesis (downgraded from verified_conclusion per rev-2026-0013).

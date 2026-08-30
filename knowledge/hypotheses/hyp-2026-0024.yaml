@@ -1,0 +1,89 @@
+id: hyp-2026-0024
+type: hypothesis
+status: open
+created_at: "2026-08-31T00:35:00Z"
+updated_at: "2026-08-31T00:35:00Z"
+summary: "H1-style positive conformance: ZKSecurity frost (Go), ZCashFoundation frost-rs (Rust), and ZCashFoundation bip-frost-dkg (Rust DKG reference) produce byte-exact identical per-step outputs (hiding_nonce_commitment, binding_nonce_commitment, binding_factor, binding_nonce, signature_share, aggregate (R, s)) on every RFC 9591 Appendix A KAT vector for both secp256k1 and ed25519 parameter sets."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: minimax-m3
+    tool: independent generator (FROST byte-exact audit prompt set A)
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://www.rfc-editor.org/rfc/rfc9591#appendix-A
+    - https://github.com/ZcashFoundation/frost
+    - https://github.com/ZcashFoundation/frost-rs
+    - https://github.com/ZcashFoundation/frost-dkg
+    - knowledge/targets/tgt-2026-0004.yaml
+    - missions/active/msn-2026-0013.yaml
+    - knowledge/findings/fnd-2026-0007.yaml
+  parent: msn-2026-0013
+  generation: 0
+links:
+  targets: [tgt-2026-0004]
+  implementations: []
+  missions: [msn-2026-0013]
+title: "HYP-A - All three FROST implementations produce byte-exact identical per-step outputs on RFC 9591 Appendix A KATs"
+statement: >
+  On every RFC 9591 Appendix A KAT vector (minimum three secp256k1
+  vectors and three ed25519 vectors per the mission acceptance criteria),
+  the three implementations ZKSecurity frost (Go), ZCashFoundation
+  frost-rs (Rust), and ZCashFoundation frost-dkg (where applicable)
+  emit byte-exact identical values for each of the following per-step
+  intermediate outputs: hiding_nonce_commitment (D_i = (D_{i,1}, D_{i,2})),
+  binding_nonce_commitment (E_i), binding_factor (rho_i, derived per
+  RFC 9591 Section 4.4 "compute_binding_factors"), binding_nonce
+  (h_i = nonce_selection / rho_i), per-signer signature_share (z_i),
+  and the aggregate (R, s) final signature. The verdict in the
+  cross-impl byte-exact differential is identical (match) for every
+  (impl, vector, step) cell that all three implementations can produce.
+  frost-dkg is expected to only produce a subset of these (commitments
+  and binding_factor appear in DKG round-1), so for those rows the
+  equality is a partial match (frost-dkg cell non-empty AND equal to
+  frost/frost-rs); the verdict is "match" not "n/a" for that cell.
+
+  Killing observation: a single cell in the per-step matrix in which
+  two implementations disagree on the byte-exact value of a step that
+  RFC 9591 specifies uniquely and deterministically (commitment,
+  binding_factor, signature_share, or aggregate (R, s) — these are
+  defined by unambiguous I-D) is sufficient to refute this hypothesis.
+  Disagreement on the verdict for a negative-stimulus row (accept vs
+  reject) does NOT refute this hypothesis because the hypothesis is
+  scoped to Appendix A positive KAT vectors only.
+falsifiable_predictions:
+  - "All hiding_nonce_commitment D_i cells (3 impls × 5 KATs × 2 group elements = 30 cells) match byte-exact."
+  - "All binding_nonce_commitment E_i cells (3 impls × 5 KATs × 2 group elements = 30 cells) match byte-exact."
+  - "All binding_factor rho_i cells (3 impls × 5 KATs × 32 bytes = 15 cells of 32-byte scalars) match byte-exact."
+  - "All signature_share z_i cells (2 impls × 5 KATs = 10 cells; frost-dkg does not produce signature_share) match byte-exact."
+  - "All aggregate (R, s) cells (2 impls × 5 KATs = 10 cells, each R = 33 bytes compressed and s = 32 bytes scalar) match byte-exact."
+  - "No cell in the per-step matrix shows byte inequality; the cross-impl differential TSV is all-match across the 95+ cells."
+  - "If frost-dkg produces a non-empty cell for commitment/binding_factor on an Appendix A vector, that cell equals frost and frost-rs byte-exact."
+disproof_attempts: []
+adversarial_angle: |
+  No direct adversarial angle: this is a positive-conformance hypothesis.
+  The indirect adversarial value is that establishing a clean
+  byte-exact baseline is the load-bearing control for every other
+  hypothesis in the mission (H2 verification, H3/H4/H5 divergence
+  searches, H6 exploitation search). A control failure (i.e., a
+  byte-exact mismatch where there should be none) is itself an
+  interop-note-class finding and prevents any exploitation claim
+  from being advanced.
+surprise_factor: low
+hypothesis_class: positive-conformance
+notes: |
+  The hypothesis is scoped to the subset of steps that RFC 9591
+  specifies deterministically. RFC 9591 Section 4.4 explicitly defines
+  the binding factor derivation (rho_i = H_1("rho" || group_public_key ||
+  nonce_commitments || verifying_share || message)), which is
+  byte-deterministic. Similarly, the commitment/aggregate/signature-share
+  steps are all defined by curve/group operations with deterministic
+  encodings (compressed SEC1 for secp256k1, RFC 8032 encoding for
+  ed25519). This hypothesis essentially asks "did the three
+  implementations all read RFC 9591 correctly?" — the surprise
+  factor is low because both ZKSecurity's frost and ZCashFoundation's
+  frost-rs have public claims of RFC 9591 conformance, and the Go
+  reference predates the RFC by ~3 years and was the reference used
+  during RFC development.

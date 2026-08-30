@@ -1,0 +1,375 @@
+id: exp-2026-0029
+type: experiment
+status: designed
+created_at: "2026-08-30T15:00:00Z"
+updated_at: "2026-08-30T15:00:00Z"
+summary: "FROST (RFC 9591) cross-implementation per-step byte-exact matrix on the three target implementations (ZcashFoundation/frost Rust, BlockstreamResearch/bip-frost-dkg Rust, taurushq-io/frost-ed25519 Go). Phase B = RFC 9591 Appendix A KAT vectors for secp256k1 + ed25519 capturing 6 per-step outputs + aggregate (R, z) per participant per vector = 108 byte-exact cells. Phase C = 8 negative-stimulus accept/reject verdicts per impl = 24 cells. Phase D = single-party reference verification of every (impl, vector) aggregate under RFC 9591 §5 = 78 verification cells. Total 210 cells; outputs crypto/frost-cross-impl/reports/frost_matrix.tsv."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: minimax-m3
+    tool: harness design for msn-2026-0013 (FROST cross-impl byte-exact matrix)
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://github.com/ZcashFoundation/frost
+    - https://github.com/BlockstreamResearch/bip-frost-dkg
+    - https://github.com/taurushq-io/frost-ed25519
+    - knowledge/specifications/spc-2026-0003.yaml
+    - knowledge/targets/tgt-2026-0004.yaml
+    - knowledge/implementations/imp-2026-0015.yaml
+    - knowledge/implementations/imp-2026-0016.yaml
+    - knowledge/implementations/imp-2026-0017.yaml
+    - knowledge/notes/scout-frost-2026-08-31.md
+  parent: msn-2026-0013
+  generation: 0
+links:
+  missions: [msn-2026-0013]
+  hypotheses: [hyp-2026-0024, hyp-2026-0025, hyp-2026-0026]
+  targets: [tgt-2026-0004]
+  implementations: [imp-2026-0015, imp-2026-0016, imp-2026-0017]
+title: "EXP-2026-0029 - FROST (RFC 9591) cross-impl per-step byte-exact matrix"
+design: |
+  Smallest decisive experiment for msn-2026-0013. Produces the per-step
+  byte-exact matrix described in the mission acceptance criteria (>=108
+  Phase B cells + >=24 Phase C cells + >=78 Phase D cells = 210 cells
+  total) and writes the consolidated matrix to
+  crypto/frost-cross-impl/reports/frost_matrix.tsv.
+
+  # Phase B - RFC 9591 Appendix A byte-exact matrix
+  For each of (parameter_set, vector_index) pairs from the RFC 9591
+  Appendix A test vectors (3 secp256k1 + 3 ed25519), and for each of
+  the three target implementations, run the FROST signing flow end to
+  end and capture per-step outputs:
+
+    1. hiding_nonce_commitment_i   per participant i
+    2. binding_nonce_commitment_i  per participant i
+    3. group_commitment            (32-byte SHA-256 of (encoded_commitments))
+    4. binding_factor_i            per participant i (rho_i)
+    5. binding_nonce_i             per participant i (h_i)
+    6. signature_share_i           per participant i (z_i)
+    7. aggregate_signature         = (R, z) (encoded as 64-byte || 32-byte hex)
+
+  Phase B cell count:
+    6 vectors x 6 per-participant-step outputs x 3 impls  = 108 cells
+    6 vectors x 1 aggregate (R, z)            x 3 impls  =  18 cells
+    (cell #6 is "per-participant-step output" - aggregate counts separately)
+    Phase B byte-exact cells total            = 126 cells
+
+  Note: aggregate (R, z) is a single 2-tuple per (vector, impl) pair,
+  not a per-participant output, so 6 vectors x 3 impls = 18 cells.
+  The mission's "108" figure counts 3 secp256k1 + 3 ed25519 = 6 vectors
+  x 6 per-participant steps x 3 impls = 108. Adding aggregate (R, z)
+  yields 108 + 18 = 126 Phase B cells. (Mission text said "108 + 54 more
+  = 162"; we faithfully capture both per-step and aggregate.)
+
+  # Phase C - 8 negative-stimulus matrix (accept/reject verdict)
+  For each implementation, run 8 negative stimuli against the RFC
+  Appendix A KAT parameters and classify the impl's response as one
+  of {accepts_invalid, rejects_correctly, accepts_correctly,
+  rejects_valid, panic, crash, hang, other}. Each impl must reject
+  every malformed input except where the RFC explicitly permits
+  acceptance (e.g. threshold dropout is RFC-defined behaviour).
+
+  Stimuli:
+    C1. nonce_reuse       - same (d_i, e_i) reused across two rounds;
+                            second-round signature MUST be rejected or
+                            panic per RFC 9591 §4.2 rogue-key defense.
+    C2. R_at_infinity     - aggregate R is the identity point; an
+                            honest verifier MUST reject because
+                            discrete-log of R is undefined.
+    C3. R_off_curve       - R has x = 0 (off-curve candidate); honest
+                            verifier MUST reject (not on subgroup).
+    C4. z_i_eq_zero       - one participant's z_i = 0; aggregate s
+                            must be rejected by the verifier
+                            (s = 0 mod n violates range check).
+    C5. z_i_eq_n_minus_1  - one participant's z_i = n - 1 (max valid);
+                            aggregate MUST verify (boundary case).
+    C6. z_i_eq_n          - one participant's z_i = n (one past max);
+                            aggregate MUST be rejected (range violation).
+    C7. threshold_dropout - one of t participants fails to respond;
+                            coordinator MUST interpolate over the
+                            responding (t) set per RFC 9591 §4.2.
+    C8. wrong_index_enc   - participant identifier encoded with the
+                            wrong width (e.g. 4-byte LE instead of
+                            RFC-mandated encoding); rejection-class.
+
+  Phase C cell count: 8 stimuli x 3 impls = 24 cells with
+  accept/reject verdict.
+
+  # Phase D - Cross-impl aggregate verification
+  For each (impl, vector) pair from Phase B + Phase C (where the impl
+  produced a candidate (R, z)), verify the aggregate under the RFC
+  9591 §5 verification equation using a reference single-party
+  verifier implemented in Python (tools/verify_aggregate.py):
+
+      e  = H("challenge" || R || group_public_key || msg)
+      z * G == R + group_public_key * e   (secp256k1)
+      z * B == R + group_public_key * e   (ed25519)
+
+  Implementation: 64-byte (or 32-byte) hex comparison of the
+  recomputed challenge-equation LHS vs RHS. Records
+  {verifies, fails_verification, fails_serialization,
+  fails_decode} per cell.
+
+  Phase D cell count:
+    (6 Phase B vectors x 3 impls) + (8 Phase C stimuli x 3 impls) = 78 cells.
+
+  # Cell budget
+  Phase B byte-exact cells:        108 (per-participant outputs)
+                                 +  18 (aggregate (R, z))
+                                 = 126
+  Phase C negative-stimuli cells:   24
+  Phase D verification cells:       78
+  GRAND TOTAL:                     228 cells
+  (Mission text counts Phase B aggregate as "54 more" = 9 vectors x
+  3 impls x 2 outputs; with 6 vectors we get 18 aggregate cells. Both
+  counts document the same artifact; this experiment commits 228.)
+
+  # Harness design (tools/run_frost_matrix.py)
+
+  Python orchestrator. Driven by an external CSV of (param_set,
+  vector_id, hex_seed_inputs, msg_hex) extracted from RFC 9591 Appendix
+  A (committed to crypto/frost-cross-impl/kat/rfc9591_appendix_a.tsv
+  during execution setup; this experiment YAML only designs the harness
+  and records where the artifact will land).
+
+  Per impl, the harness invokes one of three subprocess wrappers
+  (each pinning to a specific commit/version recorded on the
+  implementation artifact):
+
+    zksecurity-frost (Go):
+      Binary:  crypto/frost-cross-impl/zksecurity-frost/cmd/frostctl
+      Args:    --ciphersuite {secp256k1,ed25519}
+               --vector-id <id>
+               --mode {kat,neg,verify}
+               --stimulus <C1..C8 | none>
+      Stdout:  one JSON line per step:
+                 {"step":"hiding_nonce_commitment_i","i":1,"value":"hex..."}
+                 {"step":"group_commitment","value":"hex..."}
+                 {"step":"aggregate","R":"hex","z":"hex"}
+      Build:   `cd crypto/frost-cross-impl/zksecurity-frost && go build ./cmd/frostctl`
+               (commit pinned in imp-2026-00XX during mission
+                execution; the harness reads it from the implementation
+                YAML, not from this experiment YAML.)
+
+    zcash-foundation-frost-rs (Rust):
+      Binary:  crypto/frost-cross-impl/zcash-foundation-frost-rs/target/release/frostrs
+      Args:    --ciphersuite {secp256k1,ed25519}
+               --vector-id <id>
+               --mode {kat,neg,verify}
+               --stimulus <C1..C8 | none>
+      Stdout:  one JSON line per step (same shape as above).
+      Build:   `cd crypto/frost-cross-impl/zcash-foundation-frost-rs &&
+                cargo build --release --bin frostrs`.
+
+    zcash-foundation-frost-dkg (Rust):
+      Binary:  crypto/frost-cross-impl/zcash-foundation-frost-dkg/target/release/frostdkg
+      Args:    same shape; --mode {kat,neg,verify}.
+      Build:   `cd crypto/frost-cross-impl/zcash-foundation-frost-dkg &&
+                cargo build --release --bin frostdkg`.
+
+  Negative-stimulus injection:
+    For C1 (nonce_reuse), the wrapper holds the participant's (d_i, e_i)
+    bytes in a sidecar file across two invocations; second invocation
+    loads the prior (d_i, e_i) and forces reuse.
+    For C2..C6 (point / scalar tampering), the wrapper monkey-patches
+    the in-memory (R, z) tuple before invoking the verifier; the
+    patch is recorded in the per-cell metadata.
+    For C7 (threshold_dropout), the wrapper drops one of the t
+    participant's z_i bytes before aggregation.
+    For C8 (wrong_index_enc), the wrapper re-encodes the participant
+    identifier from u32 BE to u32 LE before feeding to the binding-factor
+    derivation.
+
+  All subprocess invocations route through
+  frontier.execute.run_command with the scrubbed env (no tokens,
+  keys, SSH or cloud credentials). Each subprocess is given a 30s
+  wall-clock timeout.
+
+  Output capture:
+    The harness writes:
+      crypto/frost-cross-impl/reports/frost_matrix.tsv
+        columns: impl, scenario_id, step_name, expected_hex,
+                 actual_hex, verdict, additional_metadata
+        rows: one per cell of Phase B + Phase C + Phase D
+      crypto/frost-cross-impl/reports/frost_matrix.log
+        JSON lines: RESULT|<impl>|<scenario>|<step>|<expected>|<actual>|<verdict>
+        plus per-impl run stderr/stdout captures
+      crypto/frost-cross-impl/reports/frost_matrix_summary.md
+        one-line summary per impl: total cells, pass, fail, divergent.
+
+  # Build instructions (recorded here; actual commands run during
+  # mission execution; this experiment only designs the harness)
+    zksecurity-frost:
+      cd crypto/frost-cross-impl/zksecurity-frost
+      git checkout <PINNED_COMMIT>   # set by mission executor
+      go build ./cmd/frostctl
+      cp frostctl ./bin/frostctl     # harness expects ./bin/<binary>
+    zcash-foundation-frost-rs:
+      cd crypto/frost-cross-impl/zcash-foundation-frost-rs
+      git checkout <PINNED_COMMIT>
+      cargo build --release --bin frostrs
+      cp target/release/frostrs ./bin/frostrs
+    zcash-foundation-frost-dkg:
+      cd crypto/frost-cross-impl/zcash-foundation-frost-dkg
+      git checkout <PINNED_COMMIT>
+      cargo build --release --bin frostdkg
+      cp target/release/frostdkg ./bin/frostdkg
+
+  # Reference verifier (Phase D)
+    tools/verify_aggregate.py implements RFC 9591 §5:
+      - Loads RFC 9591 Appendix A expected (R, z, group_pubkey, msg)
+        from crypto/frost-cross-impl/kat/rfc9591_appendix_a.tsv.
+      - Recomputes e = H("challenge" || R || group_pubkey || msg)
+        using SHA-256 (secp256k1) or SHA-512 (ed25519) per ciphersuite.
+      - Recomputes LHS = z * G (or z * B for ed25519) using the
+        pure-Python reference curve arithmetic (tools/ref_curve.py
+        using the `coincurve`/`PyNaCl` wrappers; checked at
+        experiment-execution time).
+      - Recomputes RHS = R + group_pubkey * e.
+      - Emits verdict {verifies, fails_verification, fails_decode,
+        fails_serialization}.
+
+  # Expected outputs (TSV columns, byte-exact format)
+    impl              - one of {zksecurity-frost, zcash-foundation-frost-rs,
+                     zcash-foundation-frost-dkg}
+    scenario_id       - RFC vector ID (B-section) or stimulus ID (C1..C8)
+    step_name         - hiding_nonce_commitment_i / binding_nonce_commitment_i /
+                     group_commitment / binding_factor_i / binding_nonce_i /
+                     signature_share_i / aggregate_R / aggregate_z /
+                     verifier_RHS / verifier_LHS / verifier_verdict /
+                     neg_verdict
+    expected_hex      - hex from RFC 9591 Appendix A expected outputs
+                        (Phase B, Phase D) or "n/a" for Phase C
+    actual_hex        - hex from impl stdout
+    verdict           - one of:
+                         byte_exact_match    (Phase B expected == actual)
+                         byte_exact_divergent (Phase B expected != actual)
+                         accepts_invalid     (Phase C: impl accepted malformed)
+                         rejects_correctly   (Phase C: impl rejected malformed)
+                         accepts_correctly   (Phase C5 boundary: accept n-1)
+                         rejects_valid       (Phase C: impl rejected valid - BUG)
+                         panic               (Phase C: impl panicked)
+                         crash               (Phase C: impl crashed)
+                         verifies            (Phase D: z*G == R + pk*e)
+                         fails_verification  (Phase D: equation mismatch)
+                         n_a                 (Phase D: input not provided)
+    additional_metadata
+                     - JSON-encoded per-cell notes: impl commit hash,
+                       vector_id, stimulus_id, participant_index,
+                       curve (secp256k1|ed25519), n_tilde, threshold_t,
+                       n, group_pubkey (hex), run_duration_ms.
+
+  # Determinism policy
+    RFC 9591 Appendix A KAT vectors are deterministic: the inputs (seeds,
+    group_pubkey, msg, threshold) are public, and every step output is a
+    pure function of those inputs. The harness records seeds only when a
+    non-deterministic step is exercised (e.g. ed25519 nonce sampling
+    internal to an implementation may use a CSPRNG; the harness pins
+    any such CSPRNG via the env var `FROST_DETERMINISTIC=1` and records
+    the seed in `additional_metadata`).
+
+  # Compute budget
+    Local Windows host (Go 1.26 + Rust 1.79 toolchains):
+      - zksecurity-frost build:        ~10s cold,  ~2s incremental
+      - frost-rs build:                ~120s cold, ~5s incremental
+      - frost-dkg build:               ~120s cold, ~5s incremental
+      - Phase B run (6 vectors x 3 impls):   ~3s
+      - Phase C run (8 stimuli x 3 impls):   ~2s
+      - Phase D run (78 cells):              ~1s
+      - Total wall (cold):                  ~5 min
+      - Total wall (warm):                  ~30 s
+
+    GHA ubuntu-latest (cross-platform reproducibility):
+      - All builds:                    ~3 min
+      - Matrix run:                    ~10 s
+      - Total wall:                    ~5 min
+      - GHA minutes charged:           ~6 min (free tier)
+
+    Classification: lightweight.
+
+  # Risks and mitigations
+    - ZKSecurity frost may not expose per-step hooks. Mitigation: the
+      wrapper forks frost's commit API and emits per-step hooks via
+      instrumentation; fallback to transcript logging in
+      `frostctl --debug`.
+    - frost-rs/frost-dkg may not expose --mode=neg. Mitigation: the
+      wrapper is a thin shim that calls into the crate's internal API
+      (which is public; the crates ship a `frost_core::SigningPackage`
+      interface that is amenable to negative-stimulus injection).
+    - The Phase D reference verifier depends on pure-Python curve
+      arithmetic; performance is not a concern (78 cells, ~1s), but
+      byte-exact correctness of the reference is. Mitigation: cross-
+      check the reference against CIRCL on a 10-vector subset during
+      experiment execution; record the cross-check delta in
+      reports/frost_matrix.log.
+    - Some impls may panic (Go) or abort (Rust) on malformed inputs;
+      the harness classifies these as `panic` / `crash` rather than
+      `rejects_correctly`, distinguishing safety from correctness.
+    - GHA secrets: workflow uses `permissions: contents: read` only;
+      no `secrets:` block; per Frontier security policy.
+
+  # Cross-platform reproducibility
+    The harness produces byte-exact deterministic outputs modulo
+    implementation-internal non-determinism (e.g. ed25519 SHA-512
+    stream nonce). The Windows host run and the GHA ubuntu-latest run
+    are expected to produce identical matrices; any platform-dependent
+    divergence is recorded as a separate axis in `frost_matrix.log`
+    under `additional_metadata.platform`.
+
+  # Acceptance
+    All 228 cells executed; matrix committed to
+    crypto/frost-cross-impl/reports/frost_matrix.tsv;
+    console log committed to
+    crypto/frost-cross-impl/reports/frost_matrix.log;
+    per-impl per-scenario verdict captured.
+
+  # Reuse of frontier infrastructure
+    - Subprocess invocations: frontier.execute.run_command (scrubbed env).
+    - ID allocation: frontier.ids.next_id for each new implementation,
+      observation, reproducer, and review artifact produced by this
+      experiment. (None produced by THIS YAML; this YAML only designs
+      the experiment.)
+    - Reproducer YAML: knowledge/reproducers/rpr-2026-00XX.yaml
+      (created at experiment-execution time, references exp-2026-0029
+      in `links.experiments`).
+
+  # Output layout
+    crypto/frost-cross-impl/
+      kat/
+        rfc9591_appendix_a.tsv     (input: extracted from RFC 9591)
+      tools/
+        run_frost_matrix.py        (Python orchestrator)
+        verify_aggregate.py        (Phase D reference verifier)
+        ref_curve.py               (pure-Python curve arithmetic)
+        gen_kat_tsv.py             (extracts RFC 9591 Appendix A vectors)
+      zksecurity-frost/
+        cmd/frostctl/              (CLI wrapper that emits per-step JSON)
+        bin/frostctl               (built binary)
+      zcash-foundation-frost-rs/
+        src/bin/frostrs.rs         (CLI wrapper)
+        bin/frostrs                (built binary)
+      zcash-foundation-frost-dkg/
+        src/bin/frostdkg.rs        (CLI wrapper)
+        bin/frostdkg               (built binary)
+      reports/
+        frost_matrix.tsv           (committed; 228 rows)
+        frost_matrix.log           (committed; JSON-line console log)
+        frost_matrix_summary.md    (committed; per-impl summary)
+        per_run/<impl>_<scenario>_stderr.log
+        per_run/<impl>_<scenario>_stdout.log
+    .scratch/msn-2026-0013/         (transient; never committed)
+
+commands:
+  - "cd crypto/frost-cross-impl && python tools/run_frost_matrix.py --phase B,C,D --ciphersuites secp256k1,ed25519 --impls zksecurity-frost,zcash-foundation-frost-rs,zcash-foundation-frost-dkg --out-tsv crypto/frost-cross-impl/reports/frost_matrix.tsv --out-log crypto/frost-cross-impl/reports/frost_matrix.log --out-summary crypto/frost-cross-impl/reports/frost_matrix_summary.md --scrub-env"
+  - "cd crypto/frost-cross-impl && python tools/verify_aggregate.py --matrix crypto/frost-cross-impl/reports/frost_matrix.tsv --append-verifier-column crypto/frost-cross-impl/reports/frost_matrix.tsv"
+compute_decision:
+  location: local
+  isolation: "env-scrubbed scratch workspace via frontier.execute.run_command"
+  reason: "Single-machine Python + Go + Rust subprocesses; lightweight compute class; primary on Windows host (Go + Rust toolchains present per localdocs/compute.md); GHA ubuntu-latest cross-platform re-run via .github/workflows/frost-matrix.yml"
+determinism:
+  deterministic: true
+  seed_policy: "All RFC 9591 Appendix A KAT vector inputs are public and deterministic. For negative-stimulus runs the harness injects the malformed value directly; no CSPRNG is exercised in Phase B/C/D. If an impl's internal ed25519 SHA-512 stream is non-deterministic, the harness pins FROST_DETERMINISTIC=1 and records the seed in additional_metadata."
+  nondeterminism_notes: "Implementation-internal non-determinism (e.g. ed25519 nonce sampling) is recorded as a separate axis in additional_metadata.platform and additional_metadata.impl_seed. The harness itself is byte-exact-deterministic."
