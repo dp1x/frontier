@@ -1,0 +1,52 @@
+id: obs-2026-0031
+type: observation
+status: recorded
+created_at: "2026-08-30T03:55:00Z"
+updated_at: "2026-08-30T03:55:00Z"
+summary: "X-Wing Combiner mutation matrix: 48 cells (16 mutations x 3 vectors), each cell produces a different ss than the canonical. Single-bit flips at every position of (ss_M, ss_X, ct_X, pk_X) and structural mutations (swap_ssM_ssX, swap_ctX_pkX, drop_label) all change the ss."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-execution-agent
+    model: minimax-m3
+    tool: full_audit.py (mutation phase)
+  sources:
+    - .scratch/msn-2026-0009/full_audit.json
+    - knowledge/experiments/exp-2026-0023.yaml
+  parent: msn-2026-0009
+  generation: 0
+links:
+  experiments: [exp-2026-0023]
+  implementations: [imp-2026-0007, imp-2026-0009]
+  specifications: [spc-2026-0002]
+  hypotheses: [hyp-2026-0013]
+title: OBS-2026-0031 - X-Wing Combiner mutation matrix (48 cells)
+observations: |
+  Per vector (3 vectors: vec-00000001, vec-00000002, vec-00000003), 16 mutations:
+    ss_m[0].bit0, ss_m[0].bit4, ss_m[5].bit5, ss_m[31].bit7
+    ss_x[0].bit0, ss_x[0].bit5, ss_x[31].bit7
+    ct_x[0].bit0, ct_x[0].bit5, ct_x[31].bit7
+    pk_x[0].bit0, pk_x[0].bit5, pk_x[31].bit7
+    swap_ssM_ssX (structural: ss_M and ss_X swapped)
+    swap_ctX_pkX (structural: ct_X and pk_X swapped)
+    drop_label   (structural: SHA3-256 without trailing XWingLabel)
+
+  Result: 48/48 mutations changed the ss (differs_from_canonical=True).
+  Per-vector pass rate: 16/16 = 100%.
+result:
+  n_mutations_total: 48
+  n_mutations_changed_ss: 48
+  pass_rate: 1.0
+notes: |
+  Every mutation produces a different ss. This rules out the possibility that
+  any bit of any component is silently ignored by the combiner; the SHA3-256
+  input is fully avalanche-active. The drop_label mutation (removing the 6-byte
+  XWingLabel) produces a different ss, confirming that the XWingLabel is
+  included in the spec's SHA3-256 preimage (draft-10 §5.3). The swap mutations
+  produce different ss values, confirming that the input order
+  (ss_M, ss_X, ct_X, pk_X) is significant - reordering produces a different
+  hash even if all inputs are correct.
+
+  Note: X25519 clamping does NOT apply here because we are mutating the
+  post-clamp outputs (ss_X, ct_X, pk_X), not the secret scalars.

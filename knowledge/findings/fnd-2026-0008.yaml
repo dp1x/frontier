@@ -1,0 +1,106 @@
+id: fnd-2026-0008
+type: finding
+status: verified_conclusion
+created_at: "2026-08-30T03:55:00Z"
+updated_at: "2026-08-30T03:55:00Z"
+summary: "Cross-implementation X-Wing + HPKE byte-exact agreement: A pure-Python reference implementation of the X-Wing Combiner (SHA3-256(ss_M || ss_X || ct_X || pk_X || XWingLabel) per draft-connolly-cfrg-xwing-kem-10 §5.3) and HPKE Base mode wrapping (RFC 9180 §5.1 with HKDF-SHA256 + AES-128-GCM) match Cloudflare CIRCL v1.6.5 byte-for-byte on all 10 deterministic test vectors. The X-Wing Combiner is input-sensitive at every tested position (mutation matrix: 48/48 changed ss). pyca/cryptography 50.0.1 X25519 is byte-exact conformant to CIRCL v1.6.5 X25519 on 10/10 random keys; pyca ML-KEM-768 round-trip is correct on 5/5."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: minimax-m3
+    tool: synthesizing obs-2026-0030, obs-2026-0031, obs-2026-0032 + vrf-2026-0009 + exp-2026-0023 + exp-2026-0024 + rpr-2026-0008 + rev-2026-0008
+  sources:
+    - knowledge/observations/obs-2026-0030.yaml
+    - knowledge/observations/obs-2026-0031.yaml
+    - knowledge/observations/obs-2026-0032.yaml
+    - knowledge/verifications/vrf-2026-0009.yaml
+    - knowledge/experiments/exp-2026-0023.yaml
+    - knowledge/experiments/exp-2026-0024.yaml
+    - knowledge/reproducers/rpr-2026-0008.yaml
+    - knowledge/reviews/rev-2026-0008.yaml
+    - knowledge/specifications/spc-2026-0002.yaml
+    - .scratch/msn-2026-0009/full_audit.json
+    - .scratch/msn-2026-0009/full_audit_summary.json
+  parent: msn-2026-0009
+  generation: 0
+links:
+  missions: [msn-2026-0009]
+  experiments: [exp-2026-0023, exp-2026-0024]
+  observations: [obs-2026-0030, obs-2026-0031, obs-2026-0032]
+  verifications: [vrf-2026-0009]
+  reproducers: [rpr-2026-0008]
+  reviews: [rev-2026-0008]
+  hypotheses: [hyp-2026-0013, hyp-2026-0014, hyp-2026-0015]
+  implementations: [imp-2026-0007, imp-2026-0009]
+  specifications: [spc-2026-0002]
+  targets: [tgt-2026-0002]
+title: "FND-2026-0008 - Cross-impl X-Wing + HPKE byte-exact agreement (CIRCL vs Python reference per draft-10 + RFC 9180)"
+classification: implementation-spec-compliance
+statement: |
+  Cross-implementation agreement between CIRCL v1.6.5 (Go) and a pure-Python
+  reference implementation of draft-connolly-cfrg-xwing-kem-10 Section 5.3
+  (X-Wing Combiner) and RFC 9180 Section 5.1 (HPKE Base mode wrapping) is
+  byte-exact on all 10 deterministic (sk, eseed, info, aad, pt) test vectors:
+
+    - X-Wing Combiner: ss_XWING = SHA3-256(ss_M || ss_X || ct_X || pk_X ||
+      XWingLabel). 10/10 vectors: py_ss == circl_ss (256-bit equality).
+    - X-Wing Encaps/Decaps symmetry: 10/10 vectors: circl_decaps == circl_encaps.
+    - HPKE Base mode key: 10/10 vectors: py_key == circl_key (16-byte AES-128 key).
+    - HPKE Base mode base_nonce: 10/10 vectors: py_base_nonce == circl_base_nonce (12 bytes).
+    - HPKE Base mode exporter_secret: 10/10 vectors: py_exporter_secret ==
+      circl_exporter_secret (32 bytes).
+    - HPKE Base mode ciphertext: 10/10 vectors: py_ciphertext == circl_ciphertext
+      (52-byte pt + 16-byte AES-GCM tag = 68 bytes).
+    - X-Wing Combiner mutation matrix: 48/48 single-bit or structural mutations
+      change the ss (16 mutations per vector × 3 vectors).
+
+  Cross-library primitives (pyca/cryptography 50.0.1 vs CIRCL v1.6.5):
+    - X25519 (RFC 7748): 10/10 random (sk_X, pk_X) → ss pairs byte-exact
+      agreement between pyca and CIRCL.
+    - X25519 public key derivation: 10/10 random sk_X → pk_X pairs byte-exact
+      agreement between pyca and CIRCL.
+    - ML-KEM-768 (FIPS 203): 5/5 random keypair → (encapsulate → K, ct;
+      decapsulate → K') round-trip correct (K == K'). pyca 50.0.1 does NOT
+      expose EncapsDerand, so byte-exact derandomized ML-KEM cross-comparison
+      is not feasible with pyca 50.0.1.
+
+  Audit-relevant facts about draft-10:
+    - IANA KEM ID for X-Wing is 0x647A = 25722 (decimal) per draft-10 §7.
+    - X-Wing sizes: sk=32 bytes (the seed), pk=1216 bytes (1184 || 32),
+      ct=1120 bytes (1088 || 32), ss=32 bytes.
+    - Combiner input order (draft-10 §5.3): ss_M || ss_X || ct_X || pk_X ||
+      XWingLabel. XWingLabel = 0x5c2e2f2f5e5c (ASCII '\./ /^\').
+    - draft-10 Appendix C has empty ct/ss fields in its KAT vectors
+      ("TODO: replace with test vectors that re-use ML-KEM, X25519 values")
+      - so draft-10 has NO complete KAT vectors. The audit uses CIRCL as
+      the byte-level oracle (CIRCL v1.6.5 implements draft-05 explicitly,
+      whose combiner is byte-identical to draft-10's combiner).
+disclosure: public
+limitations: |
+  - Only one of the five candidate implementations (imp-2026-0007..0011)
+    was exercised at the X-Wing-KEM level (CIRCL). The other four
+    (Rust hpke, libhpke, OpenSSL oqs-provider, AWS-LC) are recorded as
+    not-audited in this mission due to scope and time budget.
+  - pyca ML-KEM-768 byte-exact cross-comparison was infeasible in pyca 50.0.1
+    because pyca does not expose EncapsDerand. Round-trip correctness was
+    verified instead.
+  - The X-Wing Combiner mutation matrix does NOT test X25519 clamped-bit
+    positions (those tests were run by msn-2026-0008 and are out of scope
+    here; the audit's mutation matrix is at the COMBINER INPUT level, not
+    the SECRET SCALAR level).
+  - 10 vectors is a small statistical sample but adequate for
+    deterministic byte-exact discriminators.
+  - The audit was scoped to draft-10 (latest revision as of 2026-08-30).
+    Earlier drafts (-05 through -09) had identical combiner formulas;
+    drift to draft-11+ is not covered.
+reproducer: "Run C:\\Users\\Dhane\\frontier\\.venv\\Scripts\\python.exe .scratch\\msn-2026-0009\\full_audit.py. Expected exit code 0, 'CLASSIFICATION: AGREE'."
+follow_up:
+  - "Extend the matrix to AWS-LC, libhpke, OpenSSL oqs-provider, and Rust hpke if their X-Wing KEM support becomes available locally."
+  - "Re-run the audit when pyca exposes a from-seed ML-KEM-768 API (newer release) to enable byte-exact derandomized ML-KEM cross-comparison."
+  - "Add a draft-11/12 audit when the draft advances."
+  - "Audit X-Wing HPKE PSK and AuthPSK modes (currently only Base mode is covered)."
+  - "Add X-Wing + TLS 1.3 cross-impl interoperability test (the prior mission covered ML-KEM+X25519 hybrid; X-Wing is a different construction)."
+  - "Investigate the empty KAT vectors in draft-10 Appendix C as a separate finding (the spec explicitly notes them as TODO)."
+  - "Track draft-10's IANA KEM ID assignment (0x647A) through to RFC publication."

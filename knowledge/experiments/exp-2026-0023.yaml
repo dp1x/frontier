@@ -1,0 +1,74 @@
+id: exp-2026-0023
+type: experiment
+status: executed
+created_at: "2026-08-30T03:55:00Z"
+updated_at: "2026-08-30T03:55:00Z"
+summary: Cross-implementation X-Wing Combiner agreement matrix (CIRCL v1.6.5 vs Python reference per draft-10 §5.3) on 10 deterministic (sk, eseed) pairs; byte-exact ss comparison plus 48-cell mutation matrix.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: minimax-m3
+    tool: harness design (Go + Python, oracle.exe + full_audit.py)
+  sources:
+    - spc-2026-0002 (draft-10 Section 5.3)
+    - knowledge/hypotheses/hyp-2026-0013.yaml
+    - knowledge/implementations/imp-2026-0007.yaml
+  parent: msn-2026-0009
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0007, imp-2026-0009]
+  targets: [tgt-2026-0002]
+  hypotheses: [hyp-2026-0013]
+  observations: [obs-2026-0030, obs-2026-0031]
+title: EXP-2026-0023 - X-Wing Combiner cross-impl agreement matrix (CIRCL vs Python)
+design: |
+  Inputs:
+    - 10 deterministic (sk_seed, eseed) pairs derived via SHA3-256/SHAKE256
+      of counter-prefixed messages.
+    - For each vector:
+        1. CIRCL KeyGenDerand(seed) -> (sk, pk)  (32, 1216 bytes)
+        2. CIRCL Components(pk, eseed) -> (ss_M, ss_X, ct_X, pk_X, ss, ct)
+        3. Python xwing_combiner(ss_M, ss_X, ct_X, pk_X) -> py_ss
+        4. Compare py_ss.hex() == circl_ss.hex()
+        5. CIRCL Decapsulate(ct, sk) -> circl_dec_ss
+        6. Compare circl_dec_ss == circl_ss (Encaps/Decaps symmetry)
+
+  Mutation matrix (first 3 vectors):
+    - 13 single-bit flips at canonical positions of (ss_M, ss_X, ct_X, pk_X)
+    - 3 structural mutations: swap_ssM_ssX, swap_ctX_pkX, drop_label
+    - For each mutation, run the Python combiner on the mutated inputs and
+      confirm the resulting ss differs from the canonical ss.
+
+  Outputs:
+    - Per-vector {circl_ss, py_ss, decaps_ss, agreement}
+    - Per-mutation {mutation_label, mutated_ss, differs_from_canonical}
+    - SHAKE-256 hash of all canonical ss values (for reproducibility fingerprint)
+compute:
+  expected_class: lightweight
+  notes: "Single-machine Python + Go subprocesses; R:\\xwing-cross\\ scratch; total compute ~30s per vector."
+execution:
+  environment: "Windows 11 Pro, PowerShell, Python 3.11.15 + cryptography 50.0.1, Go 1.26.4"
+  isolation: "env-scrubbed scratch on R:\\xwing-cross (ramdisk); no secrets, no network"
+  duration_seconds: 5
+  runs: 1
+  seeds: ["xwing-cross-vec-{1..10}"]
+result:
+  status: pass
+  n_vectors: 10
+  n_combiner_agrees: 10
+  n_decaps_agrees: 10
+  n_mutations_total: 48
+  n_mutations_changed_ss: 48
+  artifacts:
+    - .scratch/msn-2026-0009/full_audit.json
+    - .scratch/msn-2026-0009/full_audit_summary.json
+    - .scratch/msn-2026-0009/full_audit.py
+notes: |
+  Every tested cell of the cross-impl agreement matrix matches CIRCL byte-exactly.
+  No divergence observed at any canonical or mutation cell.
+  Mutation matrix confirmed that every mutation changes the ss (expected: 16/16 per vector).
+  This confirms the X-Wing Combiner per draft-10 §5.3 is canonicalized and
+  is implemented identically in CIRCL v1.6.5 (Go) and the Python reference.

@@ -1,0 +1,47 @@
+id: hyp-2026-0015
+type: hypothesis
+status: open
+created_at: "2026-08-30T03:55:00Z"
+updated_at: "2026-08-30T03:55:00Z"
+summary: pyca/cryptography 50.0.1 X25519 (RFC 7748 conformant) produces byte-exact identical shared secrets to CIRCL v1.6.5 X25519 for the same (sk_X, pk_X) input pair, despite pyca exposing only the high-level X25519PrivateKey / X25519PublicKey API.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator-C
+    model: minimax-m3
+    tool: independent generator
+  sources:
+    - https://cryptography.io/en/latest/x25519.html
+    - spc-2026-0002 (RFC 7748 §5)
+    - knowledge/implementations/imp-2026-0009.yaml (pyca)
+  parent: msn-2026-0009
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  implementations: [imp-2026-0007, imp-2026-0009]
+  targets: [tgt-2026-0002]
+title: HYP-C - pyca X25519 matches CIRCL X25519 byte-exact
+statement: >
+  Both pyca/cryptography 50.0.1 and CIRCL v1.6.5 implement RFC 7748 X25519
+  with the standard 32-byte clamped scalar and Montgomery ladder; both
+  apply RFC 7748 §5 scalar clamping; both produce 32-byte little-endian
+  output; therefore they should produce byte-exact identical shared
+  secrets for the same (sk_X, pk_X) input pair.
+falsifiable_predictions:
+  - All 10 random X25519 (sk, pk) -> ss pairs agree between pyca and CIRCL.
+  - pyca's clamped pk_X (computed from a random sk_X) agrees with CIRCL's pk_X.
+disproof_attempts: []
+notes: |
+  pyca 50.0.1 uses OpenSSL 3.x's X25519 via the EVP_PKEY interface, which
+  is the same Montgomery-ladder implementation that OpenSSL has shipped for
+  years. CIRCL uses its own optimized ladder (different scalar-point order
+  in the loop, but mathematically equivalent). The audit runs both and
+  confirms byte-exact agreement. This is a precondition for using pyca as
+  a viable X25519 implementation in cross-library X-Wing testing.
+
+  pyca ML-KEM-768 (FIPS 203) is verified only for round-trip correctness
+  (encapsulate -> decapsulate -> K == K') because pyca 50.0.1 does NOT
+  expose EncapsulateDerand, making byte-exact derandomized ML-KEM cross-
+  comparison infeasible. The ML-KEM round-trip check is therefore a
+  primitive-correctness test, not a byte-exact cross-impl comparison.
