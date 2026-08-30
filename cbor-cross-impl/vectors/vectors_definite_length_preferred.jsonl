@@ -1,0 +1,6 @@
+{"axis": "definite_length_preferred", "vector_id": "array_empty", "data_item": [], "description": "empty array (definite-length)", "oracle_deterministic_hex": "80", "oracle_canonical_hex": "80"}
+{"axis": "definite_length_preferred", "vector_id": "map_empty", "data_item": {}, "description": "empty map (definite-length)", "oracle_deterministic_hex": "a0", "oracle_canonical_hex": "a0"}
+{"axis": "definite_length_preferred", "vector_id": "bstr_empty", "data_item": {"__type__": "bytes", "hex": ""}, "description": "empty byte string (definite-length)", "oracle_deterministic_hex": "40", "oracle_canonical_hex": "40"}
+{"axis": "definite_length_preferred", "vector_id": "tstr_empty", "data_item": "", "description": "empty text string (definite-length)", "oracle_deterministic_hex": "60", "oracle_canonical_hex": "60"}
+{"axis": "definite_length_preferred", "vector_id": "array_1elem", "data_item": [1], "description": "1-element array", "oracle_deterministic_hex": "8101", "oracle_canonical_hex": "8101"}
+{"axis": "definite_length_preferred", "vector_id": "map_1pair", "data_item": {"a": 1}, "description": "1-pair map", "oracle_deterministic_hex": "a1616101", "oracle_canonical_hex": "a1616101"}

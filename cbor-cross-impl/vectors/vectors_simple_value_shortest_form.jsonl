@@ -1,0 +1,4 @@
+{"axis": "simple_value_shortest_form", "vector_id": "simple_False", "data_item": {"__type__": "bool", "value": false}, "description": "simple value False", "oracle_deterministic_hex": "f4", "oracle_canonical_hex": "f4"}
+{"axis": "simple_value_shortest_form", "vector_id": "simple_True", "data_item": {"__type__": "bool", "value": true}, "description": "simple value True", "oracle_deterministic_hex": "f5", "oracle_canonical_hex": "f5"}
+{"axis": "simple_value_shortest_form", "vector_id": "simple_None", "data_item": null, "description": "simple value None", "oracle_deterministic_hex": "f6", "oracle_canonical_hex": "f6"}
+{"axis": "simple_value_shortest_form", "vector_id": "simple_undefined", "data_item": "undefined", "description": "simple value undefined", "oracle_deterministic_hex": "f7", "oracle_canonical_hex": "f7"}

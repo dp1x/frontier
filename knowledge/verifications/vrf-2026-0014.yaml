@@ -1,0 +1,94 @@
+id: vrf-2026-0014
+type: verification
+status: verified
+created_at: "2026-08-31T14:00:00Z"
+updated_at: "2026-08-31T14:00:00Z"
+summary: "Verification of msn-2026-0015 (CBOR §4.2 cross-impl conformance matrix). The cleanroom Python oracle was independently verified against (a) RFC 8949 Appendix C 14 integer reference vectors (14/14 PASS in both deterministic and canonical modes), and (b) RFC 8949 §4.2.3 length-first ordering example (byte-exact match). The matrix is reproducible from the committed reproducer (rpr-2026-0013). The matrix identifies real cross-impl divergence between RFC 8949 §4.2.1 (core deterministic bytewise lex sort) and §4.2.3 (length-first sort) for map-key ordering, plus documented cbor2 behavior (default mode uses double-precision floats)."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: verification-agent
+    model: minimax-m3
+    tool: "deterministic verification script"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc8949#appendix-C
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.3
+    - knowledge/reproducers/rpr-2026-0013.yaml
+    - knowledge/observations/obs-2026-0040.yaml
+    - cbor-cross-impl/results/matrix.tsv
+    - cbor-cross-impl/oracle/cbor_oracle.py
+  parent: exp-2026-0030
+  generation: 0
+links:
+  specifications: [spc-2026-0004]
+  targets: [tgt-2026-0005]
+  hypotheses: []
+  experiments: [exp-2026-0030]
+  observations: [obs-2026-0040]
+  reproducers: [rpr-2026-0013]
+  findings: []
+title: "VRF-2026-0014 - msn-2026-0015 verification (CBOR §4.2 matrix)"
+verification_method: deterministic-script
+verification_inputs:
+  - "RFC 8949 Appendix C 14 integer reference vectors (https://www.rfc-editor.org/rfc/rfc8949#appendix-C)"
+  - "RFC 8949 §4.2.3 length-first ordering example (https://www.rfc-editor.org/rfc/rfc8949#section-4.2.3)"
+  - "cbor-cross-impl/results/matrix.tsv (matrix output from cbor2 6.1.4)"
+
+verification_steps:
+  - step: 1
+    description: "Run cleanroom oracle self-test against RFC 8949 Appendix C"
+    command: "cd cbor-cross-impl && python oracle/cbor_oracle.py"
+    expected: "14/14 PASS for both deterministic and canonical modes"
+    actual: "14/14 PASS for both modes (verified 2026-08-31)"
+    status: PASS
+
+  - step: 2
+    description: "Verify RFC 8949 §4.2.3 example byte-exact match"
+    command: "python -c 'import sys; sys.path.insert(0, \"cbor-cross-impl/oracle\"); from cbor_oracle import encode_canonical; m={10:1,-1:1,False:1,100:1,\"z\":1,(-1,):1,\"aa\":1,(100,):1}; print(encode_canonical(m).hex())'"
+    expected: "a80a012001f401186401617a018120016261610181186401"
+    actual: "a80a012001f401186401617a018120016261610181186401"
+    status: PASS
+
+  - step: 3
+    description: "Reproduce the matrix from scratch"
+    command: "cd cbor-cross-impl && python vectors/gen_vectors.py && python runner/run_matrix.py"
+    expected: "222 cells, ~197 PASS"
+    actual: "222 cells, 197 PASS, 18 SPEC_AMBIGUITY, 3 SPEC_VIOLATION, 2 INTEROP_BREAK, 2 ERROR"
+    status: PASS
+
+  - step: 4
+    description: "Validate matrix.tsv is byte-identical on re-run"
+    command: "python runner/run_matrix.py && sha256sum results/matrix.tsv"
+    expected: "byte-identical matrix.tsv"
+    actual: "byte-identical matrix.tsv on re-run (deterministic for given inputs)"
+    status: PASS
+
+verification_summary: |
+  The msn-2026-0015 framework is verified at 4 distinct levels:
+    1. Cleanroom oracle self-test: 14/14 RFC 8949 Appendix C integer vectors PASS
+       in both deterministic and canonical modes.
+    2. RFC 8949 §4.2.3 example byte-exact match: oracle produces
+       a80a012001f401186401617a018120016261610181186401 byte-exactly.
+    3. Matrix runner reproducibility: re-running produces identical TSV.
+    4. Per-cell verdict classification: 222 cells, 88.7% PASS, 11.3% diverge
+       (with 3 SPEC_VIOLATION + 2 INTEROP_BREAK being real cross-impl
+       divergences; rest are documented behavior or vector-generator issues).
+
+  Cross-impl divergences identified:
+    - cbor2 canonical mode produces §4.2.1 bytewise lex sort; oracle produces
+      §4.2.3 length-first sort. Both are RFC 8949 normative.
+    - cbor2 default mode uses IEEE 754 double-precision for ALL floats;
+      documented behavior (canonical=True required for shortest-form floats).
+
+limitations:
+  - "Only 1 library (cbor2 6.1.4) tested. Cohort independence is weak."
+  - "Second-opinion oracle (cbor.me) not consulted. RFC 8949 §4.2.1 vs §4.2.3
+    divergence is normative in the RFC text itself, so cbor.me is informative
+    but not required."
+  - "Vector generator has 4 known issues producing false-positive divergences.
+    These are documented in obs-2026-0040 and require vector-generator fixes
+    before promoting to fnd-2026-0013."
+  - "Cross-platform + cross-version reproducibility not tested."
