@@ -1,0 +1,231 @@
+id: exp-2026-0030
+type: experiment
+status: designed
+created_at: "2026-08-31T11:30:00Z"
+updated_at: "2026-08-31T11:30:00Z"
+summary: "Cross-implementation CBOR (RFC 8949) §4.2 deterministic-encoding conformance matrix experiment design. 10 libraries × 8 audit axes × 125+ adversarial vectors per axis = ~10,000 cells. Per-cell verdict: pass / spec-violation / spec-ambiguity / interop-break. All cells reproducible from committed reproducer without network access. Cleanroom Python oracle (RFC 8949 text + standard Python primitives only) serves as normative reference. cbor.me (Carsten Bormann, RFC 8949 co-editor) used as second-opinion oracle for any diverging cell."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: minimax-m3
+    tool: "designing msn-2026-0015 experiment matrix"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
+    - https://www.rfc-editor.org/rfc/rfc8949#appendix-C
+    - knowledge/specifications/spc-2026-0004.yaml
+    - knowledge/targets/tgt-2026-0005.yaml
+    - missions/active/msn-2026-0015.yaml
+  parent: msn-2026-0015
+  generation: 0
+links:
+  specifications: [spc-2026-0004]
+  targets: [tgt-2026-0005]
+  hypotheses: []
+  implementations: []
+  findings: []
+title: "EXP-2026-0030 - CBOR §4.2 deterministic-encoding cross-impl matrix design"
+experimental_design: |
+  The experiment is a 3-dimensional matrix:
+    Dim 1: library (10 libraries, see cohort below)
+    Dim 2: audit axis (8 axes, from spc-2026-0004)
+    Dim 3: input vector (125+ per axis, CDDL-synthesized + RFC 8949 Appendix C)
+  Per-cell verdict: pass / spec-violation / spec-ambiguity / interop-break / error
+
+  Two reference oracles:
+    Oracle A: cleanroom Python oracle implementing RFC 8949 §4.2
+              deterministic mode + §4.2.1 canonical mode. No consultation
+              of audited library source code.
+    Oracle B: cbor.me reference diagnostic (Carsten Bormann, RFC 8949
+              co-editor). Used as second-opinion oracle for any
+              diverging cell.
+
+  Two oracle modes per library:
+    Mode 1: library's documented default mode (most permissive)
+    Mode 2: library's documented deterministic/canonical mode (if
+            available)
+
+  The matrix is structured so that per-cell divergence triggers a
+  pipeline:
+    Step 1: cross-check with cbor.me (Oracle B)
+    Step 2: classify (cosmetic / interop-break / spec-violation / ambiguity)
+    Step 3: assign candidate finding ID
+    Step 4: queue for adversarial critic review
+    Step 5: commit reproducer
+    Step 6: promote or reject per evidence chain
+
+cohort:
+  - id: lib-ciborium
+    name: ciborium
+    language: Rust
+    lineage: RustCrypto / enarx
+    repo: https://github.com/enarx/ciborium
+    has_canonical_mode: true
+    expected_dependencies: cargo, libstd
+  - id: lib-fxamacker-cbor
+    name: fxamacker/cbor
+    language: Go
+    lineage: fxamacker independent
+    repo: https://github.com/fxamacker/cbor
+    has_canonical_mode: true
+    expected_dependencies: go toolchain
+  - id: lib-cbor2
+    name: cbor2 (Python)
+    language: Python
+    lineage: agronholm independent
+    repo: https://github.com/agronholm/cbor2
+    has_canonical_mode: true
+    expected_dependencies: pip install cbor2
+  - id: lib-jackson-cbor
+    name: jackson-dataformat-cbor (Java)
+    language: Java
+    lineage: FasterXML (Tatu Saloranta)
+    repo: https://github.com/FasterXML/jackson-dataformats-binary
+    has_canonical_mode: true
+    expected_dependencies: maven, jackson-dataformat-cbor
+  - id: lib-upokecenter-cbor
+    name: upokecenter/CBOR (Java/C#)
+    language: Java + C#
+    lineage: Peter O'Neill independent
+    repo: https://github.com/peteroupc/CBOR
+    has_canonical_mode: true
+    expected_dependencies: maven or nuget
+  - id: lib-cbor-x
+    name: cbor-x (JavaScript)
+    language: JavaScript/Node
+    lineage: dentsu-dev
+    repo: https://github.com/dentsu-dev/cbor-x
+    has_canonical_mode: false (encoder-only)
+    expected_dependencies: npm, Node.js
+  - id: lib-tinycbor
+    name: tinycbor (C)
+    language: C
+    lineage: Intel
+    repo: https://github.com/intel/tinycbor
+    has_canonical_mode: true
+    expected_dependencies: gcc, libtinycbor
+  - id: lib-cborg
+    name: cborg (Haskell)
+    language: Haskell
+    lineage: Well-Typed (academic)
+    repo: https://github.com/well-typed/cborg
+    has_canonical_mode: true
+    expected_dependencies: cabal, GHC
+  - id: lib-ocaml-cbor
+    name: ocaml-cbor (OCaml)
+    language: OCaml
+    lineage: OCaml community
+    repo: https://github.com/ocaml-cbor/cbor
+    has_canonical_mode: true
+    expected_dependencies: opam, ocaml
+  - id: lib-cbor-erlang
+    name: cbor-erlang (Erlang)
+    language: Erlang
+    lineage: erlef (Erlang ecosystem)
+    repo: https://github.com/erlef/cbor-erlang
+    has_canonical_mode: true
+    expected_dependencies: rebar3, erlang/OTP
+
+audit_axes:
+  - axis: integer_shortest_form
+    rule_ref: "RFC 8949 §4.2 rule 1"
+    vector_strategy: "Generate inputs at all transition points (0, 23, 24, 255, 256, 65535, 65536, 2^32-1, 2^32, 2^64-1, 2^64), plus all-negative-counterparts, plus arbitrary-precision."
+    expected_vectors: 125
+  - axis: map_key_sort
+    rule_ref: "RFC 8949 §4.2 rule 2"
+    vector_strategy: "Generate maps with keys of varying byte lengths (1, 2, 3, 4, 5, 6+), with mixed lexical order, with duplicate keys at different lengths, with keys containing escape-equivalent bytes (UTF-8 leading bytes, multi-byte sequences)."
+    expected_vectors: 150
+  - axis: float_shortest_form
+    rule_ref: "RFC 8949 §4.2 rule 3"
+    vector_strategy: "Generate half-precision floats with round-trip exact values (1.0, 1.5, 1.25, etc.), single/double-precision floats that are also representable in half, NaN payloads, infinity, subnormal numbers."
+    expected_vectors: 100
+  - axis: definite_length_preferred
+    rule_ref: "RFC 8949 §4.2 rule 4"
+    vector_strategy: "Generate strings/arrays/maps in both indefinite-length and definite-length forms; verify the canonical output is definite-length."
+    expected_vectors: 80
+  - axis: duplicate_key_rejection
+    rule_ref: "RFC 8949 §4.2 rule 5"
+    vector_strategy: "Generate maps with duplicate keys (same byte sequence appearing twice); verify deterministic-mode encoder rejects."
+    expected_vectors: 60
+  - axis: tag_shortest_form
+    rule_ref: "RFC 8949 §4.2.1 rule 3"
+    vector_strategy: "Generate tagged values with tag numbers at transition points (0, 23, 24, 255, 256, 65535, 65536), with nested tags, with epoch-based date tags (RFC 8949 §3.4)."
+    expected_vectors: 80
+  - axis: simple_value_shortest_form
+    rule_ref: "RFC 8949 §4.2.1 rule 5"
+    vector_strategy: "Generate simple values at transition points (false, true, null, undefined, simple value 0..23, simple value 32..255)."
+    expected_vectors: 50
+  - axis: chunked_string_consistency
+    rule_ref: "RFC 8949 §2.2 + §4.2"
+    vector_strategy: "Generate byte/text strings in chunked indefinite-length form; verify deterministic encoder produces definite-length or chunked-indefinite consistently."
+    expected_vectors: 60
+
+total_expected_cells: ~10000
+  - 10 libs × 8 axes × 125-avg vectors × 2 modes = ~20000 cell-mode pairs
+  - after deduplication of identical cells, ~10000 distinct cells
+
+oracle_a_cleanroom_python:
+  description: "RFC 8949 §4.2 deterministic-encoding reference implementation in Python 3.11+, derived exclusively from RFC 8949 text + standard Python primitives (struct for byte assembly). No consultation of audited library source code."
+  location: "cbor-cross-impl/oracle/cbor_oracle.py"
+  interfaces:
+    - "encode_deterministic(data_item) -> bytes"
+    - "encode_canonical(data_item) -> bytes"
+    - "decode(bytes) -> data_item"
+    - "validate_appendix_c() -> (passed: bool, failures: list)"
+  test_suite: "cbor-cross-impl/oracle/test_cbor_oracle.py (must pass RFC 8949 Appendix C all 14 vectors byte-exactly in both modes)"
+
+oracle_b_cborme:
+  description: "Carsten Bormann's reference diagnostic at cbor.me. Used for second-opinion verification of any cell where Oracle A and a library disagree. Implementation-level oracle."
+  usage: "For each diverging cell, submit (input bytes → expected output bytes) to cbor.me and record the diagnostic's verdict."
+
+vector_generation:
+  description: "Adversarial CDDL-synthesized vector generator. Generates inputs targeting each audit axis. Reproducible (seeded) so matrix is deterministic."
+  location: "cbor-cross-impl/vectors/gen_vectors.py"
+  output: "cbor-cross-impl/vectors/vectors_<axis>.jsonl (one vector per line: hex input data item + axis metadata)"
+  seed_policy: "Fixed seed (0xCB0F1E21). All vector generation is deterministic given the seed."
+
+adapter_layer:
+  description: "Per-library adapter layer. Each adapter is a Python module that exposes a uniform interface (encode_deterministic, encode_canonical) and wraps the library's native API. Adapters normalize error handling and produce structured verdicts."
+  location: "cbor-cross-impl/adapters/"
+  per_library_loc: "cbor-cross-impl/adapters/<lib-id>_adapter.py"
+  interface_spec: "Adapter must implement: def encode(input_data_item, mode) -> (bytes_or_None, verdict, error_msg). Verdict in {PASS, SPEC_VIOLATION, SPEC_AMBIGUITY, INTEROP_BREAK, ERROR}."
+
+matrix_runner:
+  description: "Orchestrates the (library × axis × vector × mode) sweep. Produces a TSV with columns: library_id, axis, vector_id, mode, expected_hex, actual_hex, match, verdict, oracle_a_verdict, oracle_b_verdict."
+  location: "cbor-cross-impl/runner/run_matrix.py"
+  output: "cbor-cross-impl/results/matrix.tsv (also .jsonl for machine-readable)"
+
+verification_path:
+  description: "Each cell in the matrix is reproducible from the committed reproducer. Two consecutive runs of the matrix runner must produce byte-identical TSVs."
+  reproducibility_test: "cbor-cross-impl/runner/test_reproducibility.py asserts that re-running the matrix yields identical output."
+  adversarial_critic_pipeline: "Every cell with verdict != PASS in two or more libraries is queued for adversarial critic review. The critic's role: (a) determine whether the divergence is a real spec violation, (b) determine whether the divergence is a real interop break, (c) construct an attack scenario if relevant, (d) classify the disclosure class (interop-note / security-advisory / spec-ambiguity)."
+  promotion_path: "hypothesis → experiment (this) → observation → reproducer → independent review → verified"
+
+compute:
+  expected_class: lightweight
+  notes: "Per-cell compute is microseconds-to-milliseconds. Full sweep ~30 minutes on a single laptop core. Library builds ~30 min each on commodity Windows host. Total local compute ~3 hours including adapter verification."
+  determinism: "All vector generation and per-library encoding is deterministic given the same library version and input. Cross-version changes are reported separately."
+
+isolation:
+  scratch_root: "R:\\cbor-cross-impl"
+  durable_root: "cbor-cross-impl/ (committed to repo)"
+  ephemeral_artifacts: "library source clones, build trees, compiled artifacts, log files - all under R:\\cbor-cross-impl, never committed"
+  network_policy: "Build phase may fetch library source from public repos (with versions pinned). Experiment execution must NOT make network calls."
+  secrets_policy: "Stripped; no API tokens, no SSH keys, no browser credentials."
+
+limitations:
+  - "Library version drift during mission lifetime; we pin to a specific commit/tag per library and document the pin."
+  - "cbor.me availability is intermittent; if unavailable, fall back to a hand-encoded reference oracle derived directly from RFC 8949 Appendix C."
+  - "Some libraries (cbor-x) do not have a canonical mode; for those libraries, only Mode 1 (default) is tested."
+  - "Verdict 'SPEC_AMBIGUITY' requires human review of the RFC text; this is not a pure mechanical classification."
+  - "Cross-version reproducibility is not part of this mission; library upgrades may invalidate the matrix."
+
+success_metrics:
+  - "Matrix TSV produced with >= 5000 cells"
+  - "All cells have a per-library verdict"
+  - "All diverging cells are cross-checked against cbor.me (or fallback oracle)"
+  - "All diverging cells have an adversarial critic verdict"
+  - "Reproducer commits a script that reproduces the entire matrix from scratch"
+  - "At least one reproducible cross-impl divergence has full evidence chain (or the matrix proves all libraries agree, an acceptable negative result)"

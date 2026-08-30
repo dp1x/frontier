@@ -1,0 +1,148 @@
+id: tgt-2026-0005
+type: target
+status: active
+created_at: "2026-08-31T10:00:00Z"
+updated_at: "2026-08-31T10:00:00Z"
+summary: "CBOR (RFC 8949) canonical / deterministic-encoding (§4.2, §4.2.1) and COSE (RFC 8152 / RFC 9052) message-encoding conformance divergence across 10+ independently-lineaged implementations. CBOR is the substrate of WebAuthn/FIDO2, COSE is used in IETF/IRTF deployments, and deterministic encoding is a security property (canonical signatures, hash commitments, reproducible proofs). Independent cohorts: Rust ciborium, Go fxamacker/cbor, Python cbor2, Java jackson-dataformat-cbor, Java upokecenter-cbor, JavaScript cbor-x, C tinycbor, Haskell cborg, OCaml ocaml-cbor, Erlang cbor-erlang, plus cbor.me (Carsten Bormann) as reference oracle."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: minimax-m3
+    tool: "scout synthesis across 6 parallel scout reports (CBOR/COSE/WebAuthn, QUIC retry, X.509 path validation, C23 _BitInt, DNS/DNSSEC, WebAuthn attestation)"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc8949
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
+    - https://www.rfc-editor.org/rfc/rfc8949#appendix-C
+    - https://www.rfc-editor.org/rfc/rfc8152
+    - https://www.rfc-editor.org/rfc/rfc9052
+    - https://www.rfc-editor.org/rfc/rfc9053
+    - https://github.com/cbor/cbor-test-vector
+    - https://github.com/cbor-wg
+    - https://www.w3.org/TR/webauthn-3/
+    - https://fidoalliance.org/specs/fido2/
+    - https://cbor.me
+    - knowledge/notes/scout-cbor-cose-webauthn-2026-08-31.md
+  parent: null
+  generation: 0
+links:
+  specifications: []
+  implementations: []
+  hypotheses: []
+title: "TGT-2026-0005 - CBOR/COSE canonical-encoding conformance divergence across independent implementations"
+selection_rationale: >
+  Six parallel scout reports were commissioned for the 2026-08-31
+  research shift. Three candidates passed the Frontier economic test
+  (CBOR/COSE/WebAuthn canonical-encoding, X.509 path validation,
+  DNS/DNSSEC resolver divergence). CBOR/COSE was selected because:
+
+  1. Largest reasoning-to-compute ratio (~95% intellectual / 5% physical).
+     Per-cell compute is microseconds-to-milliseconds; full sweep
+     (10+ encoders x 10k+ vectors) finishes in <30 minutes on a laptop.
+     The reasoning burden (RFC 8949 §4.2 deep reading + per-impl
+     source-code reading + CDDL synthesis + verdict classification)
+     is the dominant cost.
+
+  2. Cleanest cohort independence. Ten independently-lineaged
+     implementations across five language families (Rust, Go, Python,
+     Java, JS, C, Haskell, OCaml, Erlang). No shared parser upstream;
+     cross-impl agreement is not a product of shared ancestry.
+
+  3. Strongest verification path. Each finding is binary-checkable
+     against RFC 8949 §4.2 text, against the cbor.me reference
+     diagnostic (Carsten Bormann, RFC 8949 co-editor), and against
+     independently-implemented reference encoders (Haskell cborg,
+     OCaml ocaml-cbor). Deterministic, reproducible, no AI needed
+     for the final judgment.
+
+  4. Genuinely new territory for Frontier. Zero prior coverage in the
+     knowledge base; orthogonal to ML-KEM/FIPS 203/204/FROST/SSH
+     hybrid KEX work; opens a new research family (canonical encoding
+     of structured wire formats).
+
+  5. Strong multi-channel disclosure surface. Findings can be filed as:
+     - IETF cbor-wg errata or draft updates (highest formal channel)
+     - Per-library GitHub issues (interop notes, expected and welcomed)
+     - W3C WebAuthn WG (if a divergence affects authenticator-data
+       byte-level conformance)
+     - FIDO Alliance liaison (if a divergence affects FIDO2 conformance
+       tooling)
+     - Embargoed security advisory (only if a divergence crosses from
+       interop into "accepts invalid signature" territory)
+
+  6. Bounded scope. CBOR §4.2 is a normative-but-tight section (~400
+     words). Per-cluster test cell construction is enumerable. The
+     mission has a clear terminal condition: matrix complete + per-cell
+     verdicts recorded + reproducibility verified + adversarial review.
+
+  Out-of-scope: post-quantum COSE algorithm conformance (separate
+  mission), CBOR-in-X.509 / C509 (separate scope), vendor proprietary
+  firmware (no observability), CBOR-LD (JSON-LD compatibility profile,
+  separate scope).
+candidate_implementations:
+  - id: imp-pending-001
+    name: ciborium (Rust)
+    repo: https://github.com/enarx/ciborium
+    lineage: RustCrypto
+  - id: imp-pending-002
+    name: fxamacker/cbor (Go)
+    repo: https://github.com/fxamacker/cbor
+    lineage: fxamacker independent
+  - id: imp-pending-003
+    name: cbor2 (Python)
+    repo: https://github.com/agronholm/cbor2
+    lineage: agronholm independent
+  - id: imp-pending-004
+    name: jackson-dataformat-cbor (Java)
+    repo: https://github.com/FasterXML/jackson-dataformats-binary
+    lineage: FasterXML (Tatu Saloranta)
+  - id: imp-pending-005
+    name: upokecenter/cbor (Java/C#)
+    repo: https://github.com/peteroupc/CBOR
+    lineage: Peter O'Neill independent
+  - id: imp-pending-006
+    name: cbor-x (JavaScript)
+    repo: https://github.com/dentsu-dev/cbor-x
+    lineage: dentsu-dev
+  - id: imp-pending-007
+    name: tinycbor (C)
+    repo: https://github.com/intel/tinycbor
+    lineage: Intel
+  - id: imp-pending-008
+    name: cborg (Haskell)
+    repo: https://github.com/well-typed/cborg
+    lineage: Well-Typed (academic)
+  - id: imp-pending-009
+    name: ocaml-cbor (OCaml)
+    repo: https://github.com/ocaml-cbor/cbor
+    lineage: OCaml community
+  - id: imp-pending-010
+    name: cbor-erlang (Erlang)
+    repo: https://github.com/erlef/cbor-erlang
+    lineage: Erlang community
+candidate_test_vectors:
+  - source: RFC 8949 Appendix C
+    url: https://www.rfc-editor.org/rfc/rfc8949#appendix-C
+    independence: full (IETF canonical)
+  - source: cbor-test-vector repository
+    url: https://github.com/cbor/cbor-test-vector
+    independence: full (CBOR WG working group)
+  - source: Frontière-generated adversarial corpus (synthesized)
+    url: pending (will be produced by msn-2026-0015)
+    independence: full (Frontier cleanroom CDDL synthesis)
+  - source: cbor.me reference diagnostic
+    url: https://cbor.me
+    independence: full (RFC 8949 co-editor, Carsten Bormann)
+candidate_specifications:
+  - spc-2026-0004 (to be created: RFC 8949 §4.2 normative extract)
+epistemic_status_long: |
+  Target status is "active" because the scout synthesis is complete and
+  candidate implementations + vector sources are identified. Target is
+  promoted to "verified" only after msn-2026-0015 reaches terminal
+  state with at least one promoted finding OR explicitly classified
+  as "inconclusive-after-budget" with documented reason. Per AGENTS.md,
+  target is distinct from mission status; a target may remain "active"
+  across multiple missions.
+notes_path: knowledge/notes/tgt-2026-0005.md

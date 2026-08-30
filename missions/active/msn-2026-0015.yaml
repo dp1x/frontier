@@ -1,0 +1,144 @@
+id: msn-2026-0015
+type: mission
+status: active
+created_at: "2026-08-31T11:00:00Z"
+updated_at: "2026-08-31T11:30:00Z"
+summary: "Cross-implementation CBOR (RFC 8949) §4.2 deterministic-encoding conformance matrix over 10 independent-lineage libraries. Build a cleanroom Python oracle (RFC 8949 §4.2 deterministic mode + §4.2.1 canonical mode), an adversarial vector generator (CDDL-synthesized inputs targeting each audit axis in spc-2026-0004), and a per-library adapter layer. Run the matrix (10 libs × 1000+ vectors × per-axis verdict), cross-check diverging cells against cbor.me reference diagnostic, and promote reproducible cross-impl divergences to findings with full evidence chains. Acceptable terminal outcomes: (a) at least one verified_conclusion finding with adversarial critic support, OR (b) inconclusive-after-budget if all libs agree (acceptable negative result, documented)."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: minimax-m3
+    tool: "synthesizing scout-cbor-cose-webauthn-2026-08-31 selection of tgt-2026-0005"
+  sources:
+    - knowledge/targets/tgt-2026-0005.yaml
+    - knowledge/specifications/spc-2026-0004.yaml
+    - knowledge/notes/scout-cbor-cose-webauthn-2026-08-31.md
+    - https://www.rfc-editor.org/rfc/rfc8949
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
+    - https://www.rfc-editor.org/rfc/rfc8949#appendix-C
+    - https://cbor.me
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0004]
+  targets: [tgt-2026-0005]
+  implementations: []
+  hypotheses: []
+  experiments: []
+  findings: []
+title: "msn-2026-0015 - CBOR RFC 8949 §4.2 deterministic-encoding cross-impl conformance matrix"
+objective: >
+  Determine whether 10 independent-lineage CBOR encoder libraries
+  (Rust ciborium, Go fxamacker/cbor, Python cbor2, Java
+  jackson-dataformat-cbor, Java upokecenter-cbor, JavaScript cbor-x,
+  C tinycbor, Haskell cborg, OCaml ocaml-cbor, Erlang cbor-erlang)
+  produce byte-exact identical deterministic-mode and canonical-mode
+  outputs for the same input data item, when input items are drawn
+  from a cleanroom CDDL-synthesized corpus targeting each audit axis
+  in spc-2026-0004 (integer shortest-form, map-key sort, float
+  shortest-form, definite-length preference, duplicate-key rejection,
+  tag shortest-form, simple-value shortest-form, chunked-string
+  consistency), and when the implementation's documented default mode
+  is the one used (per the scout's risk-2 mitigation).
+
+  Cross-check diverging cells against cbor.me reference diagnostic
+  (Carsten Bormann, RFC 8949 co-editor) to determine which
+  implementation(s) are non-conformant. Classify each finding as:
+    - cosmetic (output re-encodes to canonical), or
+    - interop break (output not parseable by other RFC-8949
+      conformant decoders), or
+    - spec violation (output not deterministic per §4.2), or
+    - spec ambiguity (RFC 8949 text permits both interpretations).
+
+  Each cell in the matrix must be reproducible from a committed
+  reproducer (rpr-2026-XXXX) without network access. The cleanroom
+  oracle must be derived exclusively from RFC 8949 text + standard
+  Python primitives (no consultation of any of the audited libraries'
+  source code).
+
+  Terminal conditions:
+    - At least one reproducible cross-impl divergence with full
+      evidence chain and adversarial critic support → promoted to
+      verified_conclusion. OR
+    - All libraries agree on all cells after diminishing-returns
+      window → terminalized as inconclusive-after-budget with the
+      matrix itself as a preserved artifact (acceptable negative
+      result). OR
+    - Budget exhausted without resolution → terminalized as
+      inconclusive-after-budget with documented reason.
+domain: interop
+scope: >
+  In scope:
+  - CBOR encoder behavior in deterministic mode (if available in the
+    library) AND canonical mode (if separately supported) AND
+    default mode (per library documentation).
+  - 10 libraries as listed above (with implementation-archaeologist
+    agents to verify lineage independence before promotion).
+  - 8 audit axes from spc-2026-0004.
+  - 1000+ adversarial vectors synthesized from a CDDL grammar.
+  - Cross-check against cbor.me reference diagnostic.
+  - Per-impl adapter layer in Python (consistent verdict
+    classification).
+
+  Out of scope (deferred to follow-up missions):
+  - COSE message-encoding (RFC 8152/9052) → msn-2026-0016.
+  - WebAuthn authenticator-data byte-level conformance →
+    msn-2026-0017.
+  - X.509 path validation → msn-2026-0018.
+  - QUIC Retry token validation → msn-2026-0019.
+  - CBOR-LD (JSON-LD compatibility profile, RFC 7049bis-04).
+  - Vendor proprietary firmware / observability-limited libraries.
+  - Post-quantum COSE algorithm conformance.
+  - Performance / timing benchmarks.
+constraints:
+  - Cleanroom Python oracle derived exclusively from RFC 8949 text.
+    No consultation of any audited library's source code.
+  - Per-library adapter layer in Python (~150 lines per library).
+  - All experiments reproducible from committed reproducer without
+    network access.
+  - All builds in env-scrubbed scratch (`R:\` if available, else
+    `.scratch/`).
+  - Adversarial critic reviews every positive finding.
+  - "Disclosure: interop note / library issue tracker. Embargo only if a finding crosses into accepts-invalid-COSE-or-WebAuthn-signature territory; that requires independent reproduction."
+desired_evidence_level: verified
+candidate_targets: [tgt-2026-0005]
+dependencies:
+  - tgt-2026-0005
+  - spc-2026-0004
+compute:
+  expected_class: lightweight
+  notes: "Per-cell compute is microseconds-to-milliseconds. Full sweep (10 libs × 1000+ vectors × 8 axes) ~30 minutes on a single laptop core. Library builds: ~30 min each on commodity Windows host. All scratch."
+budget:
+  max_attempts: 4
+  max_independent_reviews: 2
+  max_compute_runs: 6
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Cleanroom Python oracle (RFC 8949 §4.2 deterministic + §4.2.1 canonical) committed to cbor-cross-impl/oracle/."
+  - "Oracle derives inputs exclusively from RFC 8949 text + standard Python primitives. No consultation of any audited library's source."
+  - "Oracle passes the RFC 8949 Appendix C 14 reference vectors byte-exactly (both modes)."
+  - "Per-library adapter layer (10 adapters) committed to cbor-cross-impl/adapters/."
+  - "Adversarial vector generator (CDDL-synthesized, targeting each audit axis) committed to cbor-cross-impl/vectors/."
+  - "Matrix runner committed to cbor-cross-impl/runner.py with TSV output."
+  - "Matrix TSV committed to cbor-cross-impl/results/matrix.tsv."
+  - "Each cell in the matrix reproduces deterministically (2 consecutive runs produce identical TSVs)."
+  - "Cross-impl divergence identification: any cell where 2+ libraries disagree on the same input is flagged as a candidate finding."
+  - "Each candidate finding is cross-checked against cbor.me reference diagnostic; cbor.me's verdict is recorded."
+  - "Each candidate finding has an adversarial critic review (rev-2026-XXXX) supporting or rejecting promotion."
+  - "Findings promoted through the standard ladder: hypothesis → experiment → observation → reproducer → independent review → verified."
+stopping_conditions:
+  - "At least one cross-impl divergence promoted to verified_conclusion, OR"
+  - "Diminishing-returns window hit (2 consecutive matrix runs with no new diverging cells beyond the previous run), OR"
+  - "Budget exhausted without new discriminating evidence."
+artifacts: []
+follow_ups:
+  - "If a finding surfaces in COSE-relevant axes (e.g., tag handling for COSE_Encrypt), file follow-up msn-2026-0016 (COSE message-encoding conformance)."
+  - "If a finding surfaces in WebAuthn-relevant axes (e.g., text-string encoding used by authenticatorData), file follow-up msn-2026-0017 (WebAuthn byte-level conformance)."
+  - "If no divergence is found in any audited library, document as acceptable negative result and consider queuing X.509 path validation (msn-2026-0018) or QUIC Retry token (msn-2026-0019) as alternative next mission."
+notes_path: knowledge/notes/msn-2026-0015.md
+blocked_reason: null
+terminal_reason: null
