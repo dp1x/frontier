@@ -1,0 +1,57 @@
+id: hyp-2026-0023
+type: hypothesis
+status: open
+created_at: "2026-08-30T08:35:00Z"
+updated_at: "2026-08-30T08:35:00Z"
+summary: "H7 - The two upstream clang #embed crashes (#212075 assertion, #219332 OOM) reproduce deterministically on clang built from upstream main at the issue creation commits, generalize to a wider class of malformed #embed inputs (the limit/defined combination is one of several), and represent a class of bug that affects any toolchain that compiles untrusted C source (CI runners, sandboxed code-execution services, CTF judges, online C compilers)."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: hypothesis-generator
+    model: minimax-m3
+    tool: independent generator (synthesis of LLVM #embed issue analysis)
+  sources:
+    - https://github.com/llvm/llvm-project/issues/212075
+    - https://github.com/llvm/llvm-project/issues/219332
+    - https://github.com/llvm/llvm-project/issues/95222
+    - https://godbolt.org/z/oYhTvzT8M
+    - https://godbolt.org/z/sf8ojYoo4
+    - knowledge/findings/fnd-2026-0010.yaml
+  parent: msn-2026-0012
+  generation: 0
+links:
+  targets: []
+  implementations: []
+title: HYP-H7 - Clang C23 #embed crashes generalize beyond the two reported bugs
+statement: >
+  The two upstream fuzzer-discovered clang #embed crashes (issue #212075
+  assertion in HandleEmbedDirective; issue #219332 out-of-memory in
+  BumpPtrAllocator on recursive prefix) reproduce deterministically on
+  clang built from the upstream main branch near each issue's creation
+  date. They generalize to a wider class of malformed #embed inputs:
+  - The limit/defined/limit_comma family triggers HandleEmbedDirective assertion
+  - The prefix/recursive / size/minus-1 family triggers infinite recursion or
+  BumpPtrAllocator::AllocateSlow failure
+  - The cross-product of these triggers additional crashes
+  
+  These crashes affect any toolchain that compiles untrusted C source via
+  clang (CI runners, sandboxed code-execution services, CTF judges, online
+  C compilers, fuzz testing services). A 1-line C source file can crash the
+  compiler with no warning. The disclosure surface is real: the LLVM
+  upstream bug tracker is public, but the broader "untrusted C source ->
+  compiler crash" threat model is not formally documented.
+falsifiable_predictions:
+  - "LLVM issue #212075 reproducer crashes clang built at the same commit with exit 134 and 'Assertion' in stderr"
+  - "LLVM issue #219332 reproducer crashes clang built at the same commit with exit 134 and 'out of memory' in stderr"
+  - "At least 4 additional #embed input variants from the characterization matrix also crash clang (variants of limit/prefix/suffix on __FILE__ or empty embed)"
+  - "GCC 15+ rejects (does not crash) on at least some of the same inputs (proving the bug is implementation-specific, not spec-driven)"
+  - "clang -DLLVM_ENABLE_ASSERTIONS=ON (release build, no assertions) does NOT assert on #212075 but produces a different error or succeeds spuriously (the assertion is debug-only)"
+disproof_attempts: []
+notes: |
+  Per AGENTS.md, the upstream bugs are already public on github.com/llvm/llvm-project
+  (verified by web_fetch of the GitHub API). No embargo handling required.
+  
+  The mission is a *characterization study* (breadth + cross-implementation),
+  not a fresh vulnerability disclosure. The publishable artifact is the
+  crash matrix + cross-implementation comparison.
