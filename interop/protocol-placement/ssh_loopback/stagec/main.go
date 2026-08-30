@@ -123,7 +123,7 @@ func main() {
 		}
 		runMutator(*cohort, stim, *listenAddr, *upstreamAddr, ekSize, cInitSize, *outPath)
 	case "client":
-		runSshClient(*cohort, stimName, *serverAddr, *sshBinary, *outPath)
+		runSshClient(*cohort, *stimName, *serverAddr, *sshBinary, *outPath)
 	default:
 		fail("unknown mode %q", *mode)
 	}

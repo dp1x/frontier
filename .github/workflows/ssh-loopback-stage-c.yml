@@ -78,7 +78,7 @@ jobs:
       - name: Build Stage C mutator harness
         run: |
           set -euxo pipefail
-          cd "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback"
+          cd "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/stagec"
           go build -tags stagec -o /tmp/ssh_loopback_stagec .
 
       - name: Generate host keys
