@@ -407,10 +407,12 @@ func sendKexInit(conn net.Conn, cohort string) error {
 }
 
 func sendHybridInit(conn net.Conn, cInit []byte) error {
-	// SSH_MSG_KEX_HYBRID_INIT (30) payload:
-	//   string C_INIT  (per draft s2.1: C_PK2 || C_PK1)
+	// OpenSSH uses SSH2_MSG_KEX_ECDH_INIT (30) for hybrid KEX (mlkem768x25519,
+	// sntrup761x25519) -- not the draft's separate SSH_MSG_KEX_HYBRID_INIT (also
+	// 30 in the draft, but OpenSSH maps it via kex.c dispatch to ECDH_INIT).
+	// The payload is just the C_INIT string (concatenated KEM pk || X25519 pk).
 	var payload []byte
-	payload = append(payload, sshMsgKexHybridInit)
+	payload = append(payload, sshMsgKexHybridInit) // 30 == ECDH_INIT
 	cInitLen := make([]byte, 4)
 	binary.BigEndian.PutUint32(cInitLen, uint32(len(cInit)))
 	payload = append(payload, cInitLen...)
