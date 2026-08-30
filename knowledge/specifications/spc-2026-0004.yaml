@@ -1,0 +1,156 @@
+id: spc-2026-0004
+type: specification
+status: current
+created_at: "2026-08-31T10:30:00Z"
+updated_at: "2026-08-31T10:30:00Z"
+summary: "RFC 8949 (Concise Binary Object Representation, CBOR) §4.2 Deterministic Encoding + §4.2.1 Canonical CBOR + Appendix C reference vectors. The normative specification that defines the deterministic-encoding requirements under audit for tgt-2026-0005. Cross-references: RFC 8152 (COSE_Algorithms), RFC 9052 (COSE v2), RFC 9053 (COSE algorithms). Authoritative source: rfc-editor.org."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: specification-analyst
+    model: minimax-m3
+    tool: "RFC 8949 §4.2 normative extract"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc8949
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
+    - https://www.rfc-editor.org/rfc/rfc8949#appendix-C
+    - https://www.rfc-editor.org/rfc/rfc8152
+    - https://www.rfc-editor.org/rfc/rfc9052
+    - https://www.rfc-editor.org/rfc/rfc9053
+  parent: null
+  generation: 0
+links:
+  targets: [tgt-2026-0005]
+  implementations: []
+  hypotheses: []
+  findings: []
+title: "SPC-2026-0004 - RFC 8949 §4.2 Deterministic Encoding + §4.2.1 Canonical CBOR"
+normative_extract: |
+  RFC 8949 §4.2 (Deterministic Encoding):
+
+  "The encoding of a CBOR data item is determined by the data item
+  itself. It is possible to encode the same data item in different
+  ways. For some applications, it is beneficial to have a
+  deterministic encoding. The following rules define a deterministic
+  encoding. These rules are required by the deterministic encoding
+  forms defined in Section 4.2.1."
+
+  Concrete rules (from §4.2):
+
+  1. "The preferred encoding is the shortest form of the data item."
+     - Unsigned integers: shortest form has the fewest bytes.
+       (e.g., value 0 uses major type 0 + additional info 0 = 1 byte,
+       value 23 uses 1 byte, value 24 uses 2 bytes, etc.)
+     - Negative integers: same as unsigned except major type 1.
+     - Byte strings and text strings: shortest form of length
+       (definite-length encoding, indefinite-length only when
+       chunked).
+     - Arrays, maps: definite-length form preferred.
+     - Tags: tag value uses shortest form.
+     - Simple values and floats: definite-length form preferred.
+
+  2. "Map keys must be sorted by the length of the encoded key
+     followed by the encoded key itself."
+     - "For the purpose of sorting, the length of the encoded key is
+       the length of the encoded key data item in bytes. Map keys that
+       have the same encoded length must be sorted in the order of
+       their encoded values."
+     - "Keys that differ only in length are sorted by length, with
+       shorter keys first."
+     - "If two keys have the same encoded length and the same encoded
+       value, they are considered duplicates."
+
+  3. "Floating-point values must use the shortest form that can
+     represent the value."
+     - e.g., 1.0 must be encoded as 0xf9 0x3c 0x00 (half-precision)
+       rather than 0xfb 3F F0 00 00 00 00 00 00 00 (double-precision).
+
+  4. "Definite-length encoding is preferred over indefinite-length
+     encoding."
+     - Indefinite-length encoding is for chunked data items only.
+
+  5. "Duplicate keys are not permitted in deterministic encoding."
+     - This is a duplicate-detection requirement; deterministic
+       encoders must reject duplicate map keys.
+
+  RFC 8949 §4.2.1 (Canonical CBOR):
+
+  "The canonical encoding is a particular deterministic encoding
+  defined by the following rules. The encoding is well-formed and
+  valid CBOR, but not all well-formed CBOR data has a valid
+  canonical encoding."
+
+  Concrete rules (§4.2.1):
+
+  1. "Numeric values must use the shortest form. (Same as §4.2.)"
+
+  2. "Map keys must be sorted by the length of the encoded key,
+     followed by the encoded key itself."
+
+  3. "Tags must use the shortest form."
+
+  4. "Floating-point values must use the shortest form. (Same as §4.2.)"
+
+  5. "Simple values must use the shortest form. (Same as §4.2.)"
+
+  Differences from §4.2 generic deterministic:
+  - §4.2.1 adds: "The encoding of a data item is independent of the
+    context in which the data item appears."
+  - §4.2.1 is more restrictive: it REQUIRES duplicate-key rejection
+    at the encoder level (not just at the validator).
+  - §4.2.1 §1 explicitly says "indefinite-length items MUST be made
+    into definite-length items."
+
+  RFC 8949 Appendix C:
+
+  "This appendix contains a non-exhaustive set of examples for the
+  encoding of CBOR data items. ... The set of examples ... can be
+  used as test vectors."
+
+  Appendix C provides 14 specific test vector pairs (data-item
+  description ↔ hex-encoded bytes) covering: integers, byte strings,
+  text strings, arrays, maps, tags, simple values, floats.
+
+  Cross-reference: RFC 8152 §4 (CBOR encoding for COSE) and
+  RFC 9052 §4 (COSE v2) inherit RFC 8949 §4.2 determinism for
+  COSE message construction (Sign1, Mac0, Encrypt, Sign, Mac,
+  Encrypt0).
+audit_axes:
+  - axis: integer_shortest_form
+    rule_ref: "RFC 8949 §4.2 rule 1, §4.2.1 rule 1"
+    description: "Encode unsigned/negative integers using the minimum number of bytes. Examples: 0 → 0x00 (1 byte), 23 → 0x17 (1 byte), 24 → 0x18 0x18 (2 bytes), 255 → 0x18 0xff (2 bytes), 256 → 0x19 0x01 0x00 (3 bytes)."
+  - axis: map_key_sort
+    rule_ref: "RFC 8949 §4.2 rule 2, §4.2.1 rule 2"
+    description: "Sort map keys first by encoded byte length (shorter first), then lexicographically by encoded value. Map keys of equal encoded length and value are duplicates and must be rejected."
+  - axis: float_shortest_form
+    rule_ref: "RFC 8949 §4.2 rule 3, §4.2.1 rule 4"
+    description: "Float values must use the shortest encoding form that exactly represents the value. Examples: 1.0 → half (0xf9 0x3c 0x00); 1.5 → half (0xf9 0x3c 0x00); infinity must use the shortest form; NaN must use the canonical NaN encoding if defined."
+  - axis: definite_length_preferred
+    rule_ref: "RFC 8949 §4.2 rule 4, §4.2.1 final rule"
+    description: "Definite-length encoding is required (canonical) or preferred (deterministic). Indefinite-length is only for chunked data items."
+  - axis: duplicate_key_rejection
+    rule_ref: "RFC 8949 §4.2 rule 5, §4.2.1 implicit"
+    description: "Duplicate map keys are not permitted in deterministic encoding; the encoder must reject them or, if the encoder permits them in non-deterministic mode, the deterministic mode must reject them."
+  - axis: tag_shortest_form
+    rule_ref: "RFC 8949 §4.2.1 rule 3"
+    description: "Tag values must use the shortest form (analogous to integers). Tag with value 0 uses 1 byte; tag with value 24 uses 2 bytes."
+  - axis: simple_value_shortest_form
+    rule_ref: "RFC 8949 §4.2.1 rule 5"
+    description: "Simple values must use the shortest form (analogous to integers). Simple value 0 (false) uses 1 byte (0xf4); simple value 23 uses 1 byte (0xf7)."
+  - axis: chunked_string_consistency
+    rule_ref: "RFC 8949 §2.2 + §4.2"
+    description: "Byte strings and text strings should be encoded with definite-length headers. Indefinite-length encoding is permitted for chunked strings (each chunk is a definite-length byte/text string) but the overall string must be indefinite-length tagged."
+notes: |
+  The normative extract above is the authoritative basis for tgt-2026-0005.
+  Per AGENTS.md artifact rules, this specification is the "source of
+  truth" against which all candidate implementation encodings are
+  compared. The cbor.me reference diagnostic (Carsten Bormann, RFC 8949
+  co-editor) is treated as the implementation-level oracle; any
+  per-cell verdict that disagrees with cbor.me is itself subject to
+  re-validation.
+
+  The audit_axes list is the analytical decomposition of §4.2 into
+  independent test cells. Each axis will become a stimulus generator
+  and per-impl runner in the experiment artifact.
