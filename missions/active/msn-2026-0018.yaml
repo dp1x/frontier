@@ -2,7 +2,7 @@ id: msn-2026-0018
 type: mission
 status: active
 created_at: "2026-08-31T23:30:00Z"
-updated_at: "2026-08-31T23:30:00Z"
+updated_at: "2026-09-01T00:30:00Z"
 summary: "COSE (RFC 8152/9052/9053) message-encoding conformance audit. Build on the verified CBOR §4.2 framework (msn-2026-0015/0016/0017) by adding 4-5 lineage-independent COSE implementations to a new conformance matrix. Cohort candidates: cose-c (COSE WG reference, C/C++), cose-java (COSE WG, Java), coset (Google, Rust), go-cose (Veraison/ex-Mozilla, Go), pycose (Timothy Claeys, Python). Focus axes: (1) COSE_Sign1/Encrypt0/Mac0 message-construction encoding, (2) header parameter canonicalization (the 'empty protected bucket' divergence is a known interop issue), (3) Sig_structure/Enc_structure/MAC_structure encoding per RFC 9052, (4) deterministic ECDSA nonce generation (RFC 6979) for COSE_Sign1 with ES256/ES384/ES512, (5) ECDSA r||s fixed-length encoding (RFC 9053 §2.1), (6) AES-GCM/ChaCha20-Poly1305 nonce and AAD construction, (7) COSE_KDF_Context encoding for ECDH-ES. Determine implementation lineage, upstream ancestry, shared code, shared test vectors, and specification lineage for every cohort member before interpreting cross-impl results. Validate the research instrument before trusting new cohort results. Promote findings through the standard evidence ladder."
 epistemic_status: hypothesis
 provenance:
@@ -150,7 +150,22 @@ stopping_conditions:
   - "All cohort libraries tested, all disagreements investigated and classified, and findings promoted or rejected with full evidence, OR"
   - "Diminishing-returns window hit (2 consecutive matrix runs with no new diverging cells beyond the previous run), OR"
   - "Budget exhausted without resolution."
-artifacts: []
+artifacts:
+  - path: cose-cross-impl/oracle/cose_oracle.py
+    kind: cleanroom-oracle
+    description: "RFC 9052/9053 Sig_structure / Enc_structure / MAC_structure / protected-header-bucket encoding"
+  - path: cose-cross-impl/adapters/lib_pycose_adapter.py
+    kind: adapter
+    description: "pycose 1.1.0 Python adapter (Timothy Claeys)"
+  - path: cose-cross-impl/vectors/gen_vectors.py
+    kind: vector-generator
+    description: "Deterministic adversarial vector generator (seed 0xC0DE0CB0)"
+  - path: cose-cross-impl/runner/run_matrix.py
+    kind: matrix-runner
+    description: "COSE matrix runner (TSV + JSONL output)"
+  - path: cose-cross-impl/results/matrix.tsv
+    kind: matrix-output
+    description: "Initial 3-cell matrix (1 adapter x 3 vectors x 1 mode): 2 SPEC_AMBIGUITY + 1 NOT_SUPPORTED"
 follow_ups:
   - "If a COSE finding surfaces in WebAuthn-relevant axes, queue WebAuthn attestation statement verification (RFC 8809 / W3C WebAuthn Level 3)."
   - "If a finding surfaces in PQC-relevant axes, queue post-quantum COSE algorithm conformance (ML-DSA, FN-DSA, SLH-DSA per IETF COSE WG drafts)."
