@@ -1,0 +1,171 @@
+id: spc-2026-0005
+type: specification
+status: current
+created_at: "2026-08-31T23:30:00Z"
+updated_at: "2026-08-31T23:30:00Z"
+summary: "COSE (CBOR Object Signing and Encryption) — RFC 8152 (obsoleted by RFC 9052), RFC 9052 (COSE: Structures and Process, Internet Standard STD 96, August 2022), RFC 9053 (COSE: Initial Algorithms, August 2022), RFC 9338 (COSE Countersignatures, December 2022). The normative specifications that define the COSE cryptographic envelope for CBOR data items. RFC 9052 §4.4 (Sig_structure), §5.3 (Enc_structure), §6.3 (MAC_structure) define the canonical byte strings that are signed/MAC'd/encrypted. Cross-references: RFC 8949 (CBOR), RFC 8152 (COSE v1), RFC 9052 (COSE v2), RFC 9053 (algorithms), RFC 9338 (countersignatures), RFC 8230 (RSA algorithms), RFC 8812 (brainpool + secp256k1). Authoritative source: rfc-editor.org."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: specification-analyst
+    model: minimax-m3
+    tool: "RFC 8152/9052/9053 normative extract for msn-2026-0018"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc8152
+    - https://www.rfc-editor.org/rfc/rfc9052
+    - https://www.rfc-editor.org/rfc/rfc9053
+    - https://www.rfc-editor.org/rfc/rfc9338
+    - https://www.rfc-editor.org/rfc/rfc8230
+    - https://www.rfc-editor.org/rfc/rfc8812
+    - https://www.rfc-editor.org/rfc/rfc8392
+  parent: null
+  generation: 0
+links:
+  targets: [tgt-2026-0006]
+  implementations: []
+  hypotheses: []
+title: "SPC-2026-0005 - COSE RFC 8152/9052/9053 normative extract"
+normative_extract: |
+  RFC 9052 §1.2 (Notation):
+    COSE message types: COSE_Sign, COSE_Sign1, COSE_Encrypt,
+                        COSE_Encrypt0, COSE_Mac, COSE_Mac0,
+                        COSE_Countersign (RFC 9338, label 11).
+  Common structure: COSE message = tagged CBOR array
+    COSE_Sign:    [protected, unprotected, payload, signatures]
+    COSE_Sign1:   [protected, unprotected, payload, signature]
+    COSE_Encrypt: [protected, unprotected, ciphertext, recipients]
+    COSE_Encrypt0: [protected, unprotected, ciphertext]
+    COSE_Mac:     [protected, unprotected, payload, tag, recipients]
+    COSE_Mac0:    [protected, unprotected, payload, tag]
+
+  All elements are CBOR data items; the 'protected' element is a
+  bstr containing the CBOR-encoded protected header map.
+
+  RFC 9052 §3 (Header Parameters):
+    Protected header bucket: bstr containing CBOR-encoded map OR
+    empty bstr (h'') for zero-length protected map.
+    Empty protected bucket SHOULD be encoded as h'' (40), not as
+    bstr wrapping empty map (41 a0).
+    Header labels: int or tstr; negative ints for local labels.
+
+  RFC 9052 §4.4 (Sig_structure):
+    Sig_structure = [
+      context : "Signature" | "Signature1" | "CounterSignature",
+      body_protected : bstr,
+      sign_protected : bstr (optional, default h''),
+      external_aad : bstr (default h''),
+      payload : bstr
+    ]
+    Sign1: payload is the actual payload to sign.
+    For COSE_Sign, the signature is over Sig_structure.
+
+  RFC 9052 §5.3 (Enc_structure):
+    Enc_structure = [
+      context : "Encrypt" | "Encrypted" | "Recipient",
+      body_protected : bstr,
+      ? sign_protected : bstr,
+      external_aad : bstr
+    ]
+    For COSE_Encrypt0, the ciphertext is encrypted content
+    (no separate external structure to sign).
+
+  RFC 9052 §6.3 (MAC_structure):
+    MAC_structure = [
+      context : "MAC" | "MAC0",
+      body_protected : bstr,
+      sign_protected : bstr (optional),
+      external_aad : bstr,
+      payload : bstr
+    ]
+
+  RFC 9053 §2.1 (ECDSA):
+    Signature value: fixed-length r || s concatenation
+    (r and s are left-padded to the curve order size in bits / 8).
+    Curve sizes: ES256 → 32 bytes each, ES384 → 48 bytes each,
+                 ES512 → 66 bytes each.
+    Deterministic ECDSA: RFC 6979 nonce generation (k = HMAC_DRBG).
+
+  RFC 9053 §3.1 (EdDSA):
+    Signature value: r || s where (r, s) is the standard EdDSA
+    signature. For Ed25519, r and s are 32 bytes each.
+
+  RFC 9053 §4 (HMAC):
+    Tag value: raw MAC output, no truncation unless truncated
+    explicitly via header parameter.
+
+  RFC 9053 §5 (AEAD):
+    AES-GCM/CCM: nonce = fixed length (12 bytes for GCM),
+    ciphertext = encrypted content, tag = 16 bytes.
+    ChaCha20-Poly1305: nonce = 12 bytes, tag = 16 bytes.
+
+  RFC 9053 §5.2 (ECDH):
+    COSE_KDF_Context = [
+      AlgorithmID : int,
+      PartyUInfo : { nonce : bstr } (supp_pub_info optional),
+      PartyVInfo : { nonce : bstr } (supp_pub_info optional),
+      supp_pub_info : bstr
+    ]
+
+  RFC 9052 §9 (CBOR Encoding):
+    Integers MUST use shortest form. Definite-length preferred.
+    Map keys in protected headers: lexicographic by label (int vs
+    tstr separately).
+  RFC 9338 §3.3 (Countersign_structure):
+    Countersign_structure = [
+      context : "CounterSignature" | "CounterSignature0" |
+                "CounterSignatureV2" | "CounterSignature0V2",
+      body_protected : bstr,
+      ? sign_protected : bstr,
+      external_aad : bstr,
+      payload : bstr,
+      ? other_fields : array
+    ]
+
+audit_axes:
+  - axis: cose_sign1_message_construction
+    rule_ref: "RFC 9052 §4.4 (Sig_structure)"
+    description: "Verify byte-exact Sig_structure construction for COSE_Sign1 with various header configurations and payload types."
+  - axis: cose_encrypt0_message_construction
+    rule_ref: "RFC 9052 §5.3 (Enc_structure)"
+    description: "Verify COSE_Encrypt0 message construction (no Sig_structure, just AAD for AEAD)."
+  - axis: cose_mac0_message_construction
+    rule_ref: "RFC 9052 §6.3 (MAC_structure)"
+    description: "Verify COSE_Mac0 message construction (MAC_structure encoding)."
+  - axis: empty_protected_bucket
+    rule_ref: "RFC 9052 §3"
+    description: "Verify empty protected bucket is encoded as h'' (40) not as bstr-wrapping-empty-map (41 a0)."
+  - axis: header_label_sorting
+    rule_ref: "RFC 9052 §9 + RFC 8949 §4.2"
+    description: "Verify header label sorting (int labels by integer value, tstr labels by string lex order)."
+  - axis: ecdsa_r_s_encoding
+    rule_ref: "RFC 9053 §2.1"
+    description: "Verify ECDSA r || s encoding is fixed-length (32/48/66 bytes) and r/s values are left-padded to curve order size."
+  - axis: eddsa_signature_encoding
+    rule_ref: "RFC 9053 §3.1"
+    description: "Verify EdDSA signature is r || s where r and s are 32 bytes (Ed25519) or 57 bytes (Ed448)."
+  - axis: aes_gcm_nonce_construction
+    rule_ref: "RFC 9053 §5"
+    description: "Verify AES-GCM nonce construction (12 bytes for GCM) and AAD = Enc_structure serialization."
+  - axis: deterministic_ecdsa_nonce
+    rule_ref: "RFC 6979 + RFC 9053 §2.1"
+    description: "Verify deterministic ECDSA nonce generation per RFC 6979 (not random)."
+  - axis: cose_kdf_context
+    rule_ref: "RFC 9053 §5.2"
+    description: "Verify COSE_KDF_Context encoding for ECDH key agreement."
+notes: |
+  The normative extract above is the authoritative basis for tgt-2026-0006.
+  Per AGENTS.md artifact rules, this specification is the source of truth
+  against which all candidate implementation encodings are compared.
+
+  The "empty protected bucket" axis is a well-known interop issue. Multiple
+  COSE libraries historically produced `41 a0` (bstr wrapping empty map)
+  instead of `40` (empty bstr) for the protected header bucket when no
+  protected headers are present. This breaks byte-exact signature
+  verification when the verifier uses one form and the signer uses the
+  other. RFC 9052 §3 explicitly says the empty form SHOULD be `40`.
+
+  COSE message-construction is layered on top of CBOR (RFC 8949). The
+  underlying CBOR §4.2 canonical encoding is already verified across 3
+  independent lineages (msn-2026-0017); this mission focuses on the
+  COSE-specific layer above that foundation.
