@@ -1,0 +1,141 @@
+id: tgt-2026-0006
+type: target
+status: active
+created_at: "2026-08-31T23:30:00Z"
+updated_at: "2026-08-31T23:30:00Z"
+summary: "COSE (CBOR Object Signing and Encryption — RFC 8152 / RFC 9052 / RFC 9053) message-encoding conformance divergence across 4-5 lineage-independent implementations. COSE is the IETF-standardized cryptographic envelope for CBOR data items, used in WebAuthn/FIDO2, CWT (RFC 8392), IETF SUIT firmware manifests, OSCORE (RFC 8613), EAT (RFC 9334), and other security-critical protocols. COSE message-construction is layered on top of CBOR (RFC 8949), so the §4.2 framework verified in msn-2026-0017 applies to the underlying encoding. Candidate cohort: cose-c (COSE WG reference, C/C++, Jim Schaad), cose-java (COSE WG, Java), coset (Google, Rust), go-cose (Veraison/ex-Mozilla, Go), pycose (Timothy Claeys, Python)."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: minimax-m3
+    tool: "post-msn-2026-0017 opportunity scan; synthesis of 4 parallel scout reports"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc8152
+    - https://www.rfc-editor.org/rfc/rfc9052
+    - https://www.rfc-editor.org/rfc/rfc9053
+    - https://www.rfc-editor.org/rfc/rfc9338
+    - https://github.com/cose-wg/COSE-C
+    - https://github.com/cose-wg/COSE-JAVA
+    - https://github.com/google/coset
+    - https://github.com/veraison/go-cose
+    - https://github.com/TimothyClaeys/pycose
+    - knowledge/notes/msn-2026-0017.md
+    - knowledge/implementations/imp-2026-0018.yaml
+    - knowledge/implementations/imp-2026-0019.yaml
+    - knowledge/specifications/spc-2026-0004.yaml
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0004, spc-2026-0005]
+  implementations: []
+  hypotheses: []
+title: "TGT-2026-0006 - COSE (RFC 8152/9052/9053) message-encoding conformance divergence across independent implementations"
+selection_rationale: >
+  Four parallel opportunity scouts (COSE, X.509, QUIC, Lean/Coq) were
+  commissioned after msn-2026-0017 (CBOR §4.2 cohort expansion) reached
+  terminal state. COSE was selected for the next mission because:
+
+  1. **Direct methodological inheritance**: COSE message-construction is
+     layered on top of CBOR (RFC 8949). The cleanroom Python oracle,
+     vector generator, matrix runner, and 3-lineage canonical-mode
+     evidence base from msn-2026-0015/0016/0017 are directly applicable
+     to COSE's CBOR-encoding aspects. The COSE audit axis is a natural
+     next layer above the verified CBOR foundation.
+
+  2. **Strong, well-documented cohort**: 4-5 lineage-independent
+     implementations (cose-c, cose-java, coset, go-cose, pycose) span
+     C, C++, Rust, Go, and Python. Each has distinct authors,
+     organizations, and codebases. cose-c and cose-java are the COSE
+     WG reference implementations (Jim Schaad lineage); coset is
+     Google; go-cose is Veraison/ex-Mozilla; pycose is independent.
+
+  3. **Concrete interop-finding potential**: The COSE scout report
+     identified a specific known divergence: "empty protected bucket"
+     encoding. RFC 8152/9052 §3 says senders SHOULD encode a
+     zero-length map as a zero-length string (i.e., `40`) rather than
+     as a zero-length map wrapped in a bstr (`41 a0`). This is a
+     real, documented interop issue affecting multiple libraries.
+     Verification would test each cohort library on a corpus of
+     COSE_Sign1 messages with empty protected buckets.
+
+  4. **Compute is small**: Per-cell compute is microseconds for
+     message construction + milliseconds for ECDSA signing/verifying.
+     A full matrix of 4-5 libraries × dozens of test vectors ×
+     multiple algorithms completes in minutes on commodity hardware.
+
+  5. **Security relevance**: COSE underpins WebAuthn/FIDO2 (billions
+     of authenticators), CWT (signed CBOR tokens), SUIT (IoT
+     firmware update manifests), OSCORE (CoAP security), and EAT
+     (entity attestation). Interop divergences that affect
+     signature verification or encryption envelope parsing are
+     security-relevant.
+
+  6. **Methodological diversity from prior Frontier work**: While
+     COSE builds on CBOR, it is a *distinct* research domain
+     (cryptographic message-construction vs data-format encoding).
+     It is NOT a continuation of CBOR (the cohort is different:
+     cryptographic libraries, not data-format libraries).
+
+  Out-of-scope for this target:
+   - WebAuthn attestation statement verification (separate domain;
+     could be a follow-up that uses the COSE foundation)
+   - Post-quantum COSE algorithms (ML-DSA, FN-DSA, SLH-DSA — a
+     separate frontier given the PQC migration timeline)
+   - CBOR-LD (JSON-LD compatibility profile)
+   - X.509 path validation (separate scout, deferred)
+   - QUIC interop (separate scout, deferred)
+candidate_implementations:
+  - id: imp-pending-001
+    name: cose-c
+    language: C/C++
+    repo: https://github.com/cose-wg/COSE-C
+    lineage: COSE WG (Jim Schaad), reference implementation
+  - id: imp-pending-002
+    name: cose-java
+    language: Java
+    repo: https://github.com/cose-wg/COSE-JAVA
+    lineage: COSE WG (Jim Schaad), reference implementation
+  - id: imp-pending-003
+    name: coset
+    language: Rust
+    repo: https://github.com/google/coset
+    lineage: Google (Richard Uhler et al.)
+    cb_oracle: shares ciborium CBOR backend with Frontier CBOR cohort
+  - id: imp-pending-004
+    name: go-cose
+    language: Go
+    repo: https://github.com/veraison/go-cose
+    lineage: Veraison Project, originally forked from Mozilla (mozilla-services/go-cose)
+  - id: imp-pending-005
+    name: pycose
+    language: Python
+    repo: https://github.com/TimothyClaeys/pycose
+    lineage: independent (Timothy Claeys)
+    cb_oracle: uses cbor2 (already in Frontier CBOR cohort)
+candidate_test_vectors:
+  - source: RFC 9053 Appendix A (COSE algorithms test vectors)
+    url: https://www.rfc-editor.org/rfc/rfc9053#appendix-A
+    independence: full (IETF canonical)
+  - source: COSE-WG test vectors
+    url: https://github.com/cose-wg/test-vectors
+    independence: full (COSE WG working group)
+  - source: Frontier-generated corpus
+    url: pending
+    independence: full (cleanroom synthesis)
+  - source: IETF SUIT test vectors
+    url: pending
+    independence: full (IETF SUIT WG)
+candidate_specifications:
+  - spc-2026-0004 (RFC 8949 §4.2 — verified)
+  - spc-2026-0005 (RFC 8152/9052/9053 — to be created)
+epistemic_status_long: |
+  Target status is "active" because the scout synthesis is complete and
+  candidate implementations + vector sources are identified. Target is
+  promoted to "verified" only after msn-2026-0018 reaches terminal
+  state with at least one promoted finding OR explicitly classified
+  as "inconclusive-after-budget" with documented reason. Per AGENTS.md,
+  target is distinct from mission status; a target may remain "active"
+  across multiple missions.
+notes_path: knowledge/notes/tgt-2026-0006.md

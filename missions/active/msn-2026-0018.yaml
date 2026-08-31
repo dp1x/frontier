@@ -1,0 +1,160 @@
+id: msn-2026-0018
+type: mission
+status: active
+created_at: "2026-08-31T23:30:00Z"
+updated_at: "2026-08-31T23:30:00Z"
+summary: "COSE (RFC 8152/9052/9053) message-encoding conformance audit. Build on the verified CBOR §4.2 framework (msn-2026-0015/0016/0017) by adding 4-5 lineage-independent COSE implementations to a new conformance matrix. Cohort candidates: cose-c (COSE WG reference, C/C++), cose-java (COSE WG, Java), coset (Google, Rust), go-cose (Veraison/ex-Mozilla, Go), pycose (Timothy Claeys, Python). Focus axes: (1) COSE_Sign1/Encrypt0/Mac0 message-construction encoding, (2) header parameter canonicalization (the 'empty protected bucket' divergence is a known interop issue), (3) Sig_structure/Enc_structure/MAC_structure encoding per RFC 9052, (4) deterministic ECDSA nonce generation (RFC 6979) for COSE_Sign1 with ES256/ES384/ES512, (5) ECDSA r||s fixed-length encoding (RFC 9053 §2.1), (6) AES-GCM/ChaCha20-Poly1305 nonce and AAD construction, (7) COSE_KDF_Context encoding for ECDH-ES. Determine implementation lineage, upstream ancestry, shared code, shared test vectors, and specification lineage for every cohort member before interpreting cross-impl results. Validate the research instrument before trusting new cohort results. Promote findings through the standard evidence ladder."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: minimax-m3
+    tool: "post-msn-2026-0017 opportunity scan"
+  sources:
+    - missions/completed/msn-2026-0015.yaml
+    - missions/completed/msn-2026-0016.yaml
+    - missions/completed/msn-2026-0017.yaml
+    - knowledge/targets/tgt-2026-0006.yaml
+    - knowledge/specifications/spc-2026-0005.yaml (to be created)
+    - knowledge/notes/scout-cbor-cose-webauthn-2026-08-31.md
+    - knowledge/notes/msn-2026-0017.md
+    - https://www.rfc-editor.org/rfc/rfc8152
+    - https://www.rfc-editor.org/rfc/rfc9052
+    - https://www.rfc-editor.org/rfc/rfc9053
+    - https://www.rfc-editor.org/rfc/rfc9338
+    - https://github.com/cose-wg/COSE-C
+    - https://github.com/cose-wg/COSE-JAVA
+    - https://github.com/google/coset
+    - https://github.com/veraison/go-cose
+    - https://github.com/TimothyClaeys/pycose
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0005]
+  targets: [tgt-2026-0006]
+  implementations: []
+  hypotheses: []
+title: "msn-2026-0018 - COSE RFC 8152/9052/9053 message-encoding conformance matrix"
+objective: >
+  Build a COSE (RFC 8152/9052/9053) message-encoding conformance matrix
+  across 4-5 lineage-independent COSE implementations. The CBOR §4.2
+  foundation is already verified (msn-2026-0015/0016/0017); this mission
+  focuses on the COSE-specific layer above the CBOR substrate.
+
+  For each cohort library:
+  - Determine implementation lineage, upstream ancestry, shared code,
+    shared test vectors, and specification lineage.
+  - Build a cleanroom Python oracle for COSE message-construction
+    encoding (Sig_structure, Enc_structure, MAC_structure) per
+    RFC 9052 §4.4, §5.3, §6.3, derived exclusively from RFC 9052/9053
+    text + standard Python primitives.
+  - Build a Python adapter layer (same interface as the CBOR cohort
+    adapters) that exercises each library's COSE_Sign1 / COSE_Encrypt0
+    / COSE_Mac0 message-construction.
+  - Run the matrix across multiple algorithms (ES256, EdDSA, HMAC
+    256/512, AES-GCM, ChaCha20-Poly1305) and test vectors (RFC 9053
+    Appendix A, COSE-WG test vectors, Frontier-generated corpus).
+  - Cross-check every diverging cell against:
+    (a) the Frontier cleanroom Python oracle (RFC 9052/9053 text +
+        Python primitives),
+    (b) a reference cbor.me diagnostic for the COSE wrapping layer,
+    (c) RFC 9053 Appendix A reference vectors.
+  - Investigate every disagreement; classify each as: implementation
+    bug, specification ambiguity, documented mode difference, missing
+    feature, or oracle/instrument problem.
+  - Promote reproducible cross-impl divergences through the evidence
+    ladder. Pay special attention to the "empty protected bucket"
+    divergence (`41 a0` vs `40`), which is a known real interop issue
+    affecting multiple COSE libraries.
+domain: interop
+scope: >
+  In scope:
+  - cose-c (COSE WG reference, C/C++)
+  - cose-java (COSE WG, Java)
+  - coset (Google, Rust)
+  - go-cose (Veraison/ex-Mozilla, Go)
+  - pycose (Timothy Claeys, Python)
+  - COSE_Sign1, COSE_Encrypt0, COSE_Mac0 message-construction
+  - Sig_structure, Enc_structure, MAC_structure encoding (RFC 9052)
+  - Header parameter canonicalization (especially empty protected bucket)
+  - ECDSA r||s fixed-length encoding (RFC 9053 §2.1)
+  - Deterministic ECDSA nonce (RFC 6979) via library's hooks where exposed
+  - AES-GCM / ChaCha20-Poly1305 nonce + AAD construction
+  - Lineage/independence analysis for each cohort member
+  - Research instrument validation
+
+  Out of scope (deferred to follow-up missions):
+  - Post-quantum COSE algorithms (ML-DSA, FN-DSA, SLH-DSA)
+  - COSE countersignatures (RFC 9338) — separate audit
+  - CWT-specific (RFC 8392) semantics — separate audit
+  - WebAuthn attestation statement verification — separate domain
+  - Performance / timing benchmarks
+constraints:
+  - Build on the verified CBOR §4.2 framework (msn-2026-0017) where
+    applicable; the cleanroom Python oracle, vector generator, and
+    matrix runner are extended to support COSE message types.
+  - New cleanroom Python oracle for COSE must derive exclusively from
+    RFC 8152/9052/9053 text + standard Python primitives; no
+    consultation of any audited COSE library source.
+  - All new adapters follow the same uniform interface as the CBOR
+    cohort adapters.
+  - Cohort library versions are pinned to specific releases.
+  - Independence records are maintained for every cohort member
+    (no correlation counting as independence).
+  - All builds in env-scrubbed scratch (R:/cose-cohort/ or
+    .scratch/cose-cohort/) per AGENTS.md security rules.
+  - Library source code is treated as untrusted (per AGENTS.md
+    "untrusted code" rules); no credentials or sensitive data
+    exposed to library build systems.
+desired_evidence_level: independently-reviewed
+candidate_targets: [tgt-2026-0006]
+dependencies:
+  - msn-2026-0017
+  - exp-2026-0030
+  - exp-2026-0031
+compute:
+  expected_class: medium
+  notes: |
+    COSE message-construction is fast (microseconds for header
+    serialization). Signing/verification is sub-millisecond for
+    ECDSA P-256, microseconds for HMAC, milliseconds for AES-GCM
+    on small payloads. Library builds vary:
+      - cose-c: C/C++ build, ~5-10 min (CMake)
+      - cose-java: Java build, ~2-5 min (Maven)
+      - coset: Rust build, ~2-5 min (cargo)
+      - go-cose: Go build, ~30s-1 min
+      - pycose: Python, no build (pip install)
+    Total local compute: ~20-30 min including builds. R:/ ramdisk
+    for scratch. GHA ubuntu-latest available for cross-platform
+    build validation.
+budget:
+  max_attempts: 4
+  max_independent_reviews: 2
+  max_compute_runs: 8
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Independence records for 4-5 COSE cohort members (cose-c, cose-java, coset, go-cose, pycose) documenting lineage, ancestry, shared code, shared test vectors, authorship overlap, and specification lineage."
+  - "Cleanroom Python oracle for COSE message-construction (Sig_structure / Enc_structure / MAC_structure) committed to cose-cross-impl/oracle/."
+  - "COSE-WG test vectors and Frontier-generated corpus committed to cose-cross-impl/vectors/."
+  - "Per-library adapter (4-5 adapters) committed to cose-cross-impl/adapters/."
+  - "Matrix runner producing TSV + JSONL committed to cose-cross-impl/runner/."
+  - "Expanded matrix run produces per-cell verdicts across at least 100 cells."
+  - "Research instrument validation: oracle passes RFC 9053 Appendix A reference vectors byte-exactly; vector generator passes round-trip invariant; adapters pass positive/negative controls."
+  - "Every diverging cell cross-checked against a second-opinion oracle (cbor.me diagnostic for the wrapping layer; COSE-WG reference vectors for the algorithm layer)."
+  - "Every disagreement classified (implementation bug / spec ambiguity / documented mode difference / missing feature / oracle problem / independent confirmation)."
+  - "Adversarial critic review (rev-2026-XXXX) SUPPORTS or PARTIALLY_SUPPORTS any finding promotion."
+  - "Reproducer (rpr-2026-XXXX) documents how to reproduce the matrix from clean source."
+stopping_conditions:
+  - "All cohort libraries tested, all disagreements investigated and classified, and findings promoted or rejected with full evidence, OR"
+  - "Diminishing-returns window hit (2 consecutive matrix runs with no new diverging cells beyond the previous run), OR"
+  - "Budget exhausted without resolution."
+artifacts: []
+follow_ups:
+  - "If a COSE finding surfaces in WebAuthn-relevant axes, queue WebAuthn attestation statement verification (RFC 8809 / W3C WebAuthn Level 3)."
+  - "If a finding surfaces in PQC-relevant axes, queue post-quantum COSE algorithm conformance (ML-DSA, FN-DSA, SLH-DSA per IETF COSE WG drafts)."
+  - "Opportunity scan after terminalization for next mission domain."
+notes_path: knowledge/notes/msn-2026-0018.md
+blocked_reason: null
+terminal_reason: null
