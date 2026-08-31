@@ -33,13 +33,13 @@ links:
 title: "VRF-2026-0014 - msn-2026-0015 + msn-2026-0016 verification (CBOR §4.2 matrix)"
 verification_method: deterministic-script
 verification_inputs:
-  - "RFC 8949 Appendix C 14 integer reference vectors (https://www.rfc-editor.org/rfc/rfc8949#appendix-C)"
+  - "RFC 8949 Appendix A Table 6 (14 integer reference vectors; note: the prior citation of 'Appendix C' was a documentation error; Appendix C is 'Pseudocode' and Appendix A contains the integer examples). (https://www.rfc-editor.org/rfc/rfc8949#appendix-A)"
   - "RFC 8949 §4.2.3 length-first ordering example (https://www.rfc-editor.org/rfc/rfc8949#section-4.2.3)"
   - "cbor-cross-impl/results/matrix.tsv (matrix output from cbor2 6.1.4)"
 
 verification_steps:
   - step: 1
-    description: "Run cleanroom oracle self-test against RFC 8949 Appendix C"
+    description: "Run cleanroom oracle self-test against RFC 8949 Appendix A Table 6 (14 integer vectors)"
     command: "cd cbor-cross-impl && python oracle/cbor_oracle.py"
     expected: "14/14 PASS for both deterministic and canonical modes"
     actual: "14/14 PASS for both modes (verified 2026-08-31)"

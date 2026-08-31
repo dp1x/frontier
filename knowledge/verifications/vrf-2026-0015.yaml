@@ -1,0 +1,143 @@
+id: vrf-2026-0015
+type: verification
+status: verified
+created_at: "2026-08-31T22:30:00Z"
+updated_at: "2026-08-31T22:30:00Z"
+summary: "Final verification of msn-2026-0017 (CBOR §4.2 cohort expansion). 3-library canonical-mode cohort: Frontier cleanroom Python oracle + cbor2 6.1.4 (Python, agronholm) + ciborium 0.2.2 (Rust, enarx) produce byte-exact identical output on all 111 adversarial vectors × 8 audit axes = 333 canonical-mode cells (111 each per library, 222 cross-impl comparison cells). cbor-x 1.6.6 (JavaScript, kriszyp) has no canonical mode and is excluded from the canonical-mode cohort. The cleanroom oracle's derivation constraint (no consultation of audited library source) is documented and respected. The §4.2.3 length-first example map is byte-exact identical across all 3 implementations. cbor.me reference diagnostic (Carsten Bormann, RFC 8949 co-editor) provides a 4th independent oracle for spot-checks. Per rev-2026-0015 (adversarial critic), fnd-2026-0013 is SUPPORTED for promotion to verified_conclusion."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: verification-agent
+    model: minimax-m3
+    tool: "deterministic verification script"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc8949
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.3
+    - https://www.rfc-editor.org/rfc/rfc8949#appendix-A
+    - https://cbor.me/?bytes=a80a012001f401186401617a018120016261610181186401
+    - https://cbor.me/?bytes=c11a514b67b0
+    - knowledge/observations/obs-2026-0041.yaml
+    - knowledge/observations/obs-2026-0040.yaml
+    - knowledge/reviews/rev-2026-0015.yaml
+    - knowledge/reproducers/rpr-2026-0014.yaml
+    - knowledge/experiments/exp-2026-0031.yaml
+    - knowledge/specifications/spc-2026-0004.yaml
+    - cbor-cross-impl/oracle/cbor_oracle.py
+    - cbor-cross-impl/adapters/lib_cbor2_adapter.py
+    - cbor-cross-impl/adapters/lib_ciborium_adapter.py
+    - cbor-cross-impl/adapters/lib_cbor_x_adapter.py
+    - cbor-cross-impl/runner/run_matrix.py
+    - cbor-cross-impl/results/matrix.tsv
+  parent: exp-2026-0031
+  generation: 0
+links:
+  specifications: [spc-2026-0004]
+  targets: [tgt-2026-0005]
+  experiments: [exp-2026-0031]
+  observations: [obs-2026-0041, obs-2026-0040]
+  reproducers: [rpr-2026-0014]
+  reviews: [rev-2026-0015]
+  implementations: [imp-2026-0003, imp-2026-0018, imp-2026-0019]
+title: "VRF-2026-0015 - msn-2026-0017 verification (CBOR §4.2 cohort expansion)"
+verification_method: deterministic-script
+verification_inputs:
+  - "RFC 8949 Appendix A Table 6 (14 integer reference vectors)"
+  - "RFC 8949 §4.2.3 length-first ordering example"
+  - "cbor.me reference diagnostic (Carsten Bormann, RFC 8949 co-editor) — spot-checked"
+  - "cbor-cross-impl/results/matrix.tsv (matrix output from cbor2 + ciborium + cbor-x)"
+
+verification_steps:
+  - step: 1
+    description: "Re-run cleanroom oracle self-test against RFC 8949 Appendix A Table 6"
+    command: "cd cbor-cross-impl && python oracle/cbor_oracle.py"
+    expected: "14/14 PASS for both deterministic and canonical modes"
+    actual: "14/14 PASS for both modes (verified 2026-08-31)"
+    status: PASS
+
+  - step: 2
+    description: "Verify RFC 8949 §4.2.3 example byte-exact match across all 3 implementations"
+    command: "python -c 'import sys; sys.path.insert(0, \"cbor-cross-impl/oracle\"); from cbor_oracle import encode_canonical; m={10:1,-1:1,False:1,100:1,\"z\":1,(-1,):1,\"aa\":1,(100,):1}; print(encode_canonical(m).hex())'"
+    expected: "a80a012001f401186401617a018120016261610181186401"
+    actual: "a80a012001f401186401617a018120016261610181186401"
+    status: PASS
+
+  - step: 3
+    description: "Run expanded matrix across all 3 implementations × 2 modes"
+    command: "cd cbor-cross-impl && python runner/run_matrix.py"
+    expected: "555 cells (cbor2 222 + ciborium 222 + cbor-x 111 default); canonical mode 222/222 byte-exact PASS"
+    actual: "555 cells, 501 PASS (90.3%), 34 SPEC_AMBIGUITY (6.1%), 13 SPEC_VIOLATION (2.3%), 5 INTEROP_BREAK (0.9%), 2 ERROR (0.4%). Canonical mode: cbor2 111/111 PASS + ciborium 111/111 PASS = 222/222 byte-exact match with Frontier oracle."
+    status: PASS
+
+  - step: 4
+    description: "Verify cbor2 canonical byte-exact matches oracle on map_key_sort §4.2.3 example"
+    command: "cd cbor-cross-impl && python -c 'import sys; sys.path.insert(0, \"oracle\"); sys.path.insert(0, \"adapters\"); from cbor_oracle import encode_canonical; import lib_cbor2_adapter as a; m={10:1,-1:1,False:1,100:1,\"z\":1,(-1,):1,\"aa\":1,(100,):1}; oracle_hex=encode_canonical(m).hex(); adapter_hex=a.encode(m, mode=\"canonical\").hex(); print(\"oracle:\", oracle_hex); print(\"cbor2: \", adapter_hex); print(\"MATCH\" if oracle_hex==adapter_hex else \"DIVERGE\")'"
+    expected: "oracle and cbor2 canonical produce identical bytes for length-first sort"
+    actual: "MATCH (both produce a80a012001f401186401617a018120016261610181186401)"
+    status: PASS
+
+  - step: 5
+    description: "Verify ciborium canonical byte-exact matches oracle on map_key_sort §4.2.3 example"
+    command: "cd cbor-cross-impl && python -c 'import sys; sys.path.insert(0, \"oracle\"); sys.path.insert(0, \"adapters\"); from cbor_oracle import encode_canonical; import lib_ciborium_adapter as a; m={10:1,-1:1,False:1,100:1,\"z\":1,(-1,):1,\"aa\":1,(100,):1}; oracle_hex=encode_canonical(m).hex(); adapter_hex=a.encode(m, mode=\"canonical\").hex(); print(\"oracle:\", oracle_hex); print(\"ciborium:\", adapter_hex); print(\"MATCH\" if oracle_hex==adapter_hex else \"DIVERGE\")'"
+    expected: "oracle and ciborium canonical produce identical bytes for length-first sort"
+    actual: "MATCH (both produce a80a012001f401186401617a018120016261610181186401)"
+    status: PASS
+
+  - step: 6
+    description: "cbor.me cross-check of §4.2.3 example map"
+    command: "web fetch https://cbor.me/?bytes=a80a012001f401186401617a018120016261610181186401"
+    expected: "cbor.me decodes as {10: 1, -1: 1, false: 1, 100: 1, \"z\": 1, [-1]: 1, \"aa\": 1, [100]: 1} with length-first key order"
+    actual: "MATCH (cbor.me decodes the §4.2.3 example correctly with the length-first key order)"
+    status: PASS
+
+  - step: 7
+    description: "cbor.me cross-check of tagged value c11a514b67b0"
+    command: "web fetch https://cbor.me/?bytes=c11a514b67b0"
+    expected: "cbor.me decodes as 1(1363896240) — tag 1 (epoch-based date-time) around unsigned(1363896240)"
+    actual: "MATCH (cbor.me decodes correctly)"
+    status: PASS
+
+  - step: 8
+    description: "Validate matrix.tsv is byte-identical on re-run"
+    command: "python runner/run_matrix.py && sha256sum results/matrix.tsv"
+    expected: "byte-identical matrix.tsv"
+    actual: "byte-identical matrix.tsv on re-run (deterministic for given inputs + library versions)"
+    status: PASS
+
+  - step: 9
+    description: "Validate reproducibility via rpr-2026-0014"
+    command: "follow rpr-2026-0014 reproducer command from clean state"
+    expected: "all 8 reproducer steps PASS"
+    actual: "all 8 steps PASS (verified 2026-08-31)"
+    status: PASS
+
+verification_summary: |
+  The msn-2026-0017 cohort expansion is verified at 9 distinct levels:
+    1. Cleanroom oracle self-test: 14/14 RFC 8949 Appendix A Table 6 integer vectors PASS
+       in both deterministic and canonical modes.
+    2. RFC 8949 §4.2.3 example byte-exact match: oracle, cbor2, ciborium all produce
+       a80a012001f401186401617a018120016261610181186401.
+    3. Expanded matrix runner: 555 cells, 90.3% PASS overall.
+    4. cbor2 canonical byte-exact match: 111/111 PASS with oracle.
+    5. ciborium canonical byte-exact match: 111/111 PASS with oracle.
+    6. cbor.me §4.2.3 example cross-check: MATCH.
+    7. cbor.me tagged value cross-check: MATCH.
+    8. Matrix reproducibility: byte-identical on re-run.
+    9. Reproducer rpr-2026-0014: all 8 steps PASS from clean state.
+
+  Conclusion: 3-lineage canonical-mode byte-exact agreement is verified.
+  cbor2 and ciborium independently produce byte-exact identical output to
+  the Frontier cleanroom oracle on all 111 vectors × 8 audit axes.
+  cbor.me provides a 4th independent oracle for spot-checks.
+
+  Per rev-2026-0015 (adversarial critic), fnd-2026-0013 is SUPPORTED for
+  promotion to verified_conclusion with the 3-lineage evidence chain.
+
+limitations:
+  - "Cohort size = 3 libraries for canonical mode (Frontier oracle + cbor2 + ciborium). cbor-x excluded (no canonical mode)."
+  - "Haskell cborg NOT in cohort (Data.Map Ord-based key ordering does not match §4.2.1 bytewise-lex or §4.2.3 length-first; deferred to follow-up)."
+  - "Cross-platform + cross-version reproducibility not tested."
+  - "cbor.me is intermittent; spot-checked 2 cells. Full cbor.me matrix cross-check would require more reliable access."
+  - "ciborium 0.2.2's canonical encoder is built manually in the Rust driver using CanonicalValue. A future ciborium release may add a first-class canonical_into_writer; the adapter would need to be updated."

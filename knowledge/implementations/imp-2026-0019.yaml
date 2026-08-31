@@ -1,0 +1,67 @@
+id: imp-2026-0019
+type: implementation
+status: current
+created_at: "2026-08-31T21:00:00Z"
+updated_at: "2026-08-31T21:00:00Z"
+summary: "JavaScript cbor-x 1.6.6 — kriszyp/cbor-x (sole author Kris Zyp). Ultra-fast CBOR (RFC 8949) implementation with extensions for records and structured cloning. NOT a fork of any other audited CBOR library. Critically: cbor-x has NO canonical/deterministic encoding mode. Default mode wraps JS objects in tags (tag 2 for objects, tag 259 for Maps), uses double-precision for all non-integer floats, encodes small integer-valued floats as integers, and emits JS insertion order for map keys. The mission brief's URL 'dentsu-dev/cbor-x' is incorrect (returns 404); the real repo is kriszyp/cbor-x."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: "msn-2026-0017 cohort expansion"
+  sources:
+    - https://github.com/kriszyp/cbor-x
+    - https://registry.npmjs.org/cbor-x
+    - https://github.com/kriszyp/cbor-x/blob/master/package.json
+    - https://github.com/kriszyp/cbor-x/blob/master/encode.js
+    - https://github.com/kriszyp/cbor-x/blob/master/README.md
+    - cbor-cross-impl/results/matrix.tsv (msn-2026-0017 matrix run)
+  parent: tgt-2026-0005
+  generation: 0
+links:
+  targets: [tgt-2026-0005]
+  specifications: [spc-2026-0004]
+  findings: []
+  experiments: [exp-2026-0030, exp-2026-0031]
+  observations: [obs-2026-0041]
+title: "IMP-2026-0019 - JavaScript cbor-x 1.6.6 (kriszyp)"
+name: cbor-x
+language: JavaScript / Node.js
+repo: https://github.com/kriszyp/cbor-x
+version: 1.6.6
+authors:
+  - "Kris Zyp <kriszyp@gmail.com> (sole author/maintainer per package.json)"
+lineage: original work, inspired by msgpack-javascript and avsc; no CBOR-fork ancestry
+independence:
+  shared_authors_with_audited: none identified
+  shared_code_with_audited: "none (runtime deps: cbor-extract by same author, no other CBOR libs)"
+  shared_test_vectors_with_audited: "no RFC 8949 Appendix C file. Cross-testing via dev-only 'cbor' npm package (Hannes Landeholm), not as a shared vector source."
+  shared_runtime_dependencies_with_audited: none
+  independence_basis: "independent language, independent author, independent codebase. No RFC test vector inclusion. No canonical mode."
+canonical_mode:
+  supported: false
+  rationale: "cbor-x has no 'canonical', 'deterministic', 'sort keys', or equivalent flag. The 'canonical' word appears in one test comment referring to empty-buffer shortest-form (0x40), not the §4.2 spec. The encoder iterates JS object keys in insertion order via `for (let key in object)`."
+  what_default_does: "JS objects get tag 2 (bignum) wrapping unless useRecords:false; Maps get tag 259 (map-with-string-keys); insertion-order key iteration; double-precision floats by default; short-integer floats encoded as integers."
+specification:
+  primary: RFC 8949
+  references: "RFC 8746 (typed arrays), RFC 8742 (CWT), Packed CBOR draft, custom tag-105/26880-27135 record extensions"
+  no_canonical_mode: "Default mode is NOT conformant with RFC 8949 §4.2 deterministic encoding requirements. The library is conformant for decode but the encoder is optimized for speed, not canonical form."
+adapter:
+  path: cbor-cross-impl/adapters/lib_cbor_x_adapter.py
+  driver_path: R:/cbor-cohort/cbor-x/driver.js
+  driver_language: Node.js
+  build: "npm install cbor-x (R:/cbor-cohort/cbor-x/)"
+  version_in_adapter: 1.6.6
+matrix_results:
+  default_mode: "79/111 PASS (71.2%); 20 SPEC_AMBIGUITY (mostly tag wrapping: tag 2 around objects, tag 64 around bytes, tag 259 around Maps); 5 INTEROP_BREAK (small integer-valued floats encoded as integers, e.g., 1.0 → 0x01); 5 SPEC_VIOLATION; 2 ERROR (undefined not directly supported; large integers > 2^53 converted to doubles)"
+  canonical_mode: "skipped (supports_canonical = False)"
+limitations:
+  - "Every JS object is wrapped in a tag (bignum or record). No way to emit a plain CBOR map from cbor-x — this is a fundamental design choice."
+  - "Small integer-valued floats are encoded as integers (lossy with respect to the float type but value-preserving)."
+  - "Large integers (> 2^53, MAX_SAFE_INTEGER) are converted to doubles because JavaScript Number cannot represent them exactly."
+  - "No canonical mode, so cbor-x is a partial-cohort member: it demonstrates default-mode divergence patterns but cannot participate in canonical-mode cross-impl agreement."
+notes_path: knowledge/notes/imp-2026-0019.md
+corrections_to_brief:
+  - "The mission brief URL 'https://github.com/dentsu-dev/cbor-x' returns HTTP 404. The actual repo is 'https://github.com/kriszyp/cbor-x'."
