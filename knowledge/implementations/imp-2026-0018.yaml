@@ -1,0 +1,69 @@
+id: imp-2026-0018
+type: implementation
+status: current
+created_at: "2026-08-31T21:00:00Z"
+updated_at: "2026-08-31T21:00:00Z"
+summary: "Rust ciborium 0.2.2 — enarx/ciborium (Enarx/Profian TEE project, lead author Nathaniel McCallum). Cleanroom Rust implementation of CBOR (RFC 8949). Not a fork of any other audited CBOR library. Has a canonical mode (canonical_value + CanonicalValue wrapper) that implements RFC 8949 §4.2.3 length-first map key ordering (per CanonicalValue docstring: 'as defined in both RFC 7049 Section 3.9 and RFC 8949 4.2.3 as errata'). Shortest-form integer encoding mandatory; shortest-form float encoding is applied conservatively for losslessness."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: "msn-2026-0017 cohort expansion"
+  sources:
+    - https://github.com/enarx/ciborium
+    - https://github.com/enarx/ciborium/blob/main/ciborium/Cargo.toml
+    - https://github.com/enarx/ciborium/blob/main/ciborium/src/value/canonical.rs
+    - https://github.com/enarx/ciborium/blob/main/ciborium/src/value/integer.rs
+    - https://docs.rs/ciborium
+    - https://github.com/enarx/ciborium/commit/e68ebb0184ebe280596e0d0715ccd16b63cd1c75 (initial commit)
+    - cbor-cross-impl/results/matrix.tsv (msn-2026-0017 matrix run)
+  parent: tgt-2026-0005
+  generation: 0
+links:
+  targets: [tgt-2026-0005]
+  specifications: [spc-2026-0004]
+  findings: []
+  experiments: [exp-2026-0030, exp-2026-0031]
+  observations: [obs-2026-0040, obs-2026-0041]
+title: "IMP-2026-0018 - Rust ciborium 0.2.2 (enarx)"
+name: ciborium
+language: Rust
+repo: https://github.com/enarx/ciborium
+version: 0.2.2
+authors:
+  - "Nathaniel McCallum <npmccallum@profian.com> (sole author per Cargo.toml)"
+  - "Enarx / Profian (org owner)"
+lineage: original cleanroom Rust implementation, no fork ancestry
+independence:
+  shared_authors_with_audited: none identified
+  shared_code_with_audited: "none (workspace internal: ciborium-ll, ciborium-io)"
+  shared_test_vectors_with_audited: "RFC 8949 Appendix A/C examples only (shared by spec, not by lineage)"
+  shared_runtime_dependencies_with_audited: "only serde (universal Rust ecosystem dep), half (IEEE 754), embedded-io"
+  independence_basis: "independent language, independent organization, independent author, independent codebase. Test vectors are RFC-mandated (Appendix A/C), so byte-exact agreement on those is a self-consistency check against the RFC text, not evidence of shared lineage."
+canonical_mode:
+  supported: true
+  api: "ciborium::value::CanonicalValue (sortable wrapper implementing Ord via cmp_value). Driver uses canonical_value() to sort map keys, then into_writer() for byte emission. Manual canonical encoder (canonical_into_writer/canonical_value are NOT in ciborium 0.2.2; they are referenced in development/unreleased versions). The §4.2.3 length-first sort is implemented via CanonicalValue's Ord."
+  sort_rule: "§4.2.3 length-first (per CanonicalValue docstring: 'RFC 8949 4.2.3 (as errata)'). Verified by byte-exact match with Frontier oracle on map_rfc_4_2_3_example vector (a80a012001f401186401617a018120016261610181186401)."
+  shortest_form_ints: yes (mandatory via serialize_i64/serialize_u64)
+  shortest_form_floats: yes, lossless-only (encoder coerces to smaller width if round-trip is bit-identical)
+  duplicate_key_rejection: no (user responsibility per docs)
+specification:
+  primary: RFC 8949
+  secondary: RFC 7049 (cited in canonical sort doc)
+  rfc_7049_to_8949_parity: "ciborium canonical encoder aligns with RFC 8949 §4.2.3 (length-first) rather than §4.2.1 (bytewise-lex). The two rules are materially different for maps with mixed-length keys."
+adapter:
+  path: cbor-cross-impl/adapters/lib_ciborium_adapter.py
+  driver_path: R:/cbor-cohort/ciborium/target/release/cbor-driver.exe
+  driver_language: Rust
+  build: "cargo build --release (R:/cbor-cohort/ciborium/)"
+  version_in_adapter: 0.2.2
+matrix_results:
+  canonical_mode: "111/111 PASS (100% byte-exact match with Frontier cleanroom oracle)"
+  default_mode: "107/111 PASS (96.4%); 4 SPEC_VIOLATION (map_key_sort: insertion-order, not sorted — documented non-canonical behavior)"
+limitations:
+  - "ciborium 0.2.2 does not have a first-class canonical_into_writer; the adapter must sort map keys manually using CanonicalValue before calling into_writer."
+  - "The driver's float handling depends on ciborium's lossy float coercion logic. For values exactly representable in half/single precision, ciborium uses the shorter form. For values not exactly representable in those widths, ciborium uses double precision (matching RFC 8949 §4.2 rule 3 shortest-form requirement)."
+  - "Test corpus is inline hex of RFC 8949 Appendix C (the same vectors every compliant impl shares by spec), not a CBOR-WG shared test vector file."
+notes_path: knowledge/notes/imp-2026-0018.md

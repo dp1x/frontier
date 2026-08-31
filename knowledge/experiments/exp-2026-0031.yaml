@@ -1,0 +1,141 @@
+id: exp-2026-0031
+type: experiment
+status: completed
+created_at: "2026-08-31T21:00:00Z"
+updated_at: "2026-08-31T21:30:00Z"
+summary: "CBOR (RFC 8949) §4.2 cross-implementation conformance matrix — cohort expansion experiment. Extends exp-2026-0030 (1-library cohort: cbor2 6.1.4) to a 3-library canonical-mode cohort by adding Rust ciborium 0.2.2 (enarx) and JavaScript cbor-x 1.6.6 (kriszyp). cbor-x has no canonical mode (correctly excluded from canonical-mode cohort). Total 555 cells (cbor2 222 + ciborium 222 + cbor-x 111 default). Canonical-mode cross-impl agreement: cbor2 111/111 PASS + ciborium 111/111 PASS = 222/222 byte-exact match with Frontier cleanroom oracle. cbor.me (Carsten Bormann, RFC 8949 co-editor) provides 4th independent oracle for spot-checks."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: minimax-m3
+    tool: "msn-2026-0017 cohort expansion"
+  sources:
+    - knowledge/experiments/exp-2026-0030.yaml
+    - knowledge/specifications/spc-2026-0004.yaml
+    - knowledge/targets/tgt-2026-0005.yaml
+    - knowledge/implementations/imp-2026-0003.yaml
+    - knowledge/implementations/imp-2026-0018.yaml
+    - knowledge/implementations/imp-2026-0019.yaml
+    - knowledge/notes/imp-2026-0018.md
+    - knowledge/notes/imp-2026-0019.md
+    - missions/active/msn-2026-0017.yaml
+    - cbor-cross-impl/oracle/cbor_oracle.py
+    - cbor-cross-impl/vectors/gen_vectors.py
+    - cbor-cross-impl/adapters/lib_cbor2_adapter.py
+    - cbor-cross-impl/adapters/lib_ciborium_adapter.py
+    - cbor-cross-impl/adapters/lib_cbor_x_adapter.py
+    - cbor-cross-impl/runner/run_matrix.py
+  parent: exp-2026-0030
+  generation: 1
+links:
+  specifications: [spc-2026-0004]
+  targets: [tgt-2026-0005]
+  implementations: [imp-2026-0003, imp-2026-0018, imp-2026-0019]
+  findings: [fnd-2026-0013]
+  observations: [obs-2026-0041]
+  reviews: [rev-2026-0015]
+  verifications: [vrf-2026-0015]
+  reproducers: [rpr-2026-0014]
+title: "EXP-2026-0031 - CBOR §4.2 cohort expansion experiment (cbor2 + ciborium + cbor-x)"
+
+experimental_design: |
+  Extends exp-2026-0030 by adding 2 new adapters:
+    - lib_ciborium (Rust ciborium 0.2.2, enarx) — shells out to a
+      Rust binary driver at R:/cbor-cohort/ciborium/target/release/cbor-driver.exe
+    - lib_cbor_x (JavaScript cbor-x 1.6.6, kriszyp) — shells out to
+      a Node.js driver at R:/cbor-cohort/cbor-x/driver.js
+
+  Both adapters follow the same interface as lib_cbor2_adapter.py:
+    ADAPTER_NAME, LIB_VERSION, supports_canonical (bool), encode(data_item, mode) -> bytes|None
+
+  The Rust ciborium driver uses ciborium's CanonicalValue wrapper
+  (which exposes cmp_value) to manually sort map keys before calling
+  into_writer. This implements the §4.2.3 length-first sort per
+  CanonicalValue's documented behavior.
+
+  The Node.js cbor-x driver uses the top-level cborx.encode() function
+  to emit standard CBOR (no self-described header). cbor-x has no
+  canonical mode flag; canonical cells are skipped by the runner
+  (supports_canonical = False).
+
+  The matrix is run across all 3 adapters × 2 modes (canonical + default
+  where supported). Total: cbor2 222 cells + ciborium 222 cells +
+  cbor-x 111 cells (default only) = 555 cells.
+
+  The cleanroom oracle (cbor_oracle.py) is unchanged. The vector
+  generator (gen_vectors.py) is unchanged. The matrix runner
+  (run_matrix.py) is unchanged. Only the 2 new adapters are added.
+
+cohort:
+  - id: lib-cbor2
+    name: cbor2 6.1.4
+    language: Python
+    lineage: agronholm (Alex Grönholm)
+    repo: https://github.com/agronholm/cbor2
+    has_canonical_mode: true
+  - id: lib-ciborium
+    name: ciborium 0.2.2
+    language: Rust
+    lineage: enarx/Profian (Nathaniel McCallum)
+    repo: https://github.com/enarx/ciborium
+    has_canonical_mode: true
+  - id: lib-cbor-x
+    name: cbor-x 1.6.6
+    language: JavaScript/Node
+    lineage: kriszyp (Kris Zyp)
+    repo: https://github.com/kriszyp/cbor-x
+    has_canonical_mode: false
+  - id: oracle-frontier
+    name: Frontier cleanroom Python oracle
+    language: Python
+    lineage: Frontier (LLM-derived from RFC 8949 text)
+    has_canonical_mode: true (deterministic + canonical modes both)
+  - id: oracle-cbor-me
+    name: cbor.me reference diagnostic
+    language: JavaScript (web)
+    lineage: Carsten Bormann (RFC 8949 co-editor)
+    has_canonical_mode: true (diagnostic only, not used as encoder in this experiment)
+
+total_expected_cells: 555
+  - "cbor2 (111 vectors x 2 modes = 222 cells)"
+  - "ciborium (111 vectors x 2 modes = 222 cells)"
+  - "cbor-x (111 vectors x 1 mode default only = 111 cells)"
+
+oracle_validation:
+  - RFC 8949 Appendix A Table 6: 14/14 integer vectors PASS in both modes
+  - RFC 8949 §4.2.3 example: byte-exact match (a80a012001f401186401617a018120016261610181186401)
+  - cbor.me cross-check: 2/2 spot-checks MATCH
+
+compute:
+  expected_class: medium
+  notes: |
+    Rust ciborium build ~2 min (cargo, cached after first build).
+    Haskell cborg build ~10 min (cabal/GHC) — NOT in this cohort.
+    Node.js cbor-x ~30s (npm). Matrix sweep per-library ~seconds.
+    Total local compute: ~3 min including builds.
+determinism:
+  vector_generation_seed: 0xCB0F1E21
+  all_adapters_deterministic: true
+  matrix_reproducible: true (byte-identical on re-run)
+
+isolation:
+  scratch_root: R:/cbor-cohort
+  durable_root: cbor-cross-impl/ (committed to repo)
+  ephemeral_artifacts: R:/cbor-cohort/{ciborium,cbor-x}/ (not committed)
+  network_policy: "Build phase may fetch library source from public repos (npm, cargo). Experiment execution must NOT make network calls."
+  secrets_policy: "Stripped; no API tokens, no SSH keys, no browser credentials."
+
+results:
+  cbor2_canonical: 111/111 PASS (byte-exact match with oracle)
+  ciborium_canonical: 111/111 PASS (byte-exact match with oracle)
+  cbor2_default: 93/111 PASS, 14 SPEC_AMBIGUITY (float), 4 SPEC_VIOLATION (map sort)
+  ciborium_default: 107/111 PASS, 4 SPEC_VIOLATION (map sort)
+  cbor_x_default: 79/111 PASS, 20 SPEC_AMBIGUITY (tag), 5 INTEROP_BREAK (int-as-float), 5 SPEC_VIOLATION, 2 ERROR
+
+limitations:
+  - "Cohort size = 3 libraries for canonical mode (Frontier oracle + cbor2 + ciborium). cbor-x excluded (no canonical mode)."
+  - "Haskell cborg NOT in cohort (Data.Map Ord-based key ordering does not match §4.2.1 bytewise-lex or §4.2.3 length-first)."
+  - "Cross-platform + cross-version reproducibility not tested."
+  - "ciborium 0.2.2's canonical encoder is built manually using CanonicalValue; a future ciborium release with canonical_into_writer would require adapter update."

@@ -1,0 +1,151 @@
+id: rpr-2026-0014
+type: reproducer
+status: verified
+created_at: "2026-08-31T21:30:00Z"
+updated_at: "2026-08-31T21:30:00Z"
+summary: "Reproducer for msn-2026-0017 (CBOR §4.2 cohort expansion matrix). Reproduces the (Frontier oracle x cbor2 x ciborium x cbor-x) matrix from clean source. 3 adapters (cbor2 6.1.4, ciborium 0.2.2, cbor-x 1.6.6) plus the existing cleanroom oracle. 111 adversarial vectors across 8 audit axes. Total 555 cells (cbor2 222 + ciborium 222 + cbor-x 111 default). Re-running the reproducer produces byte-identical TSV output for the same library versions + toolchain versions. Deterministic given library versions + toolchain versions + vector seed."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: deterministic-tool
+    role: independent-reproducer
+    model: minimax-m3
+    tool: "reproducer script"
+  sources:
+    - knowledge/experiments/exp-2026-0030.yaml
+    - knowledge/experiments/exp-2026-0031.yaml
+    - knowledge/observations/obs-2026-0041.yaml
+    - knowledge/specifications/spc-2026-0004.yaml
+    - knowledge/implementations/imp-2026-0003.yaml
+    - knowledge/implementations/imp-2026-0018.yaml
+    - knowledge/implementations/imp-2026-0019.yaml
+    - cbor-cross-impl/oracle/cbor_oracle.py
+    - cbor-cross-impl/vectors/gen_vectors.py
+    - cbor-cross-impl/adapters/lib_cbor2_adapter.py
+    - cbor-cross-impl/adapters/lib_ciborium_adapter.py
+    - cbor-cross-impl/adapters/lib_cbor_x_adapter.py
+    - cbor-cross-impl/runner/run_matrix.py
+  parent: exp-2026-0031
+  generation: 0
+links:
+  specifications: [spc-2026-0004]
+  targets: [tgt-2026-0005]
+  experiments: [exp-2026-0031]
+  observations: [obs-2026-0041]
+  implementations: [imp-2026-0003, imp-2026-0018, imp-2026-0019]
+title: "RPR-2026-0014 - CBOR §4.2 cohort expansion matrix reproducer (cbor2 + ciborium + cbor-x)"
+reproducer_command: |
+  Reproduce msn-2026-0017 (CBOR §4.2 cohort expansion matrix).
+  Deterministic given: cleanroom oracle source, vector generator seed 0xCB0F1E21,
+  library versions cbor2 6.1.4, ciborium 0.2.2, cbor-x 1.6.6,
+  toolchain versions Python 3.11+, Rust 1.85+, Node.js 18+.
+
+  cd cbor-cross-impl
+
+  # Step 1: Verify cleanroom oracle against RFC 8949 Appendix A 14 integer vectors
+  python oracle/cbor_oracle.py
+  # Expected: "Overall: PASS (14 vectors tested)"
+
+  # Step 2: Generate adversarial vectors (deterministic; seed 0xCB0F1E21)
+  python vectors/gen_vectors.py
+  # Expected: 111 vectors across 8 axes
+
+  # Step 3: Install cbor2 (Python) if not already installed
+  pip install cbor2==6.1.4
+
+  # Step 4: Build ciborium (Rust) if not already built
+  # Rust 1.85+ and Cargo required.
+  if [ ! -f "R:/cbor-cohort/ciborium/target/release/cbor-driver.exe" ]; then
+    mkdir -p R:/cbor-cohort/ciborium
+    cd R:/cbor-cohort/ciborium
+    cargo build --release
+    cd -
+  fi
+
+  # Step 5: Install cbor-x (JavaScript) if not already installed
+  if [ ! -d "R:/cbor-cohort/cbor-x/node_modules" ]; then
+    mkdir -p R:/cbor-cohort/cbor-x
+    cd R:/cbor-cohort/cbor-x
+    npm init -y
+    npm install cbor-x@1.6.6
+    cd -
+  fi
+
+  # Step 6: Run matrix
+  python runner/run_matrix.py
+  # Expected: 555 cells (cbor2 222 + ciborium 222 + cbor-x 111 default)
+  # Canonical mode (cbor2 + ciborium): 222/222 PASS (byte-exact match with oracle)
+
+  # Step 7: Dump diverging rows for human review
+  python runner/dump_diverge.py results/matrix.tsv > results/diverge_summary.txt
+
+  # Step 8: Validate TSV is reproducible (re-run should produce identical output)
+  sha256sum results/matrix.tsv > results/matrix.tsv.sha256
+  python runner/run_matrix.py > /dev/null
+  diff <(sha256sum results/matrix.tsv | awk '{print $1}') <(cat results/matrix.tsv.sha256 | awk '{print $1}')
+
+reproducer_files:
+  - path: cbor-cross-impl/oracle/cbor_oracle.py
+    role: cleanroom oracle (RFC 8949 §4.2 + §4.2.3 length-first)
+  - path: cbor-cross-impl/vectors/gen_vectors.py
+    role: adversarial vector generator (deterministic, seed 0xCB0F1E21)
+  - path: cbor-cross-impl/vectors/vectors_*.jsonl
+    role: pre-generated adversarial vectors (8 files, 111 vectors total)
+  - path: cbor-cross-impl/adapters/lib_cbor2_adapter.py
+    role: cbor2 6.1.4 adapter (Python)
+  - path: cbor-cross-impl/adapters/lib_ciborium_adapter.py
+    role: ciborium 0.2.2 adapter (Python wrapper around Rust binary driver)
+  - path: cbor-cross-impl/adapters/lib_cbor_x_adapter.py
+    role: cbor-x 1.6.6 adapter (Python wrapper around Node.js driver)
+  - path: cbor-cross-impl/runner/run_matrix.py
+    role: matrix runner
+  - path: cbor-cross-impl/runner/dump_diverge.py
+    role: divergence dump utility
+  - path: cbor-cross-impl/results/matrix.tsv
+    role: matrix output (committed for reproducibility verification)
+  - path: R:/cbor-cohort/ciborium/Cargo.toml
+    role: Rust ciborium project manifest
+  - path: R:/cbor-cohort/ciborium/src/main.rs
+    role: Rust ciborium driver (subprocessed by Python adapter)
+  - path: R:/cbor-cohort/cbor-x/driver.js
+    role: Node.js cbor-x driver (subprocessed by Python adapter)
+
+reproducibility:
+  deterministic: true
+  seed: 0xCB0F1E21
+  library_versions:
+    cbor2: 6.1.4
+    ciborium: 0.2.2
+    cbor-x: 1.6.6
+  toolchain_versions:
+    python: ">=3.11"
+    rust: ">=1.85"
+    node: ">=18"
+  cross_platform_tested: false
+  cross_version_tested: false
+  notes: |
+    Re-running the reproducer on the same library + toolchain versions
+    produces byte-identical matrix.tsv. The Rust ciborium build is
+    reproducible from Cargo.toml + src/main.rs. The Node.js cbor-x install
+    is reproducible from package.json + the cbor-x driver.js.
+
+validation_results:
+  rfc_8949_appendix_a_integers:
+    expected: "14/14 PASS in both deterministic and canonical modes"
+    actual: "14/14 PASS in both modes (verified 2026-08-31)"
+  rfc_8949_section_4_2_3_example:
+    expected: "byte-exact match with oracle (a80a012001f401186401617a018120016261610181186401)"
+    actual: "byte-exact match verified 2026-08-31 (oracle, cbor2, ciborium all produce same bytes)"
+  canonical_mode_cross_impl:
+    expected: "cbor2 111/111 PASS + ciborium 111/111 PASS = 222/222 byte-exact match with oracle"
+    actual: "verified 2026-08-31 in cbor-cross-impl/results/matrix.tsv"
+  matrix_reproducibility:
+    expected: "re-running runner produces identical matrix.tsv"
+    actual: "byte-identical matrix.tsv on re-run (deterministic for given inputs + library + toolchain versions)"
+
+limitations:
+  - "3-library cohort for canonical mode (cbor2 + ciborium + Frontier oracle). cbor-x excluded (no canonical mode)."
+  - "ciborium 0.2.2's canonical encoder is built manually in the Rust driver using CanonicalValue (which exposes cmp_value). A future ciborium release may add a first-class canonical_into_writer; the adapter would need to be updated."
+  - "No cross-platform validation."
+  - "Haskell cborg is NOT in this cohort (Haskell Data.Map Ord-based key ordering does not match §4.2.1 bytewise-lex or §4.2.3 length-first; including cborg requires careful adapter design). Deferred to follow-up."
+  - "Default-mode cbor-x divergences (tag wrapping, integer-as-float, etc.) are documented cbor-x behavior and are NOT attempts to coerce cbor-x into producing canonical output."
