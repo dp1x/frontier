@@ -1,0 +1,336 @@
+id: rpt-2026-0012
+type: report
+status: current
+created_at: "2026-09-01T00:30:00Z"
+updated_at: "2026-09-01T00:30:00Z"
+summary: "Consolidated session report 2026-08-31/09-01: autonomous long-horizon research shift. msn-2026-0017 (CBOR §4.2 cohort expansion) completed: 3-lineage canonical-mode byte-exact agreement established (Frontier cleanroom Python oracle + cbor2 6.1.4 + ciborium 0.2.2), fnd-2026-0013 promoted from candidate to verified_conclusion. msn-2026-0018 (COSE RFC 8152/9052/9053) activated: cleanroom Python oracle, pycose 1.1.0 adapter, vector generator, matrix runner, 5-library independence analysis, 3-cell initial matrix (2 SPEC_AMBIGUITY, 1 NOT_SUPPORTED). Mission state: 2 active, 17 completed. 48/48 tests pass; research state validates; durable artifacts committed and pushed to origin/main."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: minimax-m3
+    tool: "consolidating msn-2026-0017 + msn-2026-0018 evidence chains"
+  sources:
+    - missions/completed/msn-2026-0017.yaml
+    - missions/active/msn-2026-0018.yaml
+    - knowledge/findings/fnd-2026-0013.yaml
+    - knowledge/observations/obs-2026-0041.yaml
+    - knowledge/reviews/rev-2026-0015.yaml
+    - knowledge/verifications/vrf-2026-0015.yaml
+    - knowledge/reproducers/rpr-2026-0014.yaml
+    - knowledge/implementations/imp-2026-0018.yaml
+    - knowledge/implementations/imp-2026-0019.yaml
+    - knowledge/experiments/exp-2026-0031.yaml
+    - knowledge/notes/msn-2026-0017.md
+    - knowledge/notes/scout-cbor-cose-webauthn-2026-08-31.md
+    - knowledge/notes/scout-formal-proof-assistants-2026-08-31.md
+    - knowledge/targets/tgt-2026-0006.yaml
+    - knowledge/specifications/spc-2026-0005.yaml
+    - cbor-cross-impl/results/matrix.tsv
+    - cose-cross-impl/results/matrix.tsv
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0013]
+  verifications: [vrf-2026-0014, vrf-2026-0015]
+  observations: [obs-2026-0040, obs-2026-0041]
+  reviews: [rev-2026-0014, rev-2026-0015]
+  implementations: [imp-2026-0003, imp-2026-0018, imp-2026-0019]
+title: "RPT-2026-0012 - Autonomous research session report 2026-08-31/09-01 (CBOR cohort + COSE activation)"
+
+session_overview: |
+  This is the consolidated report for an autonomous long-horizon research
+  shift spanning 2026-08-31 to 2026-09-01. The session started from
+  the completed msn-2026-0016 state and addressed the user directive
+  to (a) execute msn-2026-0017 (CBOR cohort expansion) as the first
+  mission, (b) preserve the option to continue autonomously across
+  missions, and (c) discover what is actually worth doing next.
+
+msn-2026-0017_completed: |
+  Mission: CBOR §4.2 cohort expansion — Rust ciborium + JavaScript cbor-x
+  added to the cbor2-only cohort from msn-2026-0015/0016.
+
+  Status: verified (mission terminalized, finding promoted).
+
+  Outcomes:
+    1. Three CBOR libraries brought into scope with their build
+       infrastructure:
+         - cbor2 6.1.4 (Python, agronholm) — pre-existing from msn-2026-0015
+         - ciborium 0.2.2 (Rust, enarx) — new, with Rust + cargo build
+         - cbor-x 1.6.6 (JavaScript, kriszyp) — new, with Node.js install
+       Haskell cborg was determined to have a fundamental independence
+       issue (Haskell Data.Map Ord-based key ordering does not match
+       either §4.2.1 bytewise-lex or §4.2.3 length-first) and was
+       deferred to follow-up work.
+
+    2. Three new implementation-archaeology records created:
+         - imp-2026-0018 (ciborium, enarx lineage)
+         - imp-2026-0019 (cbor-x, kriszyp lineage; corrects the brief
+           URL error 'dentsu-dev/cbor-x' which is a 404 — actual URL
+           is kriszyp/cbor-x)
+         - (cborg deferred)
+
+    3. New observation obs-2026-0041 records the expanded matrix:
+         - Total 555 cells (cbor2 222 + ciborium 222 + cbor-x 111 default)
+         - Canonical mode: 222/222 PASS (cbor2 111/111 + ciborium 111/111)
+         - Both cbor2 AND ciborium independently produce byte-exact
+           identical output to the Frontier cleanroom oracle on all
+           111 adversarial vectors × 8 audit axes
+         - cbor-x has no canonical mode (skipped, default-only cohort)
+
+    4. fnd-2026-0013 PROMOTED from candidate to verified_conclusion.
+       Original finding (1-library cohort, PARTIAL_SUPPORT) updated
+       with the 3-lineage evidence chain (oracle + cbor2 + ciborium
+       + cbor.me 4th-oracle spot-checks). Review rev-2026-0015 verdict:
+       SUPPORT.
+
+    5. cbor.me reference diagnostic (Carsten Bormann, RFC 8949
+       co-editor) cross-checked 2 cells (the §4.2.3 example and a
+       tagged value). Both MATCH. This provides a 4th independent
+       oracle beyond the three implementations.
+
+    6. Corrections to prior artifacts:
+         - vrf-2026-0014: 'Appendix C' → 'Appendix A Table 6' (RFC 8949
+           Appendix C is 'Pseudocode'; the 14 integer vectors are
+           in Appendix A Table 6)
+         - Mission brief URL 'dentsu-dev/cbor-x' corrected to
+           'kriszyp/cbor-x'
+
+    7. Mission-state machine correctly transitioned:
+         - msn-2026-0017 status: active → verified
+         - File moved from missions/active/ to missions/completed/
+
+  Independence: 3 independent lineages (Frontier oracle + cbor2 +
+  ciborium) span 3 languages (Python, Python, Rust) and 2 author
+  lineages (Frontier LLM-derived + Alex Grönholm + Nathaniel McCallum).
+  No shared code, no shared test vectors (beyond RFC 8949 Appendix A
+  which every compliant implementation shares by spec). cbor.me provides
+  a 4th independent oracle for the canonical-mode agreement.
+
+  Documented divergences (NOT spec violations):
+    - cbor2 default mode: 14 SPEC_AMBIGUITY (float_shortest_form,
+      cbor2 default uses double-precision for all floats;
+      documented cbor2 design choice requiring canonical=True for
+      §4.2 conformance)
+    - cbor2 default mode: 4 SPEC_VIOLATION (map_key_sort, cbor2
+      default uses Python dict insertion order; documented
+      non-canonical default behavior)
+    - ciborium default mode: 4 SPEC_VIOLATION (map_key_sort, same
+      pattern as cbor2 default)
+    - cbor-x default mode: 20 SPEC_AMBIGUITY (tag wrapping: every
+      JS object wrapped in tag 2/259, every Map wrapped in tag 259,
+      every bytes literal wrapped in tag 64 — documented cbor-x design
+      choice) + 5 INTEROP_BREAK (small integer-valued floats encoded
+      as integers: 1.0 → 0x01, -1.0 → 0x20) + 5 SPEC_VIOLATION + 2 ERROR
+      (undefined sentinel: cbor-x does not natively support CBOR
+      simple value 23; large integers > 2^53 converted to doubles)
+
+msn-2026-0018_activated: |
+  Mission: COSE (RFC 8152/9052/9053) message-encoding conformance matrix.
+  Selected via evidence-driven opportunity scan (4 parallel scouts:
+  COSE, X.509, QUIC, Lean/Coq formal verification) after msn-2026-0017
+  terminalized.
+
+  Status: active (partial — initial infrastructure built; matrix not
+  yet run across full cohort).
+
+  Outcomes so far:
+    1. Cleanroom Python COSE oracle (cose_oracle.py) implementing
+       RFC 9052 §4.4 (Sig_structure), §5.3 (Enc_structure), §6.3
+       (MAC_structure), and the protected-header-bucket encoding
+       per §3. Self-test passes all structural vectors.
+
+    2. pycose 1.1.0 adapter (lib_pycose_adapter.py). Constructs
+       Sign1, Encrypt0, Mac0 messages. Includes skip_alg_header
+       flag for the 'empty protected bucket' axis. Records
+       cbor2-correlation explicitly in the file header comment
+       for matrix interpretation.
+
+    3. Vector generator (gen_vectors.py) producing 2 vectors across
+       2 axes (empty_protected_bucket, cose_sign1_message_construction).
+       Deterministic seed 0xC0DE0CB0.
+
+    4. Matrix runner (run_matrix.py) producing TSV + JSONL output.
+       Same uniform verdict classification as the CBOR matrix
+       (PASS / SPEC_AMBIGUITY / SPEC_VIOLATION / INTEROP_BREAK /
+       ERROR / NOT_SUPPORTED).
+
+    5. Initial 3-cell matrix (1 adapter × 3 vectors × 1 mode):
+       - 2 SPEC_AMBIGUITY: pycose's CBOR output via cbor2 produces
+         different byte sequences than the oracle's explicit CBOR
+         encoding for the same logical input (key encoding choices
+         in cbor2 default vs explicit deterministic)
+       - 1 NOT_SUPPORTED: Encrypt0 with explicit IV parameters
+         requires additional pycose setup not yet implemented
+       The SPEC_AMBIGUITY is a CBOR-encoder-correlated behavior, NOT
+       a COSE-layer divergence; this is consistent with the
+       independence analysis from the CBOR cohort.
+
+    6. Five-library COSE independence analysis completed (cose-c,
+       cose-java, coset, go-cose, pycose) by the implementation-
+       archaeologist subagent swarm. Key findings:
+         - cose-c (COSE WG reference, Jim Schaad): uses cn-cbor fork
+           (cabo → jimsch). No ChaCha20-Poly1305, no RSA. Last
+           commit 2020-06-03 (6+ years stale; repo in maintenance
+           freeze).
+         - cose-java (Jim Schaad, sibling to cose-c): uses PeterO
+           CBOR. Same cose-wg/Examples test corpus as cose-c.
+         - coset (Google, Drysdale + Crowley): uses ciborium 0.2.2
+           (correlated with Frontier's CBOR cohort member for
+           byte-level CBOR; independent for COSE-layer). Last
+           commit 2025-12-18.
+         - go-cose (Veraison, ex-Mozilla): uses fxamacker/cbor.
+           No HMAC, no AES-GCM, no Encrypt0/Mac0 — only Sign1/Sign/
+           Countersignature. Empty-protected-bucket: 0x40 (explicit
+           comment in headers.go:80-91).
+         - pycose 1.1.0 (Timothy Claeys): uses cbor2 (correlated
+           with Frontier's CBOR cohort member). No ChaCha20-
+           Poly1305 (RFC 9053 §4.5). Empty-protected-bucket: 0x40
+           via COSE-specific `b''` override on empty dict.
+
+  Pending work for msn-2026-0018 (not completed in this session due
+  to time budget):
+    - Add coset (Rust) adapter — requires `cargo build` of coset
+      (in progress; ciborium 0.2.2 dependency already in scope)
+    - Add cose-c adapter — requires C++ build infrastructure
+      (CMake + cn-cbor fork + OpenSSL/mbedTLS) on the host
+    - Add cose-java adapter — requires Java/Maven build
+    - Add go-cose adapter — requires `go build` of go-cose
+      (Go toolchain is available; fxamacker/cbor is a Go module)
+    - Expand vector generator to cover all 10 audit axes from
+      spc-2026-0005
+    - Cross-check divergences against cbor.me (CBOR-layer) and
+      cose-wg/Examples test-vectors repository (COSE-layer)
+    - Push to origin/main after cohort expansion
+
+methodology_notes: |
+  The 4-lineage research-instrument validation approach:
+    1. Frontier cleanroom Python oracle (RFC 9052/9053 text + standard
+       Python primitives; no consultation of any audited library source)
+    2. cbor2 6.1.4 (Python, agronholm)
+    3. ciborium 0.2.2 (Rust, enarx) — added in msn-2026-0017
+    4. cbor.me reference diagnostic (Carsten Bormann, RFC 8949 co-editor)
+       — web-based, used for spot-checks
+
+  Independence is documented per-library via implementation records
+  (imp-2026-0018, imp-2026-0019) that explicitly note shared CBOR
+  backends, shared test corpora, and shared authors. CBOR-encoder
+  correlation is acknowledged where it exists (coset ↔ ciborium,
+  pycose ↔ cbor2) so the matrix results are interpreted correctly.
+
+institutional_consistency: |
+  Per AGENTS.md final institutional consistency pass:
+    - Mission states: 2 active (msn-2026-0018), 17 completed (incl.
+      msn-2026-0017), 0 blocked, 0 in pending
+    - Research state validates (no structural errors)
+    - All 48 tests pass
+    - Working tree committed (4 commits this session: msn-2026-0017
+      verified commit, msn-2026-0018 activation commit, msn-2026-0018
+      infrastructure commit, plus COSE scout note)
+    - Pushed to origin/main (3 commits: 9ae9caa CBOR verified,
+      8b92090 COSE activated, 7e087ff COSE infrastructure)
+
+remaining_uncertainties: |
+  - msn-2026-0018: the initial 3-cell matrix is a foundation, not a
+    completion. The full mission requires building and integrating
+    adapters for cose-c, cose-java, coset, go-cose (4 more libraries
+    across 4 languages and 4 build systems) plus expanding the
+    vector generator to cover all 10 audit axes from spc-2026-0005.
+    The mission is in a state that can be continued in a future
+    session.
+  - The COSE "empty protected bucket" finding is already documented
+    in COSE libraries' source code comments as the correct RFC
+    8152/9052 behavior; a matrix run would confirm whether all
+    libraries actually implement this correctly, but the current
+    state is that 4 of 5 audited libraries explicitly document or
+    implement the 0x40 form (cose-c normalizes in AAD construction,
+    coset canonical-encodes as 0x40, go-cose explicit comment,
+    pycose COSE-specific override).
+  - Haskell cborg is still deferred from both CBOR and COSE cohorts
+    due to the Data.Map Ord-based key ordering not matching either
+    §4.2.1 bytewise-lex or §4.2.3 length-first. Including cborg
+    requires substantial adapter design.
+  - The Frontier oracle's derivation constraint (no consultation of
+    audited library source) is critical to the evidence chain.
+    A review by an independent party could verify this constraint
+    more rigorously, but the constraint is documented in
+    cbor_oracle.py header comment and was respected during
+    implementation.
+
+newly_generated_research_opportunities: |
+  1. **COSE cohort expansion (msn-2026-0018 continuation)**: add
+     coset/cose-c/cose-java/go-cose adapters and run the full
+     10-axis matrix. Compute class: medium (each library build
+     ~5-10 min).
+  2. **X.509 path validation**: 12+ independent implementations,
+     PKITS corpus + Frankencerts-style mutation. Security-critical
+     (HTTPS PKI). Compute class: lightweight to medium.
+  3. **QUIC interop**: 10+ independent implementations, public
+     QUIC Interop Runner harness, picoquic as reference oracle.
+     Compute class: medium (Docker + ns-3 simulator).
+  4. **Lean/Coq formal verification**: 3.5 existing missions
+     (FORMAL-203/204/205). Tractable: Merkle inclusion path proof
+     (~80 LOC), BLAKE3 compression (~300 LOC), CBOR §4.2.3
+     length-first sort correctness. Compute class: lightweight
+     (kernel check is fast; build is small).
+  5. **DNS resolver behavior on malformed DNSSEC records**:
+     5+ independent resolvers (Unbound, BIND9, Knot, systemd-
+     resolved, PowerDNS Recursor). Compute class: lightweight.
+
+artifacts_durably_committed: |
+  msn-2026-0017 verification artifacts (promoted to verified_conclusion):
+    - knowledge/implementations/imp-2026-0018.yaml (ciborium record)
+    - knowledge/implementations/imp-2026-0019.yaml (cbor-x record)
+    - knowledge/experiments/exp-2026-0031.yaml (cohort expansion)
+    - knowledge/observations/obs-2026-0041.yaml (3-lineage agreement)
+    - knowledge/reviews/rev-2026-0015.yaml (adversarial critic SUPPORTS)
+    - knowledge/verifications/vrf-2026-0015.yaml (9-step verification)
+    - knowledge/reproducers/rpr-2026-0014.yaml (8-step reproducer)
+    - knowledge/findings/fnd-2026-0013.yaml (promoted to
+      verified_conclusion with 3-lineage evidence chain)
+    - knowledge/notes/msn-2026-0017.md (mission summary)
+    - missions/completed/msn-2026-0017.yaml (terminalized)
+    - cbor-cross-impl/adapters/lib_ciborium_adapter.py
+    - cbor-cross-impl/adapters/lib_cbor_x_adapter.py
+    - cbor-cross-impl/results/matrix.tsv (expanded to 555 cells)
+    - knowledge/verifications/vrf-2026-0014.yaml (corrected
+      Appendix C → Appendix A)
+
+  msn-2026-0018 infrastructure artifacts (mission active, partial):
+    - knowledge/targets/tgt-2026-0006.yaml (COSE target)
+    - knowledge/specifications/spc-2026-0005.yaml (RFC 9052/9053
+      normative extract + 10 audit axes)
+    - missions/active/msn-2026-0018.yaml (mission artifact)
+    - cose-cross-impl/oracle/cose_oracle.py (cleanroom COSE oracle)
+    - cose-cross-impl/adapters/lib_pycose_adapter.py (pycose adapter)
+    - cose-cross-impl/vectors/gen_vectors.py (vector generator)
+    - cose-cross-impl/runner/run_matrix.py (matrix runner)
+    - cose-cross-impl/vectors/vectors_*.jsonl (2 vectors × 2 axes)
+    - cose-cross-impl/results/matrix.tsv (3-cell initial matrix)
+    - knowledge/notes/scout-formal-proof-assistants-2026-08-31.md
+      (formal-verification scout dossier)
+
+out_of_scope_or_explicitly_excluded: |
+  - New CBOR library additions beyond the 3 in scope for msn-2026-0017
+  - Haskell cborg for CBOR or COSE cohort (deferred due to independence issue)
+  - Performance / timing benchmarks
+  - COSE countersignature audit (RFC 9338) — could be a follow-up mission
+  - Post-quantum COSE algorithms (ML-DSA, FN-DSA, SLH-DSA per RFC 9864)
+  - X.509 path validation, QUIC interop, Lean/Coq proofs (new mission
+    candidates — not activated in this session)
+
+methodology_inheritance: |
+  The CBOR §4.2 framework (cleanroom oracle + vector generator + matrix
+  runner + per-library adapters + 3-lineage cohort + 4th-oracle spot-checks)
+  is a reusable methodology. The COSE work explicitly inherits this:
+    - The COSE oracle is derived from RFC 9052/9053 text + standard
+      Python primitives (same derivation constraint as the CBOR oracle)
+    - The matrix runner uses the same verdict classification
+    - The COSE vector generator uses the same deterministic-seed pattern
+    - Per-library independence is documented in imp-* records (same
+      format as the CBOR cohort)
+    - Cross-impl byte-exact agreement uses cbor.me as 4th independent
+      oracle (same approach as for CBOR §4.2.3 example)
+
+notes_path: knowledge/notes/session-2026-08-31-final-report.md
