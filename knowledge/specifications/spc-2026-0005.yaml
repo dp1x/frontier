@@ -62,13 +62,16 @@ normative_extract: |
 
   RFC 9052 §5.3 (Enc_structure):
     Enc_structure = [
-      context : "Encrypt" | "Encrypted" | "Recipient",
+      context : "Encrypt" | "Encrypt0" | "Enc_Recipient" |
+                "Mac_Recipient" | "Rec_Recipient",
       body_protected : bstr,
       ? sign_protected : bstr,
       external_aad : bstr
     ]
-    For COSE_Encrypt0, the ciphertext is encrypted content
-    (no separate external structure to sign).
+    For COSE_Encrypt0, the context is "Encrypt0" (NOT "Encrypted" as
+    some earlier documents stated — this was corrected in RFC 9052).
+    The ciphertext is encrypted content (no separate external structure
+    to sign).
 
   RFC 9052 §6.3 (MAC_structure):
     MAC_structure = [

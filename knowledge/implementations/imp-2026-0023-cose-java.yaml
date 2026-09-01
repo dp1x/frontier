@@ -1,0 +1,133 @@
+---
+id: imp-2026-0023
+type: implementation
+status: current
+created_at: "2026-09-01T00:00:00Z"
+updated_at: "2026-09-01T00:00:00Z"
+summary: "Java cose-java 1.1.0 — cose-wg/COSE-JAVA (Jim Schaad / August Cellars, COSE WG reference implementation; sibling to cose-c). Java implementation of COSE using PeterO CBOR (Peter Occil) as the CBOR backend — NOT shared with any Frontier CBOR cohort member. STALE maintenance: last commit 2021-04-28 (HEAD e461e5e; ~5 years); no commits since the EdDSA key parsing merge from rikard-sics. Maven artifact com.augustcellars.cose:cose-java:1.1.0 (RSA PSS support added). Uses Bouncy Castle for crypto (test scope only per pom.xml). Consumes cose-wg/Examples test corpus — SHARED with cose-c (imp-2026-0022), creating a test-corpus correlation factor."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: "msn-2026-0018 cohort independence analysis (git-history-only subagent)"
+  sources:
+    - https://github.com/cose-wg/COSE-JAVA
+    - https://github.com/cose-wg/COSE-JAVA/blob/master/README.md
+    - https://raw.githubusercontent.com/cose-wg/COSE-JAVA/master/pom.xml
+    - https://github.com/cose-wg/COSE-JAVA/commits/master
+    - https://github.com/cose-wg/COSE-JAVA/releases
+    - https://github.com/cose-wg/Examples (shared test corpus)
+    - https://github.com/rikard-sics (contributor lineage)
+  parent: tgt-2026-0006
+  generation: 0
+links:
+  targets: [tgt-2026-0006]
+  specifications: [spc-2026-0005]
+  findings: []
+  experiments: []
+  observations: []
+title: "IMP-2026-0023 - Java cose-java 1.1.0 (cose-wg, jimsch)"
+name: cose-java
+language: Java
+repo: https://github.com/cose-wg/COSE-JAVA
+version: 1.1.0
+authors:
+  - "Jim Schaad <ietf@augustcellars.com> (primary maintainer per pom.xml developers section)"
+  - "rikard-sics (Rikard SICS, EdDSA key parsing contributor 2020-2021)"
+  - "fmonniot, emlun, mathias-arm, ivajloip, kant (additional contributors per commit history)"
+  - "August Cellars Company (organizational sponsor; com.augustcellars.cose groupId)"
+lineage:
+  origin: "COSE Working Group reference implementation authored by Jim Schaad. Sibling to cose-c (imp-2026-0022). Started as the WG's reference Java implementation."
+  cb_backend: "PeterO CBOR (Peter Occil) — com.upokecenter:cbor:4.0.1 per pom.xml. PeterO CBOR is a cleanroom Java CBOR library by Peter Occil."
+  cbor_backend_shared_with: "PeterO CBOR is unique to cose-java among the cohort. Not in the Frontier CBOR cohort. Independent CBOR encoder lineage."
+  crypto_backend: "Bouncy Castle (org.bouncycastle:bcprov-jdk15on:1.62, bcpkix-jdk15on:1.62) — test scope only in current pom.xml. Per README: 'Starting with version 0.9.7, the code was modified so that it only uses the JAVA cryptographic provider infrastructure rather than directly relying on the BouncyCastle implementations of these algorithms.'"
+  jce_dependencies: "Uses standard Java Cryptography Extension (JCE). README warns that 'Java Cryptographic Extension Unlimited Strength Jurisdiction Policy Files' must be installed for full key-size coverage."
+independence:
+  shared_authors_with_audited_cose: "Jim Schaad is the author of cose-c (imp-2026-0022); cose-c and cose-java are sibling implementations by the same author for different languages. Shared authorship is a known correlation factor."
+  shared_authors_with_audited_cbor: "none identified (Peter Occil is not in the Frontier CBOR cohort)"
+  shared_code_with_audited: "none directly (different language; no source-level sharing with cose-c)"
+  shared_test_vectors_with_audited_cose: "Per README: 'Automated checking is performed using the COSE Examples (https://github.com/cose-wg/Examples) as part of the suite.' cose-c also uses cose-wg/Examples. cose-wg/Examples is a separate repo from cose-wg/test-vectors."
+  shared_runtime_dependencies_with_audited: "JCA/JCE (standard); Bouncy Castle (test scope); net.i2p.crypto:eddsa:0.3.0 (EdDSA provider)"
+  independence_basis: "COSE-layer: STRONG independent language (Java), independent codebase from cose-c (C/C++) despite shared author. CBOR-layer: independent encoder (PeterO CBOR). However, the cose-java ↔ cose-c shared-author link means algorithm-level behavior may be correlated at the design level. Test corpus (cose-wg/Examples) is shared with cose-c (imp-2026-0022). STALENESS: ~5 years without maintenance makes it effectively historical-reference, not a live cohort member."
+canonical_mode:
+  supported: false (PeterO CBOR does not implement RFC 8949 §4.2 canonical mode for the encoder)
+  rationale: "PeterO CBOR's encoder is well-formed but does not provide a flag for §4.2 deterministic encoding. cose-java has no library-specific canonical-mode toggle. RFC 8152 compliance is at the message-structure level (header layout, Sig_structure construction), not at the CBOR §4.2 canonical level."
+  what_default_does: "PeterO CBOR emits map keys in insertion order; integer encoding is shortest-form; the encoder is well-formed per RFC 7049/8949 §3 but not canonical."
+specification:
+  primary: "RFC 8152, RFC 8230 (RSA — supported in v1.1.0 release 'Added RSA PSS signing to the drop')"
+  secondary:
+    - "RFC 7049 (CBOR — via PeterO)"
+    - "RFC 8812 (brainpool/secp256k1 — partial)"
+    - "RFC 8392 (CWT — referenced in com.augustcellars.cose.cwt package)"
+    - "RFC 9338 (countersignatures — supported; merged in PR #81 'Get the counter signatures to work correctly')"
+  cose_message_types_supported:
+    - "COSE_Sign1 (Sign1Message)"
+    - "COSE_Sign (SignMessage)"
+    - "COSE_Encrypt0 (Encrypt0Message)"
+    - "COSE_Encrypt (EncryptMessage)"
+    - "COSE_Mac0 (MAC0Message)"
+    - "COSE_Mac (MACMessage)"
+    - "COSE_CounterSign (CounterSignature — supported; PR #81 Jan 2019)"
+    - "COSE_Recipient"
+    - "COSE_Key (OneKey)"
+    - "CWT (com.augustcellars.cose.cwt package)"
+  algorithms_implemented_rfc9053:
+    - "ES256/ES384/ES512 (RFC 9053 §2.1) — ECDSA via JCA"
+    - "ES256K (RFC 8812) — secp256k1 (per PR #103 EdDSA key parsing)"
+    - "EdDSA (RFC 9053 §3.1) — per README 'There is a partial implementation of EdDSA using the library found at et.i2p.crypto which can be installed as a Cryptographic Provider. While this is expected to be released soon, it is currently only available on the EdDSA branch.' EdDSA support is via net.i2p.crypto:eddsa:0.3.0."
+    - "HMAC 256/384/512 (RFC 9053 §4)"
+    - "AES-MAC 128/192/256 (used for COSE_Mac)"
+    - "AES-GCM (RFC 9053 §5.1) — A128GCM/A192GCM/A256GCM"
+    - "AES-CCM (RFC 9053 §5.1) — README warns 'Some modes and algorithms are not generally supported by the default Cryptographic Provider. One example of this is the CCM mode for AES. Getting these algorithms to work requires that a new provider be installed as part of the application so that it is available for this module. Sample code that installs the BouncyCastle provider is: ...'"
+    - "RSA-PSS: PS256/PS384/PS512 (RFC 8230) — ADDED in v1.1.0 release per release notes: 'Added RSA PSS signing to the drop'"
+    - "RSA-PKCS1-v1_5: NOT documented as supported (only RSA PSS)"
+    - "ECDH-ES (RFC 9053 §5.2)"
+    - "ChaCha20-Poly1305: NOT documented as supported"
+  build_system: "Maven (per pom.xml). Source/target: Java 1.8 (per maven-compiler-plugin configuration). Maven Central artifact: com.augustcellars.cose:cose-java:1.1.0."
+adapter:
+  path: TBD
+  driver_path: TBD
+  driver_language: Java
+  build: "mvn package (COSE-JAVA-COHORT_BASE/COSE-JAVA/)"
+  version_in_adapter: "1.1.0"
+empty_protected_bucket:
+  encoded_form: "ALGORITHM-DEPENDENT — relies on PeterO CBOR behavior for empty map encoding"
+  source_evidence: |
+    PeterO CBOR is the upstream Java CBOR library; for an empty map it emits 0xa0 (the
+    major-type-5 zero-length map). cose-java wraps that map in the protected-bucket bstr
+    via CBORObject.FromObject(...) and ToBytes(), producing 0x41 0xa0 (bstr wrapping empty
+    map) — the legacy encoding.
+    The normalization to 0x40 (per RFC 9052 §3 SHOULD) is done internally in the
+    Sig_structure / MAC_structure AAD construction path (com.augustcellars.cose.CoseException
+    and the message-level encode methods), where an empty protected header is replaced
+    with an empty bstr before hashing. Net behavior mirrors cose-c: wire format may be
+    0x41 0xa0 but internal AAD normalization to 0x40 keeps signing consistent.
+  rationale: "Identical to cose-c pattern: the internal normalization in AAD construction
+    ensures cose-java signs the correct Sig_structure even if its wire-format empty
+    protected bucket diverges from the RFC 9052 §3 SHOULD."
+test_vectors_used:
+  source: "cose-wg/Examples (https://github.com/cose-wg/Examples) per README: 'Automated checking is performed using the COSE Examples as part of the suite.' cose-c also uses this corpus. Per README search method: '1) If c:\\Projects\\cose\\" exists then it uses that as the directory to look in for the examples. 2) It expects that the examples are in the same directory as the pom.xml file.'"
+  independence: "cose-wg/Examples is the shared COSE WG reference corpus. cose-java and cose-c both consume it — this is a CORRELATED test vector source between these two cohort members."
+last_commit:
+  sha: e461e5e9f87e18f88ff33d5344c7512b4c3b4bdd
+  date: "2021-04-28"
+  message: "Merge pull request #103 from rikard-sics/eddsa_key_parsing"
+  author: ivajloip (merge); rikard-sics (PR)
+last_release:
+  version: 1.1.0
+  date: "2020-01-27"
+  commit_sha: "0385f31bfcfb2793abb9d6a6560acf7f9a405269"
+  notes: "Added RSA PSS signing. Maven Central artifact: com.augustcellars.cose:cose-java:1.1.0. Security fix in v1.0.0 (Oct 2019) for Billion Laughs attack via CBOR-JAVA update."
+msrv: "Java 1.8 (per pom.xml maven-compiler-plugin source/target = 1.8)"
+limitations:
+  - "STALE: last commit 2021-04-28 (~5 years); v1.1.0 release was 2020-01-27. Repository is effectively in maintenance freeze."
+  - "Shared author (Jim Schaad) with cose-c means algorithm-level behavior is correlated at the design level."
+  - "Shared test corpus (cose-wg/Examples) with cose-c — cross-impl agreement between cose-c and cose-java would be self-consistency, not independent validation."
+  - "AES-CCM requires Bouncy Castle provider installation per README (not by default available in JCA)."
+  - "EdDSA support is via I2P provider (net.i2p.crypto:eddsa:0.3.0), not native JCA."
+  - "Wire-format empty protected bucket may be 0x41 0xa0 (legacy bug) but internal AAD normalization to 0x40 keeps signing consistent — same pattern as cose-c."
+  - "JCE Unlimited Strength Jurisdiction Policy Files must be installed for full key-size coverage."
+  - "No ChaCha20-Poly1305, no RSA-PKCS1-v1_5 support."
+notes_path: knowledge/notes/imp-2026-0023.md

@@ -262,16 +262,25 @@ def _encode_deterministic_value(value: Any, canonical: bool) -> bytes:
             _encode_deterministic_value(v, canonical) for v in value
         )
     if isinstance(value, dict):
-        # Sort keys by encoded length then lexicographically (RFC 8949 §4.2 rule 2)
+        # Sort map keys:
+        #   - canonical=True: bytewise lexicographic on encoded form
+        #     (RFC 8949 §4.2.1 "core deterministic encoding requirements")
+        #     This is the rule mandated by RFC 9052 §9 for COSE.
+        #   - canonical=False: shorter byte length first, then bytewise lex
+        #     on equal-length keys (RFC 8949 §4.2.3 "length-first map key
+        #     ordering").
         encoded_keys = []
         for k in value.keys():
             if not isinstance(k, (str, int, bytes, float, list, tuple, type(None))):
                 raise CborValueError(f"unsupported map key type: {type(k).__name__}")
             ek = _encode_deterministic_value(k, canonical)
             encoded_keys.append((ek, k))
-        # Sort: shorter byte length first, then lexicographic on bytes
-        # (RFC 8949 §4.2.3 length-first ordering)
-        encoded_keys.sort(key=lambda x: (len(x[0]), x[0]))
+        if canonical:
+            # §4.2.1: bytewise lex on encoded form (regardless of length)
+            encoded_keys.sort(key=lambda x: x[0])
+        else:
+            # §4.2.3: shorter byte length first, then bytewise lex
+            encoded_keys.sort(key=lambda x: (len(x[0]), x[0]))
         # Check for duplicates (same encoded length AND same encoded value)
         if canonical:
             for i in range(len(encoded_keys) - 1):
