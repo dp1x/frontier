@@ -1,18 +1,36 @@
-"""COSE §4.2 cross-implementation matrix runner.
+"""COSE §4 cross-implementation matrix runner (v2).
 
-Runs the COSE vector matrix against multiple COSE encoders and produces
-a per-cell verdict. Verdict classifications:
-    PASS                    - encoder output matches oracle byte-exactly
-    SPEC_AMBIGUITY          - byte-exact match but different Python repr
-    SPEC_VIOLATION          - encoder output is NOT conformant (e.g., 41 a0 vs 40)
-    INTEROP_BREAK           - encoder output is valid COSE but not parseable
+Operates on TWO levels:
+  1. STRUCTURE level: compare Sig_structure / Enc_structure / MAC_structure
+     bytes extracted from each library. This isolates message-construction
+     logic from cryptography.
+  2. WRAPPING level: compare the full CBOR-tagged COSE message bytes for
+     the parts that don't depend on signature/ciphertext (i.e., the
+     protected/unprotected header encoding). This catches things like
+     empty-protected-bucket (40 vs 41 a0).
+
+Verdict classifications (per AGENTS.md):
+    PASS                    - byte-exact match with oracle
+    SPEC_AMBIGUITY          - same semantics, different representation
+    SPEC_VIOLATION          - encoder output is NOT conformant
+    INTEROP_BREAK           - encoder output is valid but not parseable
     ERROR                   - encoder raised exception or returned None
     NOT_SUPPORTED           - library does not support this combination
+    INSTRUMENT_QUESTION     - comparison uncertain (oracle/vector problem)
 
 Inputs:
     vectors/<axis>.jsonl (output of gen_vectors.py)
 Adapters:
     adapters/<lib_id>_adapter.py (uniform interface)
+    Each adapter must expose:
+        ADAPTER_NAME: str
+        LIB_VERSION: str
+        supports_canonical: bool
+        encode(data_item, mode='default') -> bytes | None
+        encode_structure(data_item) -> bytes | None
+            Returns Sig_structure / Enc_structure / MAC_structure bytes
+            (without the crypto applied) — the canonical to-be-signed bytes.
+
 Outputs:
     results/matrix.tsv (header + one row per cell)
     results/matrix.jsonl (machine-readable)
@@ -22,7 +40,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -44,15 +61,16 @@ def _load_jsonl(path: Path):
             yield json.loads(line)
 
 
-def load_adapters():
-    """Discover and instantiate all adapter modules."""
+def load_adapters(adapters_dir=ADAPTERS_DIR):
     adapters = []
-    for adapter_path in sorted(ADAPTERS_DIR.glob("*_adapter.py")):
+    for adapter_path in sorted(adapters_dir.glob("*_adapter.py")):
         if adapter_path.name.startswith("_"):
             continue
         module_name = adapter_path.stem
         try:
             import importlib
+            if module_name in sys.modules:
+                importlib.reload(sys.modules[module_name])
             mod = importlib.import_module(module_name)
             if not hasattr(mod, "ADAPTER_NAME") or not hasattr(mod, "encode"):
                 print(f"  [SKIP] {module_name}: missing ADAPTER_NAME or encode()")
@@ -61,6 +79,36 @@ def load_adapters():
         except Exception as exc:
             print(f"  [SKIP] {module_name}: {exc}")
     return adapters
+
+
+def classify_structure_match(actual: bytes | None, expected: bytes | None) -> tuple[str, str]:
+    """Classify a structure-byte comparison."""
+    if actual is None:
+        return "NOT_SUPPORTED", "adapter returned None (no structure extraction)"
+    if expected is None:
+        return "INSTRUMENT_QUESTION", "no oracle expected bytes for this vector"
+    if actual == expected:
+        return "PASS", ""
+    if len(actual) != len(expected):
+        return "SPEC_VIOLATION", f"length mismatch: actual={len(actual)} expected={len(expected)}"
+    # Same length but different bytes — check whether it's the empty-protected-bucket issue
+    return "SPEC_VIOLATION", f"byte mismatch: actual={actual.hex()} expected={expected.hex()}"
+
+
+def classify_full_message(actual: bytes | None, expected: bytes | None) -> tuple[str, str]:
+    """Classify a full-message comparison.
+
+    Full messages include signature/ciphertext/MAC, so byte-exact match
+    is only meaningful when the matrix provides identical crypto inputs.
+    For the wrapping-layer analysis, we only compare the header bytes.
+    """
+    if actual is None:
+        return "NOT_SUPPORTED", "adapter returned None"
+    if expected is None:
+        return "INSTRUMENT_QUESTION", "no oracle expected bytes"
+    if actual == expected:
+        return "PASS", ""
+    return "DIVERGE", f"actual={actual.hex()} expected={expected.hex()}"
 
 
 def run_matrix(adapters, vectors_dir=VECTORS_DIR, results_dir=RESULTS_DIR):
@@ -79,59 +127,85 @@ def run_matrix(adapters, vectors_dir=VECTORS_DIR, results_dir=RESULTS_DIR):
 
         for vec in raw_vectors:
             data_item = vec.get("data_item")
-            expected_hex = vec.get("oracle_expected_hex")
+            expected_struct = vec.get("oracle_structure_hex")
+            expected_msg = vec.get("oracle_message_hex")
             desc = vec.get("description", "")
             vid = vec.get("vector_id", "")
+
             for adapter in adapters:
                 adapter_name = getattr(adapter, "ADAPTER_NAME", adapter.__name__)
+                lib_version = getattr(adapter, "LIB_VERSION", "?")
+
+                # --- STRUCTURE level ---
+                struct_verdict = "NOT_SUPPORTED"
+                struct_actual = ""
+                struct_expected = expected_struct or ""
+                struct_notes = ""
+                if hasattr(adapter, "encode_structure"):
+                    try:
+                        actual_struct_bytes = adapter.encode_structure(data_item)
+                    except Exception as exc:
+                        actual_struct_bytes = None
+                        struct_notes = f"exception: {type(exc).__name__}: {exc}"
+                    struct_verdict, struct_msg = classify_structure_match(
+                        actual_struct_bytes,
+                        bytes.fromhex(expected_struct) if expected_struct else None,
+                    )
+                    if struct_notes:
+                        struct_verdict = f"ERROR:{type(exc).__name__}"
+                    struct_actual = actual_struct_bytes.hex() if actual_struct_bytes else ""
+                    if not struct_notes and struct_msg:
+                        struct_notes = struct_msg
+                else:
+                    struct_verdict = "NOT_SUPPORTED"
+                    struct_notes = "adapter has no encode_structure()"
+
+                # --- FULL MESSAGE level (for wrapping analysis only) ---
+                msg_verdict = "NOT_SUPPORTED"
+                msg_actual = ""
+                msg_expected = expected_msg or ""
+                msg_notes = ""
                 try:
-                    actual_bytes = adapter.encode(data_item, mode="default")
-                    if actual_bytes is None:
-                        actual_hex = ""
-                        verdict = "NOT_SUPPORTED"
-                    else:
-                        actual_hex = actual_bytes.hex()
-                        if actual_hex == expected_hex:
-                            verdict = "PASS"
-                        else:
-                            # Compare lengths
-                            if len(actual_hex) > len(expected_hex):
-                                verdict = "SPEC_AMBIGUITY"
-                            elif len(actual_hex) < len(expected_hex):
-                                verdict = "INTEROP_BREAK"
-                            else:
-                                verdict = "SPEC_VIOLATION"
+                    actual_msg_bytes = adapter.encode(data_item, mode="default")
                 except Exception as exc:
-                    actual_hex = ""
-                    verdict = f"ERROR:{type(exc).__name__}"
+                    actual_msg_bytes = None
+                    msg_notes = f"exception: {type(exc).__name__}: {exc}"
+
+                msg_verdict, msg_msg = classify_full_message(
+                    actual_msg_bytes,
+                    bytes.fromhex(expected_msg) if expected_msg else None,
+                )
+                msg_actual = actual_msg_bytes.hex() if actual_msg_bytes else ""
+                if not msg_notes and msg_msg:
+                    msg_notes = msg_msg
+
                 row = (
-                    axis_name,
-                    vid,
-                    adapter_name,
-                    "default",
-                    expected_hex or "",
-                    actual_hex,
-                    "MATCH" if verdict == "PASS" else "DIVERGE",
-                    verdict,
+                    axis_name, vid, adapter_name, lib_version,
+                    struct_expected, struct_actual, struct_verdict, struct_notes,
+                    msg_expected, msg_actual, msg_verdict, msg_notes,
                 )
                 rows.append(row)
                 jsonl_rows.append({
                     "axis": axis_name,
                     "vector_id": vid,
                     "adapter": adapter_name,
-                    "mode": "default",
+                    "lib_version": lib_version,
                     "description": desc,
-                    "expected_hex": expected_hex,
-                    "actual_hex": actual_hex,
-                    "match": verdict == "PASS",
-                    "verdict": verdict,
+                    "oracle_structure_hex": struct_expected,
+                    "actual_structure_hex": struct_actual,
+                    "structure_verdict": struct_verdict,
+                    "structure_notes": struct_notes,
+                    "oracle_message_hex": msg_expected,
+                    "actual_message_hex": msg_actual,
+                    "message_verdict": msg_verdict,
+                    "message_notes": msg_notes,
                 })
 
     # Write outputs
     results_dir.mkdir(parents=True, exist_ok=True)
     tsv_path = results_dir / "matrix.tsv"
     with open(tsv_path, "w", encoding="utf-8") as f:
-        f.write("axis\tvector_id\tadapter\tmode\texpected_hex\tactual_hex\tmatch\tverdict\n")
+        f.write("axis\tvector_id\tadapter\tlib_version\texpected_struct_hex\tactual_struct_hex\tstruct_verdict\tstruct_notes\texpected_msg_hex\tactual_msg_hex\tmsg_verdict\tmsg_notes\n")
         for row in rows:
             f.write("\t".join(str(x) for x in row) + "\n")
     jsonl_path = results_dir / "matrix.jsonl"
@@ -139,14 +213,17 @@ def run_matrix(adapters, vectors_dir=VECTORS_DIR, results_dir=RESULTS_DIR):
         for r in jsonl_rows:
             f.write(json.dumps(r) + "\n")
 
-    # Summary statistics
     print()
-    print("=" * 60)
+    print("=" * 70)
     print(f"Matrix complete: {len(rows)} cells")
     from collections import Counter
-    verdict_counts = Counter(row[7] for row in rows)
-    print(f"Verdict distribution:")
-    for v, c in verdict_counts.most_common():
+    struct_counts = Counter(row[6] for row in rows)
+    msg_counts = Counter(row[10] for row in rows)
+    print(f"Structure-level verdict distribution:")
+    for v, c in struct_counts.most_common():
+        print(f"  {v:<25} {c:>5}")
+    print(f"Message-level verdict distribution:")
+    for v, c in msg_counts.most_common():
         print(f"  {v:<25} {c:>5}")
     print()
     print(f"Adapters: {[a.ADAPTER_NAME for a in adapters]}")

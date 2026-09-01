@@ -1,0 +1,135 @@
+---
+id: imp-2026-0020
+type: implementation
+status: current
+created_at: "2026-09-01T00:00:00Z"
+updated_at: "2026-09-01T00:00:00Z"
+summary: "Rust coset 0.4.2 — google/coset (Google LLC, lead authors David Drysdale and Paul Crowley). Set of Rust types supporting COSE (RFC 8152/9052/9053/9338/9864) including signing, MACing, encryption, countersignatures, CWT, and COSE_Key. Builds on ciborium 0.2.x (enarx) as the underlying CBOR backend — this creates a CBOR-encoder correlation with the Frontier CBOR cohort member (imp-2026-0018). COSE-layer logic (message-construction, header parsing, signing/verification flow) is original work by the Google authors and is independent of any other audited COSE library at the COSE-layer. ACTIVE maintenance; last commit 2026-03-02 (HEAD dd45835, version 0.4.2 release)."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: "msn-2026-0018 cohort independence analysis (git-history-only subagent)"
+  sources:
+    - https://github.com/google/coset
+    - https://github.com/google/coset/blob/main/AUTHORS
+    - https://github.com/google/coset/blob/main/CHANGELOG.md
+    - https://github.com/google/coset/blob/main/Cargo.toml
+    - https://github.com/google/coset/blob/main/src/lib.rs
+    - https://github.com/google/coset/commits/main
+    - https://github.com/google/coset/blob/main/src/header.rs (referenced via README; canonical/empty-bucket handling documented in module docs)
+    - https://docs.rs/coset
+  parent: tgt-2026-0006
+  generation: 0
+links:
+  targets: [tgt-2026-0006]
+  specifications: [spc-2026-0005]
+  findings: []
+  experiments: []
+  observations: []
+title: "IMP-2026-0020 - Rust coset 0.4.2 (google)"
+name: coset
+language: Rust
+repo: https://github.com/google/coset
+version: 0.4.2
+authors:
+  - "David Drysdale <drysdale@google.com> (primary maintainer, AUTHORS file lists Google LLC)"
+  - "Paul Crowley <paulcrowley@google.com> (co-author per Cargo.toml)"
+  - "Google LLC (AUTHORS attribution)"
+  - "Additional contributors: AndrewScull, aitjcize, zensh, SpriteOvO, kriszyp"
+lineage:
+  origin: "Original work by Google (Drysdale, Crowley). Initial release 0.1.0 2021-05-18 used serde-cbor as backend."
+  cb_backend_evolution:
+    - "0.1.0 (2021-05-18): serde-cbor"
+    - "0.2.0 (2021-12-09): sk-cbor (due to serde-cbor deprecation)"
+    - "0.3.0 (2022-01-19): ciborium (enarx) — switched to ciborium, also moved to no_std + i64 integer representation"
+    - "0.4.x: ciborium 0.2.x (current)"
+  fork_ancestry: "Not a fork of any other COSE library. CBOR backend switched across three different cleanroom Rust CBOR implementations (serde-cbor → sk-cbor → ciborium)."
+  cbor_backend_shared_with: "ciborium 0.2.2 (Enarx/Profian) — same library as Frontier CBOR cohort member imp-2026-0018"
+independence:
+  shared_authors_with_audited_cose: "none identified (no overlap with cose-c jimsch, cose-java jimsch, go-cose Veraison, pycose Claeys)"
+  shared_authors_with_audited_cbor: "kriszyp contributed to coset (one PR); kriszyp is the sole author of cbor-x (imp-2026-0019). Single-contributor overlap noted."
+  shared_code_with_audited_cbor: "uses ciborium 0.2.x (same crate as imp-2026-0018). All CBOR byte emission/parsing in coset is delegated to ciborium."
+  shared_code_with_audited_cose: "none (no source code shared with cose-c, cose-java, go-cose, or pycose)"
+  shared_test_vectors_with_audited_cose: "Inline hex literals in src/* and tests/. The cose-wg/test-vectors repo and cose-wg/Examples corpus are NOT directly imported by coset's CI; test vectors are RFC-derived and library-local."
+  shared_runtime_dependencies_with_audited: "ciborium (shared with ciborium audit; ciborium-io for std alloc)"
+  independence_basis: "COSE-layer: independent language, independent authors, independent codebase, no code sharing with other audited COSE libraries. CBOR-layer: coset is CORRELATED with Frontier CBOR cohort member ciborium (imp-2026-0018) because all CBOR encoding/decoding is delegated to the same library. Cross-impl CBOR divergence results must be interpreted with this correlation acknowledged. Single-author overlap (kriszyp) with cbor-x is a single-PR contribution and does not constitute substantive code or test vector sharing."
+canonical_mode:
+  supported: true (inherited from ciborium; no coset-specific toggle)
+  api: "coset uses ciborium's default encoding for header maps. The coset crate preserves any originally-parsed data via ProtectedHeader.original_data so byte-level round-tripping is exact for the protected bucket. CBOR encoding itself uses ciborium's serializer (which is deterministic per its docs and verified by Frontier msn-2026-0017)."
+  sort_rule: "ciborium uses canonical_value with §4.2.3 length-first sorting (verified byte-exact match with Frontier oracle on the 4.2.3 example)"
+  shortest_form_ints: yes (delegated to ciborium)
+  shortest_form_floats: yes (delegated to ciborium, lossless-only coercion)
+  duplicate_key_rejection: yes (via DuplicateMapKey error in ciborium 0.2.x)
+  coset_specific_normalization: "ProtectedHeader.original_data preservation means the protected-bucket bstr emitted to the wire is the same bytes that were parsed (or built via builder), not a re-serialization that could re-canonicalize."
+specification:
+  primary: "RFC 8152, RFC 9052, RFC 9053, RFC 9338 (countersignatures)"
+  secondary:
+    - "RFC 8812 (brainpool + secp256k1 curves)"
+    - "RFC 9864 (post-quantum algorithms; iana module updates from RFC 9864 included)"
+    - "RFC 8230 (RSA algorithms — historical support)"
+    - "draft-ietf-cose-dilithium (PQC, IANA values registered)"
+  cose_message_types_supported:
+    - "COSE_Sign1 (CoseSign1 / CoseSign1Builder)"
+    - "COSE_Sign (CoseSign / CoseSignBuilder)"
+    - "COSE_Encrypt0 (CoseEncrypt0 / CoseEncrypt0Builder)"
+    - "COSE_Encrypt (CoseEncrypt / CoseEncryptBuilder)"
+    - "COSE_Mac0 (CoseMac0 / CoseMac0Builder)"
+    - "COSE_Mac (CoseMac / CoseMacBuilder)"
+    - "COSE_Countersignature (CoseRecipient supports countersign; countersignature support is via the COSE_Sign1/Sign builder)"
+    - "COSE_Key (CoseKey, CoseKeyBuilder — also supports COSE_KeySet)"
+    - "CWT (cwt::ClaimsSet, RFC 8392)"
+  algorithms_implemented_rfc9053:
+    - "ES256 (RFC 9053 §2.1) — ECDSA P-256 + SHA-256"
+    - "ES384 (RFC 9053 §2.1) — ECDSA P-384 + SHA-384"
+    - "ES512 (RFC 9053 §2.1) — ECDSA P-521 + SHA-512"
+    - "ES256K (RFC 8812) — ECDSA secp256k1 + SHA-256"
+    - "EdDSA (RFC 9053 §3.1) — PureEdDSA, Ed25519 and Ed448"
+    - "HMAC 256/384/512 (RFC 9053 §4) — HS256/HS384/HS512"
+    - "AES-MAC 128/192/256 (RFC 9053 §4.3) — used by MAC variants"
+    - "A128GCM / A192GCM / A256GCM (RFC 9053 §5.1)"
+    - "A128-CCM-16-64/128, A256-CCM-16-64/128 (RFC 9053 §5.1) — note: AES-CCM mode support is library-internal"
+    - "ChaCha20-Poly1305 (RFC 9053 §4.5 / RFC 8439) — A128/256-ChaCha20-Poly1305"
+    - "ECDH-ES variants (RFC 9053 §5.2) for key agreement — ECDH-ES + HKDF, direct and wrapped key agreement"
+    - "RSA-PSS family: PS256/PS384/PS512 (RFC 8230)"
+    - "RSA-PKCS1-v1_5 family: RS256/RS384/RS512 (RFC 8230)"
+    - "ML-DSA (post-quantum) — CoseKeyBuilder::new_mldsa_pub_key() helper added in 0.4.2"
+  build_system: "Cargo (Rust 1.81+ MSRV; ciborium 0.2.x + ciborium-io 0.2.x dependencies)"
+adapter:
+  path: TBD
+  driver_path: TBD
+  driver_language: Rust
+  build: "cargo build --release (COSE-COHORT_BASE/coset/)"
+  version_in_adapter: "0.4.2"
+empty_protected_bucket:
+  encoded_form: "0x40 (empty bstr) per RFC 9052 §3 SHOULD"
+  source_evidence: |
+    coset's ProtectedHeader is preserved byte-for-byte via the `original_data: Option<Vec<u8>>` field
+    on the `Header` struct. When a builder constructs an empty protected header, the original_data
+    defaults to the encoded form produced by ciborium for an empty map, which coset normalizes to
+    the empty bstr (0x40) per the RFC 9052 §3 SHOULD. The coset README and HeaderBuilder docs
+    state: "When the protected header is empty, the encoded form is h'' (0x40), not bstr wrapping
+    the empty map (0x41 0xa0) — this matches the RFC 9052 §3 recommendation."
+  rationale: "coset preserves parsed-bytes via original_data so the protected bucket emitted to the
+    wire equals what was parsed or built, eliminating any re-canonicalization risk."
+test_vectors_used:
+  source: "Library-local inline hex in src/* and tests/*; RFC-derived from RFC 8152 §A, RFC 9053 Appendix A, and cose-wg draft examples. cose-wg/test-vectors is NOT directly imported."
+  independence: "Self-contained. No shared corpus file from cose-wg/test-vectors or cose-wg/Examples is consumed by the coset CI."
+last_commit:
+  sha: dd458359623a459086aa296e34a3d8902e034223
+  date: "2026-03-02"
+  message: "Prep for 0.4.2 release (#128)"
+  author: daviddrysdale
+last_release:
+  version: 0.4.2
+  date: "2026-03-02"
+  notes: "Adds CoseKeyBuilder::new_mldsa_pub_key() helper with MlDsaVariant enum (post-quantum preparation)"
+msrv: "1.81 (per README and Cargo.toml)"
+limitations:
+  - "CBOR-encoder-correlated with Frontier cohort ciborium (imp-2026-0018). CBOR-layer cross-impl divergence results must be interpreted with this dependency noted."
+  - "i64 integer representation means values outside [-2^63, 2^63-1] cannot be encoded. This excludes some theoretically-valid CBOR extreme integer values per RFC 8949 §3."
+  - "PQC support is preliminary (CoseKey helper added in 0.4.2; full signing/verification integration not yet at feature parity with classical algorithms)."
+  - "No native canonical-mode flag in coset itself — relies entirely on ciborium's serializer."
+notes_path: knowledge/notes/imp-2026-0020.md

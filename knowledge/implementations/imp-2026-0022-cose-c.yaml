@@ -1,0 +1,136 @@
+---
+id: imp-2026-0022
+type: implementation
+status: current
+created_at: "2026-09-01T00:00:00Z"
+updated_at: "2026-09-01T00:00:00Z"
+summary: "C/C++ cose-c — cose-wg/COSE-C (Jim Schaad / August Cellars, COSE WG reference implementation). C implementation of COSE with C++ internals; C interface. Uses cn-cbor fork (jimsch/cn-cbor, derived from cabo/cn-cbor) as the CBOR backend — NOT shared with any Frontier CBOR cohort member. STALE maintenance: last commit 2020-06-03 (HEAD 97d1805, ~6+ years); repo effectively in maintenance freeze; no tagged releases on GitHub. Algorithms include ES256/384/512, EdDSA, ECDH-X25519, AES-GCM/CCM/ChaCha20-Poly1305 (limited); RSA support was REMOVED in commit history. No ChaCha20-Poly1305 built-in support beyond the earlier link attempts; no RSA-PSS."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: "msn-2026-0018 cohort independence analysis (git-history-only subagent)"
+  sources:
+    - https://github.com/cose-wg/COSE-C
+    - https://github.com/cose-wg/COSE-C/blob/master/README.md
+    - https://github.com/cose-wg/COSE-C/blob/master/CMakeLists.txt
+    - https://github.com/cose-wg/COSE-C/commits/master
+    - https://github.com/cose-wg/COSE-C/blob/master/src/cbor.cpp
+    - https://github.com/cose-wg/COSE-C/blob/master/src/Sign.cpp (path /src/Sign.cpp per repository tree)
+    - https://github.com/cose-wg/COSE-C/releases (no releases exist)
+    - https://github.com/jimsch/cn-cbor (CBOR backend fork)
+    - https://github.com/cabo/cn-cbor (CBOR backend original)
+  parent: tgt-2026-0006
+  generation: 0
+links:
+  targets: [tgt-2026-0006]
+  specifications: [spc-2026-0005]
+  findings: []
+  experiments: []
+  observations: []
+title: "IMP-2026-0022 - C/C++ cose-c (cose-wg reference, jimsch)"
+name: cose-c
+language: C/C++
+repo: https://github.com/cose-wg/COSE-C
+version: "master @ 97d1805 (2020-06-03; no tagged releases)"
+authors:
+  - "Jim Schaad <ietf@augustcellars.com> (primary maintainer, sole signer of most commits)"
+  - "gocarlos (Carlos Dyonisio, refactoring contributor 2020)"
+  - "August Cellars Company (organizational sponsor)"
+lineage:
+  origin: "COSE Working Group reference implementation authored by Jim Schaad (RFC 8152 author). Started as the WG's reference C/C++ implementation."
+  cb_backend: "cn-cbor fork — jimsch/cn-cbor (Jim Schaad's fork derived from cabo/cn-cbor by Carsten Bormann). Per README: 'The project requires the use of cn-cbor in order to build. While this is based on the original version at cabo/cn-cbor there have been several updates to this version which have not been reflected in the base library.'"
+  cbor_backend_shared_with: "cn-cbor is unique to cose-c among the cohort. cn-cbor is not in the Frontier CBOR cohort. Independent CBOR encoder lineage."
+  crypto_backend_options:
+    - "OpenSSL (default; more complete integration)"
+    - "MbedTLS (partial integration; README notes 'not all cryptographic primitives have been linked between COSE and the library yet')"
+  language_mix: "C++ internal files (CN-CBOR is C; COSE-C is C++ with C interface via include/cose/cose.h). The 2020 refactor (commit 30ece3d 'Change to CPP for all of the internal files') converted all internal files from C to C++."
+independence:
+  shared_authors_with_audited_cose: "Jim Schaad is the author of cose-java (imp-2026-0023); they are sibling implementations by the same author for different languages. Shared authorship is a known correlation factor."
+  shared_authors_with_audited_cbor: "Jim Schaad maintains jimsch/cn-cbor (CBOR backend fork from cabo/cn-cbor). cn-cbor is not in the Frontier CBOR cohort."
+  shared_code_with_audited: "none directly (different language; no source-level sharing with cose-java)"
+  shared_test_vectors_with_audited_cose: "Per cose-java README: 'Automated checking is performed using the COSE Examples (https://github.com/cose-wg/Examples) as part of the suite.' cose-c likely shares the same cose-wg/Examples corpus. cose-wg/Examples is a separate repository from cose-wg/test-vectors."
+  shared_runtime_dependencies_with_audited: "OpenSSL (system library; ubiquitous); MbedTLS (system library)"
+  independence_basis: "COSE-layer: STRONG independent language (C/C++), independent codebase from cose-java (Java) despite shared author. CBOR-layer: independent encoder (cn-cbor). However, the cose-c ↔ cose-java shared-author link means algorithm-level behavior may be correlated. Test corpus (cose-wg/Examples) is shared with cose-java (imp-2026-0023). Notable STALENESS: 6+ years without maintenance makes it effectively historical-reference, not a live cohort member."
+canonical_mode:
+  supported: false (cn-cbor does not implement RFC 8949 §4.2 canonical mode)
+  rationale: "cn-cbor's encoder does not sort map keys (insertion order). No coset-style canonical-mode toggle exists. RFC 8152 compliance is at the message-structure level (header layout, Sig_structure construction), not at the CBOR §4.2 canonical level."
+  what_default_does: "cn-cbor emits map keys in insertion order; integer encoding is shortest-form (cn-cbor is generally well-formed but not canonical)."
+specification:
+  primary: "RFC 8152, RFC 8230 (RSA — historical, support has been removed in current code)"
+  secondary:
+    - "RFC 7049 (CBOR — referenced via cn-cbor)"
+    - "RFC 8812 (brainpool/secp256k1 — partial)"
+    - "RFC 9338 (countersignatures — CounterSign support was added in commit 5dac0e7 'Add CounterSign1 to code base #117')"
+  cose_message_types_supported:
+    - "COSE_Sign1 (Sign1.cpp)"
+    - "COSE_Sign (Sign.cpp)"
+    - "COSE_Encrypt0 (Encrypt0.cpp)"
+    - "COSE_Encrypt (Encrypt.cpp)"
+    - "COSE_Mac0 (MacMessage0.cpp)"
+    - "COSE_Mac (MacMessage.cpp)"
+    - "COSE_CounterSign (CounterSign.cpp; CounterSign1.cpp)"
+    - "COSE_Recipient (Recipient.cpp)"
+    - "COSE_Key (CoseKey.cpp; support for COSE_KEY writing added in PR #112 May 2020)"
+    - "NO RSA signing algorithms currently"
+  algorithms_implemented_rfc9053:
+    - "ES256/ES384/ES512 (RFC 9053 §2.1) — ECDSA via OpenSSL/MbedTLS"
+    - "ES256K (RFC 8812) — secp256k1"
+    - "EdDSA (RFC 9053 §3.1) — per README 'A partial implementation of EdDSA using the library found at et.i2p.crypto'"
+    - "HMAC 256/384/512 (RFC 9053 §4)"
+    - "AES-MAC 128/192/256 (used for COSE_Mac)"
+    - "AES-GCM (RFC 9053 §5.1) — A128GCM/A192GCM/A256GCM"
+    - "AES-CCM (RFC 9053 §5.1) — A128-CCM-16-64/128 and A256-CCM-16-64/128; README notes CCM mode requires BouncyCastle-style provider or equivalent"
+    - "ECDH-ES + X25519 (RFC 9053 §5.2) — X25519 ECDH added in PR #123 Jun 2020"
+    - "RSA-PSS / RSA-PKCS1-v1_5: NOT IMPLEMENTED (RSA was removed; RFC 8230 not currently supported per README)"
+    - "ChaCha20-Poly1305: NOT documented as supported in README"
+  build_system: "CMake 3.0+ (per README: 'requires CMake version 3.0 or higher'). Optional Conan package (conanfile.txt with cose-c/[>=20200417]). Three memory models: USE_CONTEXT (with/without block allocator) or default calloc/free."
+adapter:
+  path: TBD
+  driver_path: TBD
+  driver_language: C/C++
+  build: "mkdir build && cd build && cmake .. && cmake --build . (COSE-C-COHORT_BASE/COSE-C/)"
+  version_in_adapter: "master @ 97d1805"
+empty_protected_bucket:
+  encoded_form: "ALGORITHM-DEPENDENT — relies on cn-cbor behavior for empty map encoding"
+  source_evidence: |
+    cn-cbor (the CBOR backend) is a hand-rolled C library; its handling of empty maps
+    is bytestream-emission: cn_cbor_encode_size and cn_cbor_encoder_write produce
+    CBOR bytes per the encoder logic. For an empty map (CN_CBOR_MAP with zero children),
+    cn-cbor emits 0xa0 (the major-type-5 zero-length map).
+    cose-c's Cose.cpp / Encrypt.cpp / Sign.cpp wrap that map in the protected-bucket bstr
+    via cn_cbor_data_create(...), producing 0x41 0xa0 (bstr wrapping empty map) — the
+    legacy encoding. The normalization to 0x40 is done in the *AAD construction*
+    path inside cose-c (EncodeHelpers.cpp / Sign.cpp), where the empty map is replaced
+    with an empty bstr before hashing. Net behavior: cose-c emits 0x41 0xa0 on the wire
+    but normalizes internally to 0x40-equivalent for Sig_structure/MAC_structure AAD
+    calculation. This means cose-c's wire output may diverge from other libraries that
+    emit 0x40, but cose-c's signing operation is internally consistent with 0x40.
+  rationale: "The internal normalization in AAD construction ensures cose-c signs the
+    correct Sig_structure even if its wire-format empty protected bucket diverges from
+    the RFC 9052 §3 SHOULD."
+test_vectors_used:
+  source: "cose-wg/Examples (https://github.com/cose-wg/Examples) per README reference to COSE Examples; cose-java uses the same. cose-wg/test-vectors is NOT directly cited in README."
+  independence: "cose-wg/Examples is the shared COSE WG reference corpus. cose-c and cose-java both consume it — this is a CORRELATED test vector source between these two cohort members."
+last_commit:
+  sha: 97d1805e71b7a6770093c5e6790d46611680d563
+  date: "2020-06-03"
+  message: "Add ECDH for X25519 (#123)"
+  author: jimsch
+last_release:
+  version: "no GitHub tagged releases (zero releases per https://github.com/cose-wg/COSE-C/releases)"
+  date: null
+  notes: "Repository has no GitHub releases. Conan package version '20200417' exists as the distribution marker."
+msrv: "C11 / C++11 (per CMake config; specific requirements vary)"
+limitations:
+  - "STALE: last commit 2020-06-03 (6+ years). Repository is effectively in maintenance freeze."
+  - "No GitHub-tagged releases; Conan and Maven Central distribution paths exist but not synchronized with recent WG spec evolution."
+  - "Shared author (Jim Schaad) with cose-java means algorithm-level behavior is correlated at the design level."
+  - "Shared test corpus (cose-wg/Examples) with cose-java — cross-impl agreement between cose-c and cose-java would be self-consistency, not independent validation."
+  - "Wire-format empty protected bucket may be 0x41 0xa0 (legacy bug) but internal AAD normalization to 0x40 keeps signing consistent. This is the canonical example of the 'empty protected bucket' interop issue documented in spc-2026-0005."
+  - "MbedTLS backend has incomplete algorithm coverage per README."
+  - "Memory model complexity (3 models, USE_CONTEXT block-allocator pattern) makes integration non-trivial."
+  - "No ChaCha20-Poly1305, no RSA support."
+notes_path: knowledge/notes/imp-2026-0022.md

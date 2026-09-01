@@ -1,0 +1,138 @@
+---
+id: imp-2026-0021
+type: implementation
+status: current
+created_at: "2026-09-01T00:00:00Z"
+updated_at: "2026-09-01T00:00:00Z"
+summary: "Go go-cose v1.3.0 — veraison/go-cose (Veraison Project, originally forked from mozilla-services/go-cose, with Mozilla maintainers retired and Veraison now the active project). Go library implementing COSE_Sign1 (primary), COSE_Sign (experimental), and COSE_Countersignature per RFC 9338. Uses fxamacker/cbor v2.x (Fxamacker) as the underlying CBOR backend — NOT shared with any Frontier CBOR cohort member. Explicit, well-documented empty-protected-bucket handling that emits 0x40 per RFC 9052 §3. CBOR encoding uses cbor.SortCoreDeterministic (RFC 8949 §4.2.1 bytewise-lex sort). ACTIVE maintenance; last commit 2026-08-26."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: "msn-2026-0018 cohort independence analysis (git-history-only subagent)"
+  sources:
+    - https://github.com/veraison/go-cose
+    - https://github.com/veraison/go-cose/blob/main/headers.go
+    - https://github.com/veraison/go-cose/blob/main/cbor.go
+    - https://github.com/veraison/go-cose/blob/main/algorithm.go
+    - https://raw.githubusercontent.com/veraison/go-cose/main/go.mod
+    - https://github.com/veraison/go-cose/releases
+    - https://github.com/veraison/go-cose/commits/main
+    - https://github.com/veraison/go-cose/blob/main/release-management.md
+  parent: tgt-2026-0006
+  generation: 0
+links:
+  targets: [tgt-2026-0006]
+  specifications: [spc-2026-0005]
+  findings: []
+  experiments: []
+  observations: []
+title: "IMP-2026-0021 - Go go-cose v1.3.0 (veraison)"
+name: go-cose
+language: Go
+repo: https://github.com/veraison/go-cose
+version: v1.3.0
+authors:
+  - "thomas-fossati (initial creator of Sign1/Sign in PRs #1, #2)"
+  - "Steve Lasker (Microsoft; project steward at Veraison)"
+  - "qmuntal (key consolidator, API redesign, fxamacker/cbor upgrades)"
+  - "shizhMSFT (Microsoft; remote signing, refactors, COSE Hash Envelope)"
+  - "setrofim, yogeshbdeshpande, balena, hslatman, OR13, spennymac, magickli1, Sukuna0007Abhi (additional contributors)"
+  - "Historical Mozilla contributors (mozilla-services/go-cose fork): see https://github.com/mozilla-services/go-cose/graphs/contributors"
+lineage:
+  origin: "Initially forked from mozilla-services/go-cose by Veraison Project. Per README: 'The project was initially forked from the upstream mozilla-services/go-cose project, however the Veraison and Mozilla maintainers have agreed to retire the mozilla-services/go-cose project and focus on veraison/go-cose as the active project.'"
+  fork_ancestry: "Forked from mozilla-services/go-cose; Mozilla lineage includes original Sign1/Sign work by thomas-fossati"
+  cb_backend: "fxamacker/cbor v2.9.0 (Fxamacker; published 2025-11) per go.mod"
+  cbor_backend_shared_with: "No CBOR cohort member of Frontier uses fxamacker/cbor. Independent CBOR encoder lineage."
+  spec_evolution: "Updated from draft to RFC 9052 in PR #109 (fxamacker). Uses cbor.SortCoreDeterministic since PR #113 (qmuntal, 2022)."
+independence:
+  shared_authors_with_audited_cose: "thomas-fossati is a known COSE WG contributor; no overlap with cose-c (jimsch), cose-java (jimsch), coset (Drysdale/Crowley), or pycose (Claeys)"
+  shared_authors_with_audited_cbor: "fxamacker is the author of fxamacker/cbor and has contributed to go-cose (PR #109); fxamacker/cbor is NOT in the Frontier CBOR cohort"
+  shared_code_with_audited: "none (no source code shared with any audited library)"
+  shared_test_vectors_with_audited_cose: "go-cose consumes GlueCOSE test suite (github.com/gluecose/test-vectors). NOT the cose-wg/test-vectors repo. GlueCOSE is a community-built consolidation."
+  shared_runtime_dependencies_with_audited: "fxamacker/cbor (unique to go-cose among cohort), x448/float16 (indirect, for half-precision float support)"
+  independence_basis: "Independent language (Go), independent authors (Veraison/Microsoft), independent codebase, CBOR backend (fxamacker/cbor) is unique to go-cose in this cohort. CBOR-layer independence is HIGH (different backend). COSE-layer independence is HIGH (no shared code or authors with the COSE WG reference implementations). Test vector source (GlueCOSE) is community-built and distinct from cose-wg/test-vectors."
+canonical_mode:
+  supported: true (mandatory default — there is no non-canonical mode in the library)
+  api: "encMode is pre-configured at package init() in cbor.go using cbor.EncOptions{Sort: cbor.SortCoreDeterministic, IndefLength: cbor.IndefLengthForbidden}. All encoding goes through this encMode. The library explicitly comments: '// sort map keys' and '// no streaming'."
+  sort_rule: "cbor.SortCoreDeterministic — this is RFC 8949 §4.2.1 bytewise-lex (length-based within same-type, then bytewise). Differs from §4.2.3 length-first."
+  shortest_form_ints: yes (delegated to fxamacker/cbor)
+  shortest_form_floats: yes (delegated to fxamacker/cbor)
+  duplicate_key_rejection: yes (DupMapKey: cbor.DupMapKeyEnforcedAPF at init)
+  deterministic_bstr: "go-cose implements deterministicBinaryString() in cbor.go (lines 100-128) that converts bstr into shortest-form deterministic encoding per RFC 9052 §9. This is the bstr-shorting pass used when emitting deterministic COSE messages."
+specification:
+  primary: "RFC 9052, RFC 9338 (countersignatures, added in PR #172 Sep 2023)"
+  secondary:
+    - "RFC 8152 (legacy; spec update in PR #109)"
+    - "RFC 8230 (RSA algorithms, partial — RSA-PS and RSA-PKCS1-v1_5 added in PRs #72, #163)"
+    - "RFC 7049 (legacy reference; CBOR encoding rules)"
+    - "draft-ietf-cose-hash-envelope (COSE Hash Envelope, added in PR #212 Mar 2025)"
+  cose_message_types_supported:
+    - "COSE_Sign1 (Sign1Message — stable, primary support)"
+    - "COSE_Sign (SignMessage — EXPERIMENTAL per README warning)"
+    - "COSE_Countersignature (Countersignature — EXPERIMENTAL per README warning; supports RFC 9338)"
+    - "COSE_Key (Key type — added in PR #146 by setrofim; supported since v1.3.0)"
+    - "CWT (CWTClaims — added in PR #189 Jul 2024)"
+    - "NOT supported: COSE_Encrypt0, COSE_Encrypt, COSE_Mac0, COSE_Mac (encryption and MAC operations are out of scope per Veraison project charter; only signing and countersigning are implemented)"
+  algorithms_implemented_rfc9053:
+    - "ES256 (ECDSA P-256 + SHA-256) — RFC 9053 §2.1"
+    - "ES384 (ECDSA P-384 + SHA-384) — RFC 9053 §2.1"
+    - "ES512 (ECDSA P-521 + SHA-512) — RFC 9053 §2.1"
+    - "EdDSA (PureEdDSA, Ed25519/Ed448) — RFC 9053 §3.1"
+    - "PS256/PS384/PS512 (RSASSA-PSS) — RFC 8230"
+    - "RS256/RS384/RS512 (RSASSA-PKCS1-v1_5, constant names added in PR #163 Aug 2023; signing requires --tagged verification check)"
+    - "HMAC algorithms: NOT built-in for COSE message signing/verification (no HMAC-based COSE_Sign1/HMAC-based COSE_Mac0)"
+    - "AES-GCM: NOT built-in (no COSE_Encrypt0/COSE_Encrypt support)"
+    - "ChaCha20-Poly1305: NOT built-in"
+    - "AES-CCM: NOT built-in"
+    - "Custom algorithms: SUPPORTED via RegisterAlgorithm (example in README shows ML-DSA-44 integration with cloudflare/circl)"
+  build_system: "Go modules (go 1.21 per go.mod; fxamacker/cbor v2.9.0, x448/float16 v0.8.4 indirect). Fuzz testing requires Go 1.18+."
+adapter:
+  path: TBD
+  driver_path: TBD
+  driver_language: Go
+  build: "go build (GO-COSE-COHORT_BASE/go-cose/)"
+  version_in_adapter: "v1.3.0"
+empty_protected_bucket:
+  encoded_form: "0x40 (empty bstr) per RFC 9052 §3 SHOULD"
+  source_evidence: |
+    headers.go lines 70-83 (ProtectedHeader.MarshalCBOR):
+        func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
+            var encoded []byte
+            if len(h) == 0 {
+                encoded = []byte{}
+            } else {
+                ...
+                encoded, err = encMode.Marshal(map[any]any(h))
+                ...
+            }
+            return encMode.Marshal(encoded)
+        }
+    Explicit doc comment above the method:
+        // MarshalCBOR encodes the protected header into a CBOR bstr object.
+        // A zero-length header is encoded as a zero-length string rather than as a
+        // zero-length map (encoded as h'a0').
+    This is the canonical RFC 8152/9052 §3 SHOULD encoding.
+  rationale: "Library explicitly guards the empty case to emit 0x40, not 0x41 0xa0."
+test_vectors_used:
+  source: "GlueCOSE test vectors (github.com/gluecose/test-vectors). Per README: 'go-cose runs the GlueCOSE test suite on every local go test execution.'"
+  independence: "GlueCOSE is community-built and is distinct from cose-wg/test-vectors. Not the same corpus as cose-c or cose-java (which use cose-wg/Examples)."
+last_commit:
+  sha: dea543bf9b89b0cef461c0d194747c9ed5e6666c
+  date: "2026-08-26"
+  message: "feat: add x5chain trust verification (#229)"
+  author: magickli1
+last_release:
+  version: v1.3.0
+  date: "2024-09-27"
+  notes: "Adds COSE_Key support, Ed25519/PS/RS constants, COSE_Countersignature (experimental), COSE Hash Envelope (experimental). Most recent tagged release as of 2026-09-01."
+msrv: "Go 1.21 (per go.mod)"
+limitations:
+  - "Encryption and MAC operations are NOT implemented (COSE_Encrypt0, COSE_Encrypt, COSE_Mac0, COSE_Mac are out of scope). Cohort coverage for these message types must come from other libraries."
+  - "COSE_Sign and COSE_Countersignature are marked EXPERIMENTAL in README."
+  - "Uses cbor.SortCoreDeterministic (RFC 8949 §4.2.1 bytewise-lex). Cross-cohort agreement on canonical encoding is bytewise-lex based; coset/ciborium use §4.2.3 length-first. The two rules are identical for keys of the same length but differ for mixed-length keys."
+  - "Integer range limited to [-2^63, 2^63-1] (int64). Large integer values outside this range are rejected (consistent with coset limitation but less restrictive than cbor2's Python int)."
+  - "GlueCOSE test corpus is community-built; cose-wg/test-vectors is NOT directly consumed."
+notes_path: knowledge/notes/imp-2026-0021.md
