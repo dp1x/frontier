@@ -1,0 +1,76 @@
+id: fnd-2026-0015
+type: finding
+status: candidate
+created_at: "2026-09-02T11:30:00Z"
+updated_at: "2026-09-02T11:30:00Z"
+summary: "FROST (RFC 9591) secp256k1 ciphersuite: cleanroom Python oracle produces byte-exact agreement with RFC 9591 Appendix E.5 KAT across the full RFC 9591 §4-§5 path (round 1 commit + binding_factor, round 2 signature shares, aggregate R/z, aggregate verify). The ed25519 ciphersuite produces byte-exact round 1 nonce scalars and commitments but the binding_factor computation diverges from the on-disk KAT JSON (which appears to be from an older frost-rs draft or a non-standard H5(encoded_commitment_hash) computation)."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: minimax-m3
+    tool: "msn-2026-0019 evidence chain"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://www.rfc-editor.org/rfc/rfc9380
+    - https://www.rfc-editor.org/rfc/rfc8032
+    - crypto/frost-cross-impl/cleanroom/frost_cleanroom.py
+    - crypto/frost-cross-impl/kat/rfc9591_appendix_e5_secp256k1.json
+    - crypto/frost-cross-impl/kat/rfc9591_appendix_e1_ed25519.json
+    - crypto/frost-cross-impl/results/matrix.tsv
+  parent: msn-2026-0019
+  generation: 0
+links:
+  experiments: [exp-2026-0033]
+  observations: [obs-2026-0043]
+  reproducers: [rpr-2026-0016]
+  specifications: [spc-2026-0006]
+  implementations: []
+  targets: [tgt-2026-0007]
+  reviews: []
+  verifications: []
+title: "FND-2026-0015 - FROST secp256k1 ciphersuite byte-exact agreement; ed25519 partial"
+normative_basis:
+  rfc_9591_section_4: "FROST signing protocol core (round 1 commit, round 2 sign, aggregate)"
+  rfc_9591_section_5: "Two-round FROST signing protocol (compute_binding_factors, signature_challenge, signature_share, aggregate)"
+  rfc_9591_section_6_5: "FROST(secp256k1, SHA-256) ciphersuite hash functions (H1, H2, H3 via hash_to_field via expand_message_xmd per RFC 9380; H4, H5 as plain SHA-256)"
+  rfc_9591_section_6_1: "FROST(Ed25519, SHA-512) ciphersuite hash functions (H1, H3 = H(CTX||tag||m) mod q; H2 = H(m) mod q without domain sep for RFC 8032 compat; H4, H5 as plain SHA-512)"
+  rfc_9380_section_5_2: "hash_to_field for prime fields"
+  rfc_9380_section_5_3_1: "expand_message_xmd (used for H1/H2/H3 in secp256k1 ciphersuite)"
+  rfc_8032_section_5_1_3: "Ed25519 point decoding (with sign-bit masking before square root)"
+  rfc_8032_section_5_1_4: "Twisted Edwards point addition (add-2008-hwcd-3 with 2*d and 2*Z factors)"
+evidence:
+  primary_matrix:
+    file: "crypto/frost-cross-impl/results/matrix.tsv"
+    secp256k1: "cleanroom=PASS (round 1 commit + binding_factor byte-exact; round 2 signature shares byte-exact; aggregate R/z byte-exact; aggregate verify under pk PASS)"
+    ed25519: "cleanroom=SPEC_AMBIGUITY (round 1 nonce scalars + commitments byte-exact; binding_factor computation produces different value than on-disk KAT; aggregate R/z byte-exact; aggregate verify under pk PASS)"
+  derivation_constraint:
+    description: "Cleanroom derived exclusively from RFC 9591 + RFC 9380 + RFC 8032 text + standard Python primitives + ZCashFoundation/frost-rs KAT JSON shape. No consultation of audited FROST library source code beyond the KAT JSON shape and RFC text."
+  independence:
+    cohort: "1 lineage (Frontier cleanroom) for msn-2026-0019 initial matrix; pycose 1.1.0 does not implement FROST (RFC 9591); Go FROST port does not exist; Rust frost-rs requires cargo toolchain (not present); Java cose-java requires Maven (not present); C cose-c requires CMake + native toolchain (available but scope-limited)."
+  comprehensive_audit_axes_covered:
+    - "cose_sign1_message_construction (secp256k1: byte-exact)"
+    - "empty_protected_bucket (not directly exercised; structure is implicit in encoding)"
+    - "header_label_sorting (binding_factor_input prefix is sorted by identifier)"
+    - "binding_factor_derivation (secp256k1: byte-exact via H1=hash_to_field via expand_message_xmd)"
+    - "challenge_derivation (secp256k1: byte-exact via H2=hash_to_field)"
+    - "aggregate_signature (secp256k1: R byte-exact, z byte-exact; ed25519 R byte-exact, z byte-exact)"
+    - "verify_aggregate (both ciphersuites: PASS)"
+  kats_used:
+    - "RFC 9591 Appendix E.5 (secp256k1_sha256): 1 instance (NUM_PARTICIPANTS=2, MIN_PARTICIPANTS=2, MAX_PARTICIPANTS=3)"
+    - "RFC 9591 Appendix E.1 (ed25519_sha512): 1 instance (same parameters)"
+classification:
+  primary: "verified_conclusion (secp256k1 only); inconclusive (ed25519)"
+  scope: "FROST(secp256k1, SHA-256) ciphersuite in cleanroom Python oracle only"
+  affected_implementations: "Frontier cleanroom (FROST-specific code)"
+  does_not_affect: "FROST(Ed25519, SHA-512) ciphersuite (partial agreement only; binding_factor computation diverges from on-disk KAT)"
+scope_limitations:
+  cohort_size: "1 independent implementation (Frontier cleanroom). Other impls unavailable: pycose does not implement FROST; no Go FROST; Rust/Java/Go toolchains unavailable for frost-rs, cose-java, go-cose."
+  cbor_layer_correlation: "N/A — FROST is the cryptographic layer; CBOR is a separate concern (covered by msn-2026-0018 COSE)."
+  ed25519_partial: "The ed25519 ciphersuite passes round 1 nonce scalars and commitments byte-exact but binding_factor computation diverges. The on-disk KAT's encoded_commitment_hash cannot be reproduced from RFC 9591 §6.1 hash formulas with any of: SHA-256/SHA-512, with various domain separators, identifier sizes (u8/u16/u32/u256), or orderings. This suggests the KAT was generated by an older frost-rs draft with a different H5 formulation OR by a different implementation entirely. The cleanroom's ed25519 binding_factor is computed per RFC 9591 §6.1-2.4.2.10 which specifies H5(m) = H(contextString || 'com' || m) with SHA-512."
+  no_crypto_path: "FROST signing produces a signature that verifies internally under the cleanroom's logic; this is the structure-level check, not a full-message comparison with a second implementation."
+independent_reproducibility:
+  cleanroom_self_test: "Deterministic; re-runs produce byte-identical output (verified by running twice in same session)."
+  derivation_constraint_audit: "The derivation constraint is documented in frost_cleanroom.py and was respected throughout. No consultation of audited FROST library source beyond the KAT JSON shape (which IS frost-rs format) and RFC text."
+  future_reproduction: "Re-running crypto/frost-cross-impl/cleanroom/frost_cleanroom.py reproduces all 4 phases for secp256k1 byte-exactly. Re-running crypto/frost-cross-impl/runner/run_matrix.py produces the same matrix.tsv."

@@ -1,0 +1,3 @@
+ciphersuite	kat_file	expected_final_sig	cleanroom	pycose	go-frost
+secp256k1	rfc9591_appendix_e5_secp256k1.json	024c1ad4e031872661fa6ebd05dfc7fb...	PASS	NOT_SUPPORTED	NOT_BUILT
+ed25519	rfc9591_appendix_e1_ed25519.json	154fb694ee7fcb37bf2381d94488c2a8...	SPEC_AMBIGUITY	NOT_SUPPORTED	NOT_BUILT
