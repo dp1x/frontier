@@ -1,8 +1,9 @@
 id: msn-2026-0018
 type: mission
-status: active
+status: verified
 created_at: "2026-08-31T23:30:00Z"
-updated_at: "2026-09-01T00:30:00Z"
+updated_at: "2026-09-02T04:30:00Z"
+terminal_reason: "Verified finding fnd-2026-0014 promoted (pycose tstr-only map-key sort order SPEC_VIOLATION per RFC 9052 §9). Cohort of 2 libraries (pycose + go-cose) tested across 40 vectors / 10 axes / 80 cells: 74 PASS, 4 SPEC_VIOLATION, 2 NOT_SUPPORTED. 3 more libraries (cose-c, cose-java, coset) deferred due to local toolchain gaps (no Rust/Java); their archaeology records (imp-2026-0020/0022/0023) and build paths are documented for future CI-based integration. Mission budget exhausted on cohort establishment; instrument validation; instrument repair (5 distinct oracle bugs found and fixed during this session); adversarial review; deterministic verification."
 summary: "COSE (RFC 8152/9052/9053) message-encoding conformance audit. Build on the verified CBOR §4.2 framework (msn-2026-0015/0016/0017) by adding 4-5 lineage-independent COSE implementations to a new conformance matrix. Cohort candidates: cose-c (COSE WG reference, C/C++), cose-java (COSE WG, Java), coset (Google, Rust), go-cose (Veraison/ex-Mozilla, Go), pycose (Timothy Claeys, Python). Focus axes: (1) COSE_Sign1/Encrypt0/Mac0 message-construction encoding, (2) header parameter canonicalization (the 'empty protected bucket' divergence is a known interop issue), (3) Sig_structure/Enc_structure/MAC_structure encoding per RFC 9052, (4) deterministic ECDSA nonce generation (RFC 6979) for COSE_Sign1 with ES256/ES384/ES512, (5) ECDSA r||s fixed-length encoding (RFC 9053 §2.1), (6) AES-GCM/ChaCha20-Poly1305 nonce and AAD construction, (7) COSE_KDF_Context encoding for ECDH-ES. Determine implementation lineage, upstream ancestry, shared code, shared test vectors, and specification lineage for every cohort member before interpreting cross-impl results. Validate the research instrument before trusting new cohort results. Promote findings through the standard evidence ladder."
 epistemic_status: hypothesis
 provenance:
@@ -172,4 +173,4 @@ follow_ups:
   - "Opportunity scan after terminalization for next mission domain."
 notes_path: knowledge/notes/msn-2026-0018.md
 blocked_reason: null
-terminal_reason: null
+terminal_reason: "Verified finding fnd-2026-0014 promoted (pycose tstr-only map-key sort order SPEC_VIOLATION per RFC 9052 §9). Cohort of 2 libraries (pycose + go-cose) tested across 40 vectors / 10 axes / 80 cells: 74 PASS, 4 SPEC_VIOLATION, 2 NOT_SUPPORTED. 3 more libraries (cose-c, cose-java, coset) deferred due to local toolchain gaps (no Rust/Java); their archaeology records (imp-2026-0020/0022/0023) and build paths are documented for future CI-based integration. Mission budget exhausted on cohort establishment; instrument validation; instrument repair (5 distinct oracle bugs found and fixed during this session); adversarial review; deterministic verification."

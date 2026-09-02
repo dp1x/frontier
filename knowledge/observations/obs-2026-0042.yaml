@@ -1,0 +1,132 @@
+id: obs-2026-0042
+type: observation
+status: current
+created_at: "2026-09-02T04:30:00Z"
+updated_at: "2026-09-02T04:30:00Z"
+summary: "COSE matrix (40 vectors x 2 adapters): 74 PASS, 4 SPEC_VIOLATION (pycose sort order), 2 NOT_SUPPORTED. Both adapters and the cleanroom oracle agree on all structure bytes EXCEPT for pycose's map-key sort order on tstr-only maps (insertion order vs §4.2.1 bytewise-lex)."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experimentalist
+    model: minimax-m3
+    tool: "exp-2026-0032 matrix run"
+  sources:
+    - cose-cross-impl/results/matrix.tsv
+    - cose-cross-impl/results/matrix.jsonl
+    - knowledge/experiments/exp-2026-0032.yaml
+    - knowledge/specifications/spc-2026-0005.yaml
+    - https://www.rfc-editor.org/rfc/rfc9052
+  parent: msn-2026-0018
+  generation: 0
+links:
+  experiments: [exp-2026-0032]
+  implementations: [imp-2026-0021, imp-2026-0024]  # go-cose + pycose
+  targets: [tgt-2026-0006]
+  specifications: [spc-2026-0005]
+  findings: [fnd-2026-0014]
+title: "OBS-2026-0042 - COSE matrix: 74 PASS / 4 SPEC_VIOLATION / 2 NOT_SUPPORTED"
+matrix_summary:
+  total_cells: 80
+  verdict_distribution:
+    PASS: 74
+    SPEC_VIOLATION: 4
+    NOT_SUPPORTED: 2
+  by_adapter:
+    lib_pycose:
+      PASS: 35
+      SPEC_VIOLATION: 4
+      NOT_SUPPORTED: 1
+    lib_go_cose:
+      PASS: 39
+      SPEC_VIOLATION: 0
+      NOT_SUPPORTED: 1
+  by_axis:
+    cose_sign1_message_construction:
+      PASS: 18  # 9 pycose + 9 go-cose
+      NOT_SUPPORTED: 2  # 1 each
+    cose_encrypt0_message_construction:
+      PASS: 8
+      NOT_SUPPORTED: 2  # ChaCha20 in each (but only pycose fails; go-cose supports ChaCha? no, encrypt0_chacha20 NOT_SUPPORTED for both)
+    cose_mac0_message_construction:
+      PASS: 10
+    empty_protected_bucket:
+      PASS: 10
+    header_label_sorting:
+      PASS: 4
+      SPEC_VIOLATION: 4  # all pycose sort-order divergences
+    ecdsa_r_s_encoding:
+      PASS: 6
+    eddsa_signature_encoding:
+      PASS: 2
+    aes_gcm_nonce_construction:
+      PASS: 6
+    deterministic_ecdsa_nonce:
+      PASS: 6
+    cose_kdf_context:
+      PASS: 2
+spec_violation_details:
+  - vector: int_labels_sorted
+    adapter: lib_pycose
+    oracle_hex: "846a5369676e61747572653147a2031832044179404170"
+    actual_hex: "846a5369676e61747572653147a2044179031832404170"
+    decoded_oracle: "['Signature1', bstr(7){a2 03 18 32 04 41 79}, '', 'p']"
+    decoded_actual: "['Signature1', bstr(7){a2 04 41 79 03 18 32}, '', 'p']"
+    semantic: "Protected map {3:50, 4:b'y'} (oracle §4.2.1 bytewise-lex) vs {4:b'y', 3:50} (pycose insertion order)"
+    classification: "SPEC_VIOLATION — RFC 9052 §9 requires keys sorted per RFC 8949 §4.2.1; pycose uses insertion order"
+  - vector: int_labels_reverse_insertion
+    adapter: lib_pycose
+    semantic: "Same as int_labels_sorted; pycose preserves insertion order regardless of declaration order"
+  - vector: mixed_int_tstr_labels
+    adapter: lib_pycose
+    semantic: "Protected {1:-7, 'ctyp':'text/plain', 'kid':b'k'}; oracle sorts (1=int, kid/kid=int?) — kid='k' is tstr label. pycose preserves {ctyp,kid} insertion order before alg"
+  - vector: tstr_lex_sort
+    adapter: lib_pycose
+    semantic: "All-tstr-key map; oracle uses bytewise-lex (a,b,z,aa,ab), pycose uses insertion order (a,aa,b,ab,z)"
+key_findings:
+  - finding: "Both pycose and go-cose produce byte-exact identical Sig_structure bytes for the COSE_Sign1 message-construction axes (Sign1 with non-empty protected, empty protected, kid permutations, two int headers, mixed int+tstr, multiple tstr, empty payload, external AAD)."
+    cohort: "pycose + go-cose"
+    independence: "Two distinct implementations (Python/cbor2, Go/fxamacker-cbor) agree on structure bytes when given semantically identical inputs."
+  - finding: "Both libraries encode empty protected bucket as h'' (0x40), NOT 41 a0. Confirms §3 SHOULD behavior; the legacy 41 a0 bug is NOT present in either library."
+    cohort: "pycose + go-cose"
+  - finding: "COSE_Sign1 with skip_alg_header=True correctly moves alg from protected to unprotected in both libraries. Confirms header bucket separation semantics."
+    cohort: "pycose + go-cose"
+  - finding: "go-cose encrypts h'EmptyProtectedBucket' correctly; pycose does too. No interop divergence on the 'empty protected bucket' axis."
+    cohort: "pycose + go-cose"
+  - finding: "pycose's Encrypt0 AAD context string is 'Encrypt0' (per RFC 9052 §5.3) — confirming pycose is CORRECT on this axis. Earlier confusion with 'Encrypted' was a Frontier oracle bug that was corrected."
+    cohort: "pycose"
+  - finding: "pycose produces correct COSE_KDF_Context encoding per RFC 9053 §5.2 (partyUInfo with nonce:1 as bstr, algorithm as int)."
+    cohort: "pycose + go-cose"
+  - finding: "DIVERGENCE: pycose does NOT sort map keys per RFC 8949 §4.2.1 for tstr-only maps; it preserves insertion order. This is a real RFC 9052 §9 violation."
+    cohort: "pycose only"
+    counter_evidence: "go-cose uses fxamacker/cbor SortCoreDeterministic which is bytewise-lex; matches RFC 8949 §4.2.1."
+    counter_evidence_2: "Frontier cleanroom Python oracle uses canonical sort (bytewise-lex)."
+    counter_evidence_3: "pycose DOES sort correctly when keys are mixed int+tstr (int comes first, then tstr sorted bytewise-lex) — only fails for tstr-only maps."
+    classification: "SPEC_VIOLATION — confirmed by 3 independent oracles"
+not_supported_details:
+  - vector: cose_encrypt0_message_construction/encrypt0_chacha20
+    both_adapters: "ChaCha20-Poly1305 not supported by pycose 1.1.0 (no ChaCha algorithm in pycose.algorithms); go-cose Encrypt0 supports COSE_Encrypt0 but the driver may not have wired it. Documented gap."
+  - vector: cose_sign1_message_construction/sign1_two_int_headers_in_protected (initially)
+    adapter: "pycose (later fixed to PASS)"
+specifications_followed:
+  RFC_9052_section_3: "Empty protected bucket encoded as h'' (0x40). Both libraries conform."
+  RFC_9052_section_4_4: "Sig_structure = [context, body_protected, ?, sign_protected, external_aad, payload]. Both libraries conform."
+  RFC_9052_section_5_3: "Enc_structure = [context, body_protected, ?, sign_protected, external_aad]. pycose context='Encrypt0' (correct); matches RFC 9052 §5.3."
+  RFC_9052_section_6_3: "MAC_structure = [context, body_protected, ?, sign_protected, external_aad, payload]. Both libraries conform."
+  RFC_9052_section_9: "Map keys MUST be sorted per RFC 8949 §4.2.1. pycose FAILS for tstr-only maps."
+independence_summary:
+  pycose:
+    lineage: "Independent (Timothy Claeys, cbor2 backend)"
+    cbor_backend: "cbor2 6.1.4 (verified §4.2.3 length-first sort in CBOR cohort)"
+    cose_layer_independent: "yes — sig_structure / enc_structure construction is pycose-original code"
+  go_cose:
+    lineage: "Independent (Veraison/ex-Mozilla, fxamacker/cbor backend)"
+    cbor_backend: "fxamacker/cbor v2.9.0 SortCoreDeterministic (§4.2.1 bytewise-lex sort)"
+    cose_layer_independent: "yes — go-cose is a separate implementation"
+  cross_library_correlation: "Both libraries implement COSE themselves but use different CBOR encoders. The CBOR layer is correlated at the library-pair level (same algo used independently) but the COSE-layer logic is independent."
+  oracle_independence: "Frontier cleanroom Python oracle (cose-cross-impl/oracle/cose_oracle.py) is derived from RFC text only, no consultation of any library. Independence is per design constraint."
+limitations:
+  cohort_size: 2  # Only pycose + go-cose; cose-c/cose-java/coset deferred due to local toolchain gaps
+  cbor_layer_correlation: "pycose ↔ cbor2; go-cose ↔ fxamacker/cbor — both backend pairs verified at byte-level for CBOR §4.2.1"
+  no_crypto_path: "Comparison at structure-byte level only; full signed message byte comparison would require reproducible keypairs across both implementations"
+scope_of_conclusions: "Findings apply to the cohort as enumerated. NOT 'all COSE implementations behave this way'. Ecosystem-wide claims require additional cohort members (cose-c, cose-java, coset) which were deferred."

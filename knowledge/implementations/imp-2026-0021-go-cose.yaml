@@ -55,12 +55,12 @@ independence:
   shared_runtime_dependencies_with_audited: "fxamacker/cbor (unique to go-cose among cohort), x448/float16 (indirect, for half-precision float support)"
   independence_basis: "Independent language (Go), independent authors (Veraison/Microsoft), independent codebase, CBOR backend (fxamacker/cbor) is unique to go-cose in this cohort. CBOR-layer independence is HIGH (different backend). COSE-layer independence is HIGH (no shared code or authors with the COSE WG reference implementations). Test vector source (GlueCOSE) is community-built and distinct from cose-wg/test-vectors."
 canonical_mode:
-  supported: true (mandatory default — there is no non-canonical mode in the library)
+  supported: "true (mandatory default — there is no non-canonical mode in the library)"
   api: "encMode is pre-configured at package init() in cbor.go using cbor.EncOptions{Sort: cbor.SortCoreDeterministic, IndefLength: cbor.IndefLengthForbidden}. All encoding goes through this encMode. The library explicitly comments: '// sort map keys' and '// no streaming'."
   sort_rule: "cbor.SortCoreDeterministic — this is RFC 8949 §4.2.1 bytewise-lex (length-based within same-type, then bytewise). Differs from §4.2.3 length-first."
-  shortest_form_ints: yes (delegated to fxamacker/cbor)
-  shortest_form_floats: yes (delegated to fxamacker/cbor)
-  duplicate_key_rejection: yes (DupMapKey: cbor.DupMapKeyEnforcedAPF at init)
+  shortest_form_ints: "yes (delegated to fxamacker/cbor)"
+  shortest_form_floats: "yes (delegated to fxamacker/cbor)"
+  duplicate_key_rejection: "yes (DupMapKey: cbor.DupMapKeyEnforcedAPF at init)"
   deterministic_bstr: "go-cose implements deterministicBinaryString() in cbor.go (lines 100-128) that converts bstr into shortest-form deterministic encoding per RFC 9052 §9. This is the bstr-shorting pass used when emitting deterministic COSE messages."
 specification:
   primary: "RFC 9052, RFC 9338 (countersignatures, added in PR #172 Sep 2023)"

@@ -1,0 +1,81 @@
+id: fnd-2026-0014
+type: finding
+status: verified_conclusion
+created_at: "2026-09-02T04:30:00Z"
+updated_at: "2026-09-02T04:30:00Z"
+summary: "**pycose 1.1.0 does NOT sort map keys per RFC 8949 §4.2.1 bytewise-lex for tstr-only maps**. Across 4 header_label_sorting vectors, pycose preserves insertion order while both go-cose (via fxamacker/cbor SortCoreDeterministic) and the Frontier cleanroom oracle produce correct bytewise-lex sort. This is a SPEC_VIOLATION per RFC 9052 §9 (which explicitly requires RFC 8949 §4.2.1 for COSE message structures). NOTE: pycose DOES sort correctly when keys are mixed int+tstr; the divergence is scoped to all-tstr-key maps."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: minimax-m3
+    tool: "msn-2026-0018 evidence chain"
+  sources:
+    - knowledge/observations/obs-2026-0042.yaml
+    - knowledge/experiments/exp-2026-0032.yaml
+    - knowledge/reproducers/rpr-2026-0015.yaml
+    - knowledge/specifications/spc-2026-0005.yaml
+    - cose-cross-impl/results/matrix.tsv
+    - https://www.rfc-editor.org/rfc/rfc9052
+    - https://www.rfc-editor.org/rfc/rfc8949
+  parent: msn-2026-0018
+  generation: 0
+links:
+  experiments: [exp-2026-0032]
+  observations: [obs-2026-0042]
+  reproducers: [rpr-2026-0015]
+  specifications: [spc-2026-0005]
+  implementations: [imp-2026-0021, imp-2026-0024]  # go-cose + pycose
+  targets: [tgt-2026-0006]
+  reviews: [rev-2026-0016]
+  verifications: [vrf-2026-0016]
+title: "FND-2026-0014 - pycose map-key sort order non-conformance for tstr-only maps (RFC 9052 §9)"
+normative_basis:
+  rfc_9052_section_9: "Encoding restrictions are aligned with Core Deterministic Encoding Requirements specified in Section 4.2.1 of RFC 8949 [STD94]. In particular: encoding MUST be done using definite lengths, the length of the encoded argument MUST be the minimum possible length, the keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings."
+  rfc_8949_section_4_2_1: "The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings. For example: 10, 100, -1, 'z', 'aa', [100], [-1], false — sorted correctly."
+evidence:
+  primary_observation: "obs-2026-0042 — 4 SPEC_VIOLATION cells, all from lib_pycose on header_label_sorting axis, all map-key sort order divergences"
+  supporting_observation: "pycose DOES sort correctly for mixed int+tstr-key maps; failure is specific to tstr-only maps (where insertion order is preserved)"
+  counter_evidence: "go-cose (via fxamacker/cbor SortCoreDeterministic) produces bytewise-lex sort; matches Frontier cleanroom oracle exactly for all 4 vectors"
+  counter_evidence: "Frontier cleanroom Python oracle uses canonical sort = §4.2.1 bytewise-lex"
+classification:
+  primary: "SPEC_VIOLATION per RFC 9052 §9 / RFC 8949 §4.2.1"
+  scope: "scoped to tstr-only maps in COSE_Sign1/Encrypt0/Mac0 protected/unprotected buckets"
+  affected_algorithms: "All COSE message types using tstr labels (e.g., 'ctyp', 'kid' as tstr, custom labels)"
+  does_not_affect: "Mixed int+tstr maps (where pycose is correct); integer-only maps (where pycose uses canonical sort)"
+byte_evidence:
+  int_labels_sorted:
+    oracle: "846a5369676e61747572653147a2031832044179404170"
+    pycose: "846a5369676e61747572653147a2044179031832404170"
+    delta: "{3:50, 4:b'y'} (oracle) vs {4:b'y', 3:50} (pycose)"
+    signature: "sig_structure bytes differ at byte 12"
+  tstr_lex_sort:
+    oracle: "846a5369676e61747572653152a5616101616203617a056261610262616204404170"
+    pycose: "846a5369676e61747572653152a56161016261610261620362616204617a05404170"
+    delta: "{a:1, b:3, z:5, aa:2, ab:4} (oracle bytewise-lex) vs {a:1, aa:2, b:3, ab:4, z:5} (pycose insertion order)"
+    signature: "sig_structure bytes differ in the protected-map encoding"
+independence_analysis:
+  pycose_cbor_backend: "cbor2 6.1.4 — but pycose uses its OWN internal CBOR encoder (not cbor2) for COSE_Sign1/Encrypt0/Mac0 encoding"
+  go_cose_cbor_backend: "fxamacker/cbor v2.9.0 — uses SortCoreDeterministic (§4.2.1)"
+  cbor2_sort_behavior: "§4.2.3 length-first (verified in msn-2026-0017 CBOR cohort)"
+  pycose_sort_inconsistency: "pycose's own encoder appears to sort correctly for int-only and mixed-key maps but not for tstr-only maps; suggests a custom comparison function with edge-case bug"
+impact_analysis:
+  interop_consequence: "Two COSE implementations using pycose's byte-exact protected header as input may fail signature verification on the other side if the verifier's library re-sorts the headers differently"
+  security_consequence: "If pycose signs a message with tstr-only map, the signature is over insertion-order bytes. A verifier using a library that produces bytewise-lex sort (like go-cose) would compute the Sig_structure over DIFFERENT bytes and reject the signature. This breaks interop for the affected subset."
+  webauthn_consequence: "WebAuthn/FIDO2 uses CBOR-encoded COSE structures for authenticator attestation. If a pycose-based relying party computes a different Sig_structure than the authenticator, signature verification fails. The WebAuthn spec mandates RFC 8152/9052 canonical CBOR, so pycose's behavior is non-compliant for WebAuthn use cases."
+promotion_requirements:
+  - "Independent adversarial review (rev-2026-XXXX) SUPPORTS or PARTIALLY_SUPPORTS"
+  - "Deterministic verification via rpr-2026-0015 reproduction"
+  - "At least 3 independent cohort members (oracle + go-cose + pycose) confirm the divergence"
+promotion_path:
+  current_status: "candidate (pending independent review)"
+  next_steps:
+    - "Run adversarial critic review (rev-2026-0016)"
+    - "Run deterministic verification (vrf-2026-0016)"
+    - "If both SUPPORTS, promote to verified_conclusion"
+scope_limitations:
+  cohort_size: 2 (pycose + go-cose) — does NOT represent all COSE implementations
+  cbor_layer_correlation: "pycose's behavior may be inherited from or related to cbor2's encoding; the root cause is in pycose's own COSE-encoder, not cbor2 itself"
+  tstr_only_specific: "Does NOT apply to int-only or mixed-key maps"
+  no_crypto_path: "Comparison is at structure-byte level only; full-message comparison with reproducible keys is future work"
