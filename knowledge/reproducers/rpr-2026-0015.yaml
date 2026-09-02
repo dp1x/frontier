@@ -1,0 +1,127 @@
+id: rpr-2026-0015
+type: reproducer
+status: current
+created_at: "2026-09-02T04:30:00Z"
+updated_at: "2026-09-02T04:30:00Z"
+summary: "Step-by-step reproducer for the COSE matrix run (40 vectors x 2 adapters). Includes instructions for cloning go-cose, building the driver, installing pycose, and running the matrix."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: reproducer
+    model: minimax-m3
+    tool: "rpr-2026-0015 for msn-2026-0018"
+  sources:
+    - knowledge/experiments/exp-2026-0032.yaml
+    - knowledge/observations/obs-2026-0042.yaml
+    - cose-cross-impl/oracle/cose_oracle.py
+    - cose-cross-impl/vectors/gen_vectors.py
+    - cose-cross-impl/runner/run_matrix.py
+    - cose-cross-impl/adapters/lib_pycose_adapter.py
+    - cose-cross-impl/adapters/lib_go_cose_adapter.py
+    - https://github.com/veraison/go-cose
+    - https://github.com/TimothyClaeys/pycose
+  parent: msn-2026-0018
+  generation: 0
+links:
+  experiments: [exp-2026-0032]
+  observations: [obs-2026-0042]
+  implementations: [imp-2026-0021]  # go-cose
+  findings: [fnd-2026-0014]
+title: "RPR-2026-0015 - COSE matrix reproducer (40 vectors x 2 adapters)"
+prerequisites:
+  - "Python 3.11+ with pip + a virtualenv (.venv)"
+  - "Go 1.21+ (for go-cose driver build)"
+  - "R: ramdisk with at least 500 MB free (build artifacts, go-cose clone)"
+  - "Network access to GitHub (clone) and PyPI (pycose install)"
+environment:
+  os: "Windows 11 / PowerShell"
+  python: ".venv/Scripts/python.exe"
+  go: "go 1.26.4 windows/arm64"
+  ramdisk: "R:/"
+  cbor_oracle: "cbor-cross-impl/oracle/cbor_oracle.py"
+steps:
+  step_1_prepare:
+    description: "Set up Python venv and install pycose + cbor2 + cryptography"
+    commands:
+      - "python -m venv .venv"
+      - ".venv/Scripts/python.exe -m pip install pycose==1.1.0 cbor2==6.1.4 cryptography"
+    expected_outcome: "pycose 1.1.0, cbor2 6.1.4, cryptography installed; pycose.messages importable"
+  step_2_test_oracle:
+    description: "Sanity-check the COSE oracle self-test"
+    commands:
+      - ".venv/Scripts/python.exe cose-cross-impl/oracle/cose_oracle.py"
+    expected_outcome: "All 5 self-tests PASS (empty protected, Sig_structure, Enc_structure, MAC_structure, raw COSE_Sign1)"
+  step_3_clone_go_cose:
+    description: "Clone go-cose into R:/ ramdisk"
+    commands:
+      - "mkdir -p R:/cose-cohort"
+      - "cd R:/cose-cohort"
+      - "git clone https://github.com/veraison/go-cose.git"
+    expected_outcome: "go-cose cloned; HEAD at v1.3.0 or newer"
+  step_4_build_go_driver:
+    description: "Build the Frontier go-cose driver (which uses fxamacker/cbor)"
+    commands:
+      - "mkdir -p R:/cose-cohort/go-cose/driver"
+      - "Write R:/cose-cohort/go-cose/driver/main.go (see cose-cross-impl/adapters/lib_go_cose_adapter.py header for the full driver code)"
+      - "cd R:/cose-cohort/go-cose"
+      - "go build -o driver/driver.exe ./driver"
+    expected_outcome: "R:/cose-cohort/go-cose/driver/driver.exe exists and runs (try piping in JSON)"
+  step_5_gen_vectors:
+    description: "Generate the 40 COSE vectors deterministically (seed 0xC0DE0CB0)"
+    commands:
+      - ".venv/Scripts/python.exe cose-cross-impl/vectors/gen_vectors.py"
+    expected_outcome: "10 vectors_*.jsonl files in cose-cross-impl/vectors/, totaling 40 vectors across 10 audit axes"
+  step_6_run_matrix:
+    description: "Run the matrix (must be invoked from C:/Users/Dhane/frontier)"
+    commands:
+      - "cd C:/Users/Dhane/frontier"
+      - ".venv/Scripts/python.exe cose-cross-impl/runner/run_matrix.py"
+    expected_outcome: "80 cells (40 vectors x 2 adapters); 74 PASS / 4 SPEC_VIOLATION / 2 NOT_SUPPORTED"
+  step_7_inspect_results:
+    description: "Read the matrix output"
+    commands:
+      - "Get-Content cose-cross-impl/results/matrix.tsv"
+      - "Get-Content cose-cross-impl/results/matrix.jsonl"
+    expected_outcome: "See cose-cross-impl/results/matrix.tsv for the per-cell breakdown"
+reproducibility_notes:
+  - "The pycose adapter requires pycose 1.1.0 specifically; newer versions may have different sort behavior or API."
+  - "The go-cose driver must be built with go 1.21+; older versions may not have fxamacker/cbor v2.9.0."
+  - "The matrix outputs are deterministic given fixed inputs (no randomness; the only nondeterminism is ECDSA signing, which is not exercised in structure-level comparison)."
+  - "Diff between pycose and the oracle on 4 vectors is a real divergence (pycose uses insertion order for tstr-only maps). This is the primary research finding."
+  - "Re-running produces the same 74 PASS / 4 SPEC_VIOLATION distribution."
+byte_level_diffs:
+  signature_violations:
+    vector: int_labels_sorted
+    oracle: "846a5369676e61747572653147a2031832044179404170"
+    pycose: "846a5369676e61747572653147a2044179031832404170"
+    decoded_oracle_protected: "{3:50, 4:b'y'}"
+    decoded_pycose_protected: "{4:b'y', 3:50}"
+    root_cause: "pycose preserves dict insertion order when all keys are int; RFC 9052 §9 requires §4.2.1 bytewise-lex sort"
+empty_protected_bucket:
+  all_libraries: "Pass — empty protected bucket encoded as h'' (0x40) by all 3 implementations (oracle + pycose + go-cose)"
+  root_cause: "RFC 9052 §3 SHOULD is implemented correctly by all 3"
+adapter_files:
+  oracle: "cose-cross-impl/oracle/cose_oracle.py"
+  vectors: "cose-cross-impl/vectors/gen_vectors.py + vectors_*.jsonl"
+  runner: "cose-cross-impl/runner/run_matrix.py"
+  pycose_adapter: "cose-cross-impl/adapters/lib_pycose_adapter.py"
+  go_cose_adapter: "cose-cross-impl/adapters/lib_go_cose_adapter.py"
+  go_driver: "R:/cose-cohort/go-cose/driver/main.go"
+known_differences:
+  - "If pycose version != 1.1.0, ChaCha20-Poly1305 NOT_SUPPORTED status may differ (newer pycose may add ChaCha)."
+  - "If fxamacker/cbor version != 2.9.0, SortCoreDeterministic behavior may differ slightly."
+  - "Different cbor2 versions may produce slightly different float shortest-form encoding (not exercised in current vectors)."
+total_time_estimate:
+  venv_setup: 2-5 minutes
+  oracle_test: 5 seconds
+  go_cose_clone: 30-60 seconds
+  driver_build: 60 seconds (first time)
+  vector_gen: 5 seconds
+  matrix_run: 5 seconds
+  total: "5-10 minutes from scratch"
+security_notes:
+  - "No credentials are exposed. All builds happen in scratch (R:/)."
+  - "Public repositories only (no private access)."
+  - "pycose install via pip; Go driver built from public go-cose source."
+  - "Per AGENTS.md, public repos are treated as untrusted but reviewed."

@@ -1,0 +1,81 @@
+id: exp-2026-0032
+type: experiment
+status: completed
+created_at: "2026-09-02T04:30:00Z"
+updated_at: "2026-09-02T04:30:00Z"
+summary: "COSE message-construction conformance matrix across 2 adapters (pycose, go-cose), 40 vectors covering 10 audit axes from RFC 9052 §3-§9. Compares at the Sig_structure/Enc_structure/MAC_structure byte level (isolating message-construction logic from cryptography) and at the full CBOR-tagged message level (wrapping layer)."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: minimax-m3
+    tool: "msn-2026-0018 expanded matrix"
+  sources:
+    - knowledge/specifications/spc-2026-0005.yaml
+    - knowledge/implementations/imp-2026-0018.yaml  # (CBOR cohort for context)
+    - cose-cross-impl/oracle/cose_oracle.py
+    - cose-cross-impl/vectors/gen_vectors.py
+    - cose-cross-impl/runner/run_matrix.py
+    - cose-cross-impl/adapters/lib_pycose_adapter.py
+    - cose-cross-impl/adapters/lib_go_cose_adapter.py
+    - https://www.rfc-editor.org/rfc/rfc9052
+    - https://www.rfc-editor.org/rfc/rfc9053
+  parent: msn-2026-0018
+  generation: 0
+links:
+  targets: [tgt-2026-0006]
+  specifications: [spc-2026-0005]
+  implementations: [imp-2026-0018]  # pycose will get its own ID
+  hypotheses: [hyp-2026-0027]  # placeholder, will reference
+  observations: [obs-2026-0042]
+title: "EXP-2026-0032 - COSE message-construction matrix (40 vectors x 2 adapters)"
+design:
+  question: "Across 2 lineage-independent COSE implementations (pycose 1.1.0, go-cose 1.3.0), do the Sig_structure / Enc_structure / MAC_structure bytes per RFC 9052 §4.4/§5.3/§6.3 match a cleanroom Python oracle for 40 discriminating vectors across 10 audit axes?"
+  cohort:
+    - "pycose 1.1.0 (Timothy Claeys, uses cbor2 CBOR backend)"
+    - "go-cose 1.3.0 (Veraison/ex-Mozilla, uses fxamacker/cbor SortCoreDeterministic)"
+  vectors:
+    count: 40
+    axes: 10
+    axes_detail:
+      cose_cxess_sign1_message_construction: 10
+      cose_encrypt0_message_construction: 5
+      cose_mac0_message_construction: 5
+      empty_protected_bucket: 5
+      header_label_sorting: 4
+      ecdsa_r_s_encoding: 3
+      eddsa_signature_encoding: 1
+      aes_gcm_nonce_construction: 3
+      deterministic_ecdsa_nonce: 3
+      cose_kdf_context: 1
+    seed: "0xC0DE0CB0"
+  comparison_levels:
+    structure: "Sig_structure / Enc_structure / MAC_structure bytes (no crypto)"
+    message: "Full CBOR-tagged COSE message bytes (wrapping layer)"
+  oracle: "Frontier cleanroom Python (cose-cross-impl/oracle/cose_oracle.py), derived exclusively from RFC 9052/9053 text"
+expected_outcomes:
+  - "pycose and go-cose agree with oracle on most structure bytes"
+  - "Differences in sort order (RFC 9052 §9 requires §4.2.1 bytewise-lex)"
+  - "Possible ChaCha20-Poly1305 NOT_SUPPORTED (pycose 1.1.0 has no ChaCha)"
+compute:
+  route: "lightweight (local)"
+  duration_minutes: 2
+  notes: "All matrix runs execute in <2 minutes on commodity hardware; build of go-cose driver takes ~30s on first invocation."
+budget_consumed:
+  attempts: 3  # pycose only -> pycose+go-cose -> final with kdf_context fix
+  compute_runs: 80  # 40 vectors x 2 adapters
+  reviews: 0
+results: "See obs-2026-0042"
+links_referenced:
+  - knowledge/implementations/imp-2026-0021.yaml  # go-cose
+  - knowledge/notes/msn-2026-0018.md  # mission notes
+artifact_paths:
+  - cose-cross-impl/oracle/cose_oracle.py
+  - cose-cross-impl/vectors/gen_vectors.py
+  - cose-cross-impl/vectors/vectors_*.jsonl
+  - cose-cross-impl/adapters/lib_pycose_adapter.py
+  - cose-cross-impl/adapters/lib_go_cose_adapter.py
+  - cose-cross-impl/runner/run_matrix.py
+  - cose-cross-impl/results/matrix.tsv
+  - cose-cross-impl/results/matrix.jsonl

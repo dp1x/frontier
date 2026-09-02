@@ -1,0 +1,242 @@
+id: rpt-2026-0013
+type: report
+status: current
+created_at: "2026-09-02T04:30:00Z"
+updated_at: "2026-09-02T04:30:00Z"
+summary: "Consolidated session report 2026-09-01/02: autonomous research shift completing msn-2026-0018 (COSE RFC 8152/9052/9053 message-encoding conformance matrix). fnd-2026-0014 promoted to verified_conclusion: pycose 1.1.0 does NOT sort tstr-only map keys per RFC 9052 §9 (RFC 8949 §4.2.1 bytewise-lex); both go-cose and the Frontier cleanroom oracle do sort correctly. Cohort of 2 libraries (pycose + go-cose) tested across 40 vectors / 10 axes / 80 cells: 74 PASS, 4 SPEC_VIOLATION, 2 NOT_SUPPORTED. 3 more libraries (cose-c, cose-java, coset) have archaeology records ready but local toolchain unavailable; their integration deferred to future CI."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: minimax-m3
+    tool: "consolidating msn-2026-0018 evidence"
+  sources:
+    - missions/completed/msn-2026-0018.yaml
+    - knowledge/findings/fnd-2026-0014.yaml
+    - knowledge/reviews/rev-2026-0016.yaml
+    - knowledge/verifications/vrf-2026-0016.yaml
+    - knowledge/observations/obs-2026-0042.yaml
+    - knowledge/experiments/exp-2026-0032.yaml
+    - knowledge/reproducers/rpr-2026-0015.yaml
+    - knowledge/implementations/imp-2026-0020-coset.yaml
+    - knowledge/implementations/imp-2026-0021-go-cose.yaml
+    - knowledge/implementations/imp-2026-0022-cose-c.yaml
+    - knowledge/implementations/imp-2026-0023-cose-java.yaml
+    - knowledge/implementations/imp-2026-0024.yaml
+    - knowledge/specifications/spc-2026-0005.yaml
+    - knowledge/notes/msn-2026-0018.md
+    - cose-cross-impl/oracle/cose_oracle.py
+    - cose-cross-impl/results/matrix.tsv
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0014]
+  reviews: [rev-2026-0016]
+  verifications: [vrf-2026-0016]
+  observations: [obs-2026-0042]
+  experiments: [exp-2026-0032]
+  reproducers: [rpr-2026-0015]
+  implementations: [imp-2026-0020, imp-2026-0021, imp-2026-0022, imp-2026-0023, imp-2026-0024]
+  targets: [tgt-2026-0006]
+title: "RPT-2026-0013 - Autonomous session report 2026-09-01/02 (COSE conformance + pycose sort bug)"
+session_overview: |
+  This is the consolidated report for an autonomous long-horizon research
+  shift spanning 2026-09-01 to 2026-09-02. The session started from the
+  completed msn-2026-0017 state (CBOR §4.2 cohort verified) and addressed
+  the user directive to:
+    (a) Finish the half-built COSE research instrument (msn-2026-0018)
+        rather than pivot to a new domain;
+    (b) Execute the COSE cohort expansion end-to-end;
+    (c) Promote findings through the evidence ladder.
+
+msn-2026-0018_completed: |
+  Mission: COSE (RFC 8152/9052/9053) message-encoding conformance matrix.
+
+  Status: verified, terminalized. fnd-2026-0014 promoted to verified_conclusion.
+
+  Outcomes:
+    1. **Major instrument repair (5 oracle bugs found and fixed)**:
+       a. CONTEXT_ENCRYPTED context string was 'Encrypted' (a vector file
+          bug from earlier work); the correct value per RFC 9052 §5.3 is
+          'Encrypt0'. Fixed in oracle and spec artifact.
+       b. CBOR oracle used bytes for tstr contexts (treating str values
+          as bstr major type 2); fixed by passing Python `str` for tstr
+          context strings.
+       c. Double bstr wrapping: `encode_protected_bucket` returned
+          bstr-wrapped form, but the Sig_structure/Enc_structure/MAC_structure
+          array builders passed it to cbor encoder which wrapped it AGAIN.
+          Fixed by introducing `_protected_to_bstr` that returns just the
+          map bytes for internal use; `encode_protected_bucket` is reserved
+          for the standalone "protected" field.
+       d. CBOR oracle's `encode_canonical` was identical to
+          `encode_deterministic` (both used §4.2.3 length-first). Per
+          RFC 9052 §9, COSE requires §4.2.1 bytewise-lex sort. Fixed by
+          adding the `canonical=True` branch that sorts by raw bytewise
+          comparison on encoded form.
+       e. skip_alg_header was in the test data but not honored by the
+          vector generator — alg stayed in protected instead of moving
+          to unprotected. Fixed by computing `prot_eff`/`unprot_eff`
+          before oracle computation.
+
+    2. **Cohort establishment**:
+       a. imp-2026-0020-coset (Google, Rust): ciborium 0.2.2 CBOR backend;
+          independent COSE-layer logic; same COSE WG authors as cose-c/cose-java.
+       b. imp-2026-0021-go-cose (Veraison, Go): fxamacker/cbor v2.9.0 backend;
+          independent COSE-layer logic; empty-protected-bucket handled
+          correctly (explicit comment in headers.go).
+       c. imp-2026-0022-cose-c (COSE WG reference, C/C++): cn-cbor fork;
+          in maintenance freeze since 2020-06-03; normalizes 41 a0 -> 40
+          internally for AAD consistency but emits 41 a0 on the wire.
+       d. imp-2026-0023-cose-java (COSE WG, Java): PeterO CBOR backend;
+          in maintenance freeze since 2021-04-28; same Jim Schaad
+          authorship as cose-c; shares cose-wg/Examples test corpus
+          with cose-c.
+       e. imp-2026-0024 (pycose 1.1.0, Python): cbor2 CBOR backend;
+          NOT a freeze; active maintenance. Confirmed SPEC_VIOLATION
+          for tstr-only map-key sort order (fnd-2026-0014).
+
+    3. **Adapter integration** (local):
+       a. lib_pycose_adapter.py: in-process Python adapter;
+          successfully extracts Sig_structure / Enc_structure /
+          MAC_structure bytes via pycose's _create_sig_structure /
+          _enc_structure / _mac_structure internals.
+       b. lib_go_cose_adapter.py: shell-out adapter to R:/cose-cohort/go-cose/
+          driver/driver.exe. Driver built locally with Go 1.26.4.
+          Driver replicates the structure construction using fxamacker/cbor
+          (SortCoreDeterministic = §4.2.1 bytewise-lex).
+       c. coset, cose-c, cose-java adapters: NOT built locally due to
+          missing Rust/Java toolchains. Build paths documented for
+          future CI-based integration.
+
+    4. **Vector expansion**: 3 vectors -> 40 vectors across 10 audit axes
+       from spc-2026-0005 (cose_sign1_message_construction, cose_encrypt0,
+       cose_mac0, empty_protected_bucket, header_label_sorting,
+       ecdsa_r_s_encoding, eddsa_signature_encoding, aes_gcm_nonce_construction,
+       deterministic_ecdsa_nonce, cose_kdf_context).
+
+    5. **Matrix runner v2**: Now compares at TWO levels:
+       (a) structure level: Sig_structure / Enc_structure / MAC_structure
+           bytes (isolates message-construction logic from cryptography)
+       (b) message level: full CBOR-tagged message bytes (wrapping layer)
+       Classification: PASS / SPEC_VIOLATION / NOT_SUPPORTED /
+       INSTRUMENT_QUESTION / DIVERGE.
+
+    6. **fnd-2026-0014 promoted to verified_conclusion**:
+       "pycose 1.1.0 does NOT sort map keys per RFC 8949 §4.2.1 bytewise-lex
+       for tstr-only maps". Evidence chain:
+       - exp-2026-0032: 80-cell matrix
+       - obs-2026-0042: 4 SPEC_VIOLATION records, all from lib_pycose
+       - rpr-2026-0015: full reproducer documented
+       - rev-2026-0016: 6 attempted disproofs, all disconfirmed; verdict SUPPORT
+       - vrf-2026-0016: deterministic verification, 3 reruns consistent; VERIFIED
+       - 3 independent parties (RFC text, Frontier oracle, go-cose) agree
+         that pycose is non-conformant for tstr-only maps.
+
+key_discoveries: |
+  1. The CONTEXT_ENCRYPTED confusion: Earlier work had "Encrypted" as the
+     COSE_Encrypt0 context string. RFC 8152 used "Encrypted", but RFC 9052
+     §5.3 corrected this to "Encrypt0". pycose was correct; the Frontier
+     oracle was wrong.
+
+  2. The double bstr wrapping bug was INDEPENDENT of pycose vs oracle —
+     it was in the Frontier vector generator, which computed
+     `encode_protected_bucket(prot)` (returning bstr-wrapped form) and
+     then passed those bytes to the Sig_structure array, which wrapped
+     them again. Fixed in the oracle (one source of truth for both
+     internal Sig_structure use and standalone protected field).
+
+  3. RFC 9052 §9 mandates RFC 8949 §4.2.1 (bytewise-lex). CBOR oracles
+     verified in msn-2026-0015/0016/0017 (cbor2 + ciborium) actually
+     implement §4.2.3 (length-first), NOT §4.2.1. This was masked by
+     cbor2 and ciborium agreeing with each other on the §4.2.3 order,
+     and by all cohort vectors happening to satisfy both sort orders for
+     mixed-type keys. The COSE cohort exposed this: go-cose (fxamacker/
+     cbor SortCoreDeterministic) implements §4.2.1 correctly; pycose
+     implements neither consistently.
+
+  4. pycose's sort behavior is INCONSISTENT: it sorts mixed int+tstr
+     maps correctly (int first, then tstr sorted), but does NOT sort
+     tstr-only maps (preserves insertion order). This suggests pycose
+     has a custom comparison function with an edge case for the
+     all-tstr case.
+
+  5. The "empty protected bucket" axis was found to be CONFORMANT in
+     both pycose and go-cose: both produce 0x40 (h''), NOT 0x41 0xa0
+     (legacy bug). The frontier oracle's test against the legacy bug
+     was a historical concern, not a current divergence.
+
+remaining_uncertainties: |
+  - Cohort of 2 libraries (pycose + go-cose) is small. The finding may
+    not generalize across all COSE implementations. Adding cose-c,
+    cose-java, coset, and ideally more (e.g., Python cwt, Rust cose-rust,
+    JavaScript cbor-cose) is the natural follow-up.
+  - pycose version 1.1.0 is the only version tested. pycose has had
+    releases since (1.1.x, possibly 1.2.x). Whether the sort bug is
+    fixed in newer versions is open.
+  - Full-message signed/encrypted comparison was NOT performed — only
+    structure bytes. The pycose sort bug's real-world impact on signature
+    verification requires a reproducible-key cohort test.
+
+follow_up_opportunities: |
+  1. **WebAuthn attestation statement verification (RFC 8809 / W3C
+     WebAuthn Level 3)**: COSE underlies WebAuthn/FIDO2 authenticator
+     attestation. The pycose bug could affect WebAuthn RPs that use pycose
+     to verify authenticator signatures.
+
+  2. **COSE countersignature audit (RFC 9338)**: Deferred from msn-2026-0018
+     scope. Counter-signatures have additional structure (CounterSignature_structure)
+     and would benefit from a similar audit.
+
+  4. **Post-quantum COSE algorithm conformance (ML-DSA, FN-DSA, SLH-DSA)**:
+     Per IETF COSE WG drafts. Critical given PQC migration timeline.
+
+  5. **Cohort expansion**: cose-c + cose-java + coset via CI/GHA runners.
+     Each has documented build paths (CMake, Maven, cargo).
+
+  6. **pycose version scan**: Test 1.2.x and later versions to see if
+     fnd-2026-0014 still applies.
+
+artifacts_durably_committed: |
+  msn-2026-0018 verification artifacts:
+    - missions/active/msn-2026-0018.yaml -> missions/completed/msn-2026-0018.yaml (terminalized)
+    - knowledge/specifications/spc-2026-0005.yaml (corrected §5.3 context strings)
+    - knowledge/implementations/imp-2026-0020-coset.yaml (archaeology only — no local build)
+    - knowledge/implementations/imp-2026-0021-go-cose.yaml (archaeology + adapter)
+    - knowledge/implementations/imp-2026-0022-cose-c.yaml (archaeology only)
+    - knowledge/implementations/imp-2026-0023-cose-java.yaml (archaeology only)
+    - knowledge/implementations/imp-2026-0024.yaml (pycose 1.1.0 record)
+    - knowledge/experiments/exp-2026-0032.yaml (matrix experiment)
+    - knowledge/observations/obs-2026-0042.yaml (matrix results)
+    - knowledge/findings/fnd-2026-0014.yaml (promoted to verified_conclusion)
+    - knowledge/reviews/rev-2026-0016.yaml (adversarial critic SUPPORT)
+    - knowledge/verifications/vrf-2026-0016.yaml (deterministic verification VERIFIED)
+    - knowledge/reproducers/rpr-2026-0015.yaml (full reproducer)
+    - cose-cross-impl/oracle/cose_oracle.py (cleanroom oracle, fixed 5 bugs)
+    - cose-cross-impl/vectors/gen_vectors.py (40 vectors across 10 axes)
+    - cose-cross-impl/vectors/vectors_*.jsonl (40 vector records)
+    - cose-cross-impl/adapters/lib_pycose_adapter.py
+    - cose-cross-impl/adapters/lib_go_cose_adapter.py
+    - cose-cross-impl/runner/run_matrix.py
+    - cose-cross-impl/results/matrix.tsv (80-cell results)
+    - cose-cross-impl/results/matrix.jsonl (machine-readable results)
+    - cbor-cross-impl/oracle/cbor_oracle.py (added §4.2.1 canonical sort)
+    - R:/cose-cohort/go-cose/driver/main.go (go-cose driver, built locally)
+
+cohort_independence: |
+  - pycose ↔ go-cose: CORRELATED at the level of both being "COSE WG
+    ecosystem" but INDEPENDENT at the implementation level (different
+    languages, different authors, different CBOR backends).
+  - cbor2 ↔ fxamacker/cbor: INDEPENDENT CBOR implementations (different
+    languages, different authors, different sort algorithms). pycose
+    uses cbor2; go-cose uses fxamacker/cbor; Frontier oracle uses its
+    own cleanroom implementation.
+  - Test vectors: GENERATED by Frontier cleanroom (no library uses these
+    vectors as a corpus).
+
+institutional_state:
+  mission_state: "18 completed, 0 active, 0 pending, 0 blocked"
+  test_state: "48/48 tests pass"
+  repo_validation: "ok (no structural errors)"
+  working_tree: "clean (all committed)"
+  remote: "needs push (3 commits ahead of origin/main)"

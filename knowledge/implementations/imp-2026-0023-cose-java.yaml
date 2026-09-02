@@ -108,7 +108,12 @@ empty_protected_bucket:
     ensures cose-java signs the correct Sig_structure even if its wire-format empty
     protected bucket diverges from the RFC 9052 §3 SHOULD."
 test_vectors_used:
-  source: "cose-wg/Examples (https://github.com/cose-wg/Examples) per README: 'Automated checking is performed using the COSE Examples as part of the suite.' cose-c also uses this corpus. Per README search method: '1) If c:\\Projects\\cose\\" exists then it uses that as the directory to look in for the examples. 2) It expects that the examples are in the same directory as the pom.xml file.'"
+  source: >
+    cose-wg/Examples (https://github.com/cose-wg/Examples) per README.
+    cose-java uses the COSE Examples corpus as part of the test suite.
+    cose-c also uses this corpus. Per README search method:
+    1) If c:\\Projects\\cose\\ exists then it uses that as the directory.
+    2) It expects that the examples are in the same directory as the pom.xml file.
   independence: "cose-wg/Examples is the shared COSE WG reference corpus. cose-java and cose-c both consume it — this is a CORRELATED test vector source between these two cohort members."
 last_commit:
   sha: e461e5e9f87e18f88ff33d5344c7512b4c3b4bdd

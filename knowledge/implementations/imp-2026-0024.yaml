@@ -1,0 +1,71 @@
+id: imp-2026-0024
+type: implementation
+status: current
+created_at: "2026-09-02T04:30:00Z"
+updated_at: "2026-09-02T04:30:00Z"
+summary: "Python pycose 1.1.0 by Timothy Claeys. Implements COSE_Sign1/Encrypt0/Mac0 + multi-recipient variants. Uses cbor2 as the underlying CBOR encoder but pycose has its own internal CBOR encoding for COSE message structures. Note: pycose's own CBOR encoder for protected/unprotected header maps does NOT sort keys per RFC 8949 §4.2.1 for tstr-only maps — preserves dict insertion order instead. This is a confirmed SPEC_VIOLATION per RFC 9052 §9 (see fnd-2026-0014)."
+epistemic_status: verified_conclusion
+provenance:
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: minimax-m3
+    tool: "msn-2026-0018 finalization"
+  sources:
+    - https://github.com/TimothyClaeys/pycose
+    - knowledge/findings/fnd-2026-0014.yaml
+    - knowledge/observations/obs-2026-0042.yaml
+    - cose-cross-impl/adapters/lib_pycose_adapter.py
+    - .venv/Lib/site-packages/pycose/
+  parent: tgt-2026-0006
+  generation: 0
+links:
+  targets: [tgt-2026-0006]
+  specifications: [spc-2026-0005]
+  findings: [fnd-2026-0014]
+  observations: [obs-2026-0042]
+  experiments: [exp-2026-0032]
+title: "IMP-2026-0024 - Python pycose 1.1.0 (Timothy Claeys)"
+name: pycose
+language: Python
+repo: https://github.com/TimothyClaeys/pycose
+version: 1.1.0
+authors:
+  - "Timothy Claeys (sole author/maintainer)"
+lineage: original independent implementation, no fork ancestry
+independence:
+  shared_authors_with_audited: none identified
+  shared_code_with_audited: "none (no shared COSE libraries)"
+  shared_test_vectors_with_audited: "no (uses its own test suite; pulls RFC 9053 vectors)"
+  shared_runtime_dependencies_with_audited: "uses cbor2 (already in Frontier CBOR cohort)"
+  independence_basis: "independent language (Python), independent author, independent codebase"
+canonical_mode:
+  supported: true
+  note: "pycose supports canonical CBOR via cbor2 (canonical=True). HOWEVER, pycose's own internal CBOR encoder for COSE message structures does NOT sort tstr-only map keys per §4.2.1 — preserves insertion order. This is the basis of fnd-2026-0014."
+specification:
+  primary: "RFC 9052 (COSE: Structures and Process)"
+  secondary: "RFC 8152 (legacy), RFC 9053 (algorithms), RFC 9338 (countersignatures)"
+conformance_findings:
+  rfc_9052_section_3: "PASS — empty protected bucket encoded as h'' (0x40), not 41 a0"
+  rfc_9052_section_4_4: "PASS — Sig_structure bytes correct for Sign1 (verified 9/10 vectors; 1 case with two_int_headers originally failed due to vector generator bug, fixed)"
+  rfc_9052_section_5_3: "PASS — Enc_structure uses 'Encrypt0' context (correct), AAD construction correct"
+  rfc_9052_section_6_3: "PASS — MAC_structure uses 'MAC0' context, correct"
+  rfc_9052_section_9: "FAIL for tstr-only maps — pycose preserves insertion order, not §4.2.1 bytewise-lex"
+  rfc_9053_section_2_1: "NOT TESTED — requires fixed keypairs to verify r||s length; would need full sign/verify cycle"
+  rfc_9053_section_3_1: "NOT TESTED — same reason"
+  rfc_9053_section_5: "PASS — AES-GCM (A128GCM) supported; ChaCha20-Poly1305 NOT_SUPPORTED in 1.1.0"
+  rfc_9053_section_5_2: "PASS — COSE_KDF_Context structure correct"
+adapter:
+  path: cose-cross-impl/adapters/lib_pycose_adapter.py
+  version_in_adapter: 1.1.0
+matrix_results:
+  structure_level: "35 PASS, 4 SPEC_VIOLATION (header_label_sorting), 1 NOT_SUPPORTED (encrypt0_chacha20)"
+  structure_spec_violations: 4
+  structure_pass: 35
+  structure_not_supported: 1
+limitations:
+  - "ChaCha20-Poly1305 NOT_SUPPORTED (no ChaCha algorithm in pycose.algorithms)"
+  - "Map-key sort order non-conformant for tstr-only maps (fnd-2026-0014)"
+  - "Uses cbor2 for byte-level encoding, correlated with CBOR cohort (but COSE-layer is independent)"
+notes_path: knowledge/notes/msn-2026-0018.md
