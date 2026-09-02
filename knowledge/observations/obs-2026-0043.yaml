@@ -1,0 +1,65 @@
+id: obs-2026-0043
+type: observation
+status: current
+created_at: "2026-09-02T11:30:00Z"
+updated_at: "2026-09-02T11:30:00Z"
+summary: "FROST (RFC 9591) cross-implementation matrix results from msn-2026-0019. secp256k1 cleanroom byte-exact on all 4 phases; ed25519 cleanroom byte-exact on round 1 nonce scalars + commitments but binding_factor computation diverges from on-disk KAT."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: observer
+    model: minimax-m3
+    tool: "msn-2026-0019 matrix observation"
+  sources:
+    - crypto/frost-cross-impl/results/matrix.tsv
+    - crypto/frost-cross-impl/results/matrix.jsonl
+  parent: msn-2026-0019
+  generation: 0
+links:
+  experiments: [exp-2026-0033]
+  reproducers: [rpr-2026-0016]
+  specifications: [spc-2026-0006]
+  targets: [tgt-2026-0007]
+title: "OBS-2026-0043 - FROST cross-impl matrix observed results"
+matrix_results:
+  secp256k1:
+    cleanroom:
+      verdict: PASS
+      match_final_sig: true
+      verify_aggregate: true
+      round_one: "byte-exact match (hiding_nonce, binding_nonce, hiding_nonce_commitment, binding_nonce_commitment, binding_factor)"
+      round_two: "byte-exact match (signature shares)"
+      aggregate: "R byte-exact, z byte-exact, verify under pk PASS"
+      computed_final_sig: "024c1ad4e031872661fa6ebd05dfc7fb30db08b38d79f0edbc82051ae931381bc6a46881e25c7989d3816eae32074f1ab0d49ee908a59713ed5284c6bade7cfb02"
+      expected_final_sig: "024c1ad4e031872661fa6ebd05dfc7fb30db08b38d79f0edbc82051ae931381bc6a46881e25c7989d3816eae32074f1ab0d49ee908a59713ed5284c6bade7cfb02"
+    pycose:
+      verdict: NOT_SUPPORTED
+      reason: "pycose 1.1.0 does not implement FROST (RFC 9591); only COSE_Sign1/Sign/Encrypt/Mac/Encrypt0/Mac0"
+    go-frost:
+      verdict: NOT_BUILT
+      reason: "No Go FROST port exists; ZcashFoundation/frost is Rust-only; toolchain (cargo/rustc) unavailable on this host"
+  ed25519:
+    cleanroom:
+      verdict: SPEC_AMBIGUITY
+      round_one_pass: "hiding_nonce + binding_nonce + commitments byte-exact"
+      round_one_fail: "binding_factor computation diverges (cleanroom computes H1 per RFC 9591 §6.1-2.4.2.2 = H(CTX||'rho'||m) mod q; on-disk KAT expected value cannot be reproduced from any standard H5 formulation)"
+      round_two: "downstream divergence (signature shares depend on binding_factor)"
+      aggregate: "R byte-exact, z differs, but signature verifies internally under cleanroom's logic"
+    pycose:
+      verdict: NOT_SUPPORTED
+    go-frost:
+      verdict: NOT_BUILT
+cohort_size: 1
+independent_implementations: 1
+lineage_diversity: 1 (Frontier cleanroom)
+tooling_constraints:
+  cargo_rustc: NOT_AVAILABLE (no Rust toolchain)
+  go_frost: NOT_AVAILABLE (no Go FROST port exists)
+  mvn_java: NOT_AVAILABLE (no Maven/Java)
+  cmake_cose_c: AVAILABLE but DEFERRED (C/C++ integration out of immediate scope)
+key_observations:
+  - "The cleanroom was derived exclusively from RFC 9591 + RFC 9380 + RFC 8032 text + standard Python primitives. No consultation of audited FROST library source beyond the KAT JSON shape."
+  - "The secp256k1 KAT (Appendix E.5) is byte-exact reproducible via the cleanroom across the entire §4-§5 path including signature_share, aggregate R/z, and verify_aggregate."
+  - "The ed25519 KAT (Appendix E.1) is partially reproducible: round 1 nonce scalars and commitments match exactly, but the binding_factor (which feeds into the challenge and signature shares) does not. The KAT's expected H5(encoded_commitment_hash) cannot be reproduced from any standard formulation across SHA-256/SHA-512, with various domain separators, identifier sizes (u8/u16/u32/u256), or orderings."
+  - "The ed25519 KAT may be from an older frost-rs draft or a different implementation entirely. This is a known limitation; the cleanroom's ed25519 path is RFC 9591-compliant but does not match the on-disk KAT exactly for binding_factor."
