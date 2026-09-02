@@ -1,0 +1,163 @@
+id: tgt-2026-0007
+type: target
+status: active
+created_at: "2026-09-02T11:30:00Z"
+updated_at: "2026-09-02T11:30:00Z"
+summary: "FROST (RFC 9591) threshold Schnorr signature cross-implementation byte-exact differential — per-step intermediate outputs (commitments, binding factors, binding nonces, signature shares, aggregate (R, z)) and negative-stimulus behavior (nonce reuse, off-curve R, threshold dropout, s outside [1, n-1]). The IETF FROST ecosystem (RFC 9591, June 2024) has been stable for ~14 months but has no public byte-exact cross-impl matrix; a confirmed byte-exact agreement is a discovery-grade positive finding and any divergence is a consensus-failure-class hazard for Chia/Liquid custody integrations."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: minimax-m3
+    tool: "post-msn-2026-0018 opportunity scan; FROST scout dossier synthesis"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost-dkg/
+    - https://ia.cr/2020/852 (Komlo et al. FROST paper)
+    - https://github.com/ZcashFoundation/frost-rs
+    - https://github.com/zksecurity/frost
+    - knowledge/notes/scout-frost-2026-08-31.md
+    - knowledge/notes/msn-2026-0018.md
+    - crypto/frost-cross-impl/cleanroom/frost_cleanroom.py
+    - crypto/frost-cross-impl/kat/rfc9591_appendix_e5_secp256k1.json
+    - crypto/frost-cross-impl/kat/rfc9591_appendix_e1_ed25519.json
+    - knowledge/findings/fnd-2026-0007.yaml (X-Wing/HPKE byte-exact prior)
+    - knowledge/findings/fnd-2026-0008.yaml (X-Wing + HPKE cross-impl byte-exact prior)
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0006]
+  implementations: []
+  hypotheses: []
+title: "TGT-2026-0007 - FROST (RFC 9591) threshold signature cross-implementation byte-exact differential"
+selection_rationale: >
+  After msn-2026-0018 (COSE message-encoding conformance) reached verified
+  terminal state with fnd-2026-0014 promoted (pycose tstr-only sort bug),
+  a bounded opportunity scan was run against the existing scout dossiers
+  (knowledge/notes/scout-frost-2026-08-31.md,
+  knowledge/notes/scout-protocol-interop-2026-08-30.md,
+  knowledge/notes/scout-formal-proof-assistants-2026-08-31.md,
+  knowledge/notes/scout-cbor-cose-webauthn-2026-08-31.md) plus the
+  Frontier coverage matrix.
+
+  Frontier's covered territory as of 2026-09-02:
+    - ML-KEM (FIPS 203): very thorough (msn-2026-0001, 0002, 0005, 0008)
+    - HPKE / X-Wing KEM: very thorough (msn-2026-0008, 0009)
+    - SSH/TLS hybrid KEM: very thorough (msn-2026-0005, 0010, 0011)
+    - FROST (RFC 9591): cleanroom + vectors only — NOT actually run
+    - CBOR / COSE: very thorough (msn-2026-0015, 0016, 0017, 0018)
+    - Formal verification (Lean 4): three FORMAL missions completed
+    - DNS / X.509 / QUIC: only scout dossiers; never activated
+    - C23 _BitInt: env blocker (fnd-2026-0011)
+
+  Why FROST is the strongest next target:
+
+  1. **Methodological inheritance from a proven harness.** Frontier's
+     CBOR (msn-2026-0015-0017) and COSE (msn-2026-0018) missions
+     established a reusable byte-exact differential harness pattern:
+     cleanroom Python oracle + per-impl adapter subprocesses +
+     deterministic seeded vector generator + matrix runner producing
+     TSV + JSONL + verdict classification (PASS / SPEC_VIOLATION /
+     INTEROP_BREAK / ERROR / NOT_SUPPORTED). The FROST mission
+     inherits this pattern verbatim.
+
+  2. **Cleanroom oracle + KAT vectors already on disk.**
+     `crypto/frost-cross-impl/cleanroom/frost_cleanroom.py` exists
+     with `secp256k1_sha256` reference implementation against
+     `kat/rfc9591_appendix_e5_secp256k1.json` (matching the
+     ZcashFoundation/frost-rs KAT JSON shape). `kat/rfc9591_appendix_e1_ed25519.json`
+     is also already on disk. The cleanroom currently verifies only
+     up to `binding_factor` — extending it to `signature_share` and
+     `aggregate (R, z)` requires secp256k1 point addition (the existing
+     code calls out this gap explicitly).
+
+  3. **Lineage-independence ceiling is 2-3 but real.** As of 2026-01:
+       - `frost-rs` (ZCashFoundation Rust crate) — Chia / Liquid
+         production; active maintenance; 3.x release line.
+       - `frost` (ZKSecurity Go reference, ~5k LOC, derived from Komlo
+         et al. paper) — Go lineage; distinct code path.
+       - `frost-dkg` (companion DKG crate) — same lineage as frost-rs.
+     `frost-rs` and `frost-dkg` share lineage; independence ceiling
+     is effectively `frost-rs` vs `frost` + cleanroom oracle. The CBOR
+     cohort achieved verified_conclusion with 3 independent lineages
+     (oracle + cbor2 + ciborium) — FROST will likely achieve the same
+     with 3 (oracle + frost-rs + frost) but with a smaller cohort.
+
+  4. **Lightweight compute.** frost-rs `cargo build --release` <60s;
+     frost Go `go build ./...` ~5s; cleanroom runs in seconds. Total
+     wall clock for full matrix <5 min. No Docker, no GHA, no fuzzing,
+     no cross-platform.
+
+  5. **Genuinely new family.** Threshold signatures are a different
+     primitive family from anything Frontier has covered (single-party
+     sigs via X-Wing, KEMs, encryption envelopes). A successful FROST
+     matrix opens the threshold-sig family for follow-up missions
+     (FROST-2, BLS threshold, MuSig2).
+
+  6. **Discovery potential is non-trivial.** RFC 9591 is precise but
+     has at least 4 latent divergence classes:
+       - participant encoding (uint16 vs uint32; inclusive vs exclusive)
+       - binding_factor domain-separation context-string variants
+       - transcript-commitment ordering (sorted vs insertion order)
+       - Lagrange basis implementation (Barycentric vs naive)
+     The cleanroom oracle matches frost-rs's KAT shape exactly, so
+     its derivation is "RFC 9591 text + ZCashFoundation/frost-rs
+     KAT JSON shape" — this is a documented cleanroom derivation
+     constraint that will be preserved and audited.
+
+  7. **Disclosure surface is well-defined.** IETF cfrg WG mailing
+     list + ZCashFoundation security + Chia/Liquid custody. Findings
+     classify as either interop notes (no CVE class) or consensus-
+     failure hazards (relevant for Chia/Liquid integration).
+
+  Out-of-scope:
+    - FROST-2 / Round-Optimized-Threshold variants
+    - BLS threshold signatures (separate primitive family)
+    - DKG (companion; could be a follow-up)
+    - Threshold Ed25519 vs single-party Ed25519 interop (RFC 8032 vs RFC 9591)
+    - Security proofs / SUF-CMA reduction verification
+    - Performance / timing benchmarks
+candidate_implementations:
+  - id: imp-pending-frost-rs
+    name: frost-rs
+    language: Rust
+    repo: https://github.com/ZcashFoundation/frost-rs
+    lineage: ZCashFoundation (Chia, Liquid custody)
+    expected_build: cargo build --release (~60s)
+    notes: Production Rust crate. Already used by Chia blockchain.
+  - id: imp-pending-frost-go
+    name: frost
+    language: Go
+    repo: https://github.com/zksecurity/frost
+    lineage: ZKSecurity Go reference (~5k LOC, Komlo et al. paper)
+    expected_build: go build ./... (~5s)
+    notes: Distinct codebase from frost-rs. Go-native.
+  - id: imp-pending-cleanroom-oracle
+    name: frost_cleanroom (Frontier Python)
+    language: Python
+    repo: crypto/frost-cross-impl/cleanroom/frost_cleanroom.py
+    lineage: Frontier LLM-derived from RFC 9591 text + ZCashFoundation KAT JSON shape
+    expected_build: no build; runs in-process
+    notes: Already on disk; needs secp256k1 point-addition extension.
+candidate_test_vectors:
+  - source: RFC 9591 Appendix E.5 (secp256k1_sha256)
+    url: https://www.rfc-editor.org/rfc/rfc9591#appendix-E.5
+    file: crypto/frost-cross-impl/kat/rfc9591_appendix_e5_secp256k1.json
+    independence: full (IETF canonical KAT)
+  - source: RFC 9591 Appendix E.1 (Ed25519-SHA512)
+    url: https://www.rfc-editor.org/rfc/rfc9591#appendix-E.1
+    file: crypto/frost-cross-impl/kat/rfc9591_appendix_e1_ed25519.json
+    independence: full (IETF canonical KAT)
+  - source: Frontier-generated corpus
+    url: pending
+    independence: full (cleanroom synthesis)
+candidate_specifications:
+  - spc-2026-0006 (RFC 9591 — to be created)
+epistemic_status_long: |
+  Target status is "active" because scout synthesis is complete and
+  candidate implementations + vector sources are identified. Target
+  is promoted to "verified" only after msn-2026-0019 reaches terminal
+  state with at least one promoted finding OR explicitly classified
+  as "inconclusive-after-budget" with documented reason.
+notes_path: knowledge/notes/tgt-2026-0007.md

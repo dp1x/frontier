@@ -1,0 +1,222 @@
+id: spc-2026-0006
+type: specification
+status: current
+created_at: "2026-09-02T11:30:00Z"
+updated_at: "2026-09-02T11:30:00Z"
+summary: "FROST (Flexible Round-Optimized Schnorr Threshold Signatures) — RFC 9591 (June 2024, IETF Standard), IETF cfrg WG. Defines a two-round threshold Schnorr signature scheme over a prime-order group, parameterized by a ciphersuite that fixes the group, hash function, and context-string. Authoritative source: rfc-editor.org."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: specification-analyst
+    model: minimax-m3
+    tool: "RFC 9591 normative extract for msn-2026-0019"
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost-dkg/
+    - https://ia.cr/2020/852
+  parent: null
+  generation: 0
+links:
+  targets: [tgt-2026-0007]
+  implementations: []
+  hypotheses: []
+title: "SPC-2026-0006 - FROST (RFC 9591) normative extract"
+normative_extract: |
+  RFC 9591 §1 (Architecture):
+    Two-round interactive signing protocol among n participants with
+    threshold t. Round 1: each participant commits to nonces (hiding +
+    binding). Round 2: each participant produces a signature share using
+    their secret share and the group's nonce commitment.
+
+  RFC 9591 §2 (Notation):
+    B: prime-order group generator (secp256k1 base point G for
+       FROST(secp256k1, SHA-256); Ed25519 base point for
+       FROST(ed25519, SHA-512)).
+    q: order of the group.
+    Scalar arithmetic in [0, q-1] mod q.
+
+  RFC 9591 §3 (Ciphersuites):
+    A ciphersuite is a triple (GROUP, HASH, CTX) where:
+      GROUP = (B, q, ScalarMult, ScalarBaseMult)
+      HASH = SHA-256 or SHA-512
+      CTX  = ASCII string (e.g., "FROST-secp256k1-SHA256-v1",
+                              "FROST-ed25519-SHA512-v1")
+    The CTX is bound into every H1/H2/H3 invocation to ensure domain
+    separation between ciphersuites.
+
+  RFC 9591 §4.1 (Commitment):
+    nonce_generate(sk_i, random) = H3(CTX || "nonce" || random || sk_enc) mod q
+    Each participant generates two nonces (hiding_nonce d_i,
+    binding_nonce e_i), commits via ScalarBaseMult.
+
+  RFC 9591 §4.2 (Binding Factors):
+    binding_factor_i = H1(CTX || "rho" ||
+                          group_public_key ||
+                          H(CTX || "msg" || message) ||
+                          H(CTX || "com" ||
+                            EncodeGroupCommitmentList(commitments)) ||
+                          ScalarEncode(identifier_i))
+    H is the ciphersuite hash function.
+    EncodeGroupCommitmentList sorts commitments by identifier and
+    serializes as: ScalarEncode(identifier_i) || ElementEncode(hiding_i)
+      || ElementEncode(binding_i) for each i.
+
+  RFC 9591 §5.1 (Round 1 — Commit):
+    Each participant computes and publishes commitment_i =
+    (hiding_nonce_commitment_i, binding_nonce_commitment_i) =
+    (ScalarBaseMult(d_i), ScalarBaseMult(e_i)).
+
+  RFC 9591 §5.2 (Round 2 — Sign):
+    challenge e = H2(CTX || "challenge" || R || ScalarEncode(group_public_key)
+                      || msg) where R = sum_i binding_nonce_commitment_i
+                            + ScalarMult(binding_nonce_commitment_i,
+                                         binding_factor_i)
+    For each signing participant i:
+      signature_share_i = d_i + binding_factor_i * e_i
+                          + lambda_i * sk_i * challenge
+      where lambda_i = Lagrange coefficient of i over the signing
+      participant set L (computed in Scalar arithmetic mod q).
+
+  RFC 9591 §5.3 (Aggregate):
+    aggregate (R, z) where:
+      R = sum_i binding_nonce_commitment_i
+          + sum_i ScalarMult(binding_nonce_commitment_i, binding_factor_i)
+      z = sum_i signature_share_i mod q
+    The aggregate (R, z) is verified against the public group key
+    using the standard Schnorr verification equation:
+      z * B == R + ScalarMult(group_public_key,
+                              challenge + ScalarMult(n_tilde, rho))
+    where rho = H1(CTX || "rho" || ...) as in §4.2.
+
+  RFC 9591 §6.5 (Ciphersuite Constants):
+    secp256k1 ciphersuite:
+      CTX = "FROST-secp256k1-SHA256-v1"
+      HASH = SHA-256
+      SerializeElement: SEC1 compressed (33 bytes)
+      SerializeScalar: 32-byte big-endian
+      Domain separation tags: "rho", "nonce", "msg", "com", "challenge"
+    ed25519 ciphersuite:
+      CTX = "FROST-ed25519-SHA512-v1"
+      HASH = SHA-512
+      SerializeElement: 32-byte Edwards point encoding
+      SerializeScalar: 32-byte little-endian
+      Domain separation tags: same set
+    Note: ed25519 scalars are encoded LITTLE-ENDIAN (vs secp256k1's
+    big-endian) — this is a documented byte-exact divergence class
+    between ciphersuites and is NOT a bug.
+
+  RFC 9591 §6 (Security):
+    SUF-CMA reduction under the OMDL assumption. The binding factor
+    rho_i is essential for security against the rogue-nonce attack on
+    earlier FROST versions; any byte-level error in its derivation
+    would break the SUF-CMA reduction.
+
+audit_axes:
+  - axis: hiding_nonce_generation
+    rule_ref: "RFC 9591 §4.1 / §6.5"
+    description: "Hiding nonce d_i = H3(CTX || 'nonce' || random || sk_i) mod q. Verify byte-exact match to RFC 9591 Appendix E.5/E.1 KAT vectors across ciphersuites (secp256k1 big-endian vs ed25519 little-endian)."
+  - axis: binding_nonce_generation
+    rule_ref: "RFC 9591 §4.1 / §6.5"
+    description: "Binding nonce e_i = H3(CTX || 'nonce' || random || sk_i) mod q (second invocation per round). Verify byte-exact match."
+  - axis: hiding_nonce_commitment
+    rule_ref: "RFC 9591 §5.1"
+    description: "hiding_nonce_commitment_i = ScalarBaseMult(d_i). Verify byte-exact serialized element."
+  - axis: binding_nonce_commitment
+    rule_ref: "RFC 9591 §5.1"
+    description: "binding_nonce_commitment_i = ScalarBaseMult(e_i). Verify byte-exact serialized element."
+  - axis: group_commitment_encoding
+    rule_ref: "RFC 9591 §4.3"
+    description: "EncodeGroupCommitmentList sorts by identifier and serializes as (ScalarEncode(id) || ElementEncode(hiding) || ElementEncode(binding)) per entry."
+  - axis: group_commitment_hash
+    rule_ref: "RFC 9591 §4.2"
+    description: "encoded_commitment_hash = H(CTX || 'com' || encoded_commitments). Verify byte-exact hash output for both SHA-256 and SHA-512 ciphersuites."
+  - axis: message_hash
+    rule_ref: "RFC 9591 §4.2"
+    description: "msg_hash = H(CTX || 'msg' || message). Verify byte-exact hash."
+  - axis: binding_factor_derivation
+    rule_ref: "RFC 9591 §4.2"
+    description: "binding_factor_i = H1(CTX || 'rho' || group_pubkey || msg_hash || encoded_commitment_hash || ScalarEncode(identifier_i)) mod q. Verify byte-exact match against KAT vectors (the most security-critical derivation; subtle byte-level errors here break SUF-CMA)."
+  - axis: challenge_derivation
+    rule_ref: "RFC 9591 §5.2"
+    description: "challenge e = H2(CTX || 'challenge' || R || ScalarEncode(group_public_key) || msg) mod q. Verify byte-exact."
+  - axis: lagrange_coefficient
+    rule_ref: "RFC 9591 §5.2"
+    description: "lambda_i = product_{j in L, j != i}(j / (j - i)) mod q. Verify byte-exact Lagrange basis. Method choice (Barycentric vs naive) may produce mathematically-equivalent but byte-different results; this is a known divergence class."
+  - axis: signature_share
+    rule_ref: "RFC 9591 §5.2"
+    description: "signature_share_i = d_i + binding_factor_i * e_i + lambda_i * sk_i * challenge mod q. Verify byte-exact."
+  - axis: aggregate_signature
+    rule_ref: "RFC 9591 §5.3"
+    description: "(R, z) where R = sum(binding_commitments) + sum(binding_commitments * binding_factor) and z = sum(signature_shares) mod q. Verify byte-exact."
+  - axis: aggregate_verification
+    rule_ref: "RFC 9591 §5.3"
+    description: "Aggregate (R, z) must verify under the public group key using the Schnorr verification equation z * B == R + ScalarMult(pk, challenge + ScalarMult(n_tilde, rho)). Verify cross-impl that produced (R, z) passes a reference single-party verifier."
+  - axis: nonce_reuse_rejection
+    rule_ref: "implicit / security best practice"
+    description: "If a participant reuses (d_i, e_i) across two signing operations, the SUF-CMA reduction breaks. Verify whether implementations detect this (or rely on the caller)."
+  - axis: threshold_dropout_handling
+    rule_ref: "RFC 9591 §4.2 / §5"
+    description: "When fewer than t participants respond in round 2, the signing protocol fails cleanly. Verify behavior on partial responses."
+  - axis: ciphersuite_domain_separation
+    rule_ref: "RFC 9591 §6.5"
+    description: "CTX string ('FROST-secp256k1-SHA256-v1' / 'FROST-ed25519-SHA512-v1') must be bound into every H1/H2/H3 invocation. Verify cross-ciphersuite outputs are distinct even for identical inputs (except for serialization endianness differences)."
+
+ciphersuites_in_scope:
+  - id: secp256k1-sha256
+    ctx: "FROST-secp256k1-SHA256-v1"
+    hash: SHA-256
+    scalar_encoding: big-endian 32 bytes
+    element_encoding: SEC1 compressed (33 bytes)
+    kat: crypto/frost-cross-impl/kat/rfc9591_appendix_e5_secp256k1.json
+    status: KAT on disk; cleanroom runs partially
+  - id: ed25519-sha512
+    ctx: "FROST-ed25519-SHA512-v1"
+    hash: SHA-512
+    scalar_encoding: little-endian 32 bytes
+    element_encoding: 32-byte Edwards point
+    kat: crypto/frost-cross-impl/kat/rfc9591_appendix_e1_ed25519.json
+    status: KAT on disk; cleanroom does not yet support ed25519 ciphersuite
+
+known_divergence_classes:
+  - class: ciphersuite_serialization_endianness
+    description: "secp256k1 ciphersuite uses big-endian scalar encoding; ed25519 ciphersuite uses little-endian. NOT a bug — required by the ciphersuites. Verifiers must respect ciphersuite."
+  - class: lagrange_basis_method
+    description: "Barycentric-form vs naive-form Lagrange basis implementations produce mathematically equivalent but potentially byte-different lambda_i values. Both are correct if computed in Scalar arithmetic mod q. Expected divergence class for any two correct implementations."
+  - class: scalar_encoding_zero_padding
+    description: "Some implementations left-pad short scalars; some right-pad; some use 32-byte big-endian minimum. Verify ScalarEncode is canonical per ciphersuite."
+  - class: identifier_encoding
+    description: "Participant identifier encoding may be uint8, uint16, uint32. RFC 9591 leaves this informative in some contexts; verify against the implementation's documentation."
+  - class: participant_list_sort_order
+    description: "EncodeGroupCommitmentList requires sorting commitments by identifier. Verify the comparison function (numeric vs encoded-byte) is correct."
+
+notes: |
+  This specification is the authoritative normative extract against
+  which all candidate FROST implementations will be compared.
+
+  Per AGENTS.md artifact rules, this specification is the source of
+  truth. The cleanroom oracle in
+  crypto/frost-cross-impl/cleanroom/frost_cleanroom.py is derived
+  EXCLUSIVELY from RFC 9591 text + standard Python primitives + the
+  ZCashFoundation/frost-rs KAT JSON shape (a documented derivation
+  constraint).
+
+  The cleanroom oracle currently verifies up to and including
+  `binding_factor` (RFC 9591 §4.2). Extending to `signature_share` and
+  `aggregate (R, z)` requires secp256k1 point addition, which is
+  explicitly out-of-scope of the Python `cryptography` library's
+  high-level API. The extension plan is to:
+    (a) use `coincurve` (libsecp256k1 Python bindings) for secp256k1
+        point addition, or
+    (b) implement secp256k1 point addition directly using only
+        standard primitives (a small affine-coordinate implementation
+        is ~100 LOC and well-trodden).
+  The cleanroom extension is in scope for msn-2026-0019.
+
+  The ed25519 ciphersuite (RFC 9591 §E.1) is currently NOT supported
+  by the cleanroom. Implementation will mirror the secp256k1 pattern
+  using the `cryptography` library's Ed25519 primitive for ScalarBaseMult
+  + a manual Edwards-curve point addition for `R` computation.
+  Alternatively, `ed25519-dalek` could be used; cleanroom derivation
+  constraint forbids consultation of audited implementations, so the
+  cleaner path is a small pure-Python Edwards addition.

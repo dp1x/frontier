@@ -1,0 +1,191 @@
+id: msn-2026-0019
+type: mission
+status: active
+created_at: "2026-09-02T11:30:00Z"
+updated_at: "2026-09-02T11:30:00Z"
+summary: "FROST (RFC 9591) threshold Schnorr signature cross-implementation byte-exact differential. Build cleanroom Python oracle covering the full RFC 9591 §4-§5 round 1 + round 2 + aggregate path (currently only §4.2 binding_factor is verified; needs secp256k1 point addition + ed25519 ciphersuite), bring frost-rs (ZCashFoundation Rust) and frost (ZKSecurity Go) into the cohort via thin subprocess adapters, run the matrix across RFC 9591 Appendix E.5 (secp256k1) + E.1 (ed25519) KAT vectors + Frontier-generated negative stimuli (nonce reuse, off-curve R, threshold dropout), classify every cell rigorously, and promote findings through the standard evidence ladder."
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: minimax-m3
+    tool: "post-msn-2026-0018 evidence-driven opportunity scan; FROST scout synthesis"
+  sources:
+    - missions/completed/msn-2026-0018.yaml
+    - knowledge/targets/tgt-2026-0007.yaml
+    - knowledge/specifications/spc-2026-0006.yaml
+    - knowledge/notes/scout-frost-2026-08-31.md
+    - knowledge/notes/msn-2026-0018.md
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://github.com/ZcashFoundation/frost-rs
+    - https://github.com/zksecurity/frost
+    - crypto/frost-cross-impl/cleanroom/frost_cleanroom.py
+    - crypto/frost-cross-impl/kat/rfc9591_appendix_e5_secp256k1.json
+    - crypto/frost-cross-impl/kat/rfc9591_appendix_e1_ed25519.json
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0006]
+  targets: [tgt-2026-0007]
+  implementations: []
+  hypotheses: []
+title: "msn-2026-0019 - FROST (RFC 9591) threshold signature cross-implementation byte-exact differential"
+objective: >
+  Build a FROST (RFC 9591) threshold Schnorr signature cross-implementation
+  byte-exact differential matrix across at least 3 independent parties:
+  (a) the Frontier cleanroom Python oracle (RFC 9591 text + standard
+  Python primitives + ZCashFoundation/frost-rs KAT JSON shape),
+  (b) `frost-rs` (ZCashFoundation Rust crate, the production Rust
+  implementation used by Chia + Liquid),
+  (c) `frost` (ZKSecurity Go reference, ~5k LOC, Komlo et al. paper).
+
+  For each pair (implementation, RFC 9591 Appendix A/E KAT vector),
+  verify byte-exact agreement at every per-step intermediate output:
+    - hiding_nonce (d_i) and binding_nonce (e_i) per participant
+    - hiding_nonce_commitment and binding_nonce_commitment per participant
+    - group_commitment encoding + encoded_commitment_hash
+    - message_hash
+    - binding_factor per participant (the most security-critical derivation)
+    - challenge e
+    - Lagrange coefficient lambda_i per signing participant
+    - signature_share per signing participant
+    - aggregate (R, z) and verification under the public group key
+
+  Run a battery of negative stimuli:
+    - nonce reuse (same (d_i, e_i) across two signing operations)
+    - R off the curve (point at infinity / x = 0)
+    - s_i outside [1, n-1]
+    - threshold dropout (one signing participant absent)
+    - tampered binding_factor input (single-byte mutation)
+
+  Classify every cell rigorously (PASS / SPEC_VIOLATION / INTEROP_BREAK /
+  ERROR / NOT_SUPPORTED / INSTRUMENT_QUESTION), preserve raw outputs and
+  errors, and promote findings through the standard evidence ladder.
+
+  The fundamental intellectual question: **do all FROST implementations
+  produce byte-exact identical outputs at every per-step intermediate
+  on the RFC 9591 Appendix A/E KAT vectors?** If yes, this is a
+  discovery-grade positive finding (the IETF FROST ecosystem is
+  byte-exact conformant as of cohort test date). If no, every divergence
+  is a potential consensus-failure-class hazard for Chia/Liquid custody
+  integrations and an interop note for IETF cfrg WG.
+
+domain: cryptography
+scope: >
+  In scope:
+    - frost-rs (ZCashFoundation Rust) — production-grade
+    - frost (ZKSecurity Go) — reference-grade
+    - Frontier cleanroom Python oracle — derivation constraint honored
+    - RFC 9591 Appendix E.5 (secp256k1_sha256) KAT
+    - RFC 9591 Appendix E.1 (ed25519_sha512) KAT
+    - Frontier-generated corpus (deterministic seed) covering edge cases
+    - Negative stimuli: nonce reuse, off-curve R, s outside range, threshold
+      dropout, tampered binding_factor input
+    - Cross-impl aggregate verification under the public group key
+    - Per-implementation archaeology (lineage, ancestry, shared code,
+      shared test vectors, specification lineage)
+
+  Out of scope (deferred to follow-up missions):
+    - FROST-2 / Round-Optimized-Threshold variants (ePrint 2024/1835)
+    - BLS threshold signatures (separate primitive family)
+    - DKG (companion; could be a follow-up)
+    - Threshold Ed25519 vs single-party Ed25519 interop (RFC 8032 vs RFC 9591)
+    - Security proofs / SUF-CMA reduction verification
+    - Performance / timing benchmarks
+    - Honest-verifier ZK proofs of correct nonce generation
+    - Network protocol (RFC 9591 §7) — this is a primitive-level audit
+
+constraints:
+  - Build on the verified CBOR/COSE byte-exact harness pattern
+    (cleanroom + adapter + matrix runner + TSV/JSONL).
+  - Cleanroom Python oracle derived EXCLUSIVELY from RFC 9591 text +
+    standard Python primitives + ZCashFoundation/frost-rs KAT JSON
+    shape (documented derivation constraint); no consultation of
+    audited library source beyond the KAT JSON.
+  - All new adapters follow the same uniform interface as the CBOR/COSE
+    adapters.
+  - Cohort library versions are pinned to specific commits/tags.
+  - Independence records are maintained for every cohort member
+    (no correlation counting as independence).
+  - frost-rs and frost Go binaries built in env-scrubbed scratch
+    (.scratch/msn-2026-0019/) per AGENTS.md security rules.
+  - Library source code is treated as untrusted (per AGENTS.md
+    "untrusted code" rules); no credentials or sensitive data exposed
+    to library build systems.
+  - KAT vectors used as positive controls must come from RFC 9591
+    Appendix E.5/E.1 (canonical, IETF-published) — not hand-built.
+desired_evidence_level: independently-reviewed
+candidate_targets: [tgt-2026-0007]
+dependencies:
+  - msn-2026-0017
+  - msn-2026-0018
+compute:
+  expected_class: lightweight
+  notes: |
+    FROST signing operations are sub-second on commodity hardware.
+    frost-rs `cargo build --release` <60s; frost Go `go build ./...`
+    ~5s; cleanroom runs in seconds. Total wall clock for full matrix
+    <5 min. No Docker, no GHA, no fuzzing, no cross-platform matrix.
+    Single GHA ubuntu-latest run for reproducibility validation if
+    budget allows.
+budget:
+  max_attempts: 6
+  max_independent_reviews: 2
+  max_compute_runs: 4
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Independence records for 3 cohort members (frost-rs, frost Go, cleanroom oracle) documenting lineage, ancestry, shared code, shared test vectors, authorship overlap, and specification lineage."
+  - "Cleanroom Python oracle extended to cover the full RFC 9591 §4-§5 path: hiding_nonce, binding_nonce, hiding_nonce_commitment, binding_nonce_commitment, group_commitment, encoded_commitment_hash, message_hash, binding_factor, challenge, lagrange coefficient, signature_share, aggregate (R, z), and aggregate verification under the public group key."
+  - "Cleanroom oracle supports both secp256k1_sha256 and ed25519_sha512 ciphersuites."
+  - "Per-implementation adapter (frost-rs subprocess adapter, frost Go subprocess adapter) committed to crypto/frost-cross-impl/adapters/."
+  - "Frontier-generated corpus committed to crypto/frost-cross-impl/vectors/."
+  - "Matrix runner producing TSV + JSONL committed to crypto/frost-cross-impl/runner/."
+  - "Matrix run produces per-cell verdicts across at least 6 KAT vectors (3 secp256k1 + 3 ed25519) × 3 implementations × ≥6 per-step outputs = ≥108 byte-exact cells + ≥24 negative-stimulus cells."
+  - "Research instrument validation: cleanroom passes RFC 9591 Appendix E.5/E.1 reference vectors byte-exactly; adapters pass positive/negative controls; cleanroom derivation constraint respected."
+  - "Every diverging cell cross-checked against a second-opinion oracle (cleanroom itself + KAT JSON)."
+  - "Every disagreement classified (PASS / SPEC_VIOLATION / INTEROP_BREAK / ERROR / NOT_SUPPORTED / INSTRUMENT_QUESTION)."
+  - "Adversarial critic review (rev-2026-XXXX) SUPPORTS or PARTIALLY_SUPPORTS any finding promotion."
+  - "Reproducer (rpr-2026-XXXX) documents how to reproduce the matrix from clean source."
+  - "Either a verified finding promoted OR an inconclusive-after-budget terminal reason with documented evidence supporting the conclusion."
+stopping_conditions:
+  - "All 3 cohort members tested across both ciphersuites, all disagreements investigated and classified, and findings promoted or rejected with full evidence, OR"
+  - "Diminishing-returns window hit (2 consecutive matrix runs with no new diverging cells beyond the previous run), OR"
+  - "Budget exhausted without resolution, OR"
+  - "Cohort library cannot be built in env-scrubbed scratch (environmental blocker, not a research result; classified separately)."
+artifacts:
+  - path: crypto/frost-cross-impl/cleanroom/frost_cleanroom.py
+    kind: cleanroom-oracle
+    description: "Extended to cover full RFC 9591 §4-§5 path (currently verifies only up to binding_factor)."
+  - path: crypto/frost-cross-impl/kat/rfc9591_appendix_e5_secp256k1.json
+    kind: kat-vectors
+    description: "RFC 9591 Appendix E.5 KAT (secp256k1_sha256) — already on disk."
+  - path: crypto/frost-cross-impl/kat/rfc9591_appendix_e1_ed25519.json
+    kind: kat-vectors
+    description: "RFC 9591 Appendix E.1 KAT (ed25519_sha512) — already on disk."
+  - path: crypto/frost-cross-impl/vectors/gen_vectors.py
+    kind: vector-generator
+    description: "Deterministic adversarial vector generator (seed TBD) covering KAT re-runs + negative stimuli."
+  - path: crypto/frost-cross-impl/adapters/lib_frost_rs_adapter.py
+    kind: adapter
+    description: "frost-rs subprocess adapter — translates KAT JSON to frost-rs CLI invocation, captures per-step outputs."
+  - path: crypto/frost-cross-impl/adapters/lib_frost_go_adapter.py
+    kind: adapter
+    description: "frost Go subprocess adapter — translates KAT JSON to frost Go CLI invocation, captures per-step outputs."
+  - path: crypto/frost-cross-impl/runner/run_matrix.py
+    kind: matrix-runner
+    description: "FROST matrix runner (TSV + JSONL output, verdict classification)."
+  - path: crypto/frost-cross-impl/results/matrix.tsv
+    kind: matrix-output
+    description: "Per-cell matrix results."
+  - path: crypto/frost-cross-impl/results/matrix.jsonl
+    kind: matrix-output
+    description: "Machine-readable per-cell matrix results."
+follow_ups:
+  - "If a FROST finding surfaces, queue follow-up missions for FROST-2 / DKG / BLS threshold / MuSig2 byte-exact audits."
+  - "If the cleanroom proves a divergence, audit the divergence's security impact on Chia/Liquid custody integrations."
+  - "Opportunity scan after terminalization for next mission domain."
+notes_path: knowledge/notes/msn-2026-0019.md
+blocked_reason: null
+terminal_reason: null
