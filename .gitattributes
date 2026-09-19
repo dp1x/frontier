@@ -9,3 +9,4 @@
 *.pdf binary
 *.png binary
 *.jpg binary
+tools/git-hooks/* text eol=lf

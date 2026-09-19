@@ -124,6 +124,18 @@ and dependency can execute arbitrary code.
 
 ## Git rules
 
+- Commit identity is pinned by human decision (2026-09-14): author and
+  committer must both be `Dhanesh <dhaneshpanjnani@gmail.com>`, and every
+  commit must be GPG-signed (`commit.gpgsign=true`). Never pass
+  `-c user.name=...`, `-c user.email=...`, `--author=...`, or set
+  `GIT_AUTHOR_*`/`GIT_COMMITTER_*` env vars to any other identity.
+  `core.hooksPath` points at `tools/git-hooks/`; its pre-push hook rejects
+  commits with a foreign identity or a missing/invalid signature. Never
+  bypass with `--no-verify`. (Recorded one-time exception: the human
+  explicitly ordered the 2026-09-14 identity rewrite of the 41
+  agent-identity commits plus a force-push of `main`; pre-rewrite backup:
+  `frontier-backup-20260914.bundle` + branches `backup-pre-rewrite-20260914`
+  and `backup-ci-20260914`.)
 - Commit coherent units of research state, not one commit per file tweak.
 - Commit failed-but-informative investigations; they are durable evidence.
 - Never rewrite history to look cleaner.
