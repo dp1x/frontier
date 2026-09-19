@@ -78,3 +78,8 @@ compilers/alias-diff/generated/
 formal/.lake/
 formal/lake-manifest.json
 formal/build/lib/
+
+# Planning / checkpoint files (never commit)
+CHECKPOINT.md
+BLUEPRINT.md
+temp/
