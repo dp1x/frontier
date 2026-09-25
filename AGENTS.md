@@ -136,6 +136,12 @@ and dependency can execute arbitrary code.
   agent-identity commits plus a force-push of `main`; pre-rewrite backup:
   `frontier-backup-20260914.bundle` + branches `backup-pre-rewrite-20260914`
   and `backup-ci-20260914`.)
+- Commit messages must not contain `Co-authored-by:` trailers — not for
+  Claude, not for any other name. GitHub renders such trailers as contributors
+  of this repository, and an agent hallucinated one on 2026-09-03 (2 commits,
+  grok session `01a0638c`, removed by the 2026-09-14 message-only rewrite of
+  `8c334ff..main`). Enforced by `tools/git-hooks/commit-msg`; the single author
+  of this repository is `Dhanesh <dhaneshpanjnani@gmail.com>`.
 - Commit coherent units of research state, not one commit per file tweak.
 - Commit failed-but-informative investigations; they are durable evidence.
 - Never rewrite history to look cleaner.

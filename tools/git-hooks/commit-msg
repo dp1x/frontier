@@ -1,0 +1,27 @@
+#!/bin/sh
+# commit-msg gate: no co-author trailers (installed 2026-09-14).
+#
+# Background: on 2026-09-03 an agent hand-typed a co-author trailer naming
+# "Claude <noreply@anthropic.com>" into 2 commit messages (grok session
+# 01a0638c), copying another tool's convention. GitHub renders such trailers as
+# contributors of this repository, which misattributes the work. Those 2
+# occurrences were removed by a message-only rewrite of 8c334ff..main on
+# 2026-09-14; this hook makes a repeat impossible at commit time.
+# This repository has exactly one author: Dhanesh <dhaneshpanjnani@gmail.com>.
+# Never bypass with --no-verify (see AGENTS.md Git rules).
+#
+# git passes the path of the pending message file as $1.
+
+msg_file="$1"
+pattern='^[[:space:]]*co-authored-by:'
+
+if grep -i -E -q "$pattern" "$msg_file"; then
+    echo "commit-msg: REJECTED - co-author trailer found in commit message:" >&2
+    grep -i -n -E "$pattern" "$msg_file" | sed 's/^/commit-msg:   /' >&2
+    echo "commit-msg: This repository has exactly one author:" >&2
+    echo "commit-msg:   Dhanesh <dhaneshpanjnani@gmail.com>" >&2
+    echo "commit-msg: Remove the trailer and commit again. Do not use --no-verify." >&2
+    exit 1
+fi
+
+exit 0
