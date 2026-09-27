@@ -1,0 +1,147 @@
+id: obs-2026-0044
+type: observation
+status: recorded
+created_at: "2026-09-26T12:45:00Z"
+updated_at: "2026-09-26T12:45:00Z"
+summary: "CORRECTED FROST rerun. After repairing 5 cleanroom oracle defects (commit c952582), BOTH RFC 9591 ciphersuites reproduce their Appendix E.5 / E.1 KAT signature byte-exactly across all four phases. The previously reported ed25519 'SPEC_AMBIGUITY' does not reproduce; it was an oracle defect, not a KAT or RFC defect. Cohort remains cleanroom-only: this is oracle-vs-RFC-vectors consistency, NOT independent cross-implementation confirmation."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: null
+    tool: "msn-2026-0019 evidence correction - cleanroom rerun after oracle repair"
+  sources:
+    - crypto/frost-cross-impl/cleanroom/frost_cleanroom.py
+    - crypto/frost-cross-impl/results/matrix.tsv
+    - crypto/frost-cross-impl/results/matrix.jsonl
+    - crypto/frost-cross-impl/vectors/vectors_kat_replay.jsonl
+    - crypto/frost-cross-impl/vectors/vectors_message_variants.jsonl
+    - crypto/frost-cross-impl/kat/rfc9591_appendix_e5_secp256k1.json
+    - crypto/frost-cross-impl/kat/rfc9591_appendix_e1_ed25519.json
+    - knowledge/observations/obs-2026-0043.yaml
+    - knowledge/experiments/exp-2026-0033.yaml
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://www.rfc-editor.org/rfc/rfc8032
+  parent: msn-2026-0019
+  generation: 0
+links:
+  experiments: [exp-2026-0033]
+  observations: [obs-2026-0043]
+  reproducers: [rpr-2026-0016]
+  specifications: [spc-2026-0006]
+  targets: [tgt-2026-0007]
+  findings: [fnd-2026-0015]
+title: "OBS-2026-0044 - FROST cleanroom rerun after oracle repair: both KATs byte-exact"
+statement: >
+  Re-ran the FROST cleanroom self-test and the cross-implementation matrix after
+  repairing five defects in crypto/frost-cross-impl/cleanroom/frost_cleanroom.py
+  (commit c952582). Both ciphersuites now reproduce their RFC 9591 test vector:
+  secp256k1 (Appendix E.5) and ed25519 (Appendix E.1) each match the expected
+  final signature byte-for-byte across round 1 commit + binding_factor, round 2
+  signature shares, aggregate R/z, and aggregate verification under the group
+  public key. The ed25519 aggregate-verification axis went from 0/6 cells
+  verifying to 6/6. The previously reported ed25519 binding_factor divergence is
+  not reproducible with the repaired oracle, so the earlier attribution to the
+  KAT ("KAT may be from an older frost-rs draft") is withdrawn. The matrix cohort
+  is still cleanroom-only, so this observation establishes internal consistency
+  between the Frontier oracle and the RFC test vectors only; it does NOT
+  establish that any independent FROST implementation agrees.
+environment:
+  where: local
+  isolation: "env-scrubbed scratch; project-local venv; no network access"
+  cwd: "crypto/frost-cross-impl"
+  versions:
+    python: "3.11.15 (uv-managed venv)"
+    cryptography: "50.0.1"
+    ecdsa: "0.19.2"
+repaired_oracle_defects:
+  - id: 1
+    symbol: serialize_scalar_ed25519
+    defect: "Masked the most-significant little-endian byte with 0x07, corrupting bits 248-250 of any scalar having those bits set."
+    authority: "RFC 8032 section 5.1.2 already constrains the scalar to [0, q-1] with q < 2^253; explicit masking was wrong."
+    relation_to_symptom: "Direct cause of the binding_factor divergence."
+  - id: 2
+    symbol: decompress_ed25519
+    defect: "PointEdwards constructor arguments passed in the wrong order (Z and order swapped)."
+    authority: "Affine (x, y) has extended coordinates (X, Y, Z, T) = (x, y, 1, x*y)."
+  - id: 3
+    symbol: _ed25519_add_extended
+    defect: "Omitted the 2* factors in the C and D terms of the unified addition formula."
+    authority: "RFC 8032 section 5.1.4."
+  - id: 4
+    symbol: verify_aggregate_ed25519
+    defect: "Applied the RFC 8032 section 5.1.7 cofactor-8 equation [8]zB == [8]R + [8][c]PK."
+    authority: "RFC 9591 section 5.3 specifies the non-cofactored zB == R + c*PK; FROST signing yields prime-order-subgroup points."
+  - id: 5
+    symbol: frost_sign
+    defect: "Read the participant share scalar big-endian via int(hex, 16) instead of deserializing it little-endian."
+    authority: "RFC 9591 section 6.1-3 (Ed25519 ciphersuite scalar encoding)."
+reproduced_results:
+  cleanroom_self_test:
+    command: "cd crypto/frost-cross-impl && ../../.venv/Scripts/python.exe cleanroom/frost_cleanroom.py"
+    exit_code: 0
+    secp256k1:
+      round_1_commit_binding_factor: PASS
+      round_2_signature_shares: PASS
+      aggregate_R_z: PASS
+      verify_aggregate: PASS
+      computed_final_sig: "024c1ad4e031872661fa6ebd05dfc7fb30db08b38d79f0edbc82051ae931381bc6a46881e25c7989d3816eae32074f1ab0d49ee908a59713ed5284c6bade7cfb02"
+      expected_final_sig: "024c1ad4e031872661fa6ebd05dfc7fb30db08b38d79f0edbc82051ae931381bc6a46881e25c7989d3816eae32074f1ab0d49ee908a59713ed5284c6bade7cfb02"
+      byte_exact: true
+    ed25519:
+      round_1_commit_binding_factor: PASS
+      round_2_signature_shares: PASS
+      aggregate_R_z: PASS
+      verify_aggregate: PASS
+      computed_final_sig: "154fb694ee7fcb37bf2381d94488c2a84b03b3352ad085feca81ad26d45852b7ecfe971ce4da95c4a95db93ac376b053897fca212ef85f99cf696bffeb178f07"
+      expected_final_sig: "154fb694ee7fcb37bf2381d94488c2a84b03b3352ad085feca81ad26d45852b7ecfe971ce4da95c4a95db93ac376b053897fca212ef85f99cf696bffeb178f07"
+      byte_exact: true
+    overall: PASS
+  aggregate_verification_cells:
+    before_repair:
+      secp256k1: "6/6"
+      ed25519: "0/6"
+    after_repair:
+      secp256k1: "6/6"
+      ed25519: "6/6"
+    cell_definition: "5 generated message variants + 1 KAT replay, per ciphersuite (vectors/vectors_message_variants.jsonl, vectors/vectors_kat_replay.jsonl)."
+    measurement_method: "Count of records with verify_aggregate == true, parsed from each JSONL file at the pre-repair revision and after the repair."
+  matrix_tsv_delta:
+    command: "cd crypto/frost-cross-impl && ../../.venv/Scripts/python.exe runner/run_matrix.py"
+    file: "results/matrix.tsv"
+    ed25519_cleanroom: "SPEC_AMBIGUITY -> PASS"
+    secp256k1_cleanroom: "PASS (unchanged)"
+    pycose_cells: "NOT_SUPPORTED (unchanged; pycose does not implement FROST)"
+    go_frost_cells: "NOT_BUILT (unchanged; no Go FROST port)"
+  message_variant_semantics:
+    note: >
+      The 5 generated message variants have no KAT expected value, so
+      round_one_match_all / round_two_match_all / aggregate_match are false by
+      construction for them. The meaningful signal in that file is
+      verify_aggregate plus internal consistency of the derived challenge,
+      aggregate R and aggregate z, which is why the ed25519 0/5 -> 5/5 change is
+      the load-bearing measurement.
+    unchanged_secp256k1: "All 5 secp256k1 variant records are byte-identical before and after the repair."
+    changed_ed25519_fields: "challenge_hex, aggregate_R_hex, aggregate_z_hex, computed_final_sig, verify_aggregate (5 records)."
+scope_limitations:
+  cohort_size: "1 (Frontier cleanroom). No independent implementation was executed."
+  what_this_does_not_show: >
+    Does not show that frost-rs, or any other FROST implementation, produces the
+    same bytes. Agreement between an oracle and the RFC vectors it was derived
+    from is weaker evidence than agreement between two independent codebases.
+  no_promotion: "fnd-2026-0015 remains a candidate at epistemic_status hypothesis; nothing is promoted by this observation."
+  residual_risk: >
+    The repaired oracle was authored by the same lineage that introduced the
+    defects, and the KAT JSON interpretation path is shared with the defective
+    version. A defect common to both (for example in KAT JSON field
+    interpretation) would not be detected by this rerun. Independent execution
+    is the mitigation.
+corrections_to_prior_artifacts:
+  obs-2026-0043: "ed25519 cleanroom verdict corrected to PASS; the superseded SPEC_AMBIGUITY wording is preserved verbatim in that artifact's correction block."
+  exp-2026-0033: "ed25519_cleanroom result and verdict_summary corrected from 1/6 to 2/6 PASS."
+  rpr-2026-0016: "Step 2 expected output corrected; the cleanroom self-test now exits 0."
+  fnd-2026-0015: "Summary and scope corrected; the ed25519 divergence claim is withdrawn, not promoted."
+  unaffected: >
+    The secp256k1 conclusion is unchanged. It was already byte-exact before this
+    repair and remains byte-exact, so this correction does not weaken it.

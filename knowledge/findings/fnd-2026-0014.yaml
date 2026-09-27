@@ -2,7 +2,7 @@ id: fnd-2026-0014
 type: finding
 status: verified_conclusion
 created_at: "2026-09-02T04:30:00Z"
-updated_at: "2026-09-02T04:30:00Z"
+updated_at: "2026-09-26T12:45:00Z"
 summary: "**pycose 1.1.0 does NOT sort map keys per RFC 8949 §4.2.1 bytewise-lex for tstr-only maps**. Across 4 header_label_sorting vectors, pycose preserves insertion order while both go-cose (via fxamacker/cbor SortCoreDeterministic) and the Frontier cleanroom oracle produce correct bytewise-lex sort. This is a SPEC_VIOLATION per RFC 9052 §9 (which explicitly requires RFC 8949 §4.2.1 for COSE message structures). NOTE: pycose DOES sort correctly when keys are mixed int+tstr; the divergence is scoped to all-tstr-key maps."
 epistemic_status: verified_conclusion
 provenance:
@@ -69,11 +69,18 @@ promotion_requirements:
   - "Deterministic verification via rpr-2026-0015 reproduction"
   - "At least 3 independent cohort members (oracle + go-cose + pycose) confirm the divergence"
 promotion_path:
-  current_status: "candidate (pending independent review)"
+  current_status: "verified_conclusion - promoted on the msn-2026-0018 evidence chain (adversarial review rev-2026-0016 verdict SUPPORT; deterministic verification vrf-2026-0016 verdict VERIFIED). Bookkeeping corrected 2026-09-26: this field had still read 'candidate (pending independent review)' after the promotion had already occurred, contradicting the artifact's own status and epistemic_status."
+  promotion_evidence:
+    experiment: exp-2026-0032
+    observation: obs-2026-0042
+    reproducer: rpr-2026-0015
+    review: rev-2026-0016
+    verification: vrf-2026-0016
   next_steps:
-    - "Run adversarial critic review (rev-2026-0016)"
-    - "Run deterministic verification (vrf-2026-0016)"
-    - "If both SUPPORTS, promote to verified_conclusion"
+    - "Novelty check (NOT yet done): determine whether this tstr-only map-key ordering behaviour is already reported upstream in TimothyClaeys/pycose issues, pull requests, commits, or changelog. A partial issue search on 2026-09-26 returned no matching report, but that is not a complete novelty check and must not be treated as one."
+    - "Re-confirm against the pycose release the maintainers currently publish, recording the exact version and commit tested."
+    - "If still actionable and not previously reported, prepare a precise maintainer report citing RFC 9052 section 9 and RFC 8949 section 4.2.1, with a minimal reproducer and the 4 affected vectors."
+  upstream_disclosure: "none. No issue, PR, patch or maintainer report has been filed. External impact is not yet demonstrated."
 scope_limitations:
   cohort_size: 2 (pycose + go-cose) — does NOT represent all COSE implementations
   cbor_layer_correlation: "pycose's behavior may be inherited from or related to cbor2's encoding; the root cause is in pycose's own COSE-encoder, not cbor2 itself"

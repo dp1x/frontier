@@ -1,0 +1,202 @@
+id: rpt-2026-0014
+type: report
+status: current
+created_at: "2026-09-26T12:45:00Z"
+updated_at: "2026-09-26T12:45:00Z"
+summary: "Consolidated report for the 2026-09-14 and 2026-09-26 sessions. Part 1 repaired repository attribution: 41 commits with hallucinated agent identities and 2 commits with a fabricated co-author trailer were rewritten, and both defect classes are now blocked deterministically by git hooks (137/137 remote commits verified, 0 trailers remaining). Part 2 corrected a false research result: the reported ed25519 divergence against RFC 9591 Appendix E.1 was caused by five defects in the Frontier cleanroom oracle, not by the KAT; after repair both ciphersuites reproduce their KAT byte-exactly (commit c952582) and the dependent evidence artifacts were corrected. No finding was promoted and no external disclosure was made."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: null
+    tool: "consolidating the 2026-09-14 attribution repair and the 2026-09-26 FROST evidence correction"
+  sources:
+    - AGENTS.md
+    - CHECKPOINT.md
+    - tools/git-hooks/pre-push
+    - tools/git-hooks/commit-msg
+    - crypto/frost-cross-impl/cleanroom/frost_cleanroom.py
+    - crypto/frost-cross-impl/results/matrix.tsv
+    - crypto/frost-cross-impl/results/matrix.jsonl
+    - knowledge/observations/obs-2026-0043.yaml
+    - knowledge/observations/obs-2026-0044.yaml
+    - knowledge/experiments/exp-2026-0033.yaml
+    - knowledge/reproducers/rpr-2026-0016.yaml
+    - knowledge/findings/fnd-2026-0015.yaml
+    - knowledge/findings/fnd-2026-0014.yaml
+    - https://www.rfc-editor.org/rfc/rfc9591
+    - https://www.rfc-editor.org/rfc/rfc8032
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0014, fnd-2026-0015]
+  observations: [obs-2026-0043, obs-2026-0044]
+  experiments: [exp-2026-0033]
+  reproducers: [rpr-2026-0016]
+  targets: [tgt-2026-0007]
+title: "RPT-2026-0014 - Session report 2026-09-14/26 (attribution repair + FROST oracle correction)"
+session_overview: |
+  Two bodies of work, both concerned with making the repository's own record
+  trustworthy rather than adding new results.
+
+  Part 1 (2026-09-14) repaired repository attribution. Forty-one commits carried
+  hallucinated agent identities and two carried a fabricated co-author trailer.
+  Both defects were corrected by history rewrites and are now blocked
+  deterministically by git hooks.
+
+  Part 2 (2026-09-26) corrected a false research result. The FROST (RFC 9591)
+  cleanroom oracle had been reporting an ed25519 divergence against the RFC's own
+  test vector, and the finding attributed that divergence to a possible defect in
+  the KAT. The divergence was in the oracle. Five defects were repaired, after
+  which both ciphersuites reproduce their KAT byte-exactly.
+
+  No finding was promoted in either part. No external party was contacted.
+part_1_repository_attribution_repair: |
+  Scope: commit identity and commit-message integrity on main.
+
+  Defects found:
+    - 41 commits (positions 68-117) carried hallucinated identities, produced by
+      agent sessions invoking git with explicit -c user.email=... overrides.
+    - Exactly 2 of 136 commits carried a "Co-Authored-By: Claude
+      <noreply@anthropic.com>" trailer. The trailer was hand-typed into both
+      commit messages by a prior agent session (2026-09-02 22:18 UTC), not by
+      the human and not by Claude.
+
+  Corrections:
+    - Identity rewrite of 070115ff..main (67 commits) via filter-branch
+      env-filter plus git commit-tree -S. Commits 1-67 untouched.
+    - Message-only rewrite of 8c334ff..main (4 commits) via filter-branch
+      --msg-filter, stripping the trailer and trailing blank lines.
+    - Both executed first in a throwaway clone, verified there, then ported via
+      a staging ref and force-pushed with --force-with-lease. No --no-verify was
+      used. Trees were verified byte-identical to the pre-rewrite tip, so no
+      commit was rewritten for cosmetic reasons.
+
+  Permanent guards (commits a933879, e77f5e0, d26f317):
+    - tools/git-hooks/pre-push rejects a foreign or mismatched identity, or a
+      missing/invalid signature; active via core.hooksPath.
+    - tools/git-hooks/commit-msg rejects any pending message containing a
+      co-author trailer (case-insensitive, line-anchored). Integration-tested:
+      a real commit carrying the trailer exited 1, printed the offending line,
+      left HEAD unchanged and created no commit.
+
+  Post-push verification, GitHub API sweep of all 137 commits:
+    - verification reason "valid" for 137/137; UNVERIFIED 0.
+    - co-author trailers found: 0.
+    - contributors API returns a single identity: dp1x (137).
+
+  Residual observation:
+    - The rendered GitHub contributors page continued to display a stale entry
+      after the sweep, while commit pages and the API were clean. GitHub
+      documents that contributor graph data can lag for a period after a history
+      rewrite. This is a cache/display artifact, not a repository defect.
+part_2_frost_oracle_repair: |
+  Commit: c952582. Files: crypto/frost-cross-impl/cleanroom/frost_cleanroom.py
+  plus the four regenerated result/vector files.
+
+  Result previously recorded and now withdrawn: that the ed25519 ciphersuite
+  passed round 1 nonce scalars and commitments but diverged on binding_factor,
+  with the finding suggesting the on-disk KAT came from an older frost-rs draft.
+
+  Actual root cause: five defects in the cleanroom oracle.
+    1. serialize_scalar_ed25519 masked the most-significant little-endian byte
+       with 0x07, corrupting bits 248-250 of the scalar. Direct cause of the
+       binding_factor divergence. RFC 8032 section 5.1.2 already bounds the
+       scalar below 2^253, so no masking was required.
+    2. decompress_ed25519 passed PointEdwards constructor arguments in the wrong
+       order (Z and order swapped).
+    3. _ed25519_add_extended omitted the 2* factors in the C and D terms,
+       contrary to RFC 8032 section 5.1.4.
+    4. verify_aggregate_ed25519 applied the RFC 8032 section 5.1.7 cofactor-8
+       form; RFC 9591 section 5.3 specifies the non-cofactored equation.
+    5. frost_sign read the participant share scalar big-endian instead of
+       deserialising it little-endian per RFC 9591 section 6.1-3.
+
+  Measured effect: ed25519 aggregate-verification cells went from 0/6 to 6/6
+  (5 message variants + 1 KAT replay), measured by parsing both JSONL files
+  before and after. secp256k1 was and remains 6/6. The cleanroom self-test now
+  exits 0, with both ciphersuites byte-exact across round 1, round 2, aggregate
+  R/z and verification under the group public key.
+
+  Unchanged limitation: the cohort is still a single implementation. Both
+  passing ciphersuites represent agreement between the oracle and the RFC
+  vectors it was derived from. That is not independent cross-implementation
+  confirmation and must not be described as such.
+part_3_evidence_correction: |
+  The prior artifacts described a divergence that no longer exists, so they were
+  corrected rather than left in place. House convention was followed: amend the
+  artifact and make the correction visible, preserving superseded wording
+  verbatim, as fnd-2026-0012 did for its own refutation.
+
+  - obs-2026-0044 created: the corrected rerun, with the five root causes, the
+    measured 0/6 to 6/6 change, the environment and version pins, and explicit
+    scope limits including the residual risk that a defect shared by the old and
+    new oracle would not be caught by this rerun.
+  - obs-2026-0043: summary and ed25519 block corrected; superseded wording
+    preserved in correction_2026_09_26.superseded_wording; the false claim that
+    the Rust toolchain was unavailable corrected (cargo/rustc exist locally and
+    were simply not wired in).
+  - exp-2026-0033: ed25519 result and verdict_summary corrected from 1/6 to 2/6;
+    correction block added; the same toolchain claim corrected.
+  - rpr-2026-0016: steps 2, 4 and 5 expected outputs corrected; schema-required
+    path and reproduction_commands added; the incorrect "re-running produces
+    byte-identical output" claim corrected, because results/matrix.jsonl carries
+    an elapsed_s timing field and is the only file that differs between runs.
+  - fnd-2026-0015: summary, evidence, classification and scope corrected, with an
+    explicit list of withdrawn claims. Status stays candidate; epistemic_status
+    stays hypothesis.
+
+  Epistemic corrections, independent of the oracle defect:
+    - obs-2026-0043 and exp-2026-0033 carried epistemic_status
+      verified_conclusion for a single-implementation result with no linked
+      independent review or deterministic verification. Both lowered to
+      observation; the overclaim was wrong regardless of the oracle defect.
+    - fnd-2026-0014 carried status verified_conclusion while its own
+      promotion_path still read "candidate (pending independent review)". The
+      promotion was real (rev-2026-0016 verdict SUPPORT, vrf-2026-0016 verdict
+      VERIFIED), so only the stale bookkeeping was corrected. Its outstanding
+      novelty check was recorded as NOT done, rather than left to appear
+      complete.
+what_did_not_change: |
+  - No finding was promoted, and no completed promotion was reversed.
+  - fnd-2026-0015 remains a candidate at epistemic_status hypothesis.
+  - fnd-2026-0014 remains verified_conclusion; only its stale bookkeeping field
+    was corrected.
+  - The repository-wide gap between localdocs/schemas/*.json and the checks that
+    src/frontier/validate.py actually enforces was NOT addressed. Examples: the
+    observation schema permits only recorded/invalidated, yet live observations
+    also use current/open/pending and validation passes; reproducer requires
+    path and reproduction_commands, which some artifacts lack. This gap was
+    observed and deliberately left out of scope.
+remaining_work: |
+  1. FROST independence (highest value). Add a cohort member built from an
+     independent codebase - frost-rs is the nearest candidate - execute the same
+     vectors, and byte-compare its outputs. The Rust toolchain already exists at
+     C:\Users\Dhane\.cargo\bin but is not on PATH. Either the adapter agrees,
+     which yields genuine cross-implementation evidence, or it disagrees, which
+     would be a more interesting result than anything currently recorded.
+     Requires a new mission: msn-2026-0019 is terminal on budget exhaustion and
+     cannot be reopened.
+  2. pycose novelty check (fnd-2026-0014). Search the upstream repository's
+     issues, pull requests, commits and changelog for any prior report of the
+     tstr-only map-key ordering behaviour, then reproduce against the release
+     the maintainers currently publish.
+  3. Schema/validator convergence: reconcile localdocs/schemas/*.json with what
+     src/frontier/validate.py actually enforces, or narrow the schemas. Only if
+     judged worth closing.
+external_impact_status: |
+  NONE. Stated plainly because it would be easy to imply otherwise.
+
+  - No upstream issue, pull request, patch, advisory or maintainer report has
+    been filed for any Frontier finding.
+  - No external party has consumed or independently confirmed any result here.
+  - The FROST result is a single-implementation self-consistency check against
+    the RFC's own vectors.
+  - fnd-2026-0014 is the closest candidate for external impact and is blocked on
+    a novelty check that has not been completed.
+
+  What does exist: reproducible local results, a corrected and internally
+  consistent evidence record, deterministic guardrails against two specific
+  classes of agent-introduced defect, and an explicit statement of what is still
+  missing.

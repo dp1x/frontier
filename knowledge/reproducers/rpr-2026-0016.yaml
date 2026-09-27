@@ -2,7 +2,7 @@ id: rpr-2026-0016
 type: reproducer
 status: reproduced
 created_at: "2026-09-02T11:30:00Z"
-updated_at: "2026-09-02T11:30:00Z"
+updated_at: "2026-09-26T12:45:00Z"
 summary: "Step-by-step reproducer for msn-2026-0019 FROST cross-impl matrix. Re-running produces identical results to obs-2026-0043."
 epistemic_status: verified_conclusion
 provenance:
@@ -19,10 +19,26 @@ provenance:
   generation: 0
 links:
   experiments: [exp-2026-0033]
-  observations: [obs-2026-0043]
+  observations: [obs-2026-0043, obs-2026-0044]
   specifications: [spc-2026-0006]
   targets: [tgt-2026-0007]
 title: "RPR-2026-0016 - FROST cleanroom reproducer"
+path: "crypto/frost-cross-impl/cleanroom/frost_cleanroom.py"
+reproduction_commands:
+  - "cd crypto/frost-cross-impl && ../../.venv/Scripts/python.exe cleanroom/frost_cleanroom.py"
+  - "cd crypto/frost-cross-impl && ../../.venv/Scripts/python.exe vectors/gen_vectors.py"
+  - "cd crypto/frost-cross-impl && ../../.venv/Scripts/python.exe runner/run_matrix.py"
+  - "cd C:/Users/Dhane/frontier && .venv/Scripts/python.exe -m frontier.cli validate"
+correction_2026_09_26:
+  note: >
+    Steps 2, 4 and 5 originally documented an ed25519 failure that was caused by
+    defects in the cleanroom oracle itself (5 defects, commit c952582), not by
+    the KAT or the RFC. Expected outputs are corrected in place; the superseded
+    expectations are recorded here verbatim. See obs-2026-0044.
+  superseded_expected_outputs:
+    step_2: "--- ED25519 ---  (FAIL - known limitation; binding_factor diverges)"
+    step_4: "ed25519  cleanroom=SPEC_AMBIGUITY  pycose=NOT_SUPPORTED  go-frost=NOT_BUILT  |  Summary: 1/6 cells PASS"
+    step_5: 'ed25519  rfc9591_appendix_e1_ed25519.json  154fb694ee7fcb37bf2381d944...  SPEC_AMBIGUITY  NOT_SUPPORTED  NOT_BUILT'
 steps:
   - step: 1
     description: "Verify environment (Windows, Python 3.11+, cryptography, ecdsa)"
@@ -34,8 +50,9 @@ steps:
     command: "cd C:\\Users\\Dhane\\frontier\\crypto\\frost-cross-impl && ..\\..\\.venv\\Scripts\\python.exe cleanroom\\frost_cleanroom.py"
     expected_output: |
       --- SECP256K1 ---  (PASS on all 4 phases)
-      --- ED25519 ---  (FAIL — known limitation; binding_factor diverges)
-    notes: "Exit code is non-zero due to ed25519 round-1 binding_factor mismatch; secp256k1 pass is the primary result."
+      --- ED25519 ---    (PASS on all 4 phases)
+      Overall: PASS
+    notes: "Exit code is 0 as of commit c952582. Before the oracle repair, the ed25519 phase failed here because of the oracle's own defects; that failure was not a KAT defect."
 
   - step: 3
     description: "Generate the deterministic test vector corpus"
@@ -50,8 +67,8 @@ steps:
     command: "cd C:\\Users\\Dhane\\frontier && .venv\\Scripts\\python.exe crypto\\frost-cross-impl\\runner\\run_matrix.py"
     expected_output: |
       secp256k1  cleanroom=PASS  pycose=NOT_SUPPORTED  go-frost=NOT_BUILT
-      ed25519    cleanroom=SPEC_AMBIGUITY  pycose=NOT_SUPPORTED  go-frost=NOT_BUILT
-      Summary: 1/6 cells PASS
+      ed25519    cleanroom=PASS  pycose=NOT_SUPPORTED  go-frost=NOT_BUILT
+      Summary: 2/6 cells PASS
 
   - step: 5
     description: "Verify the matrix TSV"
@@ -59,7 +76,7 @@ steps:
     expected_output: |
       ciphersuite	kat_file	expected_final_sig	cleanroom	pycose	go-frost
       secp256k1	rfc9591_appendix_e5_secp256k1.json	024c1ad4e031872661fa6ebd...	PASS	NOT_SUPPORTED	NOT_BUILT
-      ed25519	rfc9591_appendix_e1_ed25519.json	154fb694ee7fcb37bf2381d94...	SPEC_AMBIGUITY	NOT_SUPPORTED	NOT_BUILT
+      ed25519	rfc9591_appendix_e1_ed25519.json	154fb694ee7fcb37bf2381d94...	PASS	NOT_SUPPORTED	NOT_BUILT
 
   - step: 6
     description: "Confirm the research state validates (no structural errors)"
@@ -71,10 +88,15 @@ steps:
     command: "cd C:\\Users\\Dhane\\frontier && .venv\\Scripts\\python.exe -m pytest tests/ -q --tb=no"
     expected_output: "................................................   [100%]"
 reproducibility_notes: |
-  All steps above are deterministic; re-running produces byte-identical output.
+  The cryptographic outputs are deterministic: re-running reproduces the same
+  bytes. CORRECTED 2026-09-26 - one caveat: results/matrix.jsonl records an
+  elapsed_s wall-clock value per cell, so matrix.jsonl is NOT byte-identical
+  across runs. In the 2026-09-26 rerun the only differences from the committed
+  matrix.jsonl were 4 elapsed_s values. results/matrix.tsv and both vector
+  JSONL files are byte-identical on re-run because they carry no timing data.
 
-  Step 2 (cleanroom self-test) is the strongest single check. The secp256k1
-  ciphersuite matches the KAT byte-for-byte across:
+  Step 2 (cleanroom self-test) is the strongest single check. BOTH ciphersuites
+  now match their KAT byte-for-byte across:
     - round 1 commit: hiding_nonce, binding_nonce, hiding_nonce_commitment,
       binding_nonce_commitment, binding_factor
     - round 2 sign: signature shares for both participants
@@ -82,6 +104,13 @@ reproducibility_notes: |
     - verify: aggregate signature verifies under the public group key
 
   Step 4 (matrix runner) confirms the cleanroom classification against the
-  verdict rubric. The "1/6 cells PASS" reflects the cohort constraint: only
+  verdict rubric. The "2/6 cells PASS" reflects the cohort constraint: only
   cleanroom is available; pycose doesn't implement FROST; Go FROST doesn't
-  exist as a port.
+  exist as a port. Corrected 2026-09-26 from "1/6", which reflected the oracle
+  defect rather than a cohort limitation.
+
+  LIMITATION THAT SURVIVES THE CORRECTION: every passing cell is agreement
+  between the Frontier oracle and the RFC vectors it was built against. No
+  independent FROST implementation was executed. Independent reproduction by a
+  second codebase remains the outstanding requirement before any claim here can
+  be promoted.
