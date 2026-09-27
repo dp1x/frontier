@@ -173,15 +173,22 @@ def serialize_scalar_secp256k1(s: int) -> bytes:
 
 
 def serialize_scalar_ed25519(s: int) -> bytes:
-    """RFC 9591 §6.1 ed25519 SerializeScalar: little-endian 32 bytes, top 3 bits zero.
+    """RFC 9591 §6.1 ed25519 SerializeScalar: little-endian 32 bytes.
 
-    In little-endian, byte[31] is the most significant byte; 'top three bits'
-    means bits 5-7 of byte[31].
+    Per RFC 8032 §5.1.2, the integer MUST be in [0, q-1] where q < 2^253,
+    so the top bit of the last (most significant) byte is implicitly zero.
+    The RFC text does not require explicit masking; valid scalars already
+    satisfy the constraint. We therefore emit the full 32-byte LE encoding.
+
+    (Previous cleanroom versions incorrectly applied `& 0x07` to the last
+    byte, which masks the LOW 3 bits of the most significant byte (i.e.,
+    bits 248-250 of the integer), corrupting any scalar that has those
+    bits set. This manifested as the ed25519 binding_factor divergence
+    from the RFC 9591 Appendix E.1 KAT.)
     """
     if s < 0 or s >= ORDER_ED25519:
         raise ValueError(f"scalar out of range: {s}")
-    b = s.to_bytes(32, "little")
-    return b[:-1] + bytes([b[31] & 0x07])
+    return s.to_bytes(32, "little")
 
 
 def deserialize_scalar_secp256k1(b: bytes) -> int:
@@ -255,7 +262,9 @@ def decompress_ed25519(b: bytes) -> Point:
             raise ValueError(f"ed25519 point y={y} has no x in Fp")
     if (x & 1) != sign:
         x = P_ED25519 - x
-    return PointEdwards(Ed25519.curve, x, y, ORDER_ED25519, 1, (x * y) % P_ED25519)
+    # PointEdwards constructor signature: (curve, X, Y, Z, T, order, generator)
+    # For an affine point (x, y), extended coords are (X, Y, Z, T) = (x, y, 1, x*y).
+    return PointEdwards(Ed25519.curve, x, y, 1, (x * y) % P_ED25519, ORDER_ED25519)
 
 
 def compress_ed25519(pt) -> bytes:
@@ -381,6 +390,10 @@ def _ed25519_add_extended(P, Q, p, n, d):
     """
     X1, Y1, Z1, T1 = P
     X2, Y2, Z2, T2 = Q
+    # RFC 8032 §5.1.4 point addition (extended twisted Edwards, a=-1).
+    # Note the `2*` factors in C and D — these are part of the RFC 8032
+    # specification for the unified addition formula. Earlier cleanroom
+    # versions incorrectly removed these factors, which broke KAT match.
     A = ((Y1 - X1) * (Y2 - X2)) % p
     B = ((Y1 + X1) * (Y2 + X2)) % p
     C = (T1 * 2 * d * T2) % p
@@ -631,13 +644,17 @@ def verify_aggregate_secp256k1(R, z, group_public_key, challenge) -> bool:
 
 
 def verify_aggregate_ed25519(R, z, group_public_key, challenge) -> bool:
-    """ed25519 verification with cofactor: [8]zB == [8]R + [8][c]PK (RFC 8032 §5.1.7)."""
+    """RFC 9591 §5.3 + §6.1 ed25519 verification: z*B == R + challenge*PK (non-cofactored).
+
+    The non-cofactored Schnorr equation is what RFC 9591 specifies. The
+    cofactor-8 form (RFC 8032 §5.1.7) is for single-party ed25519 with
+    potential small-subgroup concerns; FROST signing produces points in
+    the prime-order subgroup, so the simpler non-cofactored check suffices
+    and matches the KAT.
+    """
     lhs = scalar_mult(z, Ed25519.generator, Ed25519)
     rhs = R + scalar_mult(challenge, group_public_key, Ed25519)
-    # Multiply both by cofactor 8 for RFC 8032 compat
-    lhs8 = lhs * 8
-    rhs8 = rhs * 8
-    return lhs8.x() == rhs8.x() and lhs8.y() == rhs8.y()
+    return lhs.x() == rhs.x() and lhs.y() == rhs.y()
 
 
 # ============================================================================
@@ -740,8 +757,11 @@ def frost_sign(kat_path, group: str = "secp256k1") -> dict:
         identifier = p_expected["identifier"]
         share_hex = next(p["participant_share"] for p in participant_shares
                          if p["identifier"] == identifier)
-        share_scalar = int(share_hex, 16)
         share_enc = bytes.fromhex(share_hex)
+        # Per RFC 9591 §6.1-3 (Ed25519 ciphersuite), scalars are encoded
+        # little-endian. Read the scalar as LE bytes to get the integer
+        # value in [0, q-1].
+        share_scalar = cs["deserialize_scalar"](share_enc)
 
         hiding_nonce = cs["nonce_generate"](
             secret_share_enc=share_enc,
