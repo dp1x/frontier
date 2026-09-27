@@ -95,6 +95,15 @@ does the job better.
   degrade gracefully when short.
 - Promote anything worth keeping into a committed artifact before the workspace
   disappears. Transient noise, giant logs, caches: never commit.
+- **Heavy build trees never persist locally.** Lean/Mathlib `.lake/packages`, Rust
+  `target/`, `node_modules/`, and downloaded toolchain caches are deleted in the
+  same session that creates them; the matching CI workflow is the way to rebuild
+  (`formal.yml`, `rustls-loopback.yml`, …). Keep only artifacts that *are* evidence
+  — e.g. `formal/.lake/build/**/*.olean`, which the findings cite as kernel-accepted
+  proof terms. Local disk wear is a first-class cost: a 5.4 GB Mathlib olean cache is
+  reproducible from CI with `lake exe cache get!` and must not be hoarded.
+- A session that creates local build output and then leaves it is a defect. Record
+  every cleanup in `CHECKPOINT.md` with before/after size.
 
 ## Security and sandbox rules
 
