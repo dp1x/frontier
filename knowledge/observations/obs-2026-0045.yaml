@@ -1,0 +1,122 @@
+id: obs-2026-0045
+type: observation
+status: recorded
+created_at: "2026-09-28T14:46:00Z"
+updated_at: "2026-09-28T14:46:00Z"
+summary: "Direct probe of pycose 1.1.0 protected-header key ordering contradicts the scope caveat carried by fnd-2026-0014. pycose preserves insertion order for int-key maps as well as tstr-key maps, so the divergence is NOT scoped to tstr-only maps; pycose is not applying RFC 8949 section 4.2.1 key ordering to protected headers at all. Recorded before any upstream report, so the external claim is not overstated."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: null
+    tool: "local probe .scratch/probe_pycose_order.py driving cose-cross-impl/adapters/lib_pycose_adapter.py"
+  sources:
+    - .scratch/probe_pycose_order.py
+    - cose-cross-impl/adapters/lib_pycose_adapter.py
+    - cose-cross-impl/results/matrix.jsonl
+    - knowledge/findings/fnd-2026-0014.yaml
+    - knowledge/observations/obs-2026-0042.yaml
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
+    - https://www.rfc-editor.org/rfc/rfc9052
+  parent: msn-2026-0018
+  generation: 0
+links:
+  findings: [fnd-2026-0014]
+  observations: [obs-2026-0042]
+  experiments: [exp-2026-0032]
+  targets: [tgt-2026-0006]
+title: "OBS-2026-0045 - pycose ordering probe: divergence is not scoped to tstr-only maps"
+statement: >
+  Probed pycose 1.1.0 directly to test the scope caveat carried by fnd-2026-0014
+  ("pycose DOES sort correctly when keys are mixed int+tstr; the divergence is
+  scoped to all-tstr-key maps"). The caveat is not supported. For an int-key
+  protected map supplied in descending insertion order ({4: b'y', 3: 50}), pycose
+  emitted the keys in the insertion order it received ({4, 3}) rather than the
+  RFC 8949 section 4.2.1 bytewise-lexicographic order ({3, 4}). The apparent
+  agreement on the matrix's int_labels_sorted vector occurs only because that
+  vector's input insertion order already matched sorted order. The corrected
+  statement is that pycose does not apply RFC 8949 section 4.2.1 key ordering to
+  COSE protected headers, for int-key and tstr-key maps alike.
+environment:
+  where: local
+  isolation: "env-scrubbed local venv; no network access"
+  cwd: "c:/Users/Dhane/frontier"
+  versions:
+    pycose: "1.1.0"
+    cbor2: "6.1.4"
+    cryptography: "50.0.1"
+    python: "3.11.15 (uv-managed venv)"
+probe_method: >
+  Reused the cohort's own adapter (lib_pycose_adapter.encode_structure) so the code
+  path matches what exp-2026-0032 measured: Sign1Message._create_sig_structure(),
+  then extract the protected bucket (Sig_structure element 1) and compare its bytes
+  and decoded key order against the cbor2 canonical=True encoding of the same map.
+  Read-only with respect to research state: writes no artifacts.
+probe_results:
+  - case: "int-only, ascending insertion {3:50, 4:b'y'}"
+    insertion_order: [3, 4]
+    pycose_key_order: [3, 4]
+    matches_canonical: true
+    note: "Agrees only because the insertion order already equals sorted order."
+  - case: "int-only, descending insertion {4:b'y', 3:50}"
+    insertion_order: [4, 3]
+    pycose_key_order: [4, 3]
+    pycose_protected_hex: "a2044179031832"
+    canonical_hex: "a2031832044179"
+    matches_canonical: false
+    note: "DECISIVE. pycose preserved insertion order for int keys; it did not sort."
+  - case: "tstr-only {a,aa,b,ab,z}"
+    insertion_order: ["a", "aa", "b", "ab", "z"]
+    pycose_key_order: ["a", "aa", "b", "ab", "z"]
+    pycose_protected_hex: "a56161016261610261620362616204617a05"
+    canonical_hex: "a5616101616203617a056261610262616204"
+    matches_canonical: false
+  - case: "tstr-only, reversed insertion {z,ab,b,aa,a}"
+    insertion_order: ["z", "ab", "b", "aa", "a"]
+    pycose_key_order: ["z", "ab", "b", "aa", "a"]
+    pycose_protected_hex: "a5617a056261620461620362616102616101"
+    canonical_hex: "a5616101616203617a056261610262616204"
+    matches_canonical: false
+  - case: "int labels 0/1/9/10 (label-width variation)"
+    insertion_order: [10, 9, 1, 0]
+    pycose: "adapter returned None; not measurable through this path"
+    verdict: "no evidence either way"
+conclusions:
+  supported: >
+    pycose 1.1.0 does not apply RFC 8949 section 4.2.1 bytewise-lexicographic
+    ordering to COSE protected-header maps. The emitted key order follows the order
+    of the dict it was handed. Where the matrix recorded PASS, the input happened to
+    be pre-sorted.
+  withdrawn: >
+    The scope caveat in fnd-2026-0014 restricting the divergence to tstr-only maps.
+    It is contradicted by the int-only descending case above. The corresponding
+    counter-evidence claim in obs-2026-0042 ("pycose DOES sort correctly when keys
+    are mixed int+tstr") is likewise unreliable.
+  unchanged: >
+    The core byte-mismatch observations in the matrix stand. For the same logical
+    protected map, pycose and the oracle produce different Sig_structure bytes, so
+    signatures computed over them are mutually unverifiable. That is the substance
+    of fnd-2026-0014 and it is unaffected by this correction.
+confound_identified:
+  description: >
+    The matrix's mixed-key vectors are confounded. pycose's header machinery maps
+    some tstr header names to their registered integer labels, so a mixed vector
+    that appears to measure ordering also measures label substitution. In the probe,
+    protected {"1": -7, "ctyp": "text/plain", "kid": "6b"} came back as keys
+    ['ctyp', 4]: 'kid' became integer 4, while 'ctyp' stayed a text string.
+  consequence: >
+    Any statement about pycose's behaviour on MIXED int+tstr maps needs a
+    re-measurement that separates label normalisation from ordering. The mixed-key
+    cells must not be cited for that question.
+scope_limitations:
+  adapter_mediated: >
+    The probe runs through Frontier's own adapter, which normalises string keys to
+    int and hex-decodes values. This is the same path the matrix used, so the
+    comparison is like-for-like, but it is not a bare pycose API measurement.
+  library_scope: "pycose 1.1.0 only. Other versions were not tested."
+  no_upstream_contact: "No issue, PR or maintainer report has been filed. Novelty is unchecked."
+  what_this_does_not_establish: >
+    Does not establish that the behaviour is a spec violation in the maintainers'
+    view, nor that it is previously unreported. It establishes what the library does
+    on this path, and nothing more.

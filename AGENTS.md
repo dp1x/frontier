@@ -74,6 +74,13 @@ review → verified result`
 
 ## Compute routing
 
+**HARD RULE: use GitHub Actions wherever you can.** Building in the cloud is the default for
+anything non-trivial. Local build output is a defect unless it is tiny, fast, and deleted in
+the same session. Rule of thumb: **if a directory is gitignored AND regenerable by a CI job,
+it does not get to live on this machine.** The one exception is a build product that *is*
+evidence — e.g. the Lean `.olean` files cited by the formal findings — which is kept and
+justified in writing.
+
 Encode decisions, don't improvise:
 
 | Class | Examples | Route |
@@ -84,7 +91,8 @@ Encode decisions, don't improvise:
 
 Use `frontier.compute.route`; record the decision in the experiment artifact.
 Never use CI merely because it exists; never burn local CPU/SSD when free CI
-does the job better.
+does the job better. Both halves of that sentence are binding: do not hoard build
+output locally, and do not reach for CI for work it is unsuited to.
 
 ## Scratch / ramdisk rules
 

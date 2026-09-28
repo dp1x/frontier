@@ -8,5 +8,7 @@ Generate several self-contained prompts at once with **distinct angles**;
 near-duplicates are a defect. Deep, specific, technical. This channel is a last
 resort — see `localdocs/external-research.md`.
 
-Status: empty at initialization. The bootstrap mission does not require
-external research yet.
+Status: active. Prompts filed: aio-2026-0001 (ML-KEM encapsulation-key
+validation prior art), aio-2026-0002, aio-2026-0003 (deployed-protocol placement
+norms), aio-2026-0004 (pycose COSE protected-header key ordering: prior art and
+normative text). Outputs are paired in `ai-io/outputs/`.

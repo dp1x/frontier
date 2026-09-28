@@ -2,8 +2,8 @@ id: fnd-2026-0014
 type: finding
 status: verified_conclusion
 created_at: "2026-09-02T04:30:00Z"
-updated_at: "2026-09-26T12:45:00Z"
-summary: "**pycose 1.1.0 does NOT sort map keys per RFC 8949 §4.2.1 bytewise-lex for tstr-only maps**. Across 4 header_label_sorting vectors, pycose preserves insertion order while both go-cose (via fxamacker/cbor SortCoreDeterministic) and the Frontier cleanroom oracle produce correct bytewise-lex sort. This is a SPEC_VIOLATION per RFC 9052 §9 (which explicitly requires RFC 8949 §4.2.1 for COSE message structures). NOTE: pycose DOES sort correctly when keys are mixed int+tstr; the divergence is scoped to all-tstr-key maps."
+updated_at: "2026-09-28T14:46:00Z"
+summary: "**pycose 1.1.0 does NOT sort map keys per RFC 8949 §4.2.1 bytewise-lex for protected-header maps**. Across 4 header_label_sorting vectors, pycose preserves insertion order while both go-cose (via fxamacker/cbor SortCoreDeterministic) and the Frontier cleanroom oracle produce correct bytewise-lex sort. This is a SPEC_VIOLATION per RFC 9052 §9 (which explicitly requires RFC 8949 §4.2.1 for COSE message structures). CORRECTED 2026-09-28: the divergence is NOT scoped to tstr-only maps. Direct probing shows pycose preserves insertion order for int-key maps as well (obs-2026-0045). The earlier caveat was wrong and is withdrawn."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -23,14 +23,33 @@ provenance:
   generation: 0
 links:
   experiments: [exp-2026-0032]
-  observations: [obs-2026-0042]
+  observations: [obs-2026-0042, obs-2026-0045]
   reproducers: [rpr-2026-0015]
   specifications: [spc-2026-0005]
   implementations: [imp-2026-0021, imp-2026-0024]  # go-cose + pycose
   targets: [tgt-2026-0006]
   reviews: [rev-2026-0016]
   verifications: [vrf-2026-0016]
-title: "FND-2026-0014 - pycose map-key sort order non-conformance for tstr-only maps (RFC 9052 §9)"
+title: "FND-2026-0014 - pycose map-key sort order non-conformance (RFC 9052 §9)"
+correction_2026_09_28:
+  reason: >
+    A direct probe of pycose 1.1.0 (obs-2026-0045) contradicted this finding's scope
+    caveat. The caveat claimed pycose sorts correctly for mixed int+tstr maps and
+    fails only for tstr-only maps. In the probe, an int-only protected map supplied
+    in descending insertion order came back in insertion order, so the failure is not
+    restricted to tstr-key maps.
+  corrected_by: obs-2026-0045
+  claims_withdrawn:
+    - "The divergence is scoped to all-tstr-key maps."
+    - "pycose DOES sort correctly when keys are mixed int+tstr."
+    - "The title's qualifier 'for tstr-only maps'."
+  claims_unchanged:
+    - "For the same logical protected map, pycose and the oracle emit different Sig_structure bytes, so signatures over them are mutually unverifiable."
+    - "This is at odds with RFC 9052 section 9, which requires RFC 8949 section 4.2.1 encoding for COSE message structures."
+  effect_on_status: >
+    status stays verified_conclusion; epistemic_status unchanged. This corrects the
+    scope of the claim, not the substance. Promotion is not reversed. The novelty
+    check remains outstanding and no upstream report has been filed.
 normative_basis:
   rfc_9052_section_9: "Encoding restrictions are aligned with Core Deterministic Encoding Requirements specified in Section 4.2.1 of RFC 8949 [STD94]. In particular: encoding MUST be done using definite lengths, the length of the encoded argument MUST be the minimum possible length, the keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings."
   rfc_8949_section_4_2_1: "The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings. For example: 10, 100, -1, 'z', 'aa', [100], [-1], false — sorted correctly."

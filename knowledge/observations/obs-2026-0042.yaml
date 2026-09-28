@@ -2,7 +2,7 @@ id: obs-2026-0042
 type: observation
 status: current
 created_at: "2026-09-02T04:30:00Z"
-updated_at: "2026-09-02T04:30:00Z"
+updated_at: "2026-09-28T14:46:00Z"
 summary: "COSE matrix (40 vectors x 2 adapters): 74 PASS, 4 SPEC_VIOLATION (pycose sort order), 2 NOT_SUPPORTED. Both adapters and the cleanroom oracle agree on all structure bytes EXCEPT for pycose's map-key sort order on tstr-only maps (insertion order vs §4.2.1 bytewise-lex)."
 epistemic_status: observation
 provenance:
@@ -25,7 +25,19 @@ links:
   targets: [tgt-2026-0006]
   specifications: [spc-2026-0005]
   findings: [fnd-2026-0014]
+  observations: [obs-2026-0045]
 title: "OBS-2026-0042 - COSE matrix: 74 PASS / 4 SPEC_VIOLATION / 2 NOT_SUPPORTED"
+correction_2026_09_28:
+  note: >
+    This observation's matrix cells stand, but two of its interpretive claims about
+    pycose did not survive direct probing (obs-2026-0045): the claim that pycose
+    sorts correctly for mixed int+tstr maps (counter_evidence_3, now withdrawn), and
+    the generalisation that the divergence is confined to tstr-key maps. The
+    mixed-key vectors here are additionally confounded, because pycose substitutes
+    registered integer labels for some tstr header names, so those cells measure
+    label normalisation as well as ordering.
+  corrected_by: obs-2026-0045
+  unaffected: "The PASS/SPEC_VIOLATION counts and the byte-level mismatches for the pure int-key and pure tstr-key vectors."
 matrix_summary:
   total_cells: 80
   verdict_distribution:
@@ -101,7 +113,7 @@ key_findings:
     cohort: "pycose only"
     counter_evidence: "go-cose uses fxamacker/cbor SortCoreDeterministic which is bytewise-lex; matches RFC 8949 §4.2.1."
     counter_evidence_2: "Frontier cleanroom Python oracle uses canonical sort (bytewise-lex)."
-    counter_evidence_3: "pycose DOES sort correctly when keys are mixed int+tstr (int comes first, then tstr sorted bytewise-lex) — only fails for tstr-only maps."
+    counter_evidence_3: "WITHDRAWN 2026-09-28. This claimed pycose sorts correctly for mixed int+tstr maps and fails only for tstr-only maps. Direct probing contradicts it: pycose preserved insertion order for an int-only map supplied in descending order, and the mixed-key vectors are additionally confounded by pycose substituting registered integer labels for some tstr header names. See obs-2026-0045."
     classification: "SPEC_VIOLATION — confirmed by 3 independent oracles"
 not_supported_details:
   - vector: cose_encrypt0_message_construction/encrypt0_chacha20
