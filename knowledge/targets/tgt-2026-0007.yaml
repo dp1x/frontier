@@ -33,7 +33,7 @@ links:
 title: "TGT-2026-0007 - FROST (RFC 9591) threshold signature cross-implementation byte-exact differential"
 selection_rationale: >
   After msn-2026-0018 (COSE message-encoding conformance) reached verified
-  terminal state with fnd-2026-0014 promoted (pycose tstr-only sort bug),
+  terminal state with fnd-2026-0014 promoted (pycose protected-header ordering concern; see obs-2026-0045 for corrected scope),
   a bounded opportunity scan was run against the existing scout dossiers
   (knowledge/notes/scout-frost-2026-08-31.md,
   knowledge/notes/scout-protocol-interop-2026-08-30.md,

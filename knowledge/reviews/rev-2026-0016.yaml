@@ -2,8 +2,8 @@ id: rev-2026-0016
 type: review
 status: current
 created_at: "2026-09-02T04:30:00Z"
-updated_at: "2026-09-02T04:30:00Z"
-summary: "Adversarial critic review of fnd-2026-0014 (pycose tstr-only sort order divergence). Verdict: SUPPORT. The evidence chain is sound: 2 cohort libraries + 1 cleanroom oracle independently agree on bytewise-lex sort, while pycose disagrees on tstr-only maps. The RFC citation is correct. The scope limitation (tstr-only) is precisely scoped. The reproducibility path is complete."
+updated_at: "2026-09-29T00:00:00Z"
+summary: "Historical adversarial review of the original fnd-2026-0014 matrix. Verdict SUPPORT applies to the original tstr-vector findings and RFC analysis; its tstr-only scope conclusion and mixed-key counterevidence were superseded by obs-2026-0045 and must not be relied on."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -35,7 +35,7 @@ review_attempted_disproofs:
   disproof_1_orchestrator_self_consistency:
     claim: "The 3-way agreement (oracle + go-cose + pycose on mixed maps) is merely self-consistency within the COSE cohort, not independent evidence."
     reasoning: "Test if pycose's sort behavior on tstr-only maps differs from its own behavior on int-only or mixed maps. If yes, the divergence is real (not self-consistency)."
-    result: "DISCONFIRMED — pycose correctly sorts mixed-key maps (e.g. sign1_int_and_tstr_headers_in_protected, which contains both int 1 and tstr 'ctyp'; pycose places int first, then tstr). So pycose IS using some sort logic. The tstr-only divergence is a specific bug, not blanket non-conformance."
+    result: "SUPERSEDED 2026-09-29 — the earlier mixed-key vector is confounded by pycose header-label normalization, and a direct descending int-only protected-map probe (obs-2026-0045) shows insertion order is preserved. It does not establish that pycose correctly sorts mixed maps; clean mixed-key behavior remains unmeasured."
   disproof_2_oracle_correlation:
     claim: "Frontier cleanroom oracle may have been influenced by go-cose's behavior (correlation)."
     reasoning: "Verify oracle derivation: was the oracle built by reading RFC text alone, or did it consult go-cose?"
@@ -57,10 +57,27 @@ review_attempted_disproofs:
     reasoning: "Compare byte counts."
     result: "DISCONFIRMED — All 4 divergences have the same byte count between oracle and pycose (only key order differs). Sig_structure length is the same. This is NOT a length mismatch; it is a real reordering of bytes that produces a different CBOR byte string for the same logical map. A signature computed over one ordering will NOT verify against the other."
 verdict: SUPPORT
+correction_2026_09_29:
+  corrected_by: obs-2026-0045
+  note: >
+    This review predates the direct int-only probe. The matrix rerun and its
+    tstr-vector byte comparisons remain historical evidence, but the review's
+    narrow tstr-only scope and claim that mixed maps sort correctly are
+    superseded. Its SUPPORT verdict is retained as the recorded verdict on the
+    original evidence set, not as an independent review of obs-2026-0045 or the
+    corrected scope. No new independent adversarial review of the 2026-09-28
+    probe has been performed.
+  superseded_claims:
+    - "The tstr-only divergence is a specific bug, not blanket non-conformance."
+    - "The finding is limited to tstr-only maps."
+    - "pycose produces §4.2.1 output for mixed int+tstr maps (controlled experiment)."
+    - "Three independent parties agree; pycose disagrees in a specific, well-scoped case."
+  status_effect: "Historical verdict retained; corrected scope is not independently adversarially reviewed."
 rationale: |
-  After attempting6 independent disproofs, all were disconfirmed or inconclusive.
-  The finding stands: pycose 1.1.0 does NOT conform to RFC 9052 §9 (RFC 8949 §4.2.1
-  bytewise-lex map-key sort) for tstr-only maps. The evidence chain is:
+  Historical rationale for the original review verdict (not updated to cover
+  obs-2026-0045): the matrix and RFC analysis were considered supportive. The
+  scope-specific statements below are superseded by correction_2026_09_29 and
+  must not be relied on as current conclusions. The original evidence chain was:
 
     1. RFC 9052 §9 explicitly requires §4.2.1 (verified by direct text reading)
     2. Frontier cleanroom oracle produces §4.2.1 output (derived from RFC text
@@ -68,18 +85,22 @@ rationale: |
        before this COSE work began)
     3. go-cose (via fxamacker/cbor SortCoreDeterministic) produces §4.2.1 output
        (independently implements the same RFC text)
-    4. pycose produces insertion-order output for tstr-only maps (4/4 vectors)
-    5. pycose produces §4.2.1 output for mixed int+tstr maps (controlled experiment)
+    4. The original matrix recorded 4 pycose ordering mismatches (int-key,
+       mixed-key and tstr-key cases); obs-2026-0045 later added the decisive
+       descending int-only protected-map probe.
+    5. Original mixed int+tstr matrix vector appeared to produce §4.2.1 output;
+       obs-2026-0045 later found this vector confounded by header-label normalization.
 
-  Three independent parties (oracle, go-cose, RFC text) agree; pycose disagrees
-  in a specific, well-scoped case. This is a real SPEC_VIOLATION.
+  The review's claim of a narrowly scoped tstr-only case is superseded. This
+  record retains its historical verdict, but it is not an independent review
+  of obs-2026-0045 or of the corrected scope.
 
   The finding is appropriate to promote to verified_conclusion once the
   deterministic verification (vrf-2026-0016) runs and reproduces the same
   80-cell matrix result.
 recommendations:
   - "Promote fnd-2026-0014 to verified_conclusion after vrf-2026-0016 reproduces."
-  - "Document pycose bug in pycose issue tracker (out of scope for Frontier; we report independently)."
+  - "Do NOT file an upstream report until the novelty check is complete and the corrected scope has had independent adversarial review; if both pass, prepare a report citing RFC 9052 section 9 and RFC 8949 section 4.2.1 with a minimal reproducer."
   - "Future work: integrate cose-c/cose-java/coset to confirm scope of divergence across more libraries."
   - "Future work: test if pycose fix is in newer versions (1.1.0 is what we tested)."
   - "Future work: investigate impact on WebAuthn/FIDO2 deployments that depend on pycose."

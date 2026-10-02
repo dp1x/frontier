@@ -88,7 +88,7 @@ reproducibility_notes:
   - "The pycose adapter requires pycose 1.1.0 specifically; newer versions may have different sort behavior or API."
   - "The go-cose driver must be built with go 1.21+; older versions may not have fxamacker/cbor v2.9.0."
   - "The matrix outputs are deterministic given fixed inputs (no randomness; the only nondeterminism is ECDSA signing, which is not exercised in structure-level comparison)."
-  - "Diff between pycose and the oracle on 4 vectors is a real divergence (pycose uses insertion order for tstr-only maps). This is the primary research finding."
+  - "The original matrix recorded four pycose ordering divergences. Subsequent direct probing (obs-2026-0045) found insertion order preserved for a descending int-only map as well as tested tstr-only maps; existing mixed-key vectors are confounded and cannot establish mixed-map behavior."
   - "Re-running produces the same 74 PASS / 4 SPEC_VIOLATION distribution."
 byte_level_diffs:
   signature_violations:
@@ -97,7 +97,7 @@ byte_level_diffs:
     pycose: "846a5369676e61747572653147a2044179031832404170"
     decoded_oracle_protected: "{3:50, 4:b'y'}"
     decoded_pycose_protected: "{4:b'y', 3:50}"
-    root_cause: "pycose preserves dict insertion order when all keys are int; RFC 9052 §9 requires §4.2.1 bytewise-lex sort"
+    interpretation: "This vector's input is already sorted, so its output mismatch does not isolate insertion-order behavior. The descending int-only case in obs-2026-0045 is the direct probe for that claim."
 empty_protected_bucket:
   all_libraries: "Pass — empty protected bucket encoded as h'' (0x40) by all 3 implementations (oracle + pycose + go-cose)"
   root_cause: "RFC 9052 §3 SHOULD is implemented correctly by all 3"

@@ -93,8 +93,9 @@ msn-2026-0018_completed: |
           authorship as cose-c; shares cose-wg/Examples test corpus
           with cose-c.
        e. imp-2026-0024 (pycose 1.1.0, Python): cbor2 CBOR backend;
-          NOT a freeze; active maintenance. Confirmed SPEC_VIOLATION
-          for tstr-only map-key sort order (fnd-2026-0014).
+          NOT a freeze; active maintenance. Observed protected-header
+          ordering mismatches (fnd-2026-0014); the original tstr-only scope
+          was superseded by obs-2026-0045.
 
     3. **Adapter integration** (local):
        a. lib_pycose_adapter.py: in-process Python adapter;

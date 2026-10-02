@@ -2,8 +2,8 @@ id: vrf-2026-0016
 type: verification
 status: current
 created_at: "2026-09-02T04:30:00Z"
-updated_at: "2026-09-02T04:30:00Z"
-summary: "Deterministic verification of fnd-2026-0014 (pycose tstr-only sort order divergence) via rpr-2026-0015 reproduction. Re-runs the matrix from scratch and confirms byte-identical results: 80 cells, 74 PASS / 4 SPEC_VIOLATION (all pycose sort order) / 2 NOT_SUPPORTED."
+updated_at: "2026-09-29T00:00:00Z"
+summary: "Deterministic verification of the original fnd-2026-0014 matrix via rpr-2026-0015. Re-runs and confirms byte-identical results: 80 cells, 74 PASS / 4 SPEC_VIOLATION / 2 NOT_SUPPORTED. The original tstr-only scope interpretation was superseded by obs-2026-0045; this verification does not independently verify that later probe or establish mixed-key ordering."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -87,8 +87,19 @@ promotion_rationale: |
     - Deterministic verification (vrf-2026-0016): VERIFIED
     - Independence claims appropriately scoped: yes (cohort = 2 libraries, not ecosystem-wide)
     - Instrument validation: yes (oracle self-test passes; pycose + go-cose driver outputs verified)
-  The finding is properly scoped to tstr-only maps in pycose 1.1.0 and does not
-  make ecosystem-wide claims beyond the cohort.
+  This verification reproduces the original matrix run only. Its original
+  tstr-only scope interpretation is superseded by obs-2026-0045; it does not
+  verify the later direct probe or establish behavior beyond the matrix cases.
+correction_2026_09_29:
+  corrected_by: obs-2026-0045
+  note: >
+    The 80-cell rerun and byte identity remain historical facts. The prior scope
+    conclusion is not valid: obs-2026-0045 directly tests a descending int-only
+    protected map and finds insertion order preserved. Existing mixed-key vectors
+    are confounded by registered header-label normalization, so mixed-key sorting
+    remains unestablished. This correction does not change what this verification
+    actually reran; it limits the inference drawn from it.
+  superseded_scope_claim: "The finding is properly scoped to tstr-only maps in pycose 1.1.0."
 promotion_actions:
   - "Set fnd-2026-0014 status to 'verified_conclusion'"
   - "Set fnd-2026-0014 epistemic_status to 'verified_conclusion'"
@@ -97,5 +108,5 @@ promotion_actions:
 residual_limitations:
   cohort_size: "2 libraries (pycose + go-cose); not ecosystem-wide"
   cbor_correlation: "pycose uses cbor2 internally; go-cose uses fxamacker/cbor; cbor_oracle is Frontier's cleanroom"
-  scope: "limited to tstr-only maps in protected/unprotected headers"
+  scope: "Original matrix covered its listed vectors only. obs-2026-0045 adds an adapter-mediated descending int-only protected-map probe; mixed-key ordering, unprotected headers, other message classes, and other versions remain unestablished."
   algorithm_coverage: "ES256, HMAC, AES-GCM, ChaCha20-Poly1305 NOT_SUPPORTED via matrix-level comparison"

@@ -2,8 +2,8 @@ id: obs-2026-0045
 type: observation
 status: recorded
 created_at: "2026-09-28T14:46:00Z"
-updated_at: "2026-09-28T14:46:00Z"
-summary: "Direct probe of pycose 1.1.0 protected-header key ordering contradicts the scope caveat carried by fnd-2026-0014. pycose preserves insertion order for int-key maps as well as tstr-key maps, so the divergence is NOT scoped to tstr-only maps; pycose is not applying RFC 8949 section 4.2.1 key ordering to protected headers at all. Recorded before any upstream report, so the external claim is not overstated."
+updated_at: "2026-09-29T00:00:00Z"
+summary: "Direct probe of pycose 1.1.0 protected-header key ordering contradicts the scope caveat carried by fnd-2026-0014: on the tested adapter path, pycose preserved supplied order for an int-key map as well as tstr-key maps, so the divergence is NOT scoped to tstr-only maps. Mixed-key ordering remains unmeasured (confounded), and the probe does not establish behavior for other paths or versions (see conclusions.inference_limit_2026_09_29). Recorded before any upstream report, so the external claim is not overstated."
 epistemic_status: observation
 provenance:
   created_by:
@@ -27,6 +27,8 @@ links:
   experiments: [exp-2026-0032]
   targets: [tgt-2026-0006]
 title: "OBS-2026-0045 - pycose ordering probe: divergence is not scoped to tstr-only maps"
+inference_limits:
+  note: "A blanket claim that pycose never orders protected-header maps, a mixed-key ordering claim, other pycose versions/paths, and concrete cross-library signature-verification failure are NOT established by this probe."
 statement: >
   Probed pycose 1.1.0 directly to test the scope caveat carried by fnd-2026-0014
   ("pycose DOES sort correctly when keys are mixed int+tstr; the divergence is
@@ -36,8 +38,9 @@ statement: >
   RFC 8949 section 4.2.1 bytewise-lexicographic order ({3, 4}). The apparent
   agreement on the matrix's int_labels_sorted vector occurs only because that
   vector's input insertion order already matched sorted order. The corrected
-  statement is that pycose does not apply RFC 8949 section 4.2.1 key ordering to
-  COSE protected headers, for int-key and tstr-key maps alike.
+  statement is limited to what was probed: on this adapter path, pycose 1.1.0
+  preserved supplied order for the tested int-key and tstr-key protected maps;
+  clean mixed-key ordering behavior was not measured (see conclusions.inference_limit_2026_09_29).
 environment:
   where: local
   isolation: "env-scrubbed local venv; no network access"
@@ -83,11 +86,20 @@ probe_results:
     pycose: "adapter returned None; not measurable through this path"
     verdict: "no evidence either way"
 conclusions:
+  inference_limit_2026_09_29: >
+    The phrases "does not apply RFC 8949 section 4.2.1 ordering to COSE
+    protected-header maps" and "signatures computed over them are mutually
+    unverifiable" in this block are interpretations that outrun the probe.
+    What the probe establishes: on this adapter path for pycose 1.1.0, two
+    int-only insertion orders and two tstr-only insertion orders were emitted
+    unchanged, and one mixed-key case was confounded by label normalization.
+    A blanket no-ordering claim needs clean cases across key types and paths;
+    cross-library signature verification failure was not executed.
   supported: >
-    pycose 1.1.0 does not apply RFC 8949 section 4.2.1 bytewise-lexicographic
-    ordering to COSE protected-header maps. The emitted key order follows the order
-    of the dict it was handed. Where the matrix recorded PASS, the input happened to
-    be pre-sorted.
+    On the tested adapter path, pycose 1.1.0 emitted the supplied key order for
+    the tested int-only and tstr-only protected maps rather than RFC 8949
+    section 4.2.1 bytewise-lexicographic order. Where the matrix recorded PASS,
+    the input happened to be pre-sorted.
   withdrawn: >
     The scope caveat in fnd-2026-0014 restricting the divergence to tstr-only maps.
     It is contradicted by the int-only descending case above. The corresponding
@@ -95,9 +107,10 @@ conclusions:
     are mixed int+tstr") is likewise unreliable.
   unchanged: >
     The core byte-mismatch observations in the matrix stand. For the same logical
-    protected map, pycose and the oracle produce different Sig_structure bytes, so
-    signatures computed over them are mutually unverifiable. That is the substance
-    of fnd-2026-0014 and it is unaffected by this correction.
+    protected map, pycose and the oracle produce different protected-bucket and
+    Sig_structure bytes on the tested path; whether that yields mutual
+    signature-verification failure across libraries was not executed and remains
+    future work.
 confound_identified:
   description: >
     The matrix's mixed-key vectors are confounded. pycose's header machinery maps

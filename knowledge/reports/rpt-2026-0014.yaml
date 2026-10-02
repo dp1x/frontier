@@ -180,7 +180,8 @@ remaining_work: |
      cannot be reopened.
   2. pycose novelty check (fnd-2026-0014). Search the upstream repository's
      issues, pull requests, commits and changelog for any prior report of the
-     tstr-only map-key ordering behaviour, then reproduce against the release
+     protected-header key-ordering behaviour (obs-2026-0045 corrected the
+     original tstr-only scope), then reproduce against the release
      the maintainers currently publish.
   3. Schema/validator convergence: reconcile localdocs/schemas/*.json with what
      src/frontier/validate.py actually enforces, or narrow the schemas. Only if

@@ -3,7 +3,7 @@ type: observation
 status: current
 created_at: "2026-09-02T04:30:00Z"
 updated_at: "2026-09-28T14:46:00Z"
-summary: "COSE matrix (40 vectors x 2 adapters): 74 PASS, 4 SPEC_VIOLATION (pycose sort order), 2 NOT_SUPPORTED. Both adapters and the cleanroom oracle agree on all structure bytes EXCEPT for pycose's map-key sort order on tstr-only maps (insertion order vs §4.2.1 bytewise-lex)."
+summary: "COSE matrix (40 vectors x 2 adapters): 74 PASS, 4 SPEC_VIOLATION, 2 NOT_SUPPORTED. The original tstr-only interpretation was superseded by obs-2026-0045, which directly probes a descending int-only protected map; existing mixed-key vectors are confounded by header-label normalization."
 epistemic_status: observation
 provenance:
   created_by:
@@ -37,7 +37,7 @@ correction_2026_09_28:
     registered integer labels for some tstr header names, so those cells measure
     label normalisation as well as ordering.
   corrected_by: obs-2026-0045
-  unaffected: "The PASS/SPEC_VIOLATION counts and the byte-level mismatches for the pure int-key and pure tstr-key vectors."
+  unaffected: "The recorded PASS/SPEC_VIOLATION counts and byte-level outputs remain historical matrix observations; interpretation of int_labels_sorted as a sorting test is superseded because the input was already sorted. The tstr-only byte mismatch remains observed."
 matrix_summary:
   total_cells: 80
   verdict_distribution:
@@ -109,7 +109,7 @@ key_findings:
     cohort: "pycose"
   - finding: "pycose produces correct COSE_KDF_Context encoding per RFC 9053 §5.2 (partyUInfo with nonce:1 as bstr, algorithm as int)."
     cohort: "pycose + go-cose"
-  - finding: "DIVERGENCE: pycose does NOT sort map keys per RFC 8949 §4.2.1 for tstr-only maps; it preserves insertion order. This is a real RFC 9052 §9 violation."
+  - finding: "DIVERGENCE: the original matrix contains four pycose ordering mismatches. Later direct probing in obs-2026-0045 found insertion order preserved for a descending int-only protected map as well as tested tstr-only maps; mixed-key ordering remains unestablished because those vectors are confounded."
     cohort: "pycose only"
     counter_evidence: "go-cose uses fxamacker/cbor SortCoreDeterministic which is bytewise-lex; matches RFC 8949 §4.2.1."
     counter_evidence_2: "Frontier cleanroom Python oracle uses canonical sort (bytewise-lex)."
@@ -125,7 +125,7 @@ specifications_followed:
   RFC_9052_section_4_4: "Sig_structure = [context, body_protected, ?, sign_protected, external_aad, payload]. Both libraries conform."
   RFC_9052_section_5_3: "Enc_structure = [context, body_protected, ?, sign_protected, external_aad]. pycose context='Encrypt0' (correct); matches RFC 9052 §5.3."
   RFC_9052_section_6_3: "MAC_structure = [context, body_protected, ?, sign_protected, external_aad, payload]. Both libraries conform."
-  RFC_9052_section_9: "Map keys MUST be sorted per RFC 8949 §4.2.1. pycose FAILS for tstr-only maps."
+  RFC_9052_section_9: "The original matrix recorded four protected-header ordering mismatches; the later direct probe (obs-2026-0045) broadens tested key-type coverage to a descending int-only map. Mixed-key ordering remains unestablished."
 independence_summary:
   pycose:
     lineage: "Independent (Timothy Claeys, cbor2 backend)"

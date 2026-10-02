@@ -2,8 +2,8 @@ id: fnd-2026-0014
 type: finding
 status: verified_conclusion
 created_at: "2026-09-02T04:30:00Z"
-updated_at: "2026-09-28T14:46:00Z"
-summary: "**pycose 1.1.0 does NOT sort map keys per RFC 8949 §4.2.1 bytewise-lex for protected-header maps**. Across 4 header_label_sorting vectors, pycose preserves insertion order while both go-cose (via fxamacker/cbor SortCoreDeterministic) and the Frontier cleanroom oracle produce correct bytewise-lex sort. This is a SPEC_VIOLATION per RFC 9052 §9 (which explicitly requires RFC 8949 §4.2.1 for COSE message structures). CORRECTED 2026-09-28: the divergence is NOT scoped to tstr-only maps. Direct probing shows pycose preserves insertion order for int-key maps as well (obs-2026-0045). The earlier caveat was wrong and is withdrawn."
+updated_at: "2026-09-29T00:00:00Z"
+summary: "pycose 1.1.0 protected-header ordering concern: tested tstr-only maps and a descending int-only map preserve supplied order rather than matching the RFC 8949 §4.2.1 oracle (obs-2026-0042, obs-2026-0045). The original matrix's 4 mismatch cells and its later int-only probe support a bounded concern; mixed-key behavior, broader APIs/classes/versions, and concrete signature-verification impact remain unestablished. The earlier tstr-only scope and mixed-map counterevidence are withdrawn."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -30,7 +30,7 @@ links:
   targets: [tgt-2026-0006]
   reviews: [rev-2026-0016]
   verifications: [vrf-2026-0016]
-title: "FND-2026-0014 - pycose map-key sort order non-conformance (RFC 9052 §9)"
+title: "FND-2026-0014 - pycose protected-header ordering concern (RFC 9052 §9)"
 correction_2026_09_28:
   reason: >
     A direct probe of pycose 1.1.0 (obs-2026-0045) contradicted this finding's scope
@@ -44,7 +44,7 @@ correction_2026_09_28:
     - "pycose DOES sort correctly when keys are mixed int+tstr."
     - "The title's qualifier 'for tstr-only maps'."
   claims_unchanged:
-    - "For the same logical protected map, pycose and the oracle emit different Sig_structure bytes, so signatures over them are mutually unverifiable."
+    - "The tested protected-map byte encodings differ from the oracle; concrete cross-library signature-verification failure has not been demonstrated."
     - "This is at odds with RFC 9052 section 9, which requires RFC 8949 section 4.2.1 encoding for COSE message structures."
   effect_on_status: >
     status stays verified_conclusion; epistemic_status unchanged. This corrects the
@@ -55,14 +55,14 @@ normative_basis:
   rfc_8949_section_4_2_1: "The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings. For example: 10, 100, -1, 'z', 'aa', [100], [-1], false — sorted correctly."
 evidence:
   primary_observation: "obs-2026-0042 — 4 SPEC_VIOLATION cells, all from lib_pycose on header_label_sorting axis, all map-key sort order divergences"
-  supporting_observation: "pycose DOES sort correctly for mixed int+tstr-key maps; failure is specific to tstr-only maps (where insertion order is preserved)"
+  supporting_observation: "obs-2026-0045 directly probes a descending int-only protected map and confirms insertion order is preserved; the prior mixed-key matrix vectors are confounded by header-label normalization and cannot establish mixed-map ordering behavior"
   counter_evidence: "go-cose (via fxamacker/cbor SortCoreDeterministic) produces bytewise-lex sort; matches Frontier cleanroom oracle exactly for all 4 vectors"
   counter_evidence: "Frontier cleanroom Python oracle uses canonical sort = §4.2.1 bytewise-lex"
 classification:
   primary: "SPEC_VIOLATION per RFC 9052 §9 / RFC 8949 §4.2.1"
-  scope: "scoped to tstr-only maps in COSE_Sign1/Encrypt0/Mac0 protected/unprotected buckets"
-  affected_algorithms: "All COSE message types using tstr labels (e.g., 'ctyp', 'kid' as tstr, custom labels)"
-  does_not_affect: "Mixed int+tstr maps (where pycose is correct); integer-only maps (where pycose uses canonical sort)"
+  scope: "Observed on pycose 1.1.0 protected-header serialization for tstr-only maps and a descending int-only map; mixed int+tstr ordering remains unmeasured because existing mixed-key vectors are confounded"
+  affected_algorithms: "Not established; direct follow-up probes cover protected-map construction through one Sign1 adapter path only."
+  does_not_establish: "The probe does not establish behavior for every key type, every COSE message class, unprotected headers, other pycose versions, or clean mixed int+tstr maps"
 byte_evidence:
   int_labels_sorted:
     oracle: "846a5369676e61747572653147a2031832044179404170"
@@ -78,15 +78,15 @@ independence_analysis:
   pycose_cbor_backend: "cbor2 6.1.4 — but pycose uses its OWN internal CBOR encoder (not cbor2) for COSE_Sign1/Encrypt0/Mac0 encoding"
   go_cose_cbor_backend: "fxamacker/cbor v2.9.0 — uses SortCoreDeterministic (§4.2.1)"
   cbor2_sort_behavior: "§4.2.3 length-first (verified in msn-2026-0017 CBOR cohort)"
-  pycose_sort_inconsistency: "pycose's own encoder appears to sort correctly for int-only and mixed-key maps but not for tstr-only maps; suggests a custom comparison function with edge-case bug"
+  pycose_sort_behavior: "Direct adapter-mediated probes show insertion order preserved for tested tstr-only maps and a descending int-only protected map. Existing mixed-key vectors are confounded by registered-label normalization; root cause and generality remain unresolved"
 impact_analysis:
-  interop_consequence: "Two COSE implementations using pycose's byte-exact protected header as input may fail signature verification on the other side if the verifier's library re-sorts the headers differently"
-  security_consequence: "If pycose signs a message with tstr-only map, the signature is over insertion-order bytes. A verifier using a library that produces bytewise-lex sort (like go-cose) would compute the Sig_structure over DIFFERENT bytes and reject the signature. This breaks interop for the affected subset."
-  webauthn_consequence: "WebAuthn/FIDO2 uses CBOR-encoded COSE structures for authenticator attestation. If a pycose-based relying party computes a different Sig_structure than the authenticator, signature verification fails. The WebAuthn spec mandates RFC 8152/9052 canonical CBOR, so pycose's behavior is non-compliant for WebAuthn use cases."
+  interop_consequence: "Different tested protected-map bytes imply different Sig_structure input bytes when remaining fields are fixed; actual cross-library verification outcomes have not been measured."
+  security_consequence: "For the tested protected-map cases, different serialized protected bytes imply different Sig_structure inputs when other fields are held fixed. A concrete cross-library signature-verification failure and deployment impact have not been demonstrated."
+  webauthn_consequence: "Not assessed; no WebAuthn/FIDO2 flow or deployment was tested."
 promotion_requirements:
   - "Independent adversarial review (rev-2026-XXXX) SUPPORTS or PARTIALLY_SUPPORTS"
   - "Deterministic verification via rpr-2026-0015 reproduction"
-  - "At least 3 independent cohort members (oracle + go-cose + pycose) confirm the divergence"
+  - "Independent adversarial review of the corrected probe and a clean, non-confounded mixed-key test before broader scope claims"
 promotion_path:
   current_status: "verified_conclusion - promoted on the msn-2026-0018 evidence chain (adversarial review rev-2026-0016 verdict SUPPORT; deterministic verification vrf-2026-0016 verdict VERIFIED). Bookkeeping corrected 2026-09-26: this field had still read 'candidate (pending independent review)' after the promotion had already occurred, contradicting the artifact's own status and epistemic_status."
   promotion_evidence:
@@ -96,12 +96,19 @@ promotion_path:
     review: rev-2026-0016
     verification: vrf-2026-0016
   next_steps:
-    - "Novelty check (NOT yet done): determine whether this tstr-only map-key ordering behaviour is already reported upstream in TimothyClaeys/pycose issues, pull requests, commits, or changelog. A partial issue search on 2026-09-26 returned no matching report, but that is not a complete novelty check and must not be treated as one."
+    - "Novelty check (NOT yet done): determine whether the observed pycose 1.1.0 protected-header ordering behavior is already reported upstream in TimothyClaeys/pycose issues, pull requests, commits, or changelog. A partial issue search on 2026-09-26 returned no matching report, but that is not a complete novelty check and must not be treated as one."
     - "Re-confirm against the pycose release the maintainers currently publish, recording the exact version and commit tested."
     - "If still actionable and not previously reported, prepare a precise maintainer report citing RFC 9052 section 9 and RFC 8949 section 4.2.1, with a minimal reproducer and the 4 affected vectors."
+  correction_follow_up_2026_09_29: >
+    The linked review and verification predate obs-2026-0045. Their SUPPORT and
+    VERIFIED verdicts document the original matrix evidence but do not
+    independently review or verify the corrected scope. Mixed-key ordering and
+    the broader spec-conformance interpretation require further source-level
+    review; do not treat the earlier promotion chain as validation of those
+    later claims.
   upstream_disclosure: "none. No issue, PR, patch or maintainer report has been filed. External impact is not yet demonstrated."
 scope_limitations:
   cohort_size: 2 (pycose + go-cose) — does NOT represent all COSE implementations
-  cbor_layer_correlation: "pycose's behavior may be inherited from or related to cbor2's encoding; the root cause is in pycose's own COSE-encoder, not cbor2 itself"
-  tstr_only_specific: "Does NOT apply to int-only or mixed-key maps"
+  cbor_layer_correlation: "Root cause has not been isolated between pycose's COSE path and its CBOR dependency."
+  observed_cases: "tstr-only maps and one descending int-only protected map; mixed int+tstr ordering, unprotected-header behavior, other COSE message classes, and other pycose versions remain unestablished"
   no_crypto_path: "Comparison is at structure-byte level only; full-message comparison with reproducible keys is future work"
