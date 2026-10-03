@@ -1,0 +1,143 @@
+id: obs-2026-0048
+type: observation
+status: recorded
+created_at: "2026-10-03T00:00:00Z"
+updated_at: "2026-10-03T00:00:00Z"
+summary: "Epistemic repair of the COSE conformance corpus. The header_label_sorting axis was measured at zero discriminating power, so fnd-2026-0014 could not distinguish the competing RFC 8949 orderings. A new axis, header_key_ordering_4_2_1, adds 13 vectors of which 8 discriminate; the pycose forward/reverse pairs now show PASS then SPEC_VIOLATION on the SAME logical map, which is the finding's actual evidence. All 80 pre-existing matrix cells are byte-identical."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: "vector repair by subagent; discrimination and pycose verdicts independently recomputed by orchestrator"
+  sources:
+    - cose-cross-impl/vectors/vectors_header_key_ordering_4_2_1.jsonl
+    - cose-cross-impl/vectors/gen_vectors.py
+    - cose-cross-impl/results/matrix.jsonl
+    - cose-cross-impl/results/matrix.tsv
+    - knowledge/observations/obs-2026-0046.yaml
+    - knowledge/reviews/rev-2026-0018.yaml
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0014]
+  observations: [obs-2026-0046]
+  reviews: [rev-2026-0018]
+  targets: [tgt-2026-0006]
+title: "OBS-2026-0048 - repaired COSE key-ordering axis: 8 of 13 vectors discriminate 4.2.1 from 4.2.3"
+statement: >
+  Measured directly: the existing header_label_sorting axis has ZERO
+  discriminating power. Across the whole cose-cross-impl corpus, all 40 vectors
+  store oracle_canonical_hex == oracle_deterministic_hex, so none of them can
+  distinguish RFC 8949 section 4.2.1 bytewise-lexicographic ordering from
+  section 4.2.3 length-first ordering. The cause is structural, not accidental:
+  every map in the corpus has key encodings of equal length, where the two rules
+  yield the same permutation.
+
+  A new axis, header_key_ordering_4_2_1, adds 13 vectors of which 8
+  discriminate. They discriminate by using key encodings of DIFFERENT lengths
+  where the longer key carries the smaller leading byte, for example int 1000
+  (0x1903e8, 3 bytes, lead 0x19) against tstr 'z' (0x617a, 2 bytes, lead 0x61):
+  section 4.2.1 orders int first because 0x19 < 0x61, section 4.2.3 orders 'z'
+  first because 2 bytes precedes 3.
+environment:
+  where: local
+  isolation: "ramdisk scratch R:\\harden; env-scrubbed project venv; no network required"
+  cwd: "c:/Users/Dhane/frontier"
+  versions:
+    pycose: "1.1.0"
+    cbor2: "6.1.4"
+    python: "3.11.15 (uv-managed venv)"
+  cohort: >
+    pycose only for the new axis. The go-cose driver at R:\\cose-cohort is absent
+    from this machine, so lib_go_cose rows on the new axis are placeholders and
+    carry no measurement value. Rebuilding it is a heavy local build and was not
+    attempted.
+discriminating_vectors: 8
+total_vectors: 13
+discrimination_table:
+  - {vector_id: int_1000_vs_tstr_z, discriminates: true, mechanism: "int 1000 (3B, 0x19) vs tstr 'z' (2B, 0x61)"}
+  - {vector_id: int_1000_vs_tstr_z_rev, discriminates: true, mechanism: "reversed insertion of the same logical map"}
+  - {vector_id: int_only_65536_vs_neg300, discriminates: true, mechanism: "int 65536 (5B) vs nint -300 (3B), positive/negative crossing"}
+  - {vector_id: int_only_65536_vs_neg300_rev, discriminates: true, mechanism: "reversed insertion"}
+  - {vector_id: int_only_1000_vs_neg25, discriminates: true, mechanism: "int 1000 (3B) vs nint -25 (2B), positive/negative crossing"}
+  - {vector_id: int_only_1000_vs_neg25_rev, discriminates: true, mechanism: "reversed insertion"}
+  - {vector_id: int_only_three_key_spanning, discriminates: true, mechanism: "three keys spanning uint 1B, nint 2B, uint 3B"}
+  - {vector_id: tstr_unregistered_vs_int_len_invert, discriminates: true, mechanism: "tstr/int pair with inverted length relation"}
+non_discriminating_controls: 5
+non_discriminating_detail: >
+  int_only_neg2_vs_neg5_len, int_only_neg4_vs_pos5_len_tie,
+  tstr_unregistered_equal_len, tstr_unregistered_len_differ and
+  tstr_unregistered_vs_int_len_differ do NOT discriminate. Within a single CBOR
+  major type the two orderings are monotonic and cannot disagree, and equal-length
+  keys always agree. These five are retained deliberately as CONTROLS: they must
+  PASS for a correct encoder, so a selective failure on them would indicate a
+  broken harness rather than an ordering defect.
+pycose_result:
+  method: >
+    Each vector is run through the existing adapter and the emitted Sig_structure
+    compared against the section 4.2.1 reference.
+  forward_reversed_pair_reading: >
+    THE PER-CELL VERDICT IS MISLEADING ON ITS OWN. pycose emits PASS on a forward
+    vector and SPEC_VIOLATION on its reversed partner. Those are the SAME logical
+    map, and a library applying EITHER ordering rule would emit identical bytes
+    for both. pycose's output changes when only insertion order changes, so it
+    applies NEITHER rule. The forward PASS is a coincidence of the supplied
+    order happening to match section 4.2.1, not evidence of conformance.
+  cells:
+    - {vector_id: int_1000_vs_tstr_z, structure_verdict: PASS}
+    - {vector_id: int_1000_vs_tstr_z_rev, structure_verdict: SPEC_VIOLATION}
+    - {vector_id: int_only_65536_vs_neg300, structure_verdict: PASS}
+    - {vector_id: int_only_65536_vs_neg300_rev, structure_verdict: SPEC_VIOLATION}
+    - {vector_id: int_only_1000_vs_neg25, structure_verdict: PASS}
+    - {vector_id: int_only_1000_vs_neg25_rev, structure_verdict: SPEC_VIOLATION}
+    - {vector_id: int_only_three_key_spanning, structure_verdict: SPEC_VIOLATION}
+    - {vector_id: tstr_unregistered_equal_len, structure_verdict: SPEC_VIOLATION}
+  all_pycose_rows_13_of_13: true
+corrections_to_prior_claims:
+  - >
+    rev-2026-0018 recorded "the cose header_label_sorting axis has ZERO
+    discriminating power at HEAD". That is CONFIRMED and is now the premise of
+    this repair rather than a side note.
+  - >
+    The prior audit's claim, inherited from rev-2026-0017, that NO int-only
+    discriminating vector exists is REFUTED. Exhaustive search over 660 int keys
+    covering every CBOR width and both int major types found 25,832 disagreeing
+    pairs out of 217,470. The mechanism is a positive/negative major-type
+    crossing: within one major type the orderings are monotonic and cannot
+    disagree, which is exactly why every same-sign and all-tstr vector in the
+    original corpus failed to discriminate.
+  - >
+    The claim that the COSE corpus's stored expected values are stale is NOT
+    confirmed for this corpus. Regenerating against the live oracle changed no
+    existing vector's bytes; an initial scan suggesting otherwise was a checker
+    bug that compared Encrypt0/Mac0 structure functions against a Sign1 call.
+    What was missing was DISCRIMINATING POWER, not correct bytes. The stale-value
+    rot is confined to cbor-cross-impl (see obs-2026-0047).
+orchestrator_verification: >
+  Two orchestrator checks initially reported 0 of 13 discriminating and were
+  BOTH wrong, not the vectors. The first used the old axes' field names
+  (oracle_canonical_hex / oracle_deterministic_hex), which the new axis does not
+  use; the second failed to handle vectors whose values are stored as raw ints
+  rather than hex strings. Re-verified by decoding each protected map and
+  recomputing both orderings with the live oracle: 8 of 13 discriminate and all
+  13 axis_metadata.discriminates flags agree with the recomputation, 0
+  disagreements. Separately confirmed that the matrix change is purely additive:
+  26 rows added, 0 removed, 0 pre-existing rows modified.
+label_compatibility: >
+  All labels used are UNREGISTERED in pycose, verified against
+  CoseHeaderAttribute.get_registered_classes(). This matters because pycose
+  rewrites registered tstr labels to their integer identifiers ("alg" becomes
+  01), which was the confound identified in obs-2026-0045. Note a correction to
+  an earlier artifact: label 24 is NOT PARTIAL_IV, which pycose registers as
+  label 6; label 24 is simply unregistered. Labels that genuinely reject a bytes
+  value are -1/-2 and the other COSE_KEY headers, plus 3/4/5/6/9/10 which demand
+  specific types.
+scope_limitations:
+  - "pycose 1.1.0 only."
+  - "COSE_Sign1 only, structure-byte level; message-level cells are NOT_SUPPORTED."
+  - "go-cose has no usable coverage on the new axis: the driver is absent from this machine."
+  - "The finding's SPECIFICATION-status question is untouched. This axis shows pycose applies neither ordering rule; it does NOT establish that either rule is mandatory for COSE. rev-2026-0018 left that as an open interpretation."
+  - "No signature was computed or verified; structure bytes only."

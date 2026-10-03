@@ -1,8 +1,8 @@
 id: fnd-2026-0014
 type: finding
-status: verified_conclusion
+status: withdrawn
 created_at: "2026-09-02T04:30:00Z"
-updated_at: "2026-09-29T00:00:00Z"
+updated_at: "2026-10-03T00:00:00Z"
 summary: "pycose 1.1.0 emits COSE_Sign1 protected-header maps in supplied insertion order rather than RFC 8949 section 4.2.1 order, applying neither section 4.2.1 nor section 4.2.3 ordering. The behaviour is measured, confound-free and rooted at cosebase.py:136. Its SPEC_VIOLATION classification is WITHDRAWN (rev-2026-0017): RFC 9052 section 9 does not carry map-key ordering among its three restrictions, and RFC 9052 section 3 states the opposite design intent. The earlier 'mutually unverifiable' impact claim is withdrawn as false; the divergence is directional (signer-side only). The behaviour is already known upstream (pycose PR #91), so no maintainer report is warranted."
 epistemic_status: verified_conclusion
 provenance:
@@ -23,7 +23,7 @@ provenance:
   generation: 0
 links:
   experiments: [exp-2026-0032, exp-2026-0034]
-  observations: [obs-2026-0042, obs-2026-0045, obs-2026-0046]
+  observations: [obs-2026-0042, obs-2026-0045, obs-2026-0046, obs-2026-0048]
   reproducers: [rpr-2026-0015]
   specifications: [spc-2026-0005]
   implementations: [imp-2026-0021, imp-2026-0024]  # go-cose + pycose
@@ -300,3 +300,65 @@ scope_limitations:
   cbor_layer_correlation: "Root cause has not been isolated between pycose's COSE path and its CBOR dependency."
   observed_cases: "tstr-only maps and one descending int-only protected map; mixed int+tstr ordering, unprotected-header behavior, other COSE message classes, and other pycose versions remain unestablished"
   no_crypto_path: "Comparison is at structure-byte level only; full-message comparison with reproducible keys is future work"
+
+evidence_repair_2026_10_03:
+  reason: >
+    The corpus this finding rested on could not support it. Measured directly,
+    the header_label_sorting axis has ZERO discriminating power: across all 40
+    cose-cross-impl vectors, oracle_canonical_hex == oracle_deterministic_hex,
+    because every map in the corpus has key encodings of equal length where
+    RFC 8949 sections 4.2.1 and 4.2.3 agree. The axis therefore could not
+    distinguish the competing orderings, and could not support a conformance
+    argument even as a negative one.
+  repaired_by: obs-2026-0048
+  new_axis: header_key_ordering_4_2_1
+  vectors_added: 13
+  vectors_discriminating: 8
+  discrimination_mechanism: >
+    Key encodings of DIFFERENT lengths where the longer key carries the smaller
+    leading byte, e.g. int 1000 (0x1903e8, 3 bytes, lead 0x19) against tstr 'z'
+    (0x617a, 2 bytes, lead 0x61).
+  what_the_repair_establishes: >
+    pycose emits PASS on a forward vector and SPEC_VIOLATION on its reversed
+    partner. Those are the SAME logical map. A library applying either ordering
+    rule would emit identical bytes for both; pycose's output changes when only
+    insertion order changes, so it applies NEITHER rule. This is stronger and
+    cleaner evidence than anything in the previous matrix, and it is recorded
+    here as the finding's primary ordering evidence.
+  reading_warning: >
+    The per-cell verdict must NOT be read alone. A forward PASS is a
+    coincidence of the supplied insertion order happening to match section
+    4.2.1, not evidence of conformance. The finding stands or falls on the
+    forward/reverse PAIR.
+  prior_claim_refuted: >
+    The claim, inherited through rev-2026-0018 from rev-2026-0017, that no
+    int-only discriminating vector exists is REFUTED. Exhaustive search over 660
+    int keys covering every CBOR width and both int major types found 25,832
+    disagreeing pairs out of 217,470. The mechanism is a positive/negative
+    major-type crossing; within one major type the two orderings are monotonic
+    and cannot disagree.
+  matrix_integrity: >
+    The repair is purely additive: 26 rows added, 0 removed, 0 pre-existing rows
+    modified. Verified by diffing matrix.jsonl against HEAD.
+  what_this_does_NOT_repair: >
+    The finding's SPECIFICATION status. This axis demonstrates that pycose
+    applies neither ordering rule. It does NOT establish that either rule is
+    mandatory for COSE protected headers. That remains the open interpretation
+    recorded in correction_2026_10_02 C2 and left unresolved by rev-2026-0018.
+  status_change:
+    from: disputed
+    to: withdrawn
+    disclosure_change: "unchanged at embargoed - still not disclosable"
+  rationale: >
+    The normative basis remains a misquotation and the SPEC_VIOLATION
+    classification remains withdrawn per correction_2026_10_02 C1/C2. The
+    ordering behaviour itself is now very well measured, but what is measured
+    is a library behaviour, not a standards violation. Recording it as
+    `disputed` would imply the conformance question is still open when the
+    evidence chain cannot answer it at all.
+  surviving_claim: >
+    On pycose 1.1.0, COSE_Sign1 protected-header maps are emitted in supplied
+    insertion order, applying neither RFC 8949 section 4.2.1 nor section 4.2.3
+    ordering, via bare API and adapter alike. Root cause is a missing canonical
+    flag at cosebase.py:136. No RFC violation is established, the behaviour is
+    already known upstream, and the divergence is directional (signer-side).

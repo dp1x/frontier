@@ -155,9 +155,25 @@ limitations: >
   - Lean 4.22.0 release commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05
     was current as of the kernel check; future Lean 4
     releases may change tactic behavior.
-reproducer: "Rebuild from scratch: cd C:\\Users\\Dhane\\frontier\\formal; lake build"
+reproducer: "Rebuild and verify in CI, not locally: see .github/workflows/formal.yml (runs `lake update`, `lake exe cache get!`, then `lake build` on a GitHub runner). A local `lake build` is NOT the reproduction route and is forbidden: formal/.lake/packages was deleted 2026-09-26, so it would re-download Mathlib (several GB), which AGENTS.md prohibits. Local read-only verification of the already-built .olean proof terms under formal/.lake/build remains valid."
 follow_up:
   - "FORMAL-206: extend ValidKey to k=3 (ML-KEM-768) and k=4 (ML-KEM-1024)"
   - "FORMAL-207: combine with decapsulation formalization for end-to-end ML-KEM-512 correctness"
   - "FORMAL-208: convert isValidKey from predicate to dependent subset type"
   - "Cross-check the formal model against the FIPS 203 reference C implementation's actual length check"
+
+governance_correction_2026_10_03:
+  reason: >
+    The previous reproducer instructed `lake build` inside formal/. After the
+    2026-09-26 disk-hygiene cleanup deleted formal/.lake/packages (~5.4 GB),
+    that command re-downloads Mathlib locally, which AGENTS.md explicitly
+    forbids: heavy build trees must never persist locally, and "use GitHub
+    Actions wherever you can". The reproducibility artifact was therefore
+    itself violating project governance.
+  corrected_routes_to: ".github/workflows/formal.yml, which runs `lake update` then `lake exe cache get!` then `lake build` on a GitHub runner."
+  local_check_retained: >
+    Reading the committed .olean proof terms under formal/.lake/build remains
+    valid and stays local. It is ~1.2 MB and is evidence, not a cache.
+  scope: >
+    Reproduction route only. No claim, status, or epistemic_status is changed by
+    this correction, and no old research claim is reopened.

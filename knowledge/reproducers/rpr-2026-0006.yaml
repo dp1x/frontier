@@ -1,9 +1,11 @@
 id: rpr-2026-0006
 type: reproducer
 status: reproduced
-created_at: "2026-08-29T19:15:00Z"
-updated_at: "2026-08-29T19:15:00Z"
-summary: Independent rebuild of FORMAL-205 (Lean 4 v4.22.0) on this Windows host - `lake env lean --version` confirms the pinned toolchain resolves correctly and `lake build` re-runs the Formal library (now including ValidKey) with 0 errors, 0 sorries, 0 file-introduced axioms.
+created_at: '2026-08-29T19:15:00Z'
+updated_at: '2026-10-03T00:00:00Z'
+summary: Independent rebuild of FORMAL-205 (Lean 4 v4.22.0) on this Windows host - `lake env lean --version` confirms the
+  pinned toolchain resolves correctly and `lake build` re-runs the Formal library (now including ValidKey) with 0 errors,
+  0 sorries, 0 file-introduced axioms.
 epistemic_status: observation
 provenance:
   created_by:
@@ -12,37 +14,56 @@ provenance:
     model: grok-4.6
     tool: lake build (Lean 4 v4.22.0 kernel)
   sources:
-    - formal/lean-toolchain
-    - formal/lakefile.lean
-    - formal/Formal/ValidKey.lean
-    - formal/Formal.lean
-    - formal/build_output_r3.log
-    - knowledge/proofs/prf-2026-0003.yaml
+  - formal/lean-toolchain
+  - formal/lakefile.lean
+  - formal/Formal/ValidKey.lean
+  - formal/Formal.lean
+  - formal/build_output_r3.log
+  - knowledge/proofs/prf-2026-0003.yaml
   parent: msn-2026-0007
   generation: 0
 links:
-  findings: [fnd-2026-0006]
-  proofs: [prf-2026-0003]
-  experiments: [exp-2026-0020]
-  observations: [obs-2026-0026]
+  findings:
+  - fnd-2026-0006
+  proofs:
+  - prf-2026-0003
+  experiments:
+  - exp-2026-0020
+  observations:
+  - obs-2026-0026
 path: formal/
 reproduction_commands:
-  - "cd C:\\Users\\Dhane\\frontier\\formal"
-  - "lake env lean --version  # expect Lean (version 4.22.0, commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05)"
-  - "lake build  # expect 'Build completed successfully.'"
+- '# CANONICAL ROUTE IS GITHUB ACTIONS, NOT A LOCAL BUILD.'
+- '# Reason: formal/.lake/packages was deleted 2026-09-26, so a local `lake build`'
+- '# re-downloads Mathlib (several GB). AGENTS.md forbids heavy local build trees.'
+- '# Authoritative sequence lives in .github/workflows/formal.yml:'
+- '#   lake update -> lake exe cache get! -> lake build'
+- gh workflow run formal.yml --ref main
+- gh run view --log $(gh run list --workflow formal.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+- '# Expected in the ''Build (kernel check)'' step: ''Build completed successfully.'''
+- '# LOCAL READ-ONLY check of already-built proof terms. No build, no download.'
+- .venv\Scripts\python.exe -c "import pathlib;fs=sorted(pathlib.Path('formal/.lake/build').rglob('*.olean'));print(len(fs),'olean
+  files');[print(' ',f.name) for f in fs]"
+- '# Expected: 34 .olean files, each newer than its .lean source, header olean4.22.0...'
 reproduced_on:
-  - environment: Windows 11 host, elan toolchain, Lean 4 v4.22.0 + Mathlib4 v4.22.0
-    date: "2026-08-29"
-    result: |
-      lake env lean --version reports: Lean (version 4.22.0, commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05, Release)
-      lake build produces:
-        [3053/3054] Built Formal
-        Build completed successfully.
-      0 errors, 0 sorries, 1 linter warning.
-notes: >
-  The .lake build artifacts at formal/.lake/build/lib/Formal/ValidKey.olean
-  are the kernel-accepted proof terms.  The full Formal library
-  (ByteEncode + LengthCheck + ValidKey) builds cleanly with no
-  errors and no sorries.  The independent reproducer confirms the
-  kernel-accepted proof terms are re-derivable from the
-  committed source.
+- environment: Windows 11 host, elan toolchain, Lean 4 v4.22.0 + Mathlib4 v4.22.0
+  date: '2026-08-29'
+  result: "lake env lean --version reports: Lean (version 4.22.0, commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05, Release)\n\
+    lake build produces:\n  [3053/3054] Built Formal\n  Build completed successfully.\n0 errors, 0 sorries, 1 linter warning.\n"
+notes: 'The .lake build artifacts at formal/.lake/build/lib/Formal/ValidKey.olean are the kernel-accepted proof terms.  The
+  full Formal library (ByteEncode + LengthCheck + ValidKey) builds cleanly with no errors and no sorries.  The independent
+  reproducer confirms the kernel-accepted proof terms are re-derivable from the committed source.
+
+  '
+compute_route: github-actions
+governance_correction_2026_10_03:
+  reason: 'These reproduction_commands previously instructed `lake build` inside formal/. After the 2026-09-26 disk-hygiene
+    cleanup deleted formal/.lake/packages (~5.4 GB), that command re-downloads Mathlib locally, which AGENTS.md explicitly
+    forbids: heavy build trees must never persist locally, and ''use GitHub Actions wherever you can''. The reproducibility
+    artifact was therefore itself violating project governance.'
+  corrected_routes_to: .github/workflows/formal.yml, which runs `lake update` then `lake exe cache get!` then `lake build`
+    on a GitHub runner.
+  local_check_retained: Reading the committed .olean proof terms under formal/.lake/build remains valid and stays local. It
+    is ~1.2 MB and is evidence, not a cache.
+  scope: Reproduction route only. The recorded verdict and every claim are unchanged, and no old research claim is reopened
+    by this correction.

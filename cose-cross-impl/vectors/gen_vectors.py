@@ -6,6 +6,8 @@ Synthesizes inputs targeting each audit axis in spc-2026-0005:
   3. cose_mac0_message_construction
   4. empty_protected_bucket
   5. header_label_sorting
+  5b. header_key_ordering_4_2_1 (vectors that actually discriminate
+      RFC 8949 §4.2.1 bytewise-lex from §4.2.3 length-first)
   6. ecdsa_r_s_encoding (uses pycose to generate reference r||s bytes)
   7. eddsa_signature_encoding
   8. aes_gcm_nonce_construction
@@ -38,8 +40,14 @@ from cose_oracle import (
     build_cose_encrypt0_aad,
     build_cose_mac0_to_be_maced,
     encode_protected_bucket,
+    encode_protected_map,
     build_cose_message,
 )
+
+# RFC 8949 §4.2.3 (length-first) encoder, used only to record the
+# alternative ordering for the header_key_ordering_4_2_1 axis.
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "cbor-cross-impl" / "oracle"))
+from cbor_oracle import encode_deterministic
 
 OUT_DIR = Path(__file__).parent
 SEED = 0xC0DE0CB0
@@ -372,6 +380,128 @@ def gen_header_label_sorting():
 
 
 # ============================================================================
+# Axis 5b: header_key_ordering_4_2_1 (discriminating RFC 8949 4.2.1 vs 4.2.3)
+# ============================================================================
+#
+# WHY A SEPARATE AXIS: every vector in `header_label_sorting` uses map keys
+# whose ENCODED LENGTHS ARE EQUAL, where bytewise-lex (§4.2.1) and
+# length-first (§4.2.3) yield the same permutation. Those vectors therefore
+# have zero discriminating power over the §4.2.1-vs-§4.2.3 question.
+#
+# A map discriminates only when two keys have DIFFERENT encoded lengths AND
+# the longer key has a SMALLER leading byte. Within a single CBOR major type
+# the length ordering and the bytewise ordering are monotonic in each other,
+# so no all-tstr or all-same-width-all-int map can ever discriminate. A
+# discriminator must CROSS a major-type boundary (0 < 1 < 2 < 3):
+#   - int (major 0) 3B lead 0x19  vs  int (major 1) 2B lead 0x38
+#   - int (major 0) 3B lead 0x19  vs  tstr (major 3) 2B lead 0x61
+#
+# Every label below was verified against the installed pycose 1.1.0:
+# unregistered int labels and unregistered tstr labels pass through
+# `CoseHeaderAttribute.from_id(..., allow_unknown_attributes=True)` untouched
+# and have no `value_parser`, so they are never value-rejected. (Registered
+# labels -1/-2/-3 and -20..-26 carry `value_parser = CoseKey.from_dict`,
+# which raises TypeError on a bytes value, and label 24-style registered
+# int-only parsers reject non-int values; none of those are used here.)
+
+def gen_header_key_ordering_4_2_1():
+    vectors = []
+
+    # (vid, protected_map, disc_annotation)
+    cases = [
+        # --- int vs tstr, differing encoded lengths (the base construction) ---
+        ("int_1000_vs_tstr_z", {1000: b"x", "z": b"y"},
+         "int 1000 -> 0x1903e8 (3B, lead 0x19); tstr 'z' -> 0x617a (2B, lead 0x61). "
+         "§4.2.1: 0x19 < 0x61 so int first. §4.2.3: 2 < 3 so tstr first."),
+        ("int_1000_vs_tstr_z_rev", {"z": b"y", 1000: b"x"},
+         "Identical map, reversed insertion order. A library that applies "
+         "EITHER sorting rule emits identical bytes for both; a library that "
+         "emits insertion order emits different bytes."),
+
+        # --- int-only, differing lengths (crosses major 0 / major 1) ---
+        ("int_only_65536_vs_neg300", {65536: 1, -300: 2},
+         "uint 65536 -> 0x1a00010000 (5B, lead 0x1a); nint -300 -> 0x39012b (3B, "
+         "lead 0x39). §4.2.1: 0x1a > 0x39 so negative first. §4.2.3: 3 < 5 so "
+         "negative first. DISCRIMINATES via length only."),
+        ("int_only_65536_vs_neg300_rev", {-300: 2, 65536: 1},
+         "Reversed insertion order of the preceding map."),
+        ("int_only_1000_vs_neg25", {1000: 1, -25: 2},
+         "uint 1000 -> 0x1903e8 (3B, lead 0x19); nint -25 -> 0x3818 (2B, lead 0x38). "
+         "§4.2.1: 0x19 < 0x38 so uint first. §4.2.3: 2 < 3 so nint first."),
+        ("int_only_1000_vs_neg25_rev", {-25: 2, 1000: 1},
+         "Reversed insertion order of the preceding map."),
+        ("int_only_three_key_spanning", {1000: 1, -25: 2, 65536: 3},
+         "Three int-only keys spanning major 0 (0x19, 0x1a) and major 1 (0x38). "
+         "Neither rule can satisfy both the (1000, -25) and (-300/65536, ...) "
+         "pairings; insertion order matches neither."),
+
+        # --- negative ints, differing encoded lengths (task requirement) ---
+        ("int_only_neg2_vs_neg5_len", {-300: 1, -70000: 2},
+         "nint -300 -> 0x39012b (3B); nint -70000 -> 0x3a0001116f (5B). SAME major "
+         "type and length-monotonic, so this is a length-first AND bytewise-lex "
+         "TIE: both rules agree. Retained as an explicit control that the corpus "
+         "covers same-major-type negative-int ordering."),
+        ("int_only_neg4_vs_pos5_len_tie", {70000: 1, -70000: 2},
+         "uint 70000 -> 0x1a00011170 (5B); nint -70000 -> 0x3a0001116f (5B). "
+         "EQUAL encoded lengths, so this is another §4.2.1/§4.2.3 TIE that "
+         "isolates the pure-bytewise-lex component from the length component."),
+
+        # --- UNREGISTERED tstr labels only (no pycose normalisation confound) ---
+        # pycose rewrites REGISTERED tstr fullnames ("alg"->1, "kid"->4) but
+        # passes UNREGISTERED tstr labels through verbatim. These use only
+        # unregistered labels so no normalisation can confound the result.
+        ("tstr_unregistered_equal_len", {"zzz": 1, "mmm": 2, "qqq": 3},
+         "Three UNREGISTERED tstr labels, each encoding to exactly 2 bytes "
+         "(0x63 lead). §4.2.1 and §4.2.3 agree (equal lengths), but this is the "
+         "sorted-vs-insertion-order probe: sorted = mmm, qqq, zzz; the generator "
+         "supplies them in insertion order zzz, mmm, qqq, so a NON-sorting "
+         "library is caught."),
+        ("tstr_unregistered_len_differ", {"z": 1, "zzz": 2},
+         "Two UNREGISTERED tstr labels with DIFFERING lengths (0x617a 2B vs "
+         "0x637a7a7a 4B). Same major type, so both rules agree — retained as the "
+         "negative control that documents major-type-3 monotonicity."),
+        ("tstr_unregistered_vs_int_len_differ", {1000: b"x", "zzz": b"y"},
+         "int 1000 (0x1903e8, 3B, lead 0x19) vs unregistered tstr 'zzz' "
+         "(0x637a7a7a, 4B, lead 0x63). LONGER key has LARGER lead byte, so both "
+         "rules agree — a deliberately NON-discriminating cross-major-type "
+         "control. Documents that major-type crossing alone is insufficient; "
+         "the length inversion is what discriminates."),
+        ("tstr_unregistered_vs_int_len_invert", {1000: b"x", "z": b"y"},
+         "Same shape as the preceding vector but with the 2-byte unregistered "
+         "tstr 'z', which inverts the length/lead relationship and therefore "
+         "discriminates. Pairs with the control above."),
+    ]
+
+    for vid, prot, note in cases:
+        struct_bytes = build_cose_sign1_to_be_signed(prot, b"", b"p")
+        full_msg = build_cose_message(
+            msg_type="Sign1", protected_headers=prot, unprotected_headers={},
+            payload=b"p", signature=b"\x00" * 64,
+        )
+        vectors.append({
+            "axis": "header_key_ordering_4_2_1",
+            "vector_id": vid,
+            "data_item": {
+                "msg_type": "Sign1",
+                "protected": prot,
+                "unprotected": {},
+                "payload": b"p".hex(),
+                "alg": "ES256",
+                "skip_alg_header": True,
+            },
+            "description": f"RFC 8949 §4.2.1 vs §4.2.3 key ordering — {vid}. {note}",
+            "oracle_structure_hex": struct_bytes.hex(),
+            "oracle_message_hex": full_msg.hex(),
+            "axis_metadata": {
+                "protected_map_4_2_1_hex": encode_protected_map(prot).hex(),
+                "protected_map_4_2_3_hex": encode_deterministic(prot).hex(),
+                "discriminates": encode_protected_map(prot).hex() != encode_deterministic(prot).hex(),
+            },
+        })
+    return vectors
+
+
+# ============================================================================
 # Axis 6: ecdsa_r_s_encoding (RFC 9053 §2.1)
 # ============================================================================
 
@@ -585,8 +715,6 @@ def gen_cose_kdf_context():
         ]
 
         # Use the oracle's CBOR encoder for the KDF context itself
-        sys.path.insert(0, str(Path(__file__).parent.parent.parent / "cbor-cross-impl" / "oracle"))
-        from cbor_oracle import encode_deterministic
         oracle_kdf_hex = encode_deterministic(kdf_context).hex()
 
         # We emit this via the adapter's protected header structure
@@ -617,6 +745,7 @@ AXIS_GENERATORS = [
     ("cose_mac0_message_construction", gen_mac0_message_construction),
     ("empty_protected_bucket", gen_empty_protected_bucket),
     ("header_label_sorting", gen_header_label_sorting),
+    ("header_key_ordering_4_2_1", gen_header_key_ordering_4_2_1),
     ("ecdsa_r_s_encoding", gen_ecdsa_r_s_encoding),
     ("eddsa_signature_encoding", gen_eddsa_signature_encoding),
     ("aes_gcm_nonce_construction", gen_aes_gcm_nonce_construction),
