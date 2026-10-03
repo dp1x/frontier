@@ -1,0 +1,134 @@
+id: obs-2026-0047
+type: observation
+status: recorded
+created_at: "2026-10-03T00:00:00Z"
+updated_at: "2026-10-03T00:00:00Z"
+summary: "Deterministic re-measurement of the refuted CBOR cohort claim (fnd-2026-0013). cbor2 6.1.4's canonical=True implements RFC 8949 section 4.2.3 length-first, not section 4.2.1 bytewise-lex: it matches section 4.2.3 on 111/111 vectors and section 4.2.1 on 108/111, diverging on exactly the 3 discriminating vectors. This is a false alarm, not a cbor2 defect; the defect was Frontier's own mislabelled oracle. Verified independently by the orchestrator using the repo's own vector decoder."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: "exp-2026-0035; subagent re-measurement + orchestrator independent re-run"
+  sources:
+    - .scratch/rework_cbor_remeasure.md
+    - cbor-cross-impl/oracle/cbor_oracle.py
+    - cbor-cross-impl/runner/run_matrix.py
+    - cbor-cross-impl/vectors/vectors_map_key_sort.jsonl
+    - knowledge/reviews/rev-2026-0018.yaml
+    - knowledge/findings/fnd-2026-0013.yaml
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0013]
+  reviews: [rev-2026-0018]
+  experiments: [exp-2026-0035]
+  targets: [tgt-2026-0005]
+title: "OBS-2026-0047 - cbor2 canonical=True implements RFC 8949 section 4.2.3, not 4.2.1 (measured on 111 vectors)"
+statement: >
+  Measured cbor2 6.1.4 against Frontier's repaired RFC 8949 reference across the
+  full 111-vector CBOR conformance corpus, using the repository's own vector
+  decoder so that materialization matches how the matrix materializes it.
+
+  RESULT: cbor2's canonical=True implements the RFC 7049 / RFC 8949 section 4.2.3
+  LENGTH-FIRST rule, not section 4.2.1 bytewise-lexicographic. It matches
+  section 4.2.3 on 111/111 vectors and section 4.2.1 on 108/111, diverging on
+  exactly the three vectors whose map keys discriminate the two orderings.
+
+  This is a FALSE ALARM as a cbor2 defect. The defect was entirely internal to
+  Frontier: cbor_oracle.encode_canonical sorted length-first under a docstring
+  claiming section 4.2.1, from before the promotion commit c4b58d5 (2026-08-31)
+  until repair commit 8148462 (2026-09-02), and the vectors were never
+  regenerated. The stored expected values therefore still encode the mislabelled
+  behaviour, which is why oracle_canonical_hex == oracle_deterministic_hex for
+  111/111 and the original test could not detect the difference.
+environment:
+  where: local
+  isolation: "ramdisk scratch R:\\verify; env-scrubbed project venv; no network required"
+  cwd: "c:/Users/Dhane/frontier"
+  versions:
+    cbor2: "6.1.4"
+    python: "3.11.15 (uv-managed venv)"
+  cohort: "Frontier oracle + cbor2 only. ciborium is NOT included: its driver and the R:\\cbor-cohort tree are gone."
+measurements:
+  total_vectors: 111
+  vector_files: 8
+  map_bearing_vectors: 8
+  non_map_vectors: 103
+  stored_canonical_equals_stored_deterministic: "111/111  <- the structural blindness of the original test"
+  cbor2_canonical_true_equals_section_4_2_1: "108/111"
+  cbor2_canonical_true_equals_section_4_2_3: "111/111"
+  discriminating_vectors_count: 3
+  discriminating_vectors:
+    - "map_mixed_lengths"
+    - "map_rfc_4_2_3_example"
+    - "map_mixed_types"
+  discriminating_detail:
+    - vector_id: map_rfc_4_2_3_example
+      cbor2_canonical: "a80a012001f401186401617a018120016261610181186401"
+      section_4_2_1: "a80a011864012001617a016261610181186401812001f401"
+      note: "This is the RFC 8949 section 4.2.3 worked example itself, and cbor2 reproduces the section 4.2.3 order, not the section 4.2.1 order."
+    - vector_id: map_mixed_lengths
+      cbor2_canonical: "b30001010105010a0117012001290118640118c8013863016161016162016261610162616201626261016361616101636162630163616264016378797a01"
+      section_4_2_1: "b30001010105010a01170118640118c801200129013863016161016162016261610162616201626261016361616101636162630163616264016378797a01"
+    - vector_id: map_mixed_types
+      cbor2_canonical: "a60a032002f406186405617a0462616101"
+      section_4_2_1: "a60a031864052002617a0462616101f406"
+orchestrator_independent_verification: >
+  The subagent's two load-bearing numbers were re-derived by the orchestrator
+  rather than accepted. First attempt used a naive extraction of data_item and
+  found only 33 vectors / 0 discriminating, which was WRONG: the vectors are
+  stored in a typed encoding (__type__/hex/pairs) and must be decoded with the
+  repository's own _decode_data_item_recursive from cbor-cross-impl/runner/run_matrix.py.
+  Re-running with that decoder yields 111 vectors, 8 map-bearing, 3
+  discriminating, and the mismatching hex strings above reproduce the subagent's
+  table byte-for-byte. The subagent's denominators count ALL 111 vectors, of
+  which 103 are non-map and agree under either rule: 103 + 5 = 108/111 against
+  section 4.2.1, and 103 + 8 = 111/111 against section 4.2.3. All three of its
+  load-bearing claims are CONFIRMED.
+corrections_to_the_prior_audit:
+  - >
+    rev-2026-0018 and the subagent both cited "95 non-map vectors". Measured:
+    103. The 95 figure is unsourced and wrong.
+  - >
+    The claim "108/111 have all-equal-length map keys" is FALSE. Only 2 of the
+    111 vectors have all-equal-length map keys. The 108 coincide because the two
+    orderings yield the IDENTICAL PERMUTATION on those key sets, not because the
+    keys are equal length. The conclusion is unaffected; the mechanism as
+    previously stated is wrong.
+  - >
+    The open "52 vs 54" divergence-count item resolves AGAINST the audit and in
+    favour of the finding: the finding's enumerated breakdown sums to 54 and
+    matches matrix.jsonl exactly; only the bare "52" token is wrong.
+scope_limitations:
+  - >
+    TWO implementations only (Frontier oracle + cbor2). The ciborium leg is not
+    reproduced: its driver and R:\\cbor-cohort no longer exist and rebuilding it
+    locally is forbidden by AGENTS.md. The replacement claim is therefore a
+    2-implementation claim, not the 3-lineage claim the original finding made.
+  - "cbor2 6.1.5 is the current release; behaviour at 6.1.5 is not measured."
+  - "The committed vector files were NOT regenerated. Whether a regenerated corpus changes the 3 discriminating vectors is untested."
+  - "cbor.me was not contacted or run; the original finding cited it without running it."
+  - "spc-2026-0004's fabricated section 4.2.1 quotations were reported by the audit and are out of scope here; they remain uncorrected."
+  - >
+    The cose-cross-impl vectors were regenerated in memory during the subagent's
+    control run and came back 80/80 fields identical, so the stale-vector rot is
+    confined to cbor-cross-impl. However that control also found the cose
+    header_label_sorting axis has ZERO discriminating power at HEAD, which is
+    relevant to fnd-2026-0014 and is recorded as a new open item.
+conclusions:
+  established: >
+    cbor2 6.1.4 canonical=True is a section 4.2.3 length-first encoder. If
+    anything downstream requires section 4.2.1 ordering, cbor2's canonical flag
+    does not provide it.
+  not_a_cbor2_bug: >
+    cbor2 is not defective here. "canonical" in cbor2 follows RFC 7049 /
+    section 4.2.3, which is a coherent and widely-implemented choice. The
+    Frontier claim that cbor2 "produces canonical output" was an artefact of a
+    mislabelled local oracle.
+  outstanding_for_any_external_claim: >
+    Before any statement is made about cbor2's behaviour toward other projects,
+    the cohort must be rebuilt (ciborium leg), vectors regenerated against the
+    repaired oracle, and a novelty check run. None of that has been done.

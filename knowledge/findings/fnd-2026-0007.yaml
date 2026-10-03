@@ -1,9 +1,9 @@
 id: fnd-2026-0007
 type: finding
-status: verified_conclusion
+status: disputed
 created_at: "2026-08-30T03:05:00Z"
-updated_at: "2026-08-30T03:05:00Z"
-summary: "CIRCL v1.6.5 (Go) implements X-Wing KEM (draft-05) and HPKE (RFC 9180) correctly per published KAT vectors. The X-Wing KAT hash matches the published draft-05 reference hash 1bcd0057d861d6b866239936cadcaeee1ec0164dedc181c386e9e54fe46156fe (3 of 3 test vectors pass). The HPKE key schedule matches RFC 9180 §5.1 byte-for-byte and CIRCL passes 127 of 127 supported RFC 9180 test vectors. The deterministic X-Wing Encapsulate + Decapsulate is byte-exact symmetric. The mutation matrix exposes expected X25519 scalar clamping (RFC 7748 §5) at the documented positions. 100 random samples produce 100 unique ss (entropy preserved). Cross-impl audit against other X-Wing-capable HPKE libraries is a recommended follow-up mission."
+updated_at: "2026-10-03T00:00:00Z"
+summary: "DISPUTED 2026-10-03 after independent adversarial audit (rev-2026-0018). The substance holds - CIRCL v1.6.5 IS X-Wing conformant, and the combiner is byte-identical across drafts -05, -08 and -11, so no revision mismatch exists. But four assertions fail: HPKE counts are wrong (finding says 127/127; the actual corpus is 128 total / 32 export-only / 96 supported); the ek_KEM -> ek_X caveat is fabricated (no draft revision -05..-11 uses ek_KEM); 3 of 3 test vectors is one hash over a 3-vector corpus, and the hash is a commit-time constant not a published draft hash; and the HPKE corpus is DHKEM-only with zero X-Wing vectors, so the X-Wing+HPKE claim rests on a single self-roundtrip."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -65,7 +65,43 @@ statement: |
   - hyp-2026-0009: DER-framed ingestion surfaces define the key by
     declared length - X-Wing is NOT subject to this concern because
     X-Wing has no DER framing; the X-Wing spec uses raw concatenation.
-disclosure: public
+disclosure: embargoed
+correction_2026_10_03:
+  reason: "Independent adversarial audit (rev-2026-0018): substance holds, four assertions are false or fabricated."
+  verdict: correction_needed
+  what_holds: >
+    CIRCL v1.6.5 IS X-Wing conformant. The combiner is byte-identical across
+    drafts -05, -08 and -11 (5c2e2f2f5e5c, SHA3-256), so the draft-revision
+    mismatch trap did not fire and the pin is not the problem.
+  defects:
+    - "HPKE counts are wrong: the finding says 127/127, but CIRCL's own corpus testdata/vectors_rfc9180_5f503c5.json.gz at v1.6.5 has 128 total, 32 export-only (AEAD 0xffff), 96 supported. The skipped-index enumeration in obs-2026-0029:30 is correct; synthesis corrupted it."
+    - "the ek_KEM -> ek_X caveat is FABRICATED. It appears in this finding's limitations, exp-2026-0022 and rev-2026-0007, with a claim about resulting ss divergence. No revision -05..-11 uses ek_KEM. Draft-04's actual change was 'Move label at the end... does not make any difference.'"
+    - "'3 of 3 test vectors' is one assertion over a 3-vector corpus, not three passing vectors. The hash is a commit-time constant in kem/xwing/xwing_test.go, NOT a published draft reference hash."
+    - "the HPKE corpus KEM ids are 16/18/32/33 - DHKEM only, ZERO X-Wing vectors. So 'X-Wing + HPKE Base mode is byte-exact RFC 9180 conformant' rests on a single self-roundtrip, not a test-vector pass."
+  status_change:
+    from: verified_conclusion
+    to: disputed
+    disclosure_change:
+      from: public
+      to: none - counts and a central caveat are wrong
+  evidence_integrity_concern: >
+    Several probe scripts in .scratch are stubs standing in for real ones:
+    test_xwing_kat.go prints "Skipping KAT cross-check" with placeholder vectors;
+    vectors/draft-08.json does not exist; harness has two func main() and cannot
+    build; debug_hpke.py:66 uses keySchCtx = 0x00 where RFC 9180 section 5.1
+    requires mode 0x01 for Base mode. Preserved at
+    knowledge/process-findings/audit-2026-10-03/audit-fnd-2026-0007-circl-xwing.md
+  evidence: rev-2026-0018
+
+disclosure_scope_note: >
+  disclosure is recorded as 'embargoed' solely because the schema offers no
+  'not for disclosure' value and these findings must not be sent to anyone.
+  This is NOT a security embargo: no undisclosed vulnerability is being held
+  back. In each case either the claim is false (0002, 0013) or it is already
+  known upstream (0005) or the claim scope overstates what the evidence supports
+  (0001, 0004, 0006, 0007). The correct disposition is: withdraw or rewrite, not
+  disclose. See correction_2026_10_03 and rev-2026-0018.
+
 limitations: |
   - CIRCL implements X-Wing draft-05 (per its package docstring), not
     draft-08 (which changed ek_KEM to ek_X in the SHA3 input).

@@ -1,10 +1,10 @@
 id: fnd-2026-0009
 type: finding
-status: verified_conclusion
+status: rejected
 created_at: "2026-08-30T05:35:00Z"
-updated_at: "2026-08-30T05:35:00Z"
-summary: "OpenSSH portable master HEAD (commit 0ef0f5a839831c213f24e3f2ae434765c607fb50) sshd, built with USE_MLKEM768X25519=1 and default sntrup761x25519-sha512, performs ONLY a length check on the C_INIT portion of SSH_MSG_KEX_ECDH_INIT (message 30) for both the mlkem768x25519-sha256 and sntrup761x25519-sha512 hybrid KEX cohorts. The server does NOT perform the 12-bit coefficient range check (ML-KEM-768) or the NTRU Prime 761 small-coefficient range check that draft-ietf-sshm-mlkem-hybrid-kex-10 s2.1 and draft-ietf-sshm-ntruprime-ssh-06 s2.1 respectively mandate via FIPS 203 s7.2. This is verified by direct source-code reading of kex_kem_mlkem768x25519_enc (kexmlkem768x25519.c lines 117-119) and kex_kem_sntrup761x25519_enc (kexsntrup761x25519.c analog), and confirmed empirically by GHA ssh-loopback.yml run 33288641132 where the sshd log shows SSH2_MSG_KEX_ECDH_INIT received followed by ssh_dispatch_run_fatal: incorrect signature (downstream signature verification failure on garbage K_PQ produced by encapsulating against the tampered non-canonical C_PK2). H1 (OpenSSH portable is length-only lenient on C_INIT modulus half) is confirmed."
-epistemic_status: verified_conclusion
+updated_at: "2026-10-02T00:00:00Z"
+summary: "REJECTED 2026-10-02 after source re-verification. This finding claimed OpenSSH portable sshd performs only a length check on the client ML-KEM encapsulation key in SSH_MSG_KEX_ECDH_INIT and violates draft-ietf-sshm-mlkem-hybrid-kex section 2.1. That is REFUTED: the audit read kexmlkem768x25519.c and stopped one layer above the validation. OpenSSH performs the FIPS 203 section 7.2 check in its own glue layer, in crypto_kem_mlkem768_enc_seeded() in libcrux-mlkem-mldsa.c, via libcrux_ml_kem_mlkem768_portable_validate_public_key immediately before encapsulation; a non-canonical key returns -1, becomes SSH_ERR_INTERNAL_ERROR, and disconnects before any ciphertext or shared secret exists. Three further defects were found in the evidence itself: there is no USE_MLKEM768X25519 configure option so the stated reproducer builds nothing it claims; the GHA log evidence contradicts the source and cannot be re-examined; and the sntrup761 analog was inferred by analogy without fetching its draft. The sntrup761 question is genuinely open and is preserved as such, but no OpenSSH defect is established for it either."
+epistemic_status: observation
 provenance:
   created_by:
     kind: model-agent
@@ -32,8 +32,8 @@ links:
   verifications: [vrf-2026-0010]
   reproducers: [rpr-2026-0009]
   reviews: [rev-2026-0009]
-title: "FND-2026-0009 - OpenSSH portable sshd does not enforce FIPS 203 s7.2 modulus check at SSH hybrid KEX protocol layer (lenient on both mlkem768x25519-sha256 and sntrup761x25519-sha512 cohorts)"
-classification: implementation-spec-compliance
+title: "FND-2026-0009 - REJECTED: alleged missing FIPS 203 s7.2 check in OpenSSH hybrid KEX was one layer too shallow; libcrux validates before encapsulating"
+classification: not-a-bug
 statement: |
   Direct source-code reading of OpenSSH portable master HEAD (commit
   0ef0f5a839831c213f24e3f2ae434765c607fb50) shows that the server-side
@@ -94,6 +94,129 @@ verification:
   empirical_gha_run: "33288641132 ssh-loopback.yml ML-KEM cohort: sshd debug log confirms server accepted tampered C_INIT (SSH2_MSG_KEX_ECDH_INIT received) before failing at downstream signature verification"
   cross_cohort_audit: "sntrup761x25519-sha512 source code follows identical pattern (kexsntrup761x25519.c); empirical sshd log on cohort 99196234514 shows same 'SSH2_MSG_KEX_ECDH_INIT received' pattern"
   scope: "OpenSSH portable master HEAD as of 2026-08-30, commit 0ef0f5a839831c213f24e3f2ae434765c607fb50"
+correction_2026_10_02:
+  reason: >
+    A source-level re-verification of the pinned OpenSSH commit REFUTED the
+    finding's central claim. fnd-2026-0009 audited kexmlkem768x25519.c and
+    stopped one layer above the actual validation. The FIPS 203 section 7.2
+    encapsulation-key check IS performed, in OpenSSH's own glue layer, one
+    function below the one that was read.
+  corrections:
+    - id: O1
+      severity: fatal-to-central-claim
+      was: >
+        "The server does NOT perform the 12-bit coefficient range check
+        (ML-KEM-768) ... verified by direct source-code reading of
+        kex_kem_mlkem768_enc (kexmlkem768x25519.c lines 117-119)."
+      now: >
+        REFUTED. OpenSSH's crypto_kem_mlkem768_enc_seeded() in
+        libcrux-mlkem-mldsa.c performs the check immediately before
+        encapsulation:
+
+            memcpy(pk_internal.data, pk, crypto_kem_mlkem768_PUBLICKEYBYTES);
+            if (!libcrux_ml_kem_mlkem768_portable_validate_public_key(&pk_internal))
+                    return -1;
+            enc = libcrux_ml_kem_mlkem768_portable_encapsulate(&pk_internal, rnd);
+
+        libcrux's own vendored comment names the standard it implements
+        ("This implements the Modulus check in 7.2"), implemented as
+        deserialize-to-reduced -> re-serialize -> constant-time array compare
+        over the full 1184-byte encoding. On a non-canonical key the function
+        returns -1, which kexmlkem768x25519.c converts to SSH_ERR_INTERNAL_ERROR
+        and disconnects, BEFORE any ciphertext or shared secret exists.
+        The draft mandate in draft-ietf-sshm-mlkem-hybrid-kex-10 section 2.1 is
+        therefore SATISFIED for the ML-KEM-768 / X25519 cohort.
+      consequence: >
+        The finding's headline claim, its title, its classification as a
+        spec violation for the ML-KEM cohort, and its reproducibility claim
+        are all withdrawn. The audit stopped one layer too early.
+    - id: O2
+      severity: fatal-to-scope
+      was: >
+        scope stated as "OpenSSH portable master HEAD as of 2026-08-30, commit
+        0ef0f5a8", with a reproducer instructing
+        "./configure --prefix=... USE_MLKEM768X25519=1" and the summary
+        describing "built with USE_MLKEM768X25519=1" as an opt-in build.
+      now: >
+        There is no USE_MLKEM768X25519 configure option. The macro is set
+        UNCONDITIONALLY in defines.h based on compiler-feature probes (C99
+        named struct initialisers), not on a user flag. The KEM backend is
+        vendored in-tree as C. Passing USE_MLKEM768X25519=1 to ./configure is a
+        no-op and the "opt-in build" framing is wrong; the cohort is on by
+        default wherever the compiler supports it.
+      consequence: >
+        The reproducer as written does not build what it claims to build, and
+        the empirical GHA evidence inherited that same mistaken premise.
+    - id: O3
+      severity: fatal-to-empirical-evidence
+      was: >
+        "GHA run 33288641132 ... sshd debug log confirms server accepted
+        tampered C_INIT ... SSH2_MSG_KEX_ECDH_INIT received [preauth] ...
+        ssh_dispatch_run_fatal: incorrect signature [preauth]", offered as
+        confirmation that the server reached encapsulation.
+      now: >
+        This observation CONTRADICTS the source and cannot be what it is
+        described as. With the validate_public_key guard in place, a tampered
+        12-bit coefficient MUST cause crypto_kem_mlkem768_enc_seeded to return
+        -1, which yields SSH_ERR_INTERNAL_ERROR and a disconnect - the server
+        cannot reach signature computation, so it cannot log "incorrect
+        signature". Either the stimulus did not actually place an
+        out-of-range coefficient into the decoded 12-bit position, or the run
+        exercised a different code path or build than described. The run is
+        NOT evidence for the finding and is withdrawn as such. Its logs were
+        cited from R:/ scratch paths that no longer exist, so it could not be
+        re-examined in this session either.
+      consequence: >
+        The empirical leg of the evidence chain is unsound. This alone blocks
+        any continued verified_conclusion status regardless of the source
+        finding.
+    - id: O4
+      severity: moderate
+      was: >
+        The NTRU Prime 761 cohort was asserted to have the same defect, by
+        analogy ("The analogous code in kexsntrup761x25519.c follows the same
+        shape: only length check, no small-coefficient range check").
+      now: >
+        Directionally consistent but differently caused. crypto_kem_sntrup761_enc
+        (sntrup761.c) does not return an error for an out-of-range input:
+        Rq_decode silently reduces. This is SUPERCOP sntrup761 behaviour, not
+        an OpenSSH omission - there was never a check in that reference
+        implementation to omit. Whether draft-ietf-sshm-ntruprime-ssh-06
+        section 2.1 actually mandates a coefficient-range check for sntrup761
+        was NOT verified in this session; the draft text was not fetched.
+        The NTRU claim is therefore UNVERIFIED in both directions and is
+        marked as such rather than carried forward as an established defect.
+  status_change:
+    from: verified_conclusion
+    to: withdrawn
+    rationale: >
+      The central ML-KEM claim is refuted by source, the empirical evidence
+      contradicts the source and cannot be re-examined, and the build-scope
+      premise is wrong. A residual, weaker, UNVERIFIED question about
+      sntrup761 remains and is preserved as an open result rather than as
+      part of this finding.
+  preserved_as_negative_result: >
+    Two genuinely useful things survive. (1) A real method lesson: auditing a
+    KEX wrapper is not auditing a KEM, and the check can sit one layer below
+    the file you read. (2) The sntrup761 question is genuinely open and worth a
+    proper mission: does a reference SUPERCOP implementation that silently
+    reduces out-of-range inputs satisfy its SSH protocol draft's MUST?
+  effect_on_downstream: >
+    fnd-2026-0010 (the client-side symmetric analog) rests on the same
+    kexmlkem768x25519.c reading and the same misattributed ML-KEM check, so its
+    ML-KEM rationale inherits this refutation. Its conclusion (not a security
+    vulnerability, because the exchange-hash signature catches divergence)
+    survives and is in fact STRENGTHENED: if the server enforces the check,
+    divergence on the client side is even less consequential.
+  correction_provenance: >
+    Verified 2026-10-02 by the orchestrator directly against
+    raw.githubusercontent.com at pinned commit 0ef0f5a8, fetching
+    kexmlkem768x25519.c, crypto_api.h and libcrux-mlkem-mldsa.c. An
+    independent implementation-archaeologist subagent performed the backend
+    identification; the orchestrator then re-verified its central claim by
+    reading libcrux-mlkem-mldsa.c directly rather than accepting it. The
+    draft normative text was independently re-fetched and confirmed.
+
 disclosure: public
 limitations: |
   - The Go MITM harness has a residual recvPacket bug that prevents

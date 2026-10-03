@@ -1,0 +1,298 @@
+id: rev-2026-0017
+type: review
+status: complete
+created_at: "2026-10-02T00:00:00Z"
+updated_at: "2026-10-02T00:00:00Z"
+summary: "Independent adversarial review of the corrected pycose scope. Verdict REFUTES the finding as classified, while confirming every empirical measurement. The quoted 'normative_basis.rfc_9052_section_9' text is not in RFC 9052, map-key sorting is not among the three restrictions RFC 9052 section 9 actually carries, RFC 9052 section 3 states the opposite design intent, the maintainers already ruled on this deliberately, and 'mutually unverifiable' is false: pycose verifies conformantly-signed messages because decode preserves received protected bytes."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-critic
+    model: grok-4.7
+    tool: "subagent 01a0fca6-20ad-7ac2-894d-c84384b75ec2; draft at .scratch/rev-2026-0017_draft.md"
+  sources:
+    - knowledge/findings/fnd-2026-0014.yaml
+    - knowledge/observations/obs-2026-0045.yaml
+    - knowledge/observations/obs-2026-0046.yaml
+    - knowledge/experiments/exp-2026-0034.yaml
+    - knowledge/reviews/rev-2026-0016.yaml
+    - cose-cross-impl/probes/probe_pycose_scope_gaps.py
+    - cose-cross-impl/probes/probe_ordering_discriminator.py
+    - https://www.rfc-editor.org/rfc/rfc9052.html#section-9
+    - https://www.rfc-editor.org/rfc/rfc9052.html#section-3
+    - https://api.github.com/repos/TimothyClaeys/pycose/pulls/91
+  parent: msn-2026-0020
+  generation: 1
+links:
+  findings: [fnd-2026-0014]
+  observations: [obs-2026-0042, obs-2026-0045, obs-2026-0046]
+  experiments: [exp-2026-0032, exp-2026-0034]
+  reviews: [rev-2026-0016]
+  missions: [msn-2026-0020]
+  targets: [tgt-2026-0006]
+role: adversarial-critic
+verdict: disputes
+independent: true
+attempts_disproof: true
+scope_of_review: >
+  Covers fnd-2026-0014's CURRENT scope, which rev-2026-0016 explicitly
+  disclaimed. This is the first independent adversarial review of the corrected
+  scope required by AGENTS.md. It also covers the new evidence in
+  exp-2026-0034 / obs-2026-0046.
+objections:
+  - id: OBJ-1
+    severity: fatal-to-classification
+    claim: >
+      fnd-2026-0014.normative_basis.rfc_9052_section_9 quotes text that is NOT
+      in RFC 9052 section 9. The artifact presents "Encoding restrictions are
+      aligned with Core Deterministic Encoding Requirements ... In particular:
+      encoding MUST be done using definite lengths, the length of the encoded
+      argument MUST be the minimum possible length, the keys in every map MUST
+      be sorted in the bytewise lexicographic order of their deterministic
+      encodings." The map-key-sorting clause is RFC 8949 section 4.2.1 text,
+      spliced into an RFC 9052 quotation.
+    evidence: >
+      Verified independently by the orchestrator, fetching
+      https://www.rfc-editor.org/rfc/rfc9052.html#section-9. Actual text:
+      "This document limits the restrictions it imposes on how the CBOR Encoder
+      needs to work. The new encoding restrictions are aligned with the Core
+      Deterministic Encoding Requirements specified in Section 4.2.1 of RFC
+      8949 [STD94]. It has been narrowed down to the following restrictions:"
+      followed by exactly three bullets: (1) "The restriction applies to the
+      encoding of the Sig_structure, the Enc_structure, and the MAC_structure."
+      (2) definite lengths and minimum-length encoding; (3) no duplicate keys
+      in a single map.
+    consequence: >
+      The finding's normative basis was a misquotation. This alone invalidates
+      classification.primary "SPEC_VIOLATION per RFC 9052 section 9".
+  - id: OBJ-2
+    severity: fatal-to-classification
+    claim: >
+      Map-key ordering is NOT among the three restrictions RFC 9052 section 9
+      actually carries, so section 9 does not require it of COSE protected
+      headers.
+    evidence: >
+      The three surviving bullets are: scope of application (Sig/Enc/MAC
+      structure), definite minimum lengths, and no duplicate keys. RFC 9052
+      section 4.4 defines Sig_structure with body_protected as
+      empty_or_serialized_map, i.e. an opaque bstr, so the protected map's
+      internal key order is not itself constrained by section 9's text.
+    interpretation_marker: >
+      This is the reviewer's READING of the narrowing sentence, not a
+      sentence that says "protected-header key order is unconstrained". The
+      reviewer states explicitly that a maintainer could argue the narrowing is
+      editorial and that section 4.2.1 applies wholesale. That reading was not
+      settled and is not settled here.
+  - id: OBJ-3
+    severity: strong
+    claim: >
+      RFC 9052 section 3 states the opposite design intent for the protected
+      bucket's internal encoding.
+    evidence: >
+      "Wrapping the encoding with a byte string allows the protected map to be
+      transported with a greater chance that it will not be altered
+      accidentally in transit. ... This avoids the problem of all parties
+      needing to be able to do a common canonical encoding of the map for input
+      to cryptographic operations."
+    consequence: >
+      A conformant reading is that parties are NOT required to agree on a common
+      canonical encoding of the protected map. This is design rationale quoted
+      from the RFC, not a model inference.
+  - id: OBJ-4
+    severity: fatal-to-novelty
+    claim: >
+      The behaviour is already known and already deliberate upstream. Novelty
+      is not merely unchecked; the check that was outstanding has a positive
+      result.
+    evidence: >
+      TimothyClaeys/pycose PR #91 "Avoid re-encoding of protected header",
+      opened 2022-11-04 by letmaik (author_association COLLABORATOR), MERGED
+      2022-11-08 by maintainer TimothyClaeys, merge commit
+      a97fe64298f8cf1b1924047b3e8084a81f851307. Body: "If the original COSE
+      message was created by pycose then the same CBOR encoder (cbor2) is used
+      when re-encoding the message, which typically means that the protected
+      header is re-encoded bit-for-bit the same. However, relying on this is
+      brittle, especially since COSE does not enforce any deterministic encoding
+      for the protected header. This PR preserves the encoded protected header
+      and avoids re-encoding it." It is a follow-up to issue #82.
+      Verified by the orchestrator against the GitHub API pulls endpoint.
+    consequence: >
+      obs-2026-0046's preencoded_bytes_finding framed phdr_encoded as a caller
+      workaround ("a mitigation, not an exoneration"). It is in fact the
+      SHIPPED upstream fix. Reporting pycose's ordering behaviour to these
+      maintainers as a new defect would be a false novelty claim.
+  - id: OBJ-5
+    severity: fatal-to-impact
+    claim: >
+      "Signatures computed over them are mutually unverifiable" is false as
+      written. Divergence is on the SIGNING path only.
+    evidence: >
+      cosebase.py:21-25 (from_cose_obj pops the protected element) and
+      cosebase.py:51 (self._phdr_encoded = phdr_encoded) mean pycose preserves
+      received protected bytes verbatim on decode. The critic executed real
+      P-256/ES256 crypto and measured: a message signed by an independent
+      conformant signer over canonical protected bytes VERIFIES in pycose
+      (pycose preserves the received bytes, so ToBeSigned matches). The
+      converse fails: a signature made over pycose's non-canonical ToBeSigned
+      does not verify against a conformant verifier's ToBeSigned.
+    consequence: >
+      The impact statement must become directional. A pycose verifier accepts
+      conformant senders; a pycose signer emits bytes a conformant verifier
+      will reject. That asymmetry is the reportable core, if anything is.
+    residual: >
+      The critic's verifier used the same ecdsa library pycose uses, though the
+      conformant signer in that path bypassed pycose's encoding entirely. The
+      crypto backend is therefore not fully independent. Recorded as a limit.
+  - id: OBJ-6
+    severity: moderate
+    claim: >
+      obs-2026-0045 misdescribes its own comparator as "the cbor2
+      canonical=True encoding of the same map".
+    evidence: >
+      cbor2 6.1.4 canonical=True implements RFC 8949 section 4.2.3
+      length-first, not section 4.2.1 bytewise-lex. Confirmed independently by
+      the orchestrator and by the critic on separate vectors.
+    consequence: >
+      obs-2026-0045's conclusions survive because every vector in it has
+      equal-length key encodings, where the two rules agree. But its comparator
+      must not be cited as a section 4.2.1 reference.
+  - id: OBJ-7
+    severity: moderate
+    claim: >
+      The unprotected-bucket "widening" in obs-2026-0046 is an over-claim.
+    evidence: >
+      RFC 9052 section 9's narrowing covers Sig_structure, Enc_structure and
+      MAC_structure. The unprotected bucket is a field of the COSE message
+      array, not of those cryptographic structures.
+    consequence: >
+      The measurement stands as an observation; the claim that it WIDENS the
+      normative scope does not. obs-2026-0046's wording is corrected
+      accordingly.
+  - id: OBJ-8
+    severity: moderate
+    claim: >
+      No measured vector in the entire corpus contains a legal COSE protected
+      header.
+    evidence: >
+      Frontier's cbor_oracle.encode_canonical raises "unsupported value" on
+      pycose algorithm classes, so alg cannot be placed in the protected map on
+      the oracle side. Every vector omits alg.
+    consequence: >
+      The vectors establish ordering behaviour but do not demonstrate
+      behaviour on a realistic protected header. This is a real gap in the
+      evidence base, recorded rather than glossed.
+hypotheses_tested:
+  H1_no_canonical_path:
+    outcome: survived
+    detail: >
+      Independent package-wide walk found zero occurrences of "canonical" in
+      pycose 1.1.0 and confirmed cosebase.py:136. However the escape hatch
+      phdr_encoded is not a workaround bolted on later, it is the mechanism the
+      decoder itself uses, so OBJ-5 supersedes obs-2026-0046's framing of it.
+  H2_canonical_side_is_right:
+    outcome: survived
+    detail: >
+      cbor_oracle.encode_canonical reproduces RFC 8949 section 4.2.1 correctly
+      on the RFC's own worked example. Independently confirmed. This hypothesis
+      was the one the finding's validity most depended on.
+  H3_probe_not_confounded:
+    outcome: survived
+    detail: >
+      Every hex string reproduced independently. Unregistered-label control is
+      sound; int labels 2 and 4 are not normalised; Python 3.11 dict ordering
+      is language-guaranteed. Forward and reversed emissions differ, so no sort
+      occurred.
+  H4_scope_creep:
+    outcome: over-claims found
+    detail: "See OBJ-5, OBJ-6, OBJ-7, OBJ-8. All corrected in fnd-2026-0014 and obs-2026-0046."
+  H5_phdr_encoded_red_herring:
+    outcome: refuted as a red herring
+    detail: >
+      Not a red herring: it is the shipped fix for issue #82 (PR #91), and it
+      inverts the impact story. See OBJ-4 and OBJ-5.
+independent_measurements:
+  reproduced_hex_strings:
+    mixed_unregistered_labels_forward: "a40281637a7a7a636d6d6d0704496b69642d627974657363717171f5"
+    mixed_unregistered_labels_reversed: "a463717171f504496b69642d6279746573636d6d6d070281637a7a7a"
+    int_descending: "a2044179031832"
+    int_ascending: "a2031832044179"
+    tstr_unregistered: "a56161016261610261620362616204617a05"
+    tstr_registered_names: "a204416b615a01"
+    discriminator_forward: "a21903e84178617a4179"
+    discriminator_reversed: "a2617a41791903e84178"
+    unprotected_int: "a2044179031832"
+    unprotected_mixed: "a3044179636d6d6d07031832"
+  additional_critic_vectors:
+    - map: '{1000,100,10,256}'
+      pycose: "a41903e84161186441620a41631901004164"
+      canonical: "a40a41631864416219010041641903e84161"
+    - map: '{100,1000,10,1}'
+      pycose: "a4186441610a416201261903e84164"
+      canonical: "a40141630a4162186441611903e84164"
+  search_for_int_only_discriminator:
+    outcome: >
+      The critic searched exhaustively over 3-subsets of
+      {1,10,24,100,255,256,1000,65535,65536} and found NO int-only map where
+      RFC 8949 section 4.2.1 and section 4.2.3 disagree. For pure integer keys
+      the two orderings coincide. Only a mixed int+tstr vector discriminates.
+      This independently corroborates obs-2026-0046's discriminator choice and
+      explains why the earlier int-only and tstr-only vectors are structurally
+      unable to separate the two rules.
+  decode_preservation:
+    received_a2031832044179_after_decode: "a2031832044179"
+    received_a2044179031832_after_decode: "a2044179031832"
+    preserved_verbatim: true
+  crypto_interop:
+    conformant_signer_verified_by_pycose: true
+    pycose_signer_signature_rejected_by_conformant_verifier: true
+what_survived_the_attack:
+  - >
+    pycose 1.1.0 emits COSE_Sign1 protected-header maps in supplied insertion
+    order. Independently reproduced by the critic on its own scripts.
+  - >
+    pycose applies NEITHER RFC 8949 section 4.2.1 nor section 4.2.3 ordering:
+    the {1000, "z"} vector matches 4.2.1 forward and 4.2.3 reversed purely
+    because the insertion order changed.
+  - >
+    The Frontier adapter is not the cause; bare and adapter paths are
+    byte-identical.
+  - >
+    pycose 1.1.0 contains no canonical encoding path.
+  - >
+    pycose preserves received protected bytes verbatim on decode.
+residual_uncertainties:
+  - >
+    Whether RFC 9052 section 9's narrowing sentence is normative of intent or
+    merely editorial. The reviewer's reading is that map ordering is excluded;
+    this is interpretation, explicitly not citation.
+  - >
+    Whether the maintainers would accept an ordering change as a bug at all,
+    given their own merged PR states the opposite. Not testable by the critic.
+  - >
+    Behaviour on pycose versions other than 1.1.0.
+  - >
+    COSE_Sign, Encrypt0, Mac0, Encrypt and Mac ordering behaviour. Unmeasured;
+    Enc0Message and Mac0Message expose no _create_sig_structure.
+  - >
+    Whether a third COSE library re-encodes or preserves the protected bucket.
+  - >
+    The critic's crypto interop test shares the ecdsa backend with pycose.
+falsification_conditions_for_this_review:
+  - >
+    A primary-source reading in which RFC 9052 section 9's narrowing does not
+    restrict the alignment with RFC 8949 section 4.2.1, together with RFC 9052
+    section 3 not stating the bstr rationale. The reviewer found neither.
+  - >
+    Evidence that PR #91 was reverted or that the maintainers subsequently
+    changed position.
+  - >
+    A measurement showing pycose FAILS to verify a conformantly-signed message.
+    The reviewer measured the opposite, twice, with real crypto.
+reviewer_independence: >
+  Non-synthesizer role, spawned with the explicit goal of disproving the
+  corrected scope. It did not promote, edit or synthesize anything; it wrote a
+  single draft under .scratch and deleted its own scratch probes. The
+  orchestrator independently re-verified its three highest-stakes external
+  claims (RFC 9052 section 9 text, RFC 9052 section 3 rationale, PR #91
+  metadata) rather than accepting them.

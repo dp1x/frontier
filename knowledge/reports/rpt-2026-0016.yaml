@@ -1,0 +1,122 @@
+id: rpt-2026-0016
+type: report
+status: complete
+created_at: "2026-10-03T00:00:00Z"
+updated_at: "2026-10-03T00:00:00Z"
+summary: >
+  Session report for the 2026-10-03 parallel pre-disclosure audit. Nine targets,
+  nine independent adversarial auditors. Six findings are not safe to disclose;
+  two were refuted at the centre and one formal finding's headline is falsified
+  by its own source. Delivered tools/verify_citations.py. Corrections applied to
+  all seven affected findings; nothing may be disclosed in its current state.
+  VERDICT DETAIL IS IN rev-2026-0018 -- this report is a pointer, not a duplicate.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: grok-4.7
+    tool: "2026-10-03 parallel audit sweep, 9 subagents"
+  sources:
+    - knowledge/reviews/rev-2026-0018.yaml
+    - knowledge/process-findings/audit-2026-10-03/
+    - tools/verify_citations.py
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0001, fnd-2026-0002, fnd-2026-0004, fnd-2026-0005, fnd-2026-0006, fnd-2026-0007, fnd-2026-0013]
+  reviews: [rev-2026-0018]
+  targets: [tgt-2026-0001, tgt-2026-0002, tgt-2026-0003, tgt-2026-0005]
+title: "RPT-2026-0016 - pre-disclosure audit sweep: 6 of 9 findings need correction"
+see_also: >
+  All nine per-target verdicts, with file:line evidence, are recorded in
+  knowledge/reviews/rev-2026-0018.yaml. The underlying auditor reports are
+  preserved at knowledge/process-findings/audit-2026-10-03/. This report does
+  not restate them.
+what_was_done: >
+  Nine parallel subagents, each an adversarial-critic or specification-analyst
+  with an explicit goal of DISPROVING one target. They were given the two
+  failure modes observed when fnd-2026-0009 was refuted the previous day as
+  attack templates: (a) reading an abstraction layer above where validation
+  actually happens, and (b) empirical evidence contradicting the cited source
+  without anyone reconciling them. Auditors read real source at pinned commits,
+  traced to the leaf primitive, reconciled source against any logged evidence,
+  ran mandatory novelty checks, and marked every claim
+  VERIFIED / INFERRED / COULD-NOT-DETERMINE.
+outcome_at_a_glance:
+  refuted: [fnd-2026-0002, fnd-2026-0013]
+  headline_falsified_by_own_source: [fnd-2026-0006]
+  correction_needed: [fnd-2026-0001, fnd-2026-0004, fnd-2026-0005, fnd-2026-0007]
+  confirmed: [fnd-2026-0003, fnd-2026-0011]
+corrections_applied:
+  items:
+    - "fnd-2026-0002: verified_conclusion -> rejected; classification -> not-a-bug"
+    - "fnd-2026-0013: verified_conclusion -> rejected; classification -> process"
+    - "fnd-2026-0006: verified_conclusion -> disputed"
+    - "fnd-2026-0004: verified_conclusion -> disputed"
+    - "fnd-2026-0007: verified_conclusion -> disputed"
+    - "fnd-2026-0005: verified_conclusion -> disputed"
+    - "fnd-2026-0001: verified -> disputed"
+    - "fnd-2026-0003 and fnd-2026-0011: status unchanged; minor prose corrections noted in rev-2026-0018"
+  note: >
+    Every correction block preserves the original claim verbatim so the
+    correction is itself auditable, following the convention used by
+    fnd-2026-0012, fnd-2026-0009 and fnd-2026-0014.
+  disclosure_encoding: >
+    The seven corrected findings carry disclosure 'embargoed'. The schema offers
+    no 'not for disclosure' value. This is NOT a security embargo -- no
+    undisclosed vulnerability is being withheld. In each case the claim is false,
+    already known upstream, or overstates its evidence. Disposition is withdraw
+    or rewrite, not disclose.
+delivered_tool:
+  path: tools/verify_citations.py
+  orchestrator_verified: >
+    --selftest passes (known-bad fixture raises all six expected checks; clean
+    fixture raises zero). --all over the corpus reports 16 tier-1 FAIL.
+    Independently flags fnd-2026-0014's retracted quotation at 0/2 sentences
+    matched while the verified one matches, reproducing the exact RFC 9052
+    misquotation as a deterministic check.
+  known_limits_stated_by_its_author: >
+    Checks that a quoted sentence appears SOMEWHERE in the cited RFC, not that
+    it is from the right SECTION. Tier 2 covers RFCs only; GitHub citations are
+    reachability-checked, so the one-layer abstraction defect that refuted
+    fnd-2026-0009 is NOT detectable by this tool. sha_shape confirms
+    well-formedness, not existence. link_withdrawn is deliberately noisy.
+sntrup761_question_settled: >
+  No mandate exists. draft-ietf-sshm-ntruprime-ssh (now RFC 9941) states
+  explicitly that "No further validation is required beyond what is described in
+  RFC7748, RFC8731 and NTRUPrimePQCS", and the NTRU Prime spec's Encap has no
+  failure branch. A SUPERCOP implementation that reduces rather than rejects is
+  conformant. The ML-KEM case is different in kind: FIPS 203 section 7.2 names a
+  check and imposes it with "shall" independently of SSH. Detail in
+  rev-2026-0018.
+preserved_negative_results:
+  - "OpenSSL's d2i_PUBKEY over-length acceptance is real but is standard d2i trailing-byte behaviour, identical across every algorithm; no ML-KEM-specific vulnerability exists."
+  - "cbor2's canonical=True implements RFC 8949 section 4.2.3 length-first, not section 4.2.1. Adding canonical=True would NOT satisfy RFC 9052 section 9."
+  - "Frontier's own cbor_oracle shipped a section 4.2.3 sort mislabelled as section 4.2.1 from 2026-08-31 to 2026-09-02, and the whole evidence chain was built on it."
+  - "A raw-vs-DER matrix will ALWAYS show this asymmetry unless the harness checks the consumed length."
+  - "All three Lean proofs are sound: no sorry, axiom, native_decide, admit, unsafe, partial or opaque anywhere. The defects are in what they are claimed to prove."
+disclosure_posture: >
+  NOTHING may be disclosed in its current state. Three findings would have
+  produced false reports: fnd-2026-0002 (harness artifact, and the proposed fix
+  would make ML-KEM the only algorithm in OpenSSL to reject a trailing buffer),
+  fnd-2026-0013 (built on a mislabelled oracle), fnd-2026-0005 (already
+  non-novel; aws-lc #2891). The OpenSSH pair was withdrawn 2026-10-02.
+meta_finding: >
+  Every substantive failure was an EVIDENCE-CHAIN failure, not a reasoning
+  failure: a harness that tested the wrong thing, an oracle with the wrong
+  function under the right docstring, a citation to a different layer than the
+  one audited, a fabricated byte count, stub scripts posing as real ones. The
+  two templates - one layer too shallow, and evidence contradicting source
+  without reconciliation - appear here AND in the 2026-10-02 OpenSSH
+  refutation. That consistency is itself the finding: the corpus was assembled
+  without a check that the evidence matches the claim. The deterministic tool
+  closes the citation half of that gap; the abstraction-layer half requires
+  source-reading review and cannot be automated cheaply.
+open_work:
+  - "Regenerate the CBOR vector set against the repaired encode_canonical and re-measure fnd-2026-0013's defensible replacement (cbor2 matches on 108/111 and on the oracle's 4.2.3 ordering)."
+  - "Rebuild FORMAL-205 with a real byte-array model whose length parameter is used, and formalize the FIPS 203 section 7.2 type check that no theorem currently covers."
+  - "Re-run the X-Wing+HPKE claim with genuine X-Wing HPKE vectors; the current corpus is DHKEM-only."
+  - "Fix the rustls harness's wrong t-hat constant and add a genuine section 7.2 LENGTH-half stimulus."
+  - "Wire verify_citations.py into CI; calibrate its sentence-quorum against a larger corpus."
+  - "Regenerate dotnet_windows_report.tsv, which predates the committed Program.cs."

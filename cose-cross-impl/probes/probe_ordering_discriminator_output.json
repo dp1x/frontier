@@ -1,0 +1,118 @@
+{
+  "discriminators": [
+    {
+      "map": "int-only {4:b'y',3:50}",
+      "section_4_2_1": "a2031832044179",
+      "section_4_2_3": "a2031832044179",
+      "discriminates": false,
+      "note": "Does NOT discriminate: a maintainer sorting length-first would produce the same bytes, so these vectors cannot refute that defence."
+    },
+    {
+      "map": "tstr-only {a,aa,b,ab,z}",
+      "section_4_2_1": "a5616101616203617a056261610262616204",
+      "section_4_2_3": "a5616101616203617a056261610262616204",
+      "discriminates": false,
+      "note": "Does NOT discriminate: a maintainer sorting length-first would produce the same bytes, so these vectors cannot refute that defence."
+    },
+    {
+      "map": "mixed {2,mmm,4,qqq}",
+      "section_4_2_1": "a40281637a7a7a04496b69642d6279746573636d6d6d0763717171f5",
+      "section_4_2_3": "a40281637a7a7a04496b69642d6279746573636d6d6d0763717171f5",
+      "discriminates": false,
+      "note": "Does NOT discriminate: a maintainer sorting length-first would produce the same bytes, so these vectors cannot refute that defence."
+    }
+  ],
+  "cbor2_semantics": {
+    "question": "Does cbor2 6.1.4 canonical=True implement RFC 8949 4.2.1 or 4.2.3?",
+    "map": "{24: b\"x\", -1: b\"y\"}",
+    "cbor2_canonical_true": "a220417918184178",
+    "frontier_4_2_1": "a218184178204179",
+    "frontier_4_2_3": "a220417918184178",
+    "canonical_true_is_4_2_1": false,
+    "canonical_true_is_4_2_3": true,
+    "consequence": "If canonical=True is length-first, then adding canonical=True to pycose's encoder would NOT satisfy RFC 9052 section 9, which selects 4.2.1. The obvious one-line fix is wrong.",
+    "cbor2_version": "unknown"
+  },
+  "pycose_on_discriminator": {
+    "map": "{-4: b'x', -100: b'y'}",
+    "why_these_labels": "Both labels are unregistered in pycose (which registers -1..-3 and -20..-26 as COSE_KEY headers with a value_parser that rejects bytes), and their encoded lengths differ (0x23 = 1 byte, 0x1863 = 2 bytes) so 4.2.1 and 4.2.3 order them oppositely.",
+    "accepted_labels": true,
+    "error": null,
+    "section_4_2_1": "a223417838634179",
+    "section_4_2_3": "a223417838634179",
+    "insertion_order": "a223417838634179",
+    "discriminates": false,
+    "protected_hex": "a223417838634179",
+    "decoded_key_order": [
+      -4,
+      -100
+    ],
+    "equals_4_2_1": true,
+    "equals_4_2_3": true,
+    "equals_insertion": true,
+    "reversed_protected_hex": "a238634179234178",
+    "reversed_differs": true,
+    "reversed_equals_4_2_1": false,
+    "reversed_equals_4_2_3": false
+  },
+  "discriminator_map": {
+    "map": "{24: b\"x\", -1: b\"y\"}",
+    "section_4_2_1_bytewise_lex": "a218184178204179",
+    "section_4_2_3_length_first": "a220417918184178",
+    "insertion_order_cbor2_default": "a218184178204179",
+    "discriminates": true,
+    "caveat": "cbor2's own insertion-order default coincides with 4.2.1 here, so insertion-order output alone cannot prove absence of a sort on this map. The decisive evidence is that reversing insertion order changes the emitted bytes."
+  },
+  "pycose_discriminator_label_24_rejected": {
+    "map": "{24: b\"x\", -1: b\"y\"}",
+    "error": "TypeError: a bytes-like object is required, not 'ABCMeta'",
+    "cause": "label 24 is registered as PARTIAL_IV in pycose, whose value_parser requires an int; b'x' is rejected. This is pycose label validation, not the CBOR encoder."
+  },
+  "decisive_discriminator": {
+    "map": "{1000: b\"x\", \"z\": b\"y\"}",
+    "why": "int 1000 encodes as 0x1903e8 (3 bytes, leading byte 0x19); tstr 'z' encodes as 0x617a (2 bytes, leading byte 0x61). RFC 8949 4.2.1 orders by leading byte (int first); 4.2.3 orders by length ('z' first). The two rules disagree, so this vector distinguishes them.",
+    "section_4_2_1_bytewise_lex": "a21903e84178617a4179",
+    "section_4_2_3_length_first": "a2617a41791903e84178",
+    "discriminates": true,
+    "pycose_forward": "a21903e84178617a4179",
+    "pycose_forward_key_order": [
+      1000,
+      "z"
+    ],
+    "pycose_reversed": "a2617a41791903e84178",
+    "forward_equals_4_2_1": true,
+    "forward_equals_4_2_3": false,
+    "reversed_equals_4_2_1": false,
+    "reversed_equals_4_2_3": true,
+    "cbor2_canonical_true": "a2617a41791903e84178",
+    "cbor2_canonical_is_4_2_3": true,
+    "interpretation": "If pycose sorted by either rule, BOTH insertion orders would emit the same bytes. They do not. Forward output coincides with 4.2.1 and reversed output coincides with 4.2.3 purely because the supplied insertion order changed. This is direct evidence that pycose applies NEITHER ordering rule: it emits insertion order.",
+    "refutes_length_first_defence": "A maintainer replying 'we sort per 4.2.3 length-first' would be contradicted by the reversed case, which emits 4.2.3 order only because that was the supplied order, and emits different bytes when the order is reversed."
+  },
+  "cbor2_semantics_crosscheck": [
+    {
+      "map": "tstr len-vary {a,aa}",
+      "cbor2_canonical": "a261610162616102",
+      "frontier_4_2_1": "a261610162616102",
+      "frontier_4_2_3": "a261610162616102",
+      "cbor2_matches_4_2_1": true,
+      "cbor2_matches_4_2_3": true
+    },
+    {
+      "map": "int len-vary {24,-1}",
+      "cbor2_canonical": "a220417918184178",
+      "frontier_4_2_1": "a218184178204179",
+      "frontier_4_2_3": "a220417918184178",
+      "cbor2_matches_4_2_1": false,
+      "cbor2_matches_4_2_3": true
+    },
+    {
+      "map": "int len-vary {100,10}",
+      "cbor2_canonical": "a20a02186401",
+      "frontier_4_2_1": "a20a02186401",
+      "frontier_4_2_3": "a20a02186401",
+      "cbor2_matches_4_2_1": true,
+      "cbor2_matches_4_2_3": true
+    }
+  ]
+}

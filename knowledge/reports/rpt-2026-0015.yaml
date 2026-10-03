@@ -1,0 +1,123 @@
+id: rpt-2026-0015
+type: report
+status: complete
+created_at: "2026-10-02T00:00:00Z"
+updated_at: "2026-10-02T00:00:00Z"
+summary: "Session report for msn-2026-0020. A local probe closed three measurement gaps on the pycose ordering finding and found a fourth, and an independent adversarial review then REFUTED the finding's normative basis, classification, impact claim and novelty posture. The empirical behaviour is now well measured; the finding is no longer a candidate for an upstream report."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: grok-4.7
+    tool: "2026-10-02 session"
+  sources:
+    - knowledge/experiments/exp-2026-0034.yaml
+    - knowledge/observations/obs-2026-0046.yaml
+    - knowledge/reviews/rev-2026-0017.yaml
+    - knowledge/findings/fnd-2026-0014.yaml
+    - missions/active/msn-2026-0020.yaml
+  parent: msn-2026-0020
+  generation: 1
+links:
+  findings: [fnd-2026-0014]
+  observations: [obs-2026-0045, obs-2026-0046]
+  experiments: [exp-2026-0034]
+  reviews: [rev-2026-0017]
+  missions: [msn-2026-0020]
+  targets: [tgt-2026-0006]
+title: "RPT-2026-0015 - pycose ordering: gaps closed, finding reframed"
+baseline_confirmed: >
+  `frontier validate` ok and `pytest tests/ -q` 48/48 at session start, matching
+  the CHECKPOINT handoff. main ahead of origin/main by 5 commits, unpushed,
+  unchanged by this session.
+session_outcome: >
+  The candidate queue's A and B threads were both executed. B produced the
+  measurements; A produced the refutation. The combination changed the finding's
+  status from "candidate for an upstream report, pending novelty check" to
+  "measured behaviour, not an RFC violation, already known upstream". That is a
+  negative result for the upstream-report hypothesis and is preserved as such.
+what_was_measured:
+  - id: M1
+    question: "Does pycose sort a MIXED int+tstr protected map, with label normalisation ruled out?"
+    answer: "No."
+    how: >
+      Used tstr labels pycose does not register (zzz, mmm, qqq), verified at
+      runtime. The decisive control is a forward/reversed insertion pair over one
+      logical map: sorting would make both emissions identical; they differ.
+    bytes: "a40281637a7a7a636d6d6d0704496b69642d627974657363717171f5 vs canonical a40281637a7a7a04496b69642d6279746573636d6d6d0763717171f5"
+  - id: M2
+    question: "Is Frontier's adapter the cause?"
+    answer: "No. Bare pycose and the adapter are byte-identical in every case."
+  - id: M3
+    question: "Does phdr_encoded accept pre-encoded bytes and bypass the encoder?"
+    answer: "Yes. Caller bytes are returned verbatim; both the phdr setter and phdr_update clear the cache."
+  - id: M4
+    question: "Can the cited vectors distinguish RFC 8949 section 4.2.1 from section 4.2.3?"
+    answer: >
+      No. Every previously cited vector has equal-length key encodings, where
+      the two rules agree. The {1000, 'z'} vector does discriminate: pycose emits
+      4.2.1 bytes forward and 4.2.3 bytes reversed, proving it applies NEITHER
+      rule.
+  - id: M5
+    question: "Is cbor2's canonical=True RFC 8949 section 4.2.1?"
+    answer: >
+      No. It implements section 4.2.3 length-first. So adding canonical=True to
+      pycose would NOT satisfy RFC 9052 section 9. The obvious fix is wrong.
+  - id: M6
+    question: "Does the unprotected bucket behave the same?"
+    answer: "Yes, insertion order is preserved there too."
+review_outcome: >
+  rev-2026-0017 (independent adversarial critic, non-synthesizer) returned
+  REFUTES. It reproduced every measurement, then attacked the finding's framing
+  and succeeded. The orchestrator independently re-verified its three
+  highest-stakes external claims rather than accepting them: the RFC 9052
+  section 9 text, the RFC 9052 section 3 rationale, and the PR #91 metadata.
+corrections_applied_to_fnd_2026_0014:
+  - "normative_basis: the RFC 9052 section 9 quotation was a misquotation; the map-key-sorting clause is RFC 8949 section 4.2.1 text."
+  - "classification.primary: SPEC_VIOLATION withdrawn. RFC 9052 section 9's three restrictions do not include map ordering."
+  - "impact: 'mutually unverifiable' withdrawn as false; the divergence is directional (signer-side only), because pycose preserves received protected bytes on decode."
+  - "novelty: no longer merely unchecked. pycose PR #91 (merged 2022-11-08) already ruled on this deliberately."
+  - "promotion_path.next_steps: the maintainer-report step is explicitly withdrawn."
+  - "title and summary rewritten to match the corrected content."
+preserved_negative_results:
+  - >
+    The upstream-report hypothesis is disproved for this finding as scoped. A
+    maintainer report would be a false novelty claim. Recorded rather than
+    discarded.
+  - >
+    pycose preserves received protected bytes on decode, so the bug is
+    one-directional. This removes the security-adjacent framing.
+  - >
+    Sign1Message.decode(cbor2.dumps(CBORTag(...))) raises TypeError because
+    cbor2 decodes a tagged array to a tuple while pycose requires a list. Not an
+    ordering result; recorded so the case is not retried.
+  - >
+    pycose rejects some legal COSE labels on VALUE grounds before encoding (label
+    24 is PARTIAL_IV; -1, -2, -3 and -20..-26 are COSE_KEY headers). The map
+    {24: b'x', -1: b'y'} proposed in the Qwen transcript does not work against
+    pycose 1.1.0.
+limits_preserved:
+  - "The reading that RFC 9052 section 9's narrowing is normative rather than editorial is INTERPRETATION, not citation. It is the one question that would revive a residual spec-violation reading."
+  - "No measured vector contains a protected header with an alg label; Frontier's oracle cannot encode pycose algorithm classes."
+  - "pycose 1.1.0 only; COSE_Sign1 only; cohort still 2 libraries."
+  - "The critic's crypto interop test shared pycose's ecdsa backend, so the crypto layer is not fully independent."
+  - "The critic's search for an int-only 4.2.1-vs-4.2.3 discriminator found none exists, which corroborates rather than undermines this session's discriminator choice."
+status_changes_made: >
+  fnd-2026-0014 remains verified_conclusion, but for a materially narrower and
+  differently framed claim: a measured, reproducible, non-canonical
+  protected-bucket encoding whose status against the RFC is an open
+  interpretation. No promotion occurred. Nothing was promoted to verified by
+  this session. The mission msn-2026-0020 is closed as verified.
+housekeeping: >
+  .freebuff/ contains a single file, project-id, holding a UUID
+  (cea3bfda-83d0-43ef-992b-9a5b15241b7e). No reference to "freebuff" exists
+  anywhere in the repo, and it is not Frontier tooling output. Its origin is
+  unknown; it is left untracked and unmodified rather than guessed at or
+  deleted, since deleting unidentified user data is not a safe default.
+  ai-io/pycose_deterministic_cbor/ remains untracked raw Qwen transcript. Turn 3
+  of that transcript was materially wrong on two points that this session
+  measured: it marked the phdr_encoded question UNRESOLVED (it is answerable
+  locally and is the shipped upstream fix), and it proposed {24: b'x', -1: b'y'}
+  as a reproducer, which pycose 1.1.0 rejects. It must not be ingested as
+  evidence.

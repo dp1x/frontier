@@ -1,0 +1,183 @@
+id: rpt-2026-0017
+type: report
+status: complete
+created_at: "2026-10-03T00:00:00Z"
+updated_at: "2026-10-03T00:00:00Z"
+summary: >
+  Specification pass over the four open work items left by rev-2026-0018. The CBOR
+  re-measurement was executed and is recorded in obs-2026-0047 / exp-2026-0035.
+  The other three produced technical specifications and feasibility assessments
+  rather than measurements, because each turned out to need a decision or a CI
+  run rather than more local analysis. Two subagent self-reports were refuted by
+  the subagents themselves, which is the reason to keep verifying.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: grok-4.7
+    tool: "2026-10-03 four-agent specification pass"
+  sources:
+    - knowledge/observations/obs-2026-0047.yaml
+    - knowledge/experiments/exp-2026-0035.yaml
+    - .scratch/rework_cbor_remeasure.md
+    - .scratch/formal_rebuild_assessment.md
+    - .scratch/rustls_harness_fix_spec.md
+    - .scratch/xwing_hpke_test_spec.md
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0005, fnd-2026-0006, fnd-2026-0013]
+  reviews: [rev-2026-0018]
+  targets: [tgt-2026-0002, tgt-2026-0005]
+title: "RPT-2026-0017 - specifications for the remaining open work items"
+item_1_cbor_remeasurement:
+  status: EXECUTED and recorded as obs-2026-0047 / exp-2026-0035
+  headline: >
+    cbor2 6.1.4 canonical=True implements RFC 8949 section 4.2.3 length-first,
+    not section 4.2.1 bytewise-lex. It matches 4.2.3 on 111/111 vectors and 4.2.1
+    on 108/111, diverging on exactly the 3 discriminating vectors.
+  consequence: >
+    This is a FALSE ALARM as a cbor2 defect and a CONFIRMED defect in Frontier.
+    cbor2's "canonical" follows RFC 7049 / 4.2.3, which is coherent. The original
+    finding's claim that cbor2 "produces canonical output" was an artefact of a
+    mislabelled local oracle, now proven by the 111/111 stored-value blindness.
+  independent_verification: >
+    The orchestrator re-derived all three load-bearing numbers rather than
+    accepting them, and its first attempt was WRONG (33 vectors, 0
+    discriminating) because the vectors use a typed encoding requiring the
+    repo's own _decode_data_item_recursive. Re-running with that decoder
+    reproduced the subagent's table byte-for-byte. This is the second time in
+    this investigation that an independent check initially disagreed with a
+    subagent; both times the subagent was right and the check was wrong.
+  audit_figures_corrected:
+    - "'95 non-map vectors' is wrong; measured 103."
+    - "'108/111 have all-equal-length map keys' is false; only 2 do. The 108 coincide because both orderings give the identical permutation."
+    - "The '52 vs 54' divergence item resolves in favour of the finding; only the bare '52' token is wrong."
+  new_open_item: >
+    A control run found the cose-cross-impl header_label_sorting axis has ZERO
+    discriminating power at HEAD. fnd-2026-0014 rests on that axis, so this
+    needs follow-up before that finding is cited for anything.
+item_2_formal_205_rebuild:
+  status: SPECIFIED, not built
+  gap_is_wider_than_the_audit_found: >
+    There is no byte-array type anywhere in formal/. ByteEncode12 and ByteDecode12
+    are both (Nat -> Nat) -> Nat -> Nat, an infinite total function with no
+    length. Fin appears only inside comments. All five prerequisites for a
+    genuine composition are absent.
+
+    Critically, FORMAL-203 does not itself state Eq. (7.1): enc_dec_eq takes
+    hSeg : forall i, seg B i < 3329 with NO BOUND ON i, and segment 256k begins
+    at byte 384k, i.e. it reads the 32-byte seed, where seg >= 3329 occurs with
+    probability about 19%. So Eq. (7.1) is NOT derivable from roundtrip_iff_canonical.
+    The work is proving the prefix-restricted roundtrip nobody has stated, plus
+    two index bounds.
+  feasibility: >
+    About one day: roughly 15 declarations and 80-100 lines in one new file,
+    with ZERO new Mathlib imports. The subagent machine-checked every non-Mathlib
+    component in advance via lean --stdin against core only. No CI change needed.
+  recommendation: re-scope, do not retro-fit
+  reason: >
+    msn-2026-0007 is status verified and its terminal_reason contains the false
+    claim verbatim as the JUSTIFICATION for the terminal transition, while
+    prf-2026-0003 still asserts it. Retro-fitting would leave the record
+    self-contradictory. Separately, the mission asked for a dependent type and a
+    predicate was delivered while acceptance was recorded as met. The rebuild
+    should be a new mission.
+  hazard_flagged: >
+    The primary risk in the rebuild is vacuity-by-hypothesis-hoisting, repeating
+    FORMAL-205's failure one level down. The target theorem must be bidirectional.
+  charter_violation_risk_found: >
+    The reproducer field on fnd-2026-0004 and fnd-2026-0006 says `lake build`,
+    which after the packages deletion re-downloads about 5.5 GB. That is
+    forbidden by AGENTS.md and would violate the hard build rule.
+item_3_rustls_harness:
+  status: SPECIFIED, not applied
+  all_three_audit_defects_confirmed: >
+    The three defects rev-2026-0018 identified were confirmed independently: the
+    section 7.2 LENGTH half was never tested, wire_coeff255_eq_4095 targeted
+    coefficient 509 rather than 255, and the "ek shrunk to 1183 B" log string is
+    false.
+  orchestrator_brief_was_corrected: >
+    I told the agent that t-hat occupies ek[384k .. 384k+1152) = ek[1152..2304).
+    That is WRONG and runs past the end of a 1184-byte ek. The true range is
+    ek[0 : 384k] = ek[0 : 1152), which is the slice FIPS 203 Eq 7.1 uses verbatim.
+    The agent caught it. The t-hat SIZE of 1152 and seedStart of 1152 are right.
+  decisive_planning_finding: >
+    Layout::split() at tag v/0.23.43 fixes both component lengths and rejects any
+    total that is not their sum, obtaining the PQ part by a hard split_at(1184).
+    A 1183-byte ek therefore CANNOT reach EncapsulationKey::new for any share
+    length. Section 7.2(a) is unreachable dead code on this path, so
+    truncate_last_byte cannot be fixed by repointing its offset; it must be
+    REPLACED by a library-parse row, not repointed.
+  mechanism_discrimination: >
+    At the wire layer the two rejections are provably indistinguishable:
+    pq/mlkem.rs maps BOTH new() and encapsulate() errors to INVALID_KEY_SHARE,
+    discarding the cause. At the library-parse layer they are type-distinct:
+    KeyRejected::TooSmall / TooLarge versus Unspecified.
+  partial_exoneration: >
+    go_loopback/main.go is not uniformly broken. Its line 121 seedStart = 1152 is
+    correct and its library-parse row genuinely tests section 7.2(a), with
+    go_loopback_report.tsv:6 recording a real 1183-byte ek rejected as `length`.
+    A third harness, ssh_loopback/stagec/main.go:107-110, already uses the correct
+    ek[382]/ek[383] and visibly catches the same trap mid-comment.
+  correct_constants: "polyLo = 381, tailHi = 383; the old row hit coefficient 509"
+  rerun: "gh run view confirms 33267918229 is live and successful. The push trigger is dead, but workflow_dispatch works with no workflow changes. About one session, 4-6 hours, plus one CI round trip. Medium class, so GitHub Actions, not local."
+  not_verified: "aws-lc's C leaf was not read at the pinned aws-lc-sys 0.44.0 tag, and the 0.23.45 blob-identity claim is the prior audit's, not this agent's."
+item_4_xwing_hpke:
+  status: SPECIFIED, not executed
+  xwing_in_hpke_is_real_and_normative: >
+    draft-11 section 5.6 explicitly defines the HPKE KEM binding, with
+    DeriveKeyPair(ikm) = SHAKE256(ikm, 32*8), Encap/Decap mapped to sections 5.4
+    and 5.5, and Auth: no. Section 1.2 names HPKE as a design goal.
+  confirmed_absence_of_authoritative_vectors: >
+    No X-Wing HPKE test vectors exist in any reachable source. The draft's own
+    spec/test-vectors.json has 3 entries with 6 KEM-only fields and zero
+    occurrences of "hpke" or "9180". RFC 9180's corpus has kem_ids 16/18/32/33,
+    DHKEM only, and could not contain X-Wing because 0x647a was unassigned when
+    RFC 9180 was written. Appendix C is itself flagged TODO.
+  circl_can_use_it_today: >
+    KEM_XWING = 0x647a is in IsValid() and Scheme(), wired to genericNoAuthKEM,
+    whose DeriveKeyPair implements the draft's SHAKE256 twist. The claim is
+    testable, not untestable.
+  prior_audit_refuted_on_its_headline_script_bug: >
+    The prior audit claimed debug_hpke.py:66 wrongly used keySchCtx = 0x00 where
+    RFC 9180 section 5.1 requires 0x01. That is BACKWARDS: RFC 9180 section 5
+    Table 1 says mode_base = 0x00, and 0x01 is mode_psk. debug_hpke.py is
+    correct. The subagent confirmed this three ways, decisively: it
+    reimplemented RFC 9180 section 5.1 from the RFC text and reproduced all 96
+    supported vectors with 0 mismatches, which also independently confirms the
+    prior audit's own 128 / 32 / 96 figures.
+  worse_unreported_defect_found: >
+    .scratch/msn-2026-0009/hpke_ref.py and oracle.go share five HPKE errors
+    including a 16-byte fake suite_id, a wrong KDF codepoint, a 1166-byte
+    key_schedule_context against the RFC's 65, a double-derived exporter_secret,
+    and RFC 9380 framing misapplied. This makes full_audit_summary.json's
+    hpke_base_setup 10/10 a tautology: two implementations of the same wrong
+    construction. Contained to .scratch; no committed artifact cites it.
+  recommendation: >
+    Option (b): drive the X-Wing draft's Appendix C vectors through HPKE Base
+    mode, validated by a reference transcribed from RFC 9180 section 5.1. That
+    reference must first reproduce the 96 DHKEM vectors 96/96 before its X-Wing
+    output is trusted, and that gate is exactly what would have caught hpke_ref.py.
+    Cross-implementation comparison is rejected because no independent
+    X-Wing-in-HPKE implementation exists, so it would only prove CIRCL matches
+    code the agent wrote itself.
+  most_decision_relevant_unknown: >
+    Whether the CFRG list has already discussed the missing vectors. If vectors
+    are planned upstream, a private harness is wasted effort. This could not be
+    determined: GitHub code search returned 401 unauthenticated and web search
+    failed with HTTP 426, the same limitation rev-2026-0018 hit.
+method_note: >
+  All four agents were read-only over knowledge/ and missions/. Two of the four
+  reported self-corrections to the orchestrator's own briefing (the t-hat range
+  and the RFC 9180 mode byte). In both cases the subagent was right and the
+  briefing was wrong. This is the strongest available evidence that the
+  independent-verification discipline is working rather than being decorative.
+aggregate_honest_status: >
+  Zero new external findings were produced. What was produced is one measured
+  negative result with a clean replacement measurement, three specifications, and
+  a charter-violation risk found in existing reproducers. The remaining items
+  need a human decision (FORMAL-208 mission, CI re-run authorisation) or
+  upstream knowledge (whether CFRG plans X-Wing HPKE vectors), not more local
+  analysis.

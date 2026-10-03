@@ -1,0 +1,271 @@
+id: obs-2026-0046
+type: observation
+status: recorded
+created_at: "2026-10-02T00:00:00Z"
+updated_at: "2026-10-02T00:00:00Z"
+summary: "Probe of pycose 1.1.0 answering three open measurement gaps on fnd-2026-0014. (1) Clean mixed int+tstr protected map, using unregistered tstr labels so no label normalisation can explain it: pycose preserved supplied order, and reversing insertion order changed the emitted bytes. (2) Bare pycose API and the Frontier adapter produced byte-identical output in every case, exonerating the adapter. (3) phdr_encoded accepts pre-encoded bytes and returns them verbatim. Unprotected buckets also preserve insertion order. Root cause is a single missing canonical flag at cosebase.py:136. All of this is a measurement of library behaviour only; rev-2026-0017 subsequently withdrew the finding's SPEC_VIOLATION classification and found the behaviour already known upstream."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: "exp-2026-0034 local probe"
+  sources:
+    - cose-cross-impl/probes/probe_pycose_scope_gaps.py
+    - cose-cross-impl/probes/probe_pycose_scope_gaps_output.json
+    - knowledge/experiments/exp-2026-0034.yaml
+    - knowledge/observations/obs-2026-0045.yaml
+    - knowledge/findings/fnd-2026-0014.yaml
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
+    - https://www.rfc-editor.org/rfc/rfc9052
+  parent: msn-2026-0020
+  generation: 0
+links:
+  findings: [fnd-2026-0014]
+  observations: [obs-2026-0042, obs-2026-0045]
+  experiments: [exp-2026-0034]
+  missions: [msn-2026-0020]
+  targets: [tgt-2026-0006]
+statement: >
+  Measured pycose 1.1.0 directly, through both the bare library API and the
+  Frontier adapter, on protected-header maps chosen so that header-label
+  normalisation cannot confound the result.
+
+  MIXED KEYS, CONFOUND-FREE. Using tstr labels that pycose does not register
+  (zzz, mmm, qqq, confirmed against CoseHeaderAttribute.get_registered_classes),
+  the map {2: ["zzz"], "mmm": 7, 4: b"kid-bytes", "qqq": true} supplied in
+  insertion order [2, "mmm", 4, "qqq"] was emitted as
+  a40281637a7a7a636d6d6d0704496b69642d627974657363717171f5, whereas
+  RFC 8949 section 4.2.1 requires a40281637a7a7a04496b69642d6279746573636d6d6d0763717171f5
+  (key order [2, 4, "mmm", "qqq"]). Supplying the SAME logical map in reversed
+  insertion order produced different bytes
+  (a463717171f504496b69642d6279746573636d6d6d070281637a7a7a). Sorting would
+  make both identical, so no sorting occurred. This closes the obs-2026-0045
+  confound for this case: the withdrawn claim that pycose sorts mixed int+tstr
+  maps remains withdrawn, now on clean evidence rather than on a confounded one.
+
+  ADAPTER EXONERATED. Bare pycose and the Frontier adapter returned
+  byte-identical protected encodings in all four compared cases, including the
+  tstr-only case using a REGISTERED header name ({"KID", "Z"}), where pycose
+  substitutes the integer label 4. obs-2026-0045's limitation that the result was
+  only established "through Frontier's own adapter" no longer restricts the
+  claim: the behaviour belongs to pycose.
+
+  ROOT CAUSE IDENTIFIED. pycose/messages/cosebase.py line 136 encodes the
+  protected header with cbor2.dumps(self._phdr, default=self._custom_cbor_encoder)
+  and passes no canonical flag, so keys are emitted in Python dict insertion
+  order. A search of the whole pycose 1.1.0 package finds no occurrence of
+  canonical, SortCoreDeterministic, or any equivalent: there is no code path
+  that requests section 4.2.1 ordering.
+
+  A SECOND, INDEPENDENT MECHANISM explains the earlier confound rather than the
+  ordering: pycose/utils.py from_id() maps a registered tstr header name to its
+  attribute class case-insensitively, and _custom_cbor_encoder then re-emits the
+  attribute's integer identifier. That is why {"KID": b"k"} emerges as key 4.
+
+  PRE-ENCODED BYTES. CoseBase.__init__(phdr_encoded=...) accepts a pre-encoded
+  protected bucket and phdr_encoded returns it verbatim: canonical bytes
+  a2031832044179 passed in came out as a2031832044179 and produced a canonical
+  Sig_structure, and this is reproducible through from_cose_obj(). Both the
+  phdr setter and phdr_update clear the cache, so a later mutation re-encodes
+  through the non-canonical path. A caller can therefore obtain compliant
+  bytes by pre-encoding.
+
+  UNPROTECTED BUCKETS show the same behaviour: an unprotected map {4: b"y",
+  3: 50} was emitted as a2044179031832 against canonical a2031832044179, and a
+  mixed map {4: b"y", "mmm": 7, 3: 50} as a3044179636d6d6d07031832 against
+  canonical a3031832044179636d6d6d07. Ordering is therefore absent outside the
+  protected bucket too.
+environment:
+  where: local
+  isolation: "ramdisk scratch R:\\probe-2026-10-02; env-scrubbed project venv; no network access"
+  cwd: "c:/Users/Dhane/frontier"
+  versions:
+    pycose: "1.1.0"
+    cbor2: "6.1.4"
+    cryptography: "50.0.1"
+    python: "3.11.15 (uv-managed venv)"
+probe_method: >
+  One script, cose-cross-impl/probes/probe_pycose_scope_gaps.py, committed
+  alongside its JSON output. For each map it builds the Sig_structure, extracts
+  the protected bucket at element 1, and compares those bytes and decoded key
+  order against cbor_oracle.encode_canonical, the RFC 8949 section 4.2.1
+  reference. Every row is recorded twice, once through bare
+  Sign1Message(...) and once through
+  cose-cross-impl/adapters/lib_pycose_adapter.encode_structure, so adapter
+  influence is a measured variable rather than an assumption. Read-only with
+  respect to research state; writes no artifacts.
+measurements:
+  - case: "mixed int+tstr, unregistered tstr labels [BARE]"
+    insertion_order: [2, "mmm", 4, "qqq"]
+    pycose_protected_hex: "a40281637a7a7a636d6d6d0704496b69642d627974657363717171f5"
+    canonical_hex: "a40281637a7a7a04496b69642d6279746573636d6d6d0763717171f5"
+    preserved_supplied_order: true
+    matches_canonical: false
+  - case: "mixed int+tstr, same map reversed [BARE]"
+    insertion_order: ["qqq", 4, "mmm", 2]
+    pycose_protected_hex: "a463717171f504496b69642d6279746573636d6d6d070281637a7a7a"
+    preserved_supplied_order: true
+    matches_canonical: false
+    differs_from_forward_case: true
+  - case: "mixed int+tstr, unregistered tstr labels [ADAPTER]"
+    pycose_protected_hex: "a40281637a7a7a636d6d6d0704496b69642d627974657363717171f5"
+    adapter_agrees_with_bare: true
+    matches_canonical: false
+  - case: "int-only descending {4:b'y', 3:50} [BARE and ADAPTER]"
+    pycose_protected_hex: "a2044179031832"
+    canonical_hex: "a2031832044179"
+    adapter_agrees_with_bare: true
+    matches_canonical: false
+  - case: "int-only ascending {3:50, 4:b'y'} [BARE and ADAPTER]"
+    pycose_protected_hex: "a2031832044179"
+    canonical_hex: "a2031832044179"
+    matches_canonical: true
+    note: "Agrees only because the insertion order already equals sorted order; unchanged from obs-2026-0045."
+  - case: "tstr-only unregistered {a,aa,b,ab,z} [BARE and ADAPTER]"
+    pycose_protected_hex: "a56161016261610261620362616204617a05"
+    canonical_hex: "a5616101616203617a056261610262616204"
+    adapter_agrees_with_bare: true
+    matches_canonical: false
+  - case: "tstr-only registered names {KID, Z} [BARE and ADAPTER]"
+    pycose_protected_hex: "a204416b615a01"
+    canonical_hex: "a2615a01634b4944416b"
+    pycose_key_order: [4, "Z"]
+    adapter_agrees_with_bare: true
+    matches_canonical: false
+    note: >
+      KID was re-emitted as integer label 4. This row is the label-normalisation
+      mechanism, deliberately retained to show the confound is real and is a
+      separate effect from ordering.
+unprotected_measurements:
+  - case: "unprotected int-only {4:b'y', 3:50}"
+    location: "encoded COSE_Sign1 array element 1 (RFC 9052 section 4.4 Sig_structure carries no unprotected bucket)"
+    actual_hex: "a2044179031832"
+    canonical_hex: "a2031832044179"
+    matches_canonical: false
+  - case: "unprotected mixed {4:b'y', 'mmm':7, 3:50}"
+    actual_hex: "a3044179636d6d6d07031832"
+    canonical_hex: "a3031832044179636d6d6d07"
+    matches_canonical: false
+root_cause_identification:
+  primary:
+    file: ".venv/Lib/site-packages/pycose/messages/cosebase.py"
+    line: 136
+    code: "return cbor2.dumps(self._phdr, default=self._custom_cbor_encoder)"
+    finding: "no canonical flag, so Python dict insertion order is emitted"
+  absence_of_alternative: "no occurrence of 'canonical' anywhere in the pycose 1.1.0 package"
+  secondary_label_normalisation:
+    file: ".venv/Lib/site-packages/pycose/utils.py"
+    lines: "29-43 (_CoseAttribute.from_id)"
+    finding: "registered tstr header names map case-insensitively to their attribute class; _custom_cbor_encoder then emits the integer identifier"
+    relation_to_primary: "independent mechanism; explains the obs-2026-0045 confound, not the ordering"
+preencoded_bytes_finding:
+  accepts: true
+  returns_verbatim: true
+  canonical_in_equals_out: "a2031832044179"
+  yields_canonical_sig_structure: true
+  cache_invalidated_by_phdr_setter: true
+  cache_invalidated_by_phdr_update: true
+  significance: >
+    A caller can produce section 4.2.1 compliant bytes by pre-encoding. This is
+    a mitigation, not an exoneration, and it constrains how any maintainer
+    report should be framed.
+conclusions:
+  supported: >
+    On pycose 1.1.0, through the library's own API and not only through
+    Frontier's adapter, COSE protected-header maps are emitted in supplied
+    insertion order rather than RFC 8949 section 4.2.1 order. This now holds for
+    int-only, tstr-only and clean mixed int+tstr maps, is caused by a specific
+    missing canonical flag, and applies to unprotected buckets as well.
+  refined: >
+    obs-2026-0045's mixed-key confound is resolved in favour of the finding:
+    on a map where no label substitution is possible, pycose still did not
+    sort. Its conclusion stands and is now confound-free.
+  withdrawn: >
+    Nothing further is withdrawn. The already-withdrawn caveat that "pycose
+    DOES sort correctly when keys are mixed int+tstr" remains withdrawn on
+    stronger evidence.
+  still_unestablished: >
+    Concrete cross-library signature-verification failure was NOT executed: no
+    signature was produced or verified in this run, so fnd-2026-0014's
+    "mutually unverifiable" phrasing remains an interpretation and not a
+    measurement. Behaviour on COSE_Sign, Encrypt0, Mac0, Encrypt and Mac, on
+    other pycose versions, and on a third library cohort, is unmeasured.
+    Whether maintainers regard this as a defect or as caller-owned encoding
+    is untested, and upstream novelty is unchecked.
+discriminator_4_2_1_vs_4_2_3:
+  question: >
+    Can the cited vectors refute a defence that pycose sorts, but by RFC 8949
+    section 4.2.3 length-first rather than 4.2.1 bytewise-lexicographic?
+  prior_vectors_discriminate: false
+  prior_vectors_note: >
+    Every vector cited so far has key encodings of equal length, so 4.2.1 and
+    4.2.3 agree on all of them. None can distinguish the two rules.
+  decisive_vector:
+    map: '{1000: b"x", "z": b"y"}'
+    section_4_2_1: "a21903e84178617a4179"
+    section_4_2_3: "a2617a41791903e84178"
+    pycose_forward: "a21903e84178617a4179"
+    pycose_reversed: "a2617a41791903e84178"
+    forward_matches_4_2_1: true
+    forward_matches_4_2_3: false
+    reversed_matches_4_2_1: false
+    reversed_matches_4_2_3: true
+    verdict: >
+      DECISIVE, and adverse to a specific defence. A library applying either
+      rule would emit identical bytes for both insertion orders. pycose does
+      not: the forward output coincides with 4.2.1 and the reversed output with
+      4.2.3 purely because the supplied order changed. This is direct evidence
+      that pycose applies NEITHER rule.
+cbor2_canonical_true_is_4_2_3_not_4_2_1:
+  question: "Does cbor2 6.1.4 canonical=True implement 4.2.1 or 4.2.3? (Qwen Turn 3 left this UNRESOLVED)"
+  map: '{1000: b"x", "z": b"y"}'
+  cbor2_canonical_true: "a2617a41791903e84178"
+  equals_4_2_1: false
+  equals_4_2_3: true
+  consequence: >
+    cbor2 canonical=True implements the RFC 7049 / 4.2.3 LENGTH-FIRST rule, not
+    4.2.1. Adding canonical=True to pycose's encoder would NOT satisfy RFC 9052
+    section 9, which selects 4.2.1. The obvious one-line fix is wrong, and any
+    maintainer report must not propose it.
+pycose_label_validation_constraint:
+  finding: >
+    pycose rejects some legal COSE labels on VALUE grounds before encoding.
+    Label 24 is PARTIAL_IV with an int-only value_parser; labels -1, -2, -3
+    and -20..-26 are COSE_KEY headers whose value_parser is CoseKey.from_dict,
+    which raises TypeError on a bytes value.
+  consequence: >
+    Reproducer design constraint, not an ordering result. The map
+    {24: b'x', -1: b'y'} proposed in the Qwen transcript does not work against
+    pycose 1.1.0.
+scope_limitations:
+  library_scope: "pycose 1.1.0 only."
+  message_class: "COSE_Sign1 only in this run; other message classes are listed as gaps, not as cleared."
+  structure_bytes_only: "No cryptography was performed and no signature was verified."
+  cohort: "Still 2 libraries (pycose + go-cose)."
+  reference_implementation: "The section 4.2.1 reference is Frontier's own cbor_oracle.encode_canonical; independently attacked in rev-2026-0017, not assumed correct here."
+  no_upstream_contact: "No issue, PR or maintainer report has been filed by us. Superseded 2026-10-02: the behaviour IS already known upstream (pycose PR #91, merged 2022-11-08, following issue #82), so no report is warranted."
+review_required_before_citation: >
+  This observation is new evidence, not a reviewed conclusion. The
+  unprotected-bucket widening and the root-cause identification are NOT yet
+  reflected in fnd-2026-0014 and must not be cited from it until rev-2026-0017
+  covers them.
+review_outcome_2026_10_02: >
+  rev-2026-0017 reviewed this evidence as an independent adversarial critic and
+  CONFIRMED every measurement here (claims 1, 2, 3, the discriminator vector and
+  the cbor2 finding), reproducing all hex strings independently. Three of this
+  observation's framings were corrected by that review:
+
+  1. The unprotected-bucket result no longer WIDENS the normative scope. RFC 9052
+     section 9 narrows its alignment with RFC 8949 section 4.2.1 to Sig_structure,
+     Enc_structure and MAC_structure; the unprotected bucket is a field of the
+     message array, not of those structures. The measurement stands as an
+     observation; the widening claim is withdrawn (rev-2026-0017 OBJ-7).
+  2. phdr_encoded is not a caller workaround. It is the mechanism pycose's own
+     decode path uses, and it is the shipped fix for issue #82 (PR #91, merged
+     2022-11-08). The preencoded_bytes_finding.significance block above frames it
+     as "a mitigation, not an exoneration", which understates it (OBJ-4, OBJ-5).
+  3. "novelty remains unchecked" in scope_limitations is superseded. The check
+     that was outstanding has a positive result: the behaviour is already known
+     and deliberate upstream. No maintainer report is warranted (OBJ-4).

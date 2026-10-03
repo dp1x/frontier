@@ -1,10 +1,10 @@
 id: fnd-2026-0010
 type: finding
-status: verified_conclusion
+status: disputed
 created_at: "2026-08-30T07:50:00Z"
-updated_at: "2026-08-30T07:50:00Z"
-summary: "OpenSSH portable master HEAD (commit 0ef0f5a839831c213f24e3f2ae434765c607fb50) ssh client performs ONLY a length check on the server S_REPLY portion of SSH_MSG_KEX_ECDH_REPLY (message 31) for both the mlkem768x25519-sha256 and sntrup761x25519-sha512 hybrid KEX cohorts, the symmetric analog of the server-side leniency established by fnd-2026-0009. However, on the client side this is NOT a FIPS 203 s7.2 modulus check concern because s7.2 is defined for encapsulation keys (ek), not ciphertexts; the client's relevant FIPS 203 surface is s7.3 (decapsulation input checks via implicit rejection), which the underlying crypto_kem_mlkem768_dec primitive is responsible for implementing. The structural safety net for the SSH handshake is the exchange-hash signature verification on H = hash(... || K_PQ || ...), which catches any K_PQ_server vs K_PQ_client divergence caused by either side's leniency. Per adversarial critic analysis of 16 attack scenarios (rev-2026-0010), the lenient client does NOT enable any active MITM attack because forging the server's signature requires sk_host. Therefore this is a compliance gap symmetric to fnd-2026-0009, NOT a security vulnerability."
-epistemic_status: verified_conclusion
+updated_at: "2026-10-02T00:00:00Z"
+summary: "DISPUTED 2026-10-02. The conclusion survives - a compliance observation, not a security vulnerability, because the exchange-hash signature verification catches any K_PQ divergence - and is in fact strengthened, since fnd-2026-0009 correction established that the SERVER verifiably enforces the FIPS 203 section 7.2 encapsulation-key check before encapsulating. But the finding ML-KEM evidence leg was withdrawn: it rested on the same one-layer-too-shallow reading of kexmlkem768x25519.c, and its GHA observation is inconsistent with the source and no longer re-examinable. Downgraded from verified_conclusion to interpretation rather than withdrawn, because nothing found contradicts the conclusion itself, only the evidence that was supposed to support it. Surviving support is rev-2026-0010 adversarial analysis of 16 attack scenarios plus the exchange-hash reasoning."
+epistemic_status: interpretation
 provenance:
   created_by:
     kind: model-agent
@@ -125,6 +125,58 @@ verification:
     per-stimulus byte-exact verdict capture; the underlying FIPS 203 s7.2
     question is determinable from source code alone.
   scope: "OpenSSH portable master HEAD as of 2026-08-30, commit 0ef0f5a839831c213f24e3f2ae434765c607fb50"
+correction_2026_10_02:
+  reason: >
+    The ML-KEM half of this finding rested on the same reading of
+    kexmlkem768x25519.c that correction_2026_10_02 in fnd-2026-0009 shows was
+    one layer too shallow. The FIPS 203 section 7.2 check is performed by
+    OpenSSH in libcrux-mlkem-mldsa.c via
+    libcrux_ml_kem_mlkem768_portable_validate_public_key, immediately before
+    encapsulation.
+  corrections:
+    - id: P1
+      severity: moderate
+      was: >
+        The client-side leniency was framed as a symmetric compliance gap
+        arising because "OpenSSH performs only a length check" on the server's
+        S_REPLY CT portion.
+      now: >
+        Partly superseded. For the ML-KEM-768 / X25519 cohort, the SERVER now
+        verifiably enforces the encapsulation-key check before encapsulating.
+        That is the security-relevant side, and it is enforced. The client's
+        own KEX-dec function still performs only a length check on the
+        ciphertext, but section 7.2 governs encapsulation keys, not
+        ciphertexts - which this finding already correctly noted - so the
+        client's ciphertext-side length check is not itself a section 7.2 gap.
+      consequence: >
+        The finding's CONCLUSION is unchanged and is in fact strengthened:
+        this is a compliance observation, not a security vulnerability. The
+        structural safety net (exchange-hash signature verification catching
+        any K_PQ divergence) remains the operative reason, and it now has the
+        server-side check as an additional barrier upstream of it.
+    - id: P2
+      severity: moderate
+      was: >
+        The empirical GHA observation supporting the ML-KEM leg.
+      now: >
+        Withdrawn alongside O3 in fnd-2026-0009. That log evidence is
+        inconsistent with the source and could not be re-examined (R:/ scratch
+        paths no longer exist).
+  status_change:
+    from: verified_conclusion
+    to: interpretation
+    rationale: >
+      The conclusion ("not a security vulnerability, compliance gap only") is
+      well supported and survives, but its ML-KEM evidence base was withdrawn
+      and the surviving support is the exchange-hash reasoning plus
+      rev-2026-0010's 16-scenario adversarial analysis, not the empirical
+      run. Downgraded from verified_conclusion to interpretation rather than
+      withdrawn, because nothing found this session contradicts the
+      conclusion - only the leg of evidence that was supposed to support it.
+  correction_provenance: >
+    Same verification pass as fnd-2026-0009 correction_2026_10_02. Source
+    read directly at pinned commit 0ef0f5a8.
+
 disclosure: public
 limitations: |
   - The empirical Stage C GHA run has a strict-KEX sequence number

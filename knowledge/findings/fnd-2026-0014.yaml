@@ -3,7 +3,7 @@ type: finding
 status: verified_conclusion
 created_at: "2026-09-02T04:30:00Z"
 updated_at: "2026-09-29T00:00:00Z"
-summary: "pycose 1.1.0 protected-header ordering concern: tested tstr-only maps and a descending int-only map preserve supplied order rather than matching the RFC 8949 §4.2.1 oracle (obs-2026-0042, obs-2026-0045). The original matrix's 4 mismatch cells and its later int-only probe support a bounded concern; mixed-key behavior, broader APIs/classes/versions, and concrete signature-verification impact remain unestablished. The earlier tstr-only scope and mixed-map counterevidence are withdrawn."
+summary: "pycose 1.1.0 emits COSE_Sign1 protected-header maps in supplied insertion order rather than RFC 8949 section 4.2.1 order, applying neither section 4.2.1 nor section 4.2.3 ordering. The behaviour is measured, confound-free and rooted at cosebase.py:136. Its SPEC_VIOLATION classification is WITHDRAWN (rev-2026-0017): RFC 9052 section 9 does not carry map-key ordering among its three restrictions, and RFC 9052 section 3 states the opposite design intent. The earlier 'mutually unverifiable' impact claim is withdrawn as false; the divergence is directional (signer-side only). The behaviour is already known upstream (pycose PR #91), so no maintainer report is warranted."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -22,15 +22,15 @@ provenance:
   parent: msn-2026-0018
   generation: 0
 links:
-  experiments: [exp-2026-0032]
-  observations: [obs-2026-0042, obs-2026-0045]
+  experiments: [exp-2026-0032, exp-2026-0034]
+  observations: [obs-2026-0042, obs-2026-0045, obs-2026-0046]
   reproducers: [rpr-2026-0015]
   specifications: [spc-2026-0005]
   implementations: [imp-2026-0021, imp-2026-0024]  # go-cose + pycose
   targets: [tgt-2026-0006]
-  reviews: [rev-2026-0016]
+  reviews: [rev-2026-0016, rev-2026-0017]
   verifications: [vrf-2026-0016]
-title: "FND-2026-0014 - pycose protected-header ordering concern (RFC 9052 §9)"
+title: "FND-2026-0014 - pycose 1.1.0 emits protected-header maps in insertion order (signer-side interop divergence; no RFC violation established)"
 correction_2026_09_28:
   reason: >
     A direct probe of pycose 1.1.0 (obs-2026-0045) contradicted this finding's scope
@@ -50,19 +50,182 @@ correction_2026_09_28:
     status stays verified_conclusion; epistemic_status unchanged. This corrects the
     scope of the claim, not the substance. Promotion is not reversed. The novelty
     check remains outstanding and no upstream report has been filed.
-normative_basis:
-  rfc_9052_section_9: "Encoding restrictions are aligned with Core Deterministic Encoding Requirements specified in Section 4.2.1 of RFC 8949 [STD94]. In particular: encoding MUST be done using definite lengths, the length of the encoded argument MUST be the minimum possible length, the keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings."
-  rfc_8949_section_4_2_1: "The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings. For example: 10, 100, -1, 'z', 'aa', [100], [-1], false — sorted correctly."
+correction_2026_10_02:
+  reason: >
+    Independent adversarial review rev-2026-0017 attacked the corrected scope and
+    REFUTED the finding's normative basis and impact analysis while confirming every
+    empirical measurement. Four defects are corrected here: a misquotation of RFC 9052
+    section 9, a classification of SPEC_VIOLATION that the RFC text does not support,
+    an incorrect claim of mutual signature unverifiability, and the statement that
+    upstream novelty was merely unchecked.
+  corrected_by: rev-2026-0017
+  evidence: [obs-2026-0046, exp-2026-0034]
+  corrections:
+    - id: C1
+      severity: fatal-to-classification
+      was: >
+        normative_basis.rfc_9052_section_9 presented the following as RFC 9052
+        section 9: "Encoding restrictions are aligned with Core Deterministic
+        Encoding Requirements specified in Section 4.2.1 of RFC 8949. In
+        particular: encoding MUST be done using definite lengths, the length of
+        the encoded argument MUST be the minimum possible length, the keys in
+        every map MUST be sorted in the bytewise lexicographic order of their
+        deterministic encodings."
+      now: >
+        That quotation is not in RFC 9052. The map-key-sorting sentence is
+        RFC 8949 section 4.2.1 text spliced into an RFC 9052 quotation. Verified
+        against https://www.rfc-editor.org/rfc/rfc9052.html#section-9. The
+        misattributed quotation is retained below as normative_basis_original.
+    - id: C2
+      severity: fatal-to-classification
+      was: >
+        classification.primary: "SPEC_VIOLATION per RFC 9052 section 9 /
+        RFC 8949 section 4.2.1".
+      now: >
+        Withdrawn as an established classification. RFC 9052 section 9 says the
+        alignment "has been narrowed down to the following restrictions", and
+        the three it lists are: (1) the restriction applies to Sig_structure,
+        Enc_structure and MAC_structure; (2) definite, minimum-length encoding;
+        (3) no duplicate keys in a single map. Map-key ordering is NOT among
+        them. RFC 9052 section 4.4 carries body_protected as
+        empty_or_serialized_map, an opaque bstr. The normative violation is
+        therefore NOT established. The behaviour is real and measured; its
+        classification as a spec violation is withdrawn.
+      caveat: >
+        This rests on the reading that the narrowing sentence is normative of
+        intent rather than editorial. rev-2026-0017 records explicitly that a
+        maintainer could argue the narrowing is editorial and that RFC 8949
+        section 4.2.1 applies wholesale. That reading is unsettled and is
+        preserved as an open question, not resolved here.
+    - id: C3
+      severity: fatal-to-novelty
+      was: "The novelty check remains outstanding and is not done."
+      now: >
+        The outstanding check has a POSITIVE result, which is worse for
+        upstream. TimothyClaeys/pycose PR #91, "Avoid re-encoding of protected
+        header", opened 2022-11-04 by a COLLABORATOR and MERGED 2022-11-08 by
+        maintainer TimothyClaeys (merge commit
+        a97fe64298f8cf1b1924047b3e8084a81f851307), states: "relying on this is
+        brittle, especially since COSE does not enforce any deterministic
+        encoding for the protected header. This PR preserves the encoded
+        protected header and avoids re-encoding it." It follows issue #82. The
+        behaviour is already known and already deliberate upstream. phdr_encoded
+        is that shipped fix, not an undocumented workaround.
+        Consequence: NO upstream defect report may be filed on the basis of
+        this finding as it stands. Any maintainer contact would be a false
+        novelty claim.
+    - id: C4
+      severity: fatal-to-impact
+      was: >
+        "signatures computed over them are mutually unverifiable" / "different
+        Sig_structure bytes, so signatures over them are mutually unverifiable".
+      now: >
+        FALSE as written. The divergence is directional. pycose's decode path
+        preserves received protected bytes verbatim (cosebase.py:21-25 and :51),
+        so a message signed by a conformant sender VERIFIES in pycose; rev-2026-0017
+        measured this with real P-256/ES256. The failure is the opposite
+        direction: a signature produced over pycose's non-canonical ToBeSigned
+        does not verify against a conformant verifier. A pycose verifier accepts
+        conformant senders; a pycose signer emits bytes a conformant verifier
+        rejects.
+      residual: >
+        The critic's verifier shared pycose's ecdsa backend, so the crypto layer
+        is not fully independent. The asymmetry is measured but its boundary is
+        not exhaustive.
+    - id: C5
+      severity: moderate
+      was: "impact_analysis.security_consequence implied symmetric breakage."
+      now: >
+        Restated directionally per C4. No security vulnerability is claimed or
+        demonstrated; a signer-side interoperability defect is all that is
+        supported.
+  corrected_scope:
+    established:
+      - >
+        pycose 1.1.0 emits COSE_Sign1 protected-header maps in supplied insertion
+        order, through the library's own API and not only through Frontier's
+        adapter.
+      - >
+        It applies NEITHER RFC 8949 section 4.2.1 nor section 4.2.3 ordering. The
+        map {1000: b'x', 'z': b'y'} yields 4.2.1 bytes forward and 4.2.3 bytes
+        reversed, purely because the supplied order changed.
+      - >
+        The cause is a missing canonical flag at cosebase.py:136; no canonical
+        code path exists anywhere in the package.
+      - >
+        The unprotected bucket behaves the same way.
+      - >
+        On decode, pycose preserves received protected bytes verbatim, so a
+        conformantly-signed message verifies.
+    not_established:
+      - "That this violates any RFC requirement. See C2."
+      - "Any concrete cross-library signature-verification failure in the symmetric sense. See C4."
+      - "Behaviour on pycose versions other than 1.1.0."
+      - "COSE_Sign, Encrypt0, Mac0, Encrypt and Mac ordering behaviour."
+      - >
+        Behaviour on a realistic protected header: Frontier's oracle cannot
+        encode pycose algorithm classes, so no measured vector contains alg.
+  effect_on_status: >
+    status stays verified_conclusion for the EMPIRICAL behaviour, which is now
+    multiply and independently measured (obs-2026-0042, obs-2026-0045,
+    obs-2026-0046, plus rev-2026-0017's own reproduction). What changes is the
+    finding's content: its normative basis is corrected, its SPEC_VIOLATION
+    classification is withdrawn, its impact statement is corrected to
+    directional, and its novelty status is resolved as already-known. The
+    finding is no longer a candidate for an upstream defect report.
+normative_basis_original:
+  note: >
+    RETRACTED MISQUOTATION, retained verbatim per the convention used by
+    fnd-2026-0012. This is the text previously carried as
+    normative_basis.rfc_9052_section_9. It is NOT a quotation of RFC 9052
+    section 9; the final clause is RFC 8949 section 4.2.1. See
+    correction_2026_10_02 C1.
+  rfc_9052_section_9_as_previously_quoted: "Encoding restrictions are aligned with Core Deterministic Encoding Requirements specified in Section 4.2.1 of RFC 8949 [STD94]. In particular: encoding MUST be done using definite lengths, the length of the encoded argument MUST be the minimum possible length, the keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings."
+normative_basis_verified:
+  rfc_9052_section_9_actual: >
+    "This document limits the restrictions it imposes on how the CBOR Encoder
+    needs to work. The new encoding restrictions are aligned with the Core
+    Deterministic Encoding Requirements specified in Section 4.2.1 of RFC 8949
+    [STD94]. It has been narrowed down to the following restrictions: The
+    restriction applies to the encoding of the Sig_structure, the Enc_structure,
+    and the MAC_structure. Encoding MUST be done using definite lengths, and the
+    length of the (encoded) argument MUST be the minimum possible length. This
+    means that the integer 1 is encoded as '0x01' and not '0x1801'.
+    Applications MUST NOT generate messages with the same label used twice as a
+    key in a single map. Applications MUST NOT parse and process messages with
+    the same label used twice as a key in a single map."
+  rfc_9052_section_3_rationale: >
+    "Wrapping the encoding with a byte string allows the protected map to be
+    transported with a greater chance that it will not be altered accidentally
+    in transit. ... This avoids the problem of all parties needing to be able to
+    do a common canonical encoding of the map for input to cryptographic
+    operations."
+  rfc_8949_section_4_2_1: "The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings."
+  interpretation_marker: >
+    The section 3 rationale is quoted text and is strong evidence of design
+    intent. The conclusion that section 9 therefore does NOT require protected-map
+    key ordering is an interpretation of how the narrowing sentence interacts
+    with section 4.4's empty_or_serialized_map. It is not a sentence in the RFC.
+    Preserved as unsettled.
 evidence:
   primary_observation: "obs-2026-0042 — 4 SPEC_VIOLATION cells, all from lib_pycose on header_label_sorting axis, all map-key sort order divergences"
   supporting_observation: "obs-2026-0045 directly probes a descending int-only protected map and confirms insertion order is preserved; the prior mixed-key matrix vectors are confounded by header-label normalization and cannot establish mixed-map ordering behavior"
   counter_evidence: "go-cose (via fxamacker/cbor SortCoreDeterministic) produces bytewise-lex sort; matches Frontier cleanroom oracle exactly for all 4 vectors"
   counter_evidence: "Frontier cleanroom Python oracle uses canonical sort = §4.2.1 bytewise-lex"
 classification:
-  primary: "SPEC_VIOLATION per RFC 9052 §9 / RFC 8949 §4.2.1"
-  scope: "Observed on pycose 1.1.0 protected-header serialization for tstr-only maps and a descending int-only map; mixed int+tstr ordering remains unmeasured because existing mixed-key vectors are confounded"
-  affected_algorithms: "Not established; direct follow-up probes cover protected-map construction through one Sign1 adapter path only."
-  does_not_establish: "The probe does not establish behavior for every key type, every COSE message class, unprotected headers, other pycose versions, or clean mixed int+tstr maps"
+  primary: "WITHDRAWN 2026-10-02. Was 'SPEC_VIOLATION per RFC 9052 section 9 / RFC 8949 section 4.2.1'. That classification is no longer supported: RFC 9052 section 9 narrows the alignment with RFC 8949 section 4.2.1 to three restrictions, and map-key ordering is not among them (see correction_2026_10_02 C2). No RFC violation is established."
+  secondary: "Observed non-deterministic protected-bucket encoding: pycose 1.1.0 emits supplied insertion order and applies neither RFC 8949 section 4.2.1 nor section 4.2.3 ordering. The behaviour is measured and reproducible; its status against the specification is an open interpretation, not a conclusion."
+  scope: >
+    Observed on pycose 1.1.0 for COSE_Sign1 protected headers (int-only,
+    tstr-only and mixed int+tstr maps) and for the unprotected bucket, through
+    the library's own API. Mixed-key ordering is now measured confound-free;
+    root cause is identified at cosebase.py:136. Other message classes, other
+    versions, and realistic headers containing alg remain unmeasured.
+  affected_algorithms: "Not established; probes cover protected-map construction through one Sign1 adapter path only."
+  does_not_establish: >
+    Does not establish a specification violation, a security vulnerability, or
+    any behaviour for other COSE message classes, other pycose versions, or
+    protected headers containing an alg label.
 byte_evidence:
   int_labels_sorted:
     oracle: "846a5369676e61747572653147a2031832044179404170"
@@ -80,9 +243,23 @@ independence_analysis:
   cbor2_sort_behavior: "§4.2.3 length-first (verified in msn-2026-0017 CBOR cohort)"
   pycose_sort_behavior: "Direct adapter-mediated probes show insertion order preserved for tested tstr-only maps and a descending int-only protected map. Existing mixed-key vectors are confounded by registered-label normalization; root cause and generality remain unresolved"
 impact_analysis:
-  interop_consequence: "Different tested protected-map bytes imply different Sig_structure input bytes when remaining fields are fixed; actual cross-library verification outcomes have not been measured."
-  security_consequence: "For the tested protected-map cases, different serialized protected bytes imply different Sig_structure inputs when other fields are held fixed. A concrete cross-library signature-verification failure and deployment impact have not been demonstrated."
+  interop_consequence: >
+    DIRECTIONAL, corrected 2026-10-02. A pycose SIGNER emits protected-map and
+    Sig_structure bytes that a conformant verifier will reject. A pycose
+    VERIFIER accepts a conformantly-signed message, because pycose's decode path
+    preserves received protected bytes verbatim. The earlier symmetric claim of
+    "mutually unverifiable" was false and is withdrawn (correction_2026_10_02 C4).
+  security_consequence: >
+    None demonstrated. This is a signer-side interoperability defect. No
+    vulnerability, no exploitability assessment, and no deployment impact has
+    been shown. RFC 9052 section 3 anticipates this class of difference by design.
   webauthn_consequence: "Not assessed; no WebAuthn/FIDO2 flow or deployment was tested."
+  upstream_consequence: >
+    NOT ACTIONABLE. The behaviour is already known and deliberate upstream:
+    TimothyClaeys/pycose PR #91 (merged 2022-11-08) states that "COSE does not
+    enforce any deterministic encoding for the protected header" and preserves
+    the encoded protected header accordingly. No defect report may be filed from
+    this finding as it stands.
 promotion_requirements:
   - "Independent adversarial review (rev-2026-XXXX) SUPPORTS or PARTIALLY_SUPPORTS"
   - "Deterministic verification via rpr-2026-0015 reproduction"
@@ -96,9 +273,20 @@ promotion_path:
     review: rev-2026-0016
     verification: vrf-2026-0016
   next_steps:
-    - "Novelty check (NOT yet done): determine whether the observed pycose 1.1.0 protected-header ordering behavior is already reported upstream in TimothyClaeys/pycose issues, pull requests, commits, or changelog. A partial issue search on 2026-09-26 returned no matching report, but that is not a complete novelty check and must not be treated as one."
+    - "WITHDRAWN 2026-10-02. 'Novelty check (NOT yet done)' is superseded: rev-2026-0017 located TimothyClaeys/pycose PR #91 (merged 2022-11-08) and issue #82, which settle it. The behaviour is already known upstream."
+    - "WITHDRAWN 2026-10-02. 'Prepare a precise maintainer report' must not be acted on: the behaviour is deliberate upstream and the SPEC_VIOLATION classification is withdrawn. Filing would be a false novelty claim."
+    - "If a maintainer report is ever proposed by a human, it must first resolve the open interpretation in correction_2026_10_02 C2 (whether RFC 9052 section 9's narrowing is normative or editorial) and must disclose the directional, signer-only impact."
     - "Re-confirm against the pycose release the maintainers currently publish, recording the exact version and commit tested."
-    - "If still actionable and not previously reported, prepare a precise maintainer report citing RFC 9052 section 9 and RFC 8949 section 4.2.1, with a minimal reproducer and the 4 affected vectors."
+    - "Measure a protected header containing alg: Frontier's cbor_oracle cannot encode pycose algorithm classes, so no measured vector currently does."
+  correction_follow_up_2026_10_02: >
+    rev-2026-0017 reviewed this finding's corrected scope as an independent
+    adversarial critic and returned REFUTES on classification and impact while
+    confirming the empirical behaviour. The finding's content has been corrected
+    under correction_2026_10_02. Its SPEC_VIOLATION classification, its
+    "mutually unverifiable" impact claim, and its pending-novelty posture are all
+    withdrawn. What remains verified is a measured, reproducible, non-canonical
+    protected-bucket encoding in pycose 1.1.0 whose status against the RFC is an
+    open interpretation.
   correction_follow_up_2026_09_29: >
     The linked review and verification predate obs-2026-0045. Their SUPPORT and
     VERIFIED verdicts document the original matrix evidence but do not

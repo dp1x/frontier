@@ -1,0 +1,113 @@
+id: msn-2026-0020
+type: mission
+status: verified
+created_at: "2026-10-02T00:00:00Z"
+updated_at: "2026-10-02T00:00:00Z"
+summary: "Independent adversarial review of the corrected pycose protected-header ordering scope, plus a local probe closing the three open measurement gaps (clean mixed-key, bare-API vs adapter, phdr_encoded). Threads A and B of the 2026-10-02 candidate queue."
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: grok-4.7
+    tool: "2026-10-02 session, CHECKPOINT candidate queue A+B"
+  sources:
+    - knowledge/findings/fnd-2026-0014.yaml
+    - knowledge/observations/obs-2026-0045.yaml
+    - knowledge/reviews/rev-2026-0016.yaml
+    - knowledge/verifications/vrf-2026-0016.yaml
+    - knowledge/observations/obs-2026-0046.yaml
+    - knowledge/experiments/exp-2026-0034.yaml
+  parent: msn-2026-0018
+  generation: 1
+links:
+  findings: [fnd-2026-0014]
+  observations: [obs-2026-0042, obs-2026-0045, obs-2026-0046]
+  experiments: [exp-2026-0032, exp-2026-0034]
+  reviews: [rev-2026-0016, rev-2026-0017]
+  targets: [tgt-2026-0006]
+title: "MSN-2026-0020 - independent review and gap-closing probe for the pycose ordering scope"
+objective: >
+  Satisfy the AGENTS.md requirement that a verified claim carries independent
+  adversarial review of its CURRENT scope. fnd-2026-0014 is
+  verified_conclusion, but rev-2026-0016 and vrf-2026-0016 predate
+  obs-2026-0045 and explicitly disclaim reviewing it. This mission produces
+  an adversarial review of the corrected scope, and closes the three
+  measurement gaps that obs-2026-0045 left open, so that the scope rests on
+  clean evidence rather than on a confounded matrix.
+domain: interop
+scope: >
+  pycose 1.1.0 as installed in the project venv; COSE_Sign1 protected and
+  unprotected header bucket serialization; comparison against Frontier's
+  RFC 8949 section 4.2.1 cleanroom reference. No other library, version,
+  message class or deployment is in scope.
+constraints:
+  - "No upstream contact of any kind without an explicit human decision."
+  - "No promotion of fnd-2026-0014 to a broader claim on the strength of this mission's own probe."
+  - "The probe is read-only with respect to research state."
+  - "Adversarial review must be performed by a non-synthesizer role."
+  - "Heavy builds belong in GitHub Actions; this mission is lightweight and runs locally."
+desired_evidence_level: independently-reviewed
+candidate_dependencies:
+  - "pycose 1.1.0 installed in .venv (present)."
+dependencies: []
+compute:
+  expected_class: lightweight
+  notes: >
+    One local Python probe against an installed pure-Python library, plus one
+    read-only adversarial review subagent. No build step, no matrix, no
+    fuzzing. Heavy compute would be wasted here.
+budget:
+  max_attempts: 2
+  max_independent_reviews: 1
+  max_compute_runs: 3
+  diminishing_returns_window: 1
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Clean mixed int+tstr protected map measured without header-label normalisation able to confound it."
+  - "Bare pycose API compared against the Frontier adapter path, byte for byte."
+  - "The phdr_encoded pre-encoded-bytes question answered from source and by execution."
+  - "An adversarial critic whose explicit goal is to disprove the corrected scope has returned a verdict."
+  - "frontier validate passes and the test suite stays green."
+stopping_conditions:
+  - "Review returns a verdict; the scope is then either confirmed, narrowed or withdrawn."
+  - "Budget exhausted without a conclusive review."
+artifacts:
+  - knowledge/experiments/exp-2026-0034.yaml
+  - knowledge/observations/obs-2026-0046.yaml
+  - knowledge/reviews/rev-2026-0017.yaml
+  - knowledge/reports/rpt-2026-0015.yaml
+reviews: [rev-2026-0016, rev-2026-0017]
+notes_path: "missions/msn-2026-0020.md"
+follow_ups:
+  - "Upstream novelty check (thread C) remains a precondition for any maintainer report."
+  - "Concrete cross-library signature-verification failure remains unmeasured."
+status_notes: >
+  CLOSED as verified 2026-10-02. Both threads completed. Thread B answered all
+  three measurement gaps: clean mixed-key ordering is now measured confound-free,
+  the adapter is exonerated, and phdr_encoded semantics are established from
+  source and by execution. A fourth gap was found and closed: whether the cited
+  vectors can distinguish RFC 8949 section 4.2.1 from section 4.2.3 (they cannot;
+  the {1000, 'z'} vector can). Thread A returned REFUTES: the critic confirmed
+  every empirical measurement but refuted the finding's normative basis, its
+  SPEC_VIOLATION classification, its symmetric impact claim, and its pending
+  novelty posture. fnd-2026-0014 was corrected accordingly. The mission's own
+  acceptance criteria are met, and the outcome is a preserved negative result
+  for the upstream-report hypothesis rather than a new defect.
+terminal_reason: >
+  Objective met: the corrected scope received its first independent adversarial
+  review, and three named measurement gaps were closed with committed evidence.
+  The mission's central deliverable turned out to be a refutation of the
+  finding's framing, which is a durable result per AGENTS.md. No further budget
+  is warranted on this thread; the surviving open items (RFC 9052 section 9
+  interpretation, other message classes, other versions) are follow-ups, not
+  unfinished work on this mission.
+open_questions_left_unresolved:
+  - >
+    Whether RFC 9052 section 9's narrowing sentence is normative of intent or
+    editorial. rev-2026-0017 records this as interpretation, not citation. It
+    is the single question that would determine whether any residual
+    spec-violation reading survives.
+  - "Protected-header behaviour when an alg label is present."
+  - "COSE_Sign, Encrypt0, Mac0, Encrypt and Mac ordering behaviour."
+  - "Behaviour on pycose versions other than 1.1.0."

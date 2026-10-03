@@ -1,9 +1,9 @@
 id: fnd-2026-0006
 type: finding
-status: verified_conclusion
+status: disputed
 created_at: "2026-08-29T19:15:00Z"
-updated_at: "2026-08-29T19:15:00Z"
-summary: "FORMAL-205 (msn-2026-0007) - combined FIPS 203 s7.2 encapsulation-key check (LENGTH + MODULUS halves) for ML-KEM-512 machine-checked in Lean 4 v4.22.0 + Mathlib4.  Three top-level theorems (isValidKey_zero_k2, isValidKey_length_k2, isValidKey_roundtrip_general) are kernel-verified, zero-sorry, zero-axiom-file-introduced, with axiom inventory limited to {propext, Classical.choice, Quot.sound} (subset of standard Lean 4 core axioms).  Together with FORMAL-203 (fnd-2026-0003, MODULUS half), FORMAL-204 (fnd-2026-0004, LENGTH half), and FORMAL-205 (this file, combined half), the complete s7.2 encapsulation-key check is now machine-checked end-to-end."
+updated_at: "2026-10-03T00:00:00Z"
+summary: "DISPUTED 2026-10-03 after independent adversarial audit (rev-2026-0018). FORMAL-205 claimed a combined FIPS 203 section 7.2 check (LENGTH + MODULUS) machine-checked for ML-KEM-512. The headline claim is falsified by its own source: ValidKey.lean:47-48 defines isValidKey p B := B = B AND forall i, seg B i < 3329 - the first conjunct is reflexivity, p is never used (proved by the build log's own unused-variable warning), and Fin appears only in comments. T2 is literally exact canonicalLength_k2, a restatement of FORMAL-204, and T3 is FORMAL-203's helper verbatim. It does not compose the two halves, and FIPS 203 section 7.2's type check is not formalized anywhere. THE PROOFS THEMSELVES ARE SOUND - no sorry/axiom/native_decide anywhere, build verified three ways. The defect is claim scope, not proof soundness."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -94,7 +94,51 @@ verification:
   axiom_check: "Per #print axioms: 2 theorems depend on {propext, Classical.choice, Quot.sound}; 1 theorem (canonicalLength) depends on no axioms (definitional equality)."
   cross_check: "All citations to FIPS 203 spec verified against localdocs/refs/fips203.pdf."
   scope_disclosure: "Header at formal/Formal/ValidKey.lean correctly disclaims the k=2-only scope and explains the predicate-rather-than-subset-type choice."
-disclosure: public
+disclosure: embargoed
+correction_2026_10_03:
+  reason: >
+    Independent adversarial audit (rev-2026-0018) found the headline claim
+    falsified by the finding's OWN source file.
+  verdict: headline_falsified_by_own_source
+  decisive_evidence: >
+    ValidKey.lean:47-48 defines isValidKey p B := B = B AND forall i, seg B i <
+    3329. The first conjunct is reflexivity. The parameter p is never used, and
+    the build log's own "unused variable 'p'" warning proves it. Fin appears in
+    the codebase only inside comments. T2 is literally `exact canonicalLength_k2`,
+    a restatement of FORMAL-204 with isValidKey nowhere in its statement; T3 is
+    enc_dec_eq B hB hSeg y, character-for-character FORMAL-203's helper. It does
+    not compose the two halves, and its summary: and statement: contradict each
+    other.
+  critical_absent_claim: >
+    FIPS 203 section 7.2's type check len(ek) == 384k+32 is NOT formalized
+    anywhere in the corpus.
+  what_survives: >
+    All three proofs are SOUND. No sorry, axiom, native_decide, admit, unsafe,
+    partial or opaque anywhere in formal/**/*.lean. Build verified three ways:
+    oleans newer than sources with header olean4.22.0..., CI run 35469449259
+    logs BUILD_EXIT=0, and git blob hashes prove CI compiled byte-identical
+    sources. The defect is claim scope, not proof soundness.
+  status_change:
+    from: verified_conclusion
+    to: disputed
+    disclosure_change:
+      from: public
+      to: none - the "combined" claim is false as written
+  what_must_be_redone: >
+    A genuine composition of the LENGTH and MODULUS halves needs a real byte-array
+    model with a length parameter that is USED in the statement, and the Lean
+    type check formalized rather than left as Nat arithmetic.
+  evidence: rev-2026-0018
+
+disclosure_scope_note: >
+  disclosure is recorded as 'embargoed' solely because the schema offers no
+  'not for disclosure' value and these findings must not be sent to anyone.
+  This is NOT a security embargo: no undisclosed vulnerability is being held
+  back. In each case either the claim is false (0002, 0013) or it is already
+  known upstream (0005) or the claim scope overstates what the evidence supports
+  (0001, 0004, 0006, 0007). The correct disposition is: withdraw or rewrite, not
+  disclose. See correction_2026_10_03 and rev-2026-0018.
+
 limitations: >
   - The combined type is a predicate, not a subset type.  A
     subset type would be more idiomatic Lean 4 but requires

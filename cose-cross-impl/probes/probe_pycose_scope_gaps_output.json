@@ -1,0 +1,369 @@
+{
+  "cases": [
+    {
+      "case": "mixed int+tstr, unregistered tstr labels (bare API)",
+      "path": "bare pycose API (no Frontier adapter)",
+      "insertion_order": [
+        2,
+        "mmm",
+        4,
+        "qqq"
+      ],
+      "pycose_protected_hex": "a40281637a7a7a636d6d6d0704496b69642d627974657363717171f5",
+      "canonical_hex": "a40281637a7a7a04496b69642d6279746573636d6d6d0763717171f5",
+      "pycose_key_order": [
+        2,
+        "mmm",
+        4,
+        "qqq"
+      ],
+      "canonical_key_order": [
+        2,
+        4,
+        "mmm",
+        "qqq"
+      ],
+      "matches_canonical": false,
+      "preserved_supplied_order": true
+    },
+    {
+      "case": "mixed int+tstr, reversed insertion (bare API)",
+      "path": "bare pycose API (no Frontier adapter)",
+      "insertion_order": [
+        "qqq",
+        4,
+        "mmm",
+        2
+      ],
+      "pycose_protected_hex": "a463717171f504496b69642d6279746573636d6d6d070281637a7a7a",
+      "canonical_hex": "a40281637a7a7a04496b69642d6279746573636d6d6d0763717171f5",
+      "pycose_key_order": [
+        "qqq",
+        4,
+        "mmm",
+        2
+      ],
+      "canonical_key_order": [
+        2,
+        4,
+        "mmm",
+        "qqq"
+      ],
+      "matches_canonical": false,
+      "preserved_supplied_order": true,
+      "notes": "Same logical map as the forward case, reversed insertion order.",
+      "differs_from_forward_case": true
+    },
+    {
+      "case": "mixed int+tstr, unregistered tstr labels (adapter path)",
+      "path": "Frontier lib_pycose_adapter",
+      "insertion_order": [
+        2,
+        "mmm",
+        4,
+        "qqq"
+      ],
+      "pycose_protected_hex": "a40281637a7a7a636d6d6d0704496b69642d627974657363717171f5",
+      "canonical_hex": "a40281637a7a7a04496b69642d6279746573636d6d6d0763717171f5",
+      "pycose_key_order": [
+        2,
+        "mmm",
+        4,
+        "qqq"
+      ],
+      "canonical_key_order": [
+        2,
+        4,
+        "mmm",
+        "qqq"
+      ],
+      "matches_canonical": false,
+      "preserved_supplied_order": true,
+      "notes": "Confound control: adapter path for the same clean map."
+    },
+    {
+      "case": "int-only descending {4,3} [BARE]",
+      "path": "bare pycose API",
+      "insertion_order": [
+        4,
+        3
+      ],
+      "pycose_protected_hex": "a2044179031832",
+      "canonical_hex": "a2031832044179",
+      "pycose_key_order": [
+        4,
+        3
+      ],
+      "canonical_key_order": [
+        3,
+        4
+      ],
+      "matches_canonical": false,
+      "preserved_supplied_order": true,
+      "adapter_agrees": true
+    },
+    {
+      "case": "int-only descending {4,3} [ADAPTER]",
+      "path": "Frontier lib_pycose_adapter",
+      "insertion_order": [
+        4,
+        3
+      ],
+      "pycose_protected_hex": "a2044179031832",
+      "canonical_hex": "a2031832044179",
+      "pycose_key_order": [
+        4,
+        3
+      ],
+      "canonical_key_order": [
+        3,
+        4
+      ],
+      "matches_canonical": false,
+      "preserved_supplied_order": true,
+      "notes": "Compare with the BARE row: any difference isolates adapter influence."
+    },
+    {
+      "case": "int-only ascending {3,4} [BARE]",
+      "path": "bare pycose API",
+      "insertion_order": [
+        3,
+        4
+      ],
+      "pycose_protected_hex": "a2031832044179",
+      "canonical_hex": "a2031832044179",
+      "pycose_key_order": [
+        3,
+        4
+      ],
+      "canonical_key_order": [
+        3,
+        4
+      ],
+      "matches_canonical": true,
+      "preserved_supplied_order": true,
+      "adapter_agrees": true
+    },
+    {
+      "case": "int-only ascending {3,4} [ADAPTER]",
+      "path": "Frontier lib_pycose_adapter",
+      "insertion_order": [
+        3,
+        4
+      ],
+      "pycose_protected_hex": "a2031832044179",
+      "canonical_hex": "a2031832044179",
+      "pycose_key_order": [
+        3,
+        4
+      ],
+      "canonical_key_order": [
+        3,
+        4
+      ],
+      "matches_canonical": true,
+      "preserved_supplied_order": true,
+      "notes": "Compare with the BARE row: any difference isolates adapter influence."
+    },
+    {
+      "case": "tstr-only registered-name {kid,z} [BARE]",
+      "path": "bare pycose API",
+      "insertion_order": [
+        "KID",
+        "Z"
+      ],
+      "pycose_protected_hex": "a204416b615a01",
+      "canonical_hex": "a2615a01634b4944416b",
+      "pycose_key_order": [
+        4,
+        "Z"
+      ],
+      "canonical_key_order": [
+        "Z",
+        "KID"
+      ],
+      "matches_canonical": false,
+      "preserved_supplied_order": false,
+      "adapter_agrees": true
+    },
+    {
+      "case": "tstr-only registered-name {kid,z} [ADAPTER]",
+      "path": "Frontier lib_pycose_adapter",
+      "insertion_order": [
+        "KID",
+        "Z"
+      ],
+      "pycose_protected_hex": "a204416b615a01",
+      "canonical_hex": "a2615a01634b4944416b",
+      "pycose_key_order": [
+        4,
+        "Z"
+      ],
+      "canonical_key_order": [
+        "Z",
+        "KID"
+      ],
+      "matches_canonical": false,
+      "preserved_supplied_order": false,
+      "notes": "Compare with the BARE row: any difference isolates adapter influence."
+    },
+    {
+      "case": "tstr-only unregistered {a,aa,b,ab,z} [BARE]",
+      "path": "bare pycose API",
+      "insertion_order": [
+        "a",
+        "aa",
+        "b",
+        "ab",
+        "z"
+      ],
+      "pycose_protected_hex": "a56161016261610261620362616204617a05",
+      "canonical_hex": "a5616101616203617a056261610262616204",
+      "pycose_key_order": [
+        "a",
+        "aa",
+        "b",
+        "ab",
+        "z"
+      ],
+      "canonical_key_order": [
+        "a",
+        "b",
+        "z",
+        "aa",
+        "ab"
+      ],
+      "matches_canonical": false,
+      "preserved_supplied_order": true,
+      "adapter_agrees": true
+    },
+    {
+      "case": "tstr-only unregistered {a,aa,b,ab,z} [ADAPTER]",
+      "path": "Frontier lib_pycose_adapter",
+      "insertion_order": [
+        "a",
+        "aa",
+        "b",
+        "ab",
+        "z"
+      ],
+      "pycose_protected_hex": "a56161016261610261620362616204617a05",
+      "canonical_hex": "a5616101616203617a056261610262616204",
+      "pycose_key_order": [
+        "a",
+        "aa",
+        "b",
+        "ab",
+        "z"
+      ],
+      "canonical_key_order": [
+        "a",
+        "b",
+        "z",
+        "aa",
+        "ab"
+      ],
+      "matches_canonical": false,
+      "preserved_supplied_order": true,
+      "notes": "Compare with the BARE row: any difference isolates adapter influence."
+    }
+  ],
+  "environment": {
+    "registered_tstr_names": [
+      "ALG",
+      "CONTENT_TYPE",
+      "COUNTER_SIGN",
+      "COUNTER_SIGN0",
+      "CRITICAL",
+      "EPHEMERAL_KEY",
+      "IV",
+      "KID",
+      "KID_CONTEXT",
+      "PARTIAL_IV",
+      "PARTY_U_ID",
+      "PARTY_U_NONCE",
+      "PARTY_U_OTHER",
+      "PARTY_V_ID",
+      "PARTY_V_NONCE",
+      "PARTY_V_OTHER",
+      "RESERVED",
+      "SALT",
+      "STATIC_KEY",
+      "STATIC_KEY_ID",
+      "X5_BAG",
+      "X5_CHAIN",
+      "X5_T",
+      "X5_U"
+    ],
+    "probe_tstr_labels": [
+      "zzz",
+      "mmm",
+      "qqq"
+    ],
+    "probe_tstr_labels_all_unregistered": true
+  },
+  "gap3": {
+    "question": "Does CoseBase.__init__(phdr_encoded=...) accept pre-encoded bytes and bypass the encoder?",
+    "canonical_protected_hex": "a2031832044179",
+    "insertion_order_protected_hex": "a2044179031832",
+    "bytes_differ": true,
+    "phdr_encoded_canonical_returns": "a2031832044179",
+    "phdr_encoded_canonical_roundtrip_preserved": true,
+    "sig_structure_with_canonical_bytes": "846a5369676e61747572653147a2031832044179404d70726f62652d7061796c6f6164",
+    "protected_in_sig_structure": "a2031832044179",
+    "phdr_encoded_insertion_returns": "a2044179031832",
+    "phdr_encoded_insertion_roundtrip_preserved": true,
+    "protected_in_sig_structure_insertion": "a2044179031832",
+    "preencoded_canonical_yields_canonical_sig_structure": true,
+    "after_phdr_setter_cache_invalidated": true,
+    "after_phdr_setter_bytes": "a10126",
+    "after_phdr_update_cache_invalidated": true,
+    "after_phdr_update_bytes": "a30318320441790701",
+    "decode_from_cbor2_dumps": "TypeError: Bytes cannot be decoded as COSE message",
+    "from_cose_obj_reencode_byte_stable": true,
+    "cbor2_decode_quirk": "Sign1Message.decode(cbor2.dumps(CBORTag(18, [...]))) raises TypeError: cbor2 decodes a tagged array to a tuple while pycose requires a list (cosemessage.py:65). Unrelated to header ordering; recorded so the case is not retried."
+  },
+  "root_cause": {
+    "phdr_encoded_source": "@property\n    def phdr_encoded(self) -> CBOR:\n        \"\"\"\n        Encode the protected header.\n\n        :returns: Returns the encoded protected header.\n        \"\"\"\n\n        if self._phdr_encoded is not None:\n            return self._phdr_encoded\n        # TODO: check if not double header parameters in header buckets\n        if len(self._phdr):\n            return cbor2.dumps(self._phdr, default=self._custom_cbor_encoder)\n        else:\n            return b''",
+    "calls_cbor2_dumps_with_canonical": false,
+    "repo_wide_canonical_reference_in_pycose": false,
+    "interpretation": "phdr_encoded calls cbor2.dumps(...) with NO canonical flag, so map keys are emitted in Python dict insertion order. There is no code path in pycose 1.1.0 that requests RFC 8949 4.2.1 ordering.",
+    "cbor2_default_descending_matches_insertion": true,
+    "cbor2_canonical_true_sorts": true
+  },
+  "mixed_key_forward_vs_reversed_differ": true,
+  "unprotected_check": {
+    "note": "RFC 9052 \u00a74.4 Sig_structure has no unprotected bucket; the unprotected map is element 1 of the encoded COSE_Sign1 array. Measured there.",
+    "input_uhdr": {
+      "4": "79",
+      "3": 50
+    },
+    "uhdr_decoded_key_order": [
+      4,
+      3
+    ],
+    "canonical_key_order": [
+      3,
+      4
+    ],
+    "canonical_hex": "a2031832044179",
+    "actual_hex": "a2044179031832",
+    "matches_canonical": false,
+    "implication": "If False, RFC 8949 \u00a74.2.1 map ordering is also absent for the unprotected bucket, which widens the scope beyond protected headers."
+  },
+  "unprotected_mixed_check": {
+    "input_order": [
+      4,
+      "mmm",
+      3
+    ],
+    "decoded_key_order": [
+      4,
+      "mmm",
+      3
+    ],
+    "canonical_hex": "a3031832044179636d6d6d07",
+    "actual_hex": "a3044179636d6d6d07031832",
+    "matches_canonical": false
+  }
+}

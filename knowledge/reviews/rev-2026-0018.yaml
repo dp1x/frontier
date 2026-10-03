@@ -1,0 +1,250 @@
+id: rev-2026-0018
+type: review
+status: complete
+created_at: "2026-10-03T00:00:00Z"
+updated_at: "2026-10-03T00:00:00Z"
+summary: "Parallel pre-disclosure audit of nine verified findings by independent adversarial critics. Six of nine are not safe to disclose: fnd-2026-0002 and fnd-2026-0013 are REFUTED at the centre, and fnd-2026-0006's headline claim is contradicted by its own source file. All three Lean proofs are sound; the failures are claim-scope and evidence-chain, not proof soundness. Also settles the open sntrup761 question: no validation mandate exists."
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-critic
+    model: grok-4.7
+    tool: "2026-10-03 parallel sweep, 9 subagents; verdicts consolidated by orchestrator"
+  sources:
+    - .scratch/audit_fnd_0001.md
+    - .scratch/audit_fnd_0002.md
+    - .scratch/audit_fnd_0005.md
+    - .scratch/audit_fnd_0007.md
+    - .scratch/audit_fnd_0011.md
+    - .scratch/audit_fnd_0013.md
+    - .scratch/audit_formal_3_4_6.md
+    - .scratch/audit_sntrup761_spec.md
+    - knowledge/reports/rpt-2026-0016.yaml
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0001, fnd-2026-0002, fnd-2026-0003, fnd-2026-0004, fnd-2026-0005, fnd-2026-0006, fnd-2026-0007, fnd-2026-0011, fnd-2026-0013]
+  targets: [tgt-2026-0001, tgt-2026-0002, tgt-2026-0003, tgt-2026-0005]
+title: "REV-2026-0018 - pre-disclosure audit sweep over the verified corpus"
+role: adversarial-critic
+verdict: disputes
+independent: true
+attempts_disproof: true
+scope: >
+  Every finding carrying disclosure: public that had not already been adversarially
+  reviewed at its CURRENT content. Attack templates supplied to each auditor were
+  the two failure modes observed when fnd-2026-0009 was refuted on 2026-10-02:
+  (a) reading an abstraction layer above where validation actually happens, and
+  (b) empirical evidence contradicting the cited source without reconciliation.
+  Auditors were required to trace to the leaf primitive, reconcile source against
+  any logged evidence, run a mandatory novelty check, and mark every claim
+  VERIFIED / INFERRED / COULD-NOT-DETERMINE.
+verdicts:
+  - target: fnd-2026-0002
+    verdict: refuted
+    central_claim_false_because: >
+      The harness never placed the malformed length inside the DER.
+      openssl_invar_runner.c:66-76 copies a canonical, fully-consistent 822-byte
+      ML-KEM-512 SPKI prefix and appends the extra body bytes PAST the end of the
+      declared DER object. d2i_PUBKEY decoded one complete well-formed key and
+      left the caller's bytes where the caller put them, which is documented d2i
+      behaviour (doc/man3/d2i_X509.pod: "*ppin is incremented to the byte
+      following the parsed data").
+    decisive_measurements:
+      - "properly framed over-length SPKI (SEQ + BIT STRING lengths both declare the over-length body, zero trailing bytes) -> REJECTED, 'asn1 encoding routines:too long'"
+      - "coefficient q = 3329 in a canonically framed 822-byte SPKI -> REJECTED on both raw and DER paths; FIPS 203 section 7.2 IS enforced via scalar_decode_12 at crypto/ml_kem/ml_kem.c:1055-1069"
+      - "identical trailing-byte acceptance for Ed25519, X25519 and ML-DSA-44 -> ML-KEM is not special"
+      - "the accepted key is byte-identical to the canonical truncated key and re-encodes to a canonical 822-byte SPKI"
+    secondary_defect: >
+      obs-2026-0022's "33-byte over-shoot" is fabricated; measured 1 byte
+      (801 = 800 canonical + 1). Its own stdout block claims a 23-byte literal
+      into a 22-byte array; there are exactly 22 initialisers. rev-2026-0002 and
+      rpr-2026-0002 propagate the error.
+    novelty: >
+      total_count 0 across three formulations, BUT the family is already tracked:
+      openssl/openssl#32368 (open, tested on 3.5.7) is the generic non-ML-KEM
+      instance of the same shape. Filing an ML-KEM-specialised variant would
+      mis-frame it.
+    survives_as: "negative result plus a harness-design lesson"
+  - target: fnd-2026-0013
+    verdict: refuted
+    central_claim_false_because: >
+      Root cause is a MISLABELLED ORACLE. Until commit 8148462 (2026-09-02),
+      cbor_oracle.encode_canonical sorted (len(encoded), encoded) i.e. RFC 8949
+      section 4.2.3 length-first, under a docstring claiming section 4.2.1. The
+      promotion commit c4b58d5 (2026-08-31 22:39Z) shipped the mislabelled sort.
+      The repair two days later never regenerated the vectors, so the entire
+      evidence chain still rests on it.
+    test_is_structurally_blind:
+      "oracle_canonical_hex == oracle_deterministic_hex for 111/111 vectors; 108/111 also have all-equal-length map keys, so the two orderings provably coincide. Only 3 vectors (2.7%) discriminate."
+    current_measurements:
+      - "under HEAD, cbor2 matches the committed oracle on 108/111, failing exactly the 3 discriminating vectors (map_mixed_lengths, map_rfc_4_2_3_example, map_mixed_types)"
+      - "vrf-2026-0015 step 4 returns DIVERGE, not the recorded MATCH; its recorded step-2 hex is also wrong"
+      - "101 of 222 canonical cells rest on hand-written Rust that was never committed and whose R:\\ scratch tree is gone"
+      - "cbor.me was cited, not run; and the cited hex is section 4.2.3, offered for section 4.2.1"
+    collateral: >
+      spc-2026-0004 contains fabricated section 4.2.1 quotations; its map_key_sort
+      axis is DEFINED as section 4.2.3. The duplicate_key_rejection axis is
+      inert: Python dict deduplicates before the oracle sees it, so it PASSes
+      trivially for every library. Divergence count 54 vs a recorded 52 could
+      not be reconstructed. cbor2 6.1.5 is now latest.
+    defensible_replacement_survives: >
+      cbor2 matches the oracle on 108/111, on all 95 non-map vectors, and matches
+      the oracle's section 4.2.3 ordering (not its section 4.2.1 ordering) on the
+      3 that discriminate.
+  - target: fnd-2026-0006
+    verdict: headline_falsified_by_own_source
+    decisive_evidence: >
+      ValidKey.lean:47-48 defines isValidKey p B := B = B AND forall i, seg B i
+      < 3329. The first conjunct is reflexivity. The parameter p is never used,
+      and the build log's own "unused variable 'p'" warning proves it. Fin
+      appears in the codebase only inside comments. T2 is literally
+      `exact canonicalLength_k2`, a restatement of FORMAL-204 with isValidKey
+      nowhere in its statement; T3 is enc_dec_eq B hB hSeg y, character-for-
+      character FORMAL-203's helper. It does not compose the two halves, and its
+      summary: and statement: contradict each other.
+    critical_absent_claim: >
+      FIPS 203 section 7.2's type check len(ek) == 384k+32 is NOT formalized
+      anywhere in the corpus.
+    what_survives: >
+      All three proofs are SOUND. No sorry, axiom, native_decide, admit, unsafe,
+      partial or opaque anywhere in formal/**/*.lean. Build verified three ways:
+      oleans newer than sources with header olean4.22.0..., CI run 35469449259
+      logs BUILD_EXIT=0, and git blob hashes prove CI compiled byte-identical
+      sources. The defect is claim scope, not proof soundness.
+  - target: fnd-2026-0004
+    verdict: correction_needed
+    detail: >
+      FORMAL-204 contains no byte array at all. T1 is `rfl` on 384*2+32 = 800;
+      T2/T3 are ground Nat arithmetic with zero hypotheses. Constants are correct
+      (verified against PDF pp.44-45) but the model is severely weakened
+      relative to the prose claim.
+  - target: fnd-2026-0003
+    verdict: supports_with_minor_correction
+    detail: >
+      Sound and non-circular: roundtrip_iff_canonical never assumes injectivity
+      of ByteEncode12. minimalCounterexample (ByteEncode.lean:440-444) asserts
+      neither seg B0 0 = 3329 nor any bound making the counterexample "minimal",
+      and B0 does not "fail" Eq (7.1) - Eq (7.1) evaluates on it.
+  - target: fnd-2026-0007
+    verdict: correction_needed
+    detail: >
+      Substance holds: CIRCL v1.6.5 IS X-Wing conformant, and the combiner is
+      byte-identical across drafts -05, -08 and -11 (5c2e2f2f5e5c, SHA3-256), so
+      the draft-revision trap did not fire. But the HPKE counts are wrong (finding
+      says 127/127; CIRCL's own corpus is 128 total, 32 export-only, 96
+      supported); the ek_KEM -> ek_X caveat is FABRICATED (no revision -05..-11
+      uses ek_KEM; draft-04's actual change was "Move label at the end..."); "3
+      of 3 test vectors" is one hash compared over a 3-vector corpus; and the
+      hash is a commit-time constant in kem/xwing/xwing_test.go, not a published
+      draft hash. Critically the HPKE corpus KEM ids are 16/18/32/33 - DHKEM
+      only, ZERO X-Wing vectors - so the X-Wing+HPKE claim rests on a single
+      self-roundtrip.
+  - target: fnd-2026-0005
+    verdict: partially_supported_and_not_novel
+    detail: >
+      Core claim survives: traced rustls 0.23.43 through pq/hybrid.rs and
+      pq/mlkem.rs to aws-lc's mlk_kem_check_pk, which carries the literal
+      annotation "Implements @[FIPS203, Section 7.2, Modulus check]" and does
+      frombytes -> reduce -> tobytes -> ct_memcmp. Failure maps to
+      send_fatal_alert(IllegalParameter, ...), as the draft mandates. But the
+      section 7.2 LENGTH half was never tested: truncate_last_byte computes
+      cut = d + shareSize - 1 with shareSize 1216, removing offset 31 of the
+      32-byte X25519 tail, so ek stays exactly 1184 bytes; the abort came from
+      rustls's own Layout::split() share-length check, a DIFFERENT mechanism
+      producing a byte-identical outcome. wire_coeff255_eq_4095 actually targets
+      coefficient 509 (coeff255 lives at ek[381..383] and was byte-identical to
+      baseline), because main.go:64 misstates "384 B encoded t-hat" when the
+      real t-hat is 1152 B. A console log claiming "ek shrunk to 1183 B" is
+      false and was copied into the finding unchecked.
+    novelty: >
+      NOT NOVEL. aws-lc #2891 (merged 2026-01-20) already states "we
+      successfully import ML-KEM encapsulation keys with modulus overflow. This
+      is allowed by FIPS 203"; #2872 (merged 2026-04-06) added ACVP
+      encapsulationKeyCheck vectors against this exact function; #2709 quotes the
+      same kem.c lines.
+    drift: >
+      rustls 0.23.44/.45 and aws-lc-rs 1.18.1 shipped after the pins. Re-checked
+      at 0.23.45 (2976d90f): pq/hybrid.rs blob SHA identical, property holds,
+      pin is stale only.
+  - target: fnd-2026-0001
+    verdict: partially_confirmed_misattribution_risk
+    detail: >
+      All six claimed placements survived direct source reading at pinned commits;
+      no bypass found; the 82/82 figures check out exactly. But the finding says
+      liboqs's fixed-size structs enforce length statically, while
+      src/kem/kem.h declares (*encaps)(uint8_t*, uint8_t*, const uint8_t
+      *public_key) - an unqualified pointer, nothing enforced statically - and
+      the finding's own later sentence contradicts it. Same one-layer error as
+      the OpenSSH refutation in milder form: liboqs's own wrapper contains no
+      check; the check is in mlkem-native's mlk_kem_enc_derand, shared by all
+      backends. Credit would be misattributed to maintainers being targeted.
+  - target: fnd-2026-0011
+    verdict: supports
+    detail: >
+      The predicted staleness failure did not occur. ubuntu-latest is still
+      Ubuntu 24.04, still shipping clang 18.1.3 and gcc 13.3.0 as recorded 34
+      days ago (runner-images image 20260927.320.1). #embed first shipped in
+      clang 19.1.0 and gcc 15; no flag enables it in 18.x/13.x. Both upstream
+      issues are real and the downstream consequence holds. Four defects need
+      correction: the primary evidence was never committed and is gone
+      (R:\\clang-embed missing; the only experiment family in the repo that
+      does not commit its TSV); rpr-2026-0011 step_5 cats a gcc-default
+      artifact that commit ebddd71 deleted; provenance paths read
+      "claw-embed/.../claw-default/..." in the finding and vrf-2026-0012 versus
+      the correct "clang-embed/.../clang-default/..." elsewhere; and "reproducible
+      by anyone with clang-19+" is refuted because both reports reproduce on
+      clang-assertions-trunk, which the apt.llvm.org clang-19 the workflow
+      installs likely will not satisfy.
+    forward_risk: >
+      GitHub has announced ubuntu-latest -> Ubuntu 26.04 in November 2026,
+      shipping gcc 15.2.0 and clang 22.1.2. The #embed gap closes and the
+      "gcc-15 via PPA" remedy becomes obsolete. Every workflow uses unpinned
+      ubuntu-latest.
+sntrup761_question_settled:
+  verdict: no_mandate_exists
+  evidence: >
+    draft-ietf-sshm-ntruprime-ssh (published as RFC 9941, April 2026,
+    Informational, no errata) section 3 states clients and servers MUST abort on
+    wrong lengths and then says: "No further validation is required beyond what
+    is described in RFC7748, RFC8731 and NTRUPrimePQCS." NTRU Prime round-3
+    section 3.1 says Decode yields integers "although not necessarily in the
+    same range as R"; section 2.3.5 lists decoding as a total function over all
+    strings of a specified length; section 2.3.7's Encap has no failure branch.
+    For sntrup761 q = 4591 < 2^16, so non-canonical encodings are
+    wire-representable and the spec says what happens to them.
+  conclusion: >
+    A SUPERCOP implementation that reduces rather than rejects is CONFORMANT; it
+    is doing what the cited spec says Encap does. The ML-KEM contrast is
+    different in kind: FIPS 203 section 7.2 names an "Encapsulation key check"
+    and imposes it with "shall", independently of SSH, and the SSH draft then
+    inherits it. NTRU Prime has nothing to inherit.
+  open_gap: >
+    Whether the sshm WG discussed this is UNRESOLVED. mailarchive returned a
+    Cloudflare interstitial on every attempt and web_search failed with HTTP 426.
+    The IESG ballot record shows no reviewer raising it, which is not the same
+    as absence of discussion. Given the ML-KEM draft claims to align with the
+    ntruprime draft's abstraction while conspicuously not aligning its validation
+    requirements, whether that was deliberate is an open question.
+meta_finding: >
+  Every substantive failure in this sweep was an EVIDENCE-CHAIN failure, not a
+  reasoning failure: a harness that tested the wrong thing, an oracle with the
+  wrong function under the right docstring, a citation to a different layer than
+  the one audited, a fabricated byte count, stub scripts posing as real ones.
+  The two templates - one layer too shallow, and evidence contradicting source
+  without reconciliation - appear here AND in the 2026-10-02 OpenSSH
+  refutation. That consistency is the finding: the corpus was assembled with no
+  check that evidence matches claim.
+falsification_conditions: >
+  For the corpus overall: an independent reviewer reproducing the mislabelled
+  cbor_oracle history, or showing a FIPS 203 section 7.2 length formalization
+  exists elsewhere in formal/, would overturn individual entries. For the
+  meta-finding: a future audit sweep finding failures distributed randomly across
+  reasoning errors rather than concentrated in evidence chains would weaken it.
+reviewer_independence: >
+  Nine independent subagents with disjoint targets and explicit disproof goals,
+  read-only over the repo. The orchestrator independently re-ran
+  tools/verify_citations.py selftest and full corpus rather than accepting the
+  agents' self-reports, and independently re-fetched RFC 9052 section 9,
+  RFC 9052 section 3, and pycose PR #91 in the previous session's review.
