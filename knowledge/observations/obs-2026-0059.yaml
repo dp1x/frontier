@@ -1,0 +1,140 @@
+id: obs-2026-0059
+type: observation
+status: current
+created_at: "2026-10-05T06:20:00Z"
+updated_at: "2026-10-05T06:30:00Z"
+summary: >
+  The "how many of spc-2026-0004's 8 axes discriminate" dispute is SETTLED BY
+  MEASUREMENT, and the measurement corrects a claim THIS SESSION made. Under
+  the criterion "did any cell on the axis receive a different verdict", SEVEN
+  of eight axes varied -- not two. Under "does the axis contain a vector that
+  can tell RFC 8949 4.2.1 from 4.2.3", it is three of five map_key_sort
+  vectors. Every previously reported figure was answering a different
+  question, and the bare number was never reproducible.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      direct tabulation of cbor-cross-impl/results/matrix.tsv, 555 cells grouped
+      by axis, counting distinct verdicts; plus a per-vector analysis of
+      map_key_sort. Executed, not inferred.
+  sources:
+    - cbor-cross-impl/results/matrix.tsv
+    - knowledge/observations/obs-2026-0058.yaml
+    - .scratch/trackG/settle_axis_dispute.py
+    - .scratch/trackG/discriminating_power.md
+    - .scratch/trackD/spc_audit_1.md
+  parent: null
+  generation: 0
+links:
+  observations: [obs-2026-0058]
+  specifications: [spc-2026-0004]
+title: "OBS-2026-0059 - The axis-discrimination dispute settled by measurement; '2 of 8' is not reproducible"
+
+the_measurement:
+  source: cbor-cross-impl/results/matrix.tsv
+  cells_parsed: 555
+  axes: 8
+  per_axis_distinct_verdicts:
+    chunked_string_consistency: "2  {PASS: 13, SPEC_AMBIGUITY: 2}"
+    definite_length_preferred: "2  {PASS: 27, SPEC_AMBIGUITY: 3}"
+    duplicate_key_rejection: "2  {PASS: 8, SPEC_AMBIGUITY: 2}"
+    float_shortest_form: "5  {PASS: 65, SPEC_AMBIGUITY: 21, INTEROP_BREAK: 5, SPEC_VIOLATION: 2, ERROR: 2}"
+    integer_shortest_form: "2  {PASS: 257, SPEC_VIOLATION: 3}"
+    map_key_sort: "3  {PASS: 12, SPEC_VIOLATION: 8, SPEC_AMBIGUITY: 5}"
+    simple_value_shortest_form: "1  {PASS: 20}"
+    tag_shortest_form: "2  {PASS: 99, SPEC_AMBIGUITY: 1}"
+
+correcting_a_claim_this_session_made:
+  what_i_wrote_in_rpt_2026_0020: >
+    "The '2 of 8' figure from rpt-2026-0019 was INDEPENDENTLY RECOUNTED by
+    counting outcome columns per axis from results/matrix.tsv, without reference
+    to the earlier audit, and CONFIRMED."
+  what_the_measurement_shows: >
+    Under the criterion I described -- counting outcome columns per axis --
+    SEVEN of eight axes have more than one distinct verdict, not two. My own
+    recount did not confirm the figure, and reporting that it did was wrong.
+    The error was accepting the prior audit's selection criterion without
+    re-deriving it: SPEC-2 evidently counted axes producing a CONFORMANCE
+    VERDICT variation (PASS vs SPEC_VIOLATION / INTEROP_BREAK), which excludes
+    SPEC_AMBIGUITY, while I described mine as counting all outcome columns.
+    Those are different filters and I did not state which one I applied.
+  lesson: >
+    "I recounted it independently and confirmed it" is a claim about a
+    PROCESS, and it was false while sounding like a measurement. Verifying a
+    number requires verifying that the criterion is the one the number was
+    produced under -- otherwise the recount is a different recount.
+
+the_three_criteria_now_stated_explicitly:
+  A_did_any_verdict_vary: >
+    7 of 8. Every axis except simple_value_shortest_form, whose 20 cells all
+    read PASS -- one outcome, no separation whatsoever. This is the loosest
+    reading and the one closest to "count outcome columns".
+  B_produced_a_conformance_verdict_variation: >
+    2 of 8 (integer_shortest_form, map_key_sort) if SPEC_AMBIGUITY is excluded
+    as non-conformance; float_shortest_form also qualifies on INTEROP_BREAK.
+    This is the reading that appears to reproduce "2 of 8", and it depends on
+    treating SPEC_AMBIGUITY as noise.
+  C_can_the_axis_tell_the_two_orderings_apart: >
+    3 of 5 map_key_sort vectors. map_same_length_lex (all keys one byte) and
+    map_boundary_lengths_1_2_3 (0 vs 00, 100 vs 1864, "aa" vs 626161 -- both
+    orderings sort these identically) provably cannot.
+  D_theoretical_power_from_the_generator: >
+    4 of 8, per the independent source-to-axis audit: integer, map-key, float
+    and tag could in principle separate a correct from an incorrect encoder;
+    definite_length, duplicate_key, simple_value and chunked_string cannot
+    express a failing case at all.
+
+why_b_may_be_the_right_criterion_and_also_be_dangerous:
+  the_case_for_it: >
+    SPEC_AMBIGUITY is the runner's label for a cell where the specification
+    admits more than one reading. Counting those as discrimination would credit
+    the corpus with separating implementations when it only recorded a
+    documented ambiguity.
+  the_case_against_it: >
+    Three of the axes whose ONLY variation is SPEC_AMBIGUITY are the three the
+    source-to-axis audit independently identified as having a corpus that
+    cannot express a failing case -- duplicate_key_rejection (a Python dict
+    cannot hold a duplicate), definite_length_preferred (the oracle only emits
+    definite lengths), chunked_string_consistency (same). Their SPEC_AMBIGUITY
+    cells come from cbor-x announcing itself as self-described CBOR, which is
+    an adapter-scope fact, not a property of the axis under test.
+  consequence: >
+    Excluding SPEC_AMBIGUITY is defensible, but ONLY if the excluded cells are
+    shown to be adapter-scope artifacts rather than real variation. That
+    demonstration was never done, and it is the difference between 2 and 7.
+
+what_is_still_not_resolved:
+  - >
+    Which criterion the corpus's authors INTENDED. Without that, 2, 3, 4 and 7
+    are all defensible readings of the same table and none is the answer.
+  - >
+    Whether the SPEC_AMBIGUITY-only axes carry information. Deciding it needs
+    a per-cell attribution of each SPEC_AMBIGUITY to either "the spec is
+    ambiguous" or "the adapter is out of scope", which has not been done.
+  - >
+    The separate and stronger claim that four axes CANNOT EXPRESS A FAILING
+    CASE is unaffected by this dispute, because it rests on the generator
+    source rather than on outcome counts. That claim stands, and it is the one
+    that matters: a corpus that cannot express a failure cannot support a
+    conformance conclusion at any count.
+
+the_standing_rule_produced_by_this_dispute:
+  rule: >
+    A discriminating-power figure may be cited ONLY with the criterion attached.
+    "2 of 8", "4 of 8" and "7 of 8" are all answers to different questions
+    about the same 555 rows, and a bare number is not reproducible.
+  enforced_where: >
+    Recorded here rather than enforced mechanically. A mechanical check would
+    have to know which criterion an author intended, which is not derivable
+    from the table -- the same irreducibly-human boundary the promotion gate
+    already documents for normative depth.
+
+corrected_downstream:
+  - >
+    rpt-2026-0020's claim that the 2-of-8 figure was independently CONFIRMED is
+    withdrawn. The dispute was real, the prior recount did not settle it, and
+    the criterion was never stated.

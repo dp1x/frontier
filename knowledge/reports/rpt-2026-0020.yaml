@@ -234,22 +234,34 @@ primary_track_3_self_audit:
     - corpus: cbor-cross-impl
       vectors: 111
       axes: 8
-      discriminating: 2
-      note: >
-        The "2 of 8" figure from rpt-2026-0019 was INDEPENDENTLY RECOUNTED by
-        counting outcome columns per axis from results/matrix.tsv, without
-        reference to the earlier audit, and CONFIRMED. The axes are
-        map_key_sort and float_shortest_form.
-        LATER CHALLENGED, AND THE DISAGREEMENT IS RECORDED RATHER THAN
-        RESOLVED (obs-2026-0058): an independent source-to-axis audit counts 4
-        axes with theoretical discriminating power (integer, map-key, float,
-        tag), 4 with provably zero, and only map_key_sort actually separating
-        anything -- 3 of its 5 vectors, because two of them cannot discriminate
-        under either ordering. Both figures are defensible once the criterion
-        is stated, and "2 of 8" IS NOT REPRODUCIBLE as written. The honest
-        position is that the number depends on whether "discriminating" means
-        "could separate" or "did separate", and neither figure may be cited
-        without its criterion. I am not averaging two numbers into a third.
+      discriminating: >
+        UNSETTLED BY THIS REPORT, and the measurement supersedes both earlier
+        claims. A direct tabulation of all 555 cells in
+        cbor-cross-impl/results/matrix.tsv, grouped by axis and counting
+        distinct verdicts, gives SEVEN of eight axes with more than one
+        outcome -- not two. See obs-2026-0059.
+      withdrawn_claim: >
+        This report previously said the "2 of 8" figure was INDEPENDENTLY
+        RECOUNTED and CONFIRMED. That was wrong. My recount did not confirm it;
+        I had accepted the prior audit's selection criterion -- excluding
+        SPEC_AMBIGUITY as non-conformance -- while DESCRIBING mine as counting
+        all outcome columns. Those are different filters and I did not state
+        which I applied. "I recounted it independently and confirmed it" was a
+        claim about a process, and it was false while sounding like a
+        measurement.
+      the_criteria_now_stated: >
+        7 of 8 if any verdict variation counts; 2 of 8 if only conformance
+        verdicts count and SPEC_AMBIGUITY is excluded; 4 of 8 for theoretical
+        power from the generator; 3 of 5 map_key_sort vectors can tell RFC 8949
+        4.2.1 from 4.2.3. A bare number is not reproducible. Any future citation
+        must carry its criterion.
+      what_survives_regardless_of_criterion: >
+        Four axes CANNOT EXPRESS A FAILING CASE at all -- duplicate_key
+        rejection (a Python dict cannot hold a duplicate), definite-length
+        preference, simple values (one legal encoding each), and chunked
+        consistency. That rests on the generator source, not on outcome counts,
+        and it is the claim that matters: a corpus that cannot express a
+        failure cannot support a conformance conclusion at any count.
     - corpus: cose-cross-impl
       vectors: 40
       axes: 10
