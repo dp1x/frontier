@@ -1,0 +1,141 @@
+id: obs-2026-0053
+type: observation
+status: current
+created_at: "2026-10-05T01:05:00Z"
+updated_at: "2026-10-05T01:10:00Z"
+summary: >
+  The FORMAL-208 refutation is RE-CONFIRMED at the byte level: CI run
+  37221348965 on commit 8c99e73 produces exactly 30 Lean compile errors in
+  formal/Formal/EkCheck.lean. The module is NOT kernel-checked and its 51
+  theorems are NOT machine-checked end-to-end. The earlier claim that the
+  module "resolves cleanly under the Lean front end" is REFUTED: a front-end
+  check is not a type check. This session did NOT rebuild the proofs -- it
+  confirmed the refutation, recorded the exact error taxonomy, and preserved
+  the mission as ACTIVE and unblocked-but-unfinished. No axiom transcript is
+  produced, because producing one any other way would fabricate a build
+  artifact.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: "gh run view --log on run 37221348965, error lines extracted and counted"
+  sources:
+    - https://github.com/dp1x/frontier/actions/runs/37221348965
+    - formal/Formal/EkCheck.lean
+    - formal/Formal.lean
+    - .github/workflows/formal.yml
+    - knowledge/reports/rpt-2026-0019.yaml
+  parent: msn-2026-0021
+  generation: 0
+links:
+  missions: [msn-2026-0021]
+title: "OBS-2026-0053 - EkCheck.lean refutation re-confirmed: 30 errors, not kernel-checked"
+
+method: >
+  Not rebuilt this session. The refutation was re-confirmed from the CI log of
+  the run that already refuted it, and the error taxonomy below was extracted
+  from that log rather than re-derived. This is a re-verification, not new
+  work, and is labelled as such.
+
+what_was_re_confirmed:
+  run_id: 37221348965
+  commit: 8c99e73
+  workflow: formal-verify
+  command: lake build  (with Mathlib olean cache from `lake exe cache get!`)
+  error_count: 30
+  counted_how: >
+    Regex match for '^.*error:.*$' over the full run log. Exactly 30 matches.
+    The previous session's report said "roughly 30"; the exact figure is 30.
+  status_of_module: >
+    NOT KERNEL-ACCEPTED. formal/axioms.txt is deliberately UNCOMMITTED, and
+    remains so, because it can only come from a successful build.
+
+exact_error_taxonomy_from_the_run_log:
+  omega_could_not_prove_the_goal:
+    count: 4
+    lines: "209, 224, 493"
+    note: >
+      Lean supplies a concrete counterexample for at least one of these
+      (line 209 with a := k), so these are not merely incomplete automation --
+      at least one goal is FALSE as stated.
+  show_tactic_failed_pattern:
+    count: 5
+    lines: "304, 506, 534, 538"
+  application_type_mismatch:
+    count: 5
+    lines: "318, 347, 363, 513, 577"
+  rewrite_failed_no_instance:
+    count: 3
+    lines: "216, 398, 613"
+  type_mismatch:
+    count: 3
+    lines: "283, 365, 374"
+  rfl_failed:
+    count: 2
+    lines: "467, 602"
+  function_expected_at:
+    count: 2
+    lines: "319, 575"
+  total: 30
+
+what_this_does_not_claim:
+  - >
+    It does not claim the DESIGN is wrong. The bounded-index Ek type and the
+    T1/T2 pairing were assessed as sound by the prior session, and this
+    session did not refute that. The design is UNREFUTED; the PROOFS are
+    REFUTED.
+  - >
+    It does not claim any specific line is the "real" bug. Fixing 30 errors in
+    one commit without a kernel check would repeat exactly the failure this
+    record exists to prevent.
+  - >
+    It does not claim FORMAL-208 is finished. It is not. The mission stays
+    active.
+
+the_misreported_check_is_the_durable_lesson:
+  was_claimed: "EkCheck.lean resolves cleanly under the Lean front end"
+  is: >
+    REFUTED. The module produces 30 errors under `lake build`, which is the
+    type-and-kernel check CI performs. A front-end-only check that typechecks
+    nothing of consequence was reported as though it were the stronger check.
+    This is a process defect in addition to a technical one, and it is the
+    same shape as the "machine-checked end-to-end" claim that FORMAL-205 was
+    already corrected for.
+  why_it_is_worth_keeping: >
+    Frontier's own history now contains the SAME failure twice: an over-strong
+    verification claim on FIPS 203 7.2 byte-array modelling, and an
+    over-strong verification claim on the EkCheck proofs. A recurring failure
+    is a property of the process, not of one agent.
+
+compute_routing_compliance:
+  - >
+    NO local `lake build` was run. Mathlib source and olean caches are
+    prohibited local artifacts under the AGENTS.md HARD RULE; the build route
+    is GitHub Actions, which is where the refuting run already happened.
+  - >
+    A Lean toolchain IS present locally (elan/lake/lean on PATH). Its
+    presence was noted and deliberately not used, because a local
+    Mathlib-resolving build would produce exactly the heavy local build tree
+    the rule forbids.
+
+state_of_the_track_at_session_close:
+  mission: msn-2026-0021, FORMAL-208
+  status: ACTIVE, unfinished
+  what_would_close_it: >
+    A green formal-verify run on a commit whose EkCheck.lean compiles, plus a
+    committed #print axioms transcript distinguishing imported standard axioms
+    (propext, Classical.choice, Quot.sound) from any project-introduced axiom.
+    Neither exists.
+  budget_note: >
+    The mission records max_compute_runs: 5. Run 37221348965 consumed one.
+    Rebuilding is a further compute run and was NOT started this session; the
+    session ended with the refutation confirmed and the fix unstarted rather
+    than with an unverified local edit presented as progress.
+
+negative_result_preserved: >
+  No axiom transcript, no "theorem proven", and no repaired EkCheck is claimed.
+  The correct outcome of this track at session close is a precisely recorded
+  refutation with an exact error taxonomy, which is what a negative result is
+  for.

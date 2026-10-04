@@ -680,11 +680,19 @@ def quote_is_probeable(quoted: str) -> bool:
     Mirrors the probe decompositions ``_best_ratio`` uses: a whole-string
     match only counts if it is at least ``QUOTE_PROBE_MIN_WORDS`` long, or if
     the ellipsis/sentence splits yield at least one probeable unit.
+
+    The whole-string count is taken over the ellipsis-fragment REMOVED text.
+    Counting the fragments inflated it: ``"yes ... no ... ok ... confirmed
+    ... checked ... done ... pass"`` is nine whitespace-separated tokens and so
+    passed the floor as a bare word count, while ``_split_ellipsis`` returned
+    no unit for it (every chunk is a single word). An artifact could therefore
+    satisfy G10 with seven one-word fragments and no quotation at all.
+    Verified 2026-10-05: such a record was ALLOWED end-to-end before this fix.
     """
     text = (quoted or "").strip()
     if not text:
         return False
-    if len(text.split()) >= QUOTE_PROBE_MIN_WORDS:
+    if len(_strip_ellipsis(text).split()) >= QUOTE_PROBE_MIN_WORDS:
         return True
     return bool(_split_ellipsis(text)) or bool(VERIFY._quote_probe_sentences(text))
 
@@ -1122,6 +1130,15 @@ def _best_ratio(
     # as a fabricated quotation when the truth is that there was nothing to
     # check.  Signal that explicitly instead.
     return best if best[2] else (None, 0, 0)
+
+
+def _strip_ellipsis(text: str) -> str:
+    """``text`` with the ellipsis separators removed and fragments dropped.
+
+    A whole-string word count must not be satisfiable by the fragments an
+    ellipsis split would throw away, or the count stops measuring anything.
+    """
+    return " ".join(chunk for chunk in re.split(r"\.{3}|…", text) if chunk.strip(" \"'"))
 
 
 def _split_ellipsis(text: str) -> list[str]:
