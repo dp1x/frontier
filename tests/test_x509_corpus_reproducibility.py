@@ -20,6 +20,15 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
+# ``cryptography`` is NOT a declared dependency of this package (pyproject lists
+# only pyyaml and jsonschema), so CI does not have it installed. These tests
+# exercise the real generator, which needs it. Skip rather than fail: the
+# property is pinned wherever the corpus can actually be built, and CI is not
+# that place.
+pytest.importorskip("cryptography", reason="x509 corpus generator needs cryptography")
+
 
 def _generate(repo: Path, out: Path) -> dict[str, str]:
     proc = subprocess.run(
