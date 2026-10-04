@@ -315,6 +315,17 @@ def check_index_consistency(root: Path, docs: list[tuple[Path, dict]]) -> list[s
         return []
 
     errors: list[str] = []
+    # A mis-pathed rebuild once wrote knowledge/indices/knowledge/indices/*.yaml,
+    # and because files under knowledge/indices are not validated as artifacts,
+    # two tracked 4-byte "{}" stubs sat in the repository undetected. Refuse any
+    # nested index tree outright: a derived view has exactly one location.
+    for nested in sorted(index_dir.rglob("*")):
+        if nested.is_dir() and (nested / "by-status.yaml").is_file():
+            errors.append(
+                f"knowledge/indices/{nested.relative_to(index_dir).as_posix()}: "
+                "nested index directory; knowledge/indices is a derived view with "
+                "exactly one location. Delete it and rebuild from the repository root."
+            )
     truth = {
         doc["id"]: doc
         for _rel, doc in docs
