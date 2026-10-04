@@ -325,6 +325,25 @@ primary_track_5_x_wing:
       unreachable, so the order is UNCONFIRMED rather than disproven.
     refuted_3: >
       draft-10 EXPIRED on 2026-09-03; draft-11 (23 Sep 2026) is live.
+  new_opened_this_session: >
+    hyp-2026-0029 records IETF datatracker issue #28, OPEN since 2025-02-25 and
+    never yet run: draft-11 5.5 does not say whether RFC 7748 6.1's all-zero
+    check applies to X-Wing decapsulation, and two Appendix A implementations
+    reportedly disagree. It needs no test vectors, so it is reachable without
+    the blocked conformance work. The hypothesis records the framing trap
+    explicitly -- if both implementations accept, that is NOT a violation,
+    because the draft has no rule to violate -- and specifies three cells,
+    because without controls an implementation that rejected everything would
+    pass a naive reading. The issue attribution is INHERITED and not
+    re-fetched; the hypothesis says so and makes confirming it its first
+    acceptance criterion.
+  additional_correction_made_this_session: >
+    fnd-2026-0007 carried epistemic_status: verified_conclusion while its own
+    status read disputed and its correction block listed three confirmed
+    defects. Downgraded to interpretation, and its statement -- still readable
+    at face value as asserting a stale draft-05 pin, wrong HPKE counts (96
+    supported, not 127) and a fabricated ek_KEM caveat -- is now labelled
+    superseded.
   what_this_unblocks_and_what_it_does_not: >
     DRAFT-VERSION REPRODUCIBILITY IS UNBLOCKED: Appendix C is bit-stable across
     at least revisions -05, -08, -10 and -11, so a match is a match against the
