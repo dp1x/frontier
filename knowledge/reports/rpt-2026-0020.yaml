@@ -240,6 +240,16 @@ primary_track_3_self_audit:
         counting outcome columns per axis from results/matrix.tsv, without
         reference to the earlier audit, and CONFIRMED. The axes are
         map_key_sort and float_shortest_form.
+        LATER CHALLENGED, AND THE DISAGREEMENT IS RECORDED RATHER THAN
+        RESOLVED (obs-2026-0058): an independent source-to-axis audit counts 4
+        axes with theoretical discriminating power (integer, map-key, float,
+        tag), 4 with provably zero, and only map_key_sort actually separating
+        anything -- 3 of its 5 vectors, because two of them cannot discriminate
+        under either ordering. Both figures are defensible once the criterion
+        is stated, and "2 of 8" IS NOT REPRODUCIBLE as written. The honest
+        position is that the number depends on whether "discriminating" means
+        "could separate" or "did separate", and neither figure may be cited
+        without its criterion. I am not averaging two numbers into a third.
     - corpus: cose-cross-impl
       vectors: 40
       axes: 10
@@ -289,21 +299,49 @@ primary_track_3_self_audit:
 
 primary_track_4_spc_2026_0004:
   outcome: >
-    The audit ran independently of the prior one, fetching RFC 8949 and RFC 9052
-    itself and reconstructing the source-to-axis mapping before reading the
-    previous conclusions.
+    COMPLETED this session, and it REFUTED something Frontier had been carrying.
+    The audit independently fetched RFC 8949 and RFC 9052 and reconstructed the
+    source-to-axis mapping before reading the prior conclusions.
   the_one_numeric_check_the_orchestrator_ran_directly: >
     spc-2026-0004's correction list claims 1.5 encodes as 0xf93c00. RFC 8949 was
     fetched (185226 bytes, sha256
     f1164a5b31a39350ad46abe29b83575eb933ca6c45366989c118b6b1058a214a, matching
     the recorded fixture) and section 4.2.1 read directly: "1.5 is encoded as
     0xf93e00". The 0xf93c00 form does not occur. The prior audit was RIGHT.
-  disposition_of_the_29_inheriting_artifacts: >
-    NOT individually dispositioned this session. The auditors were given that
-    task and produced the per-axis reconstruction and the 25-unit confirmation,
-    but the per-artifact corrected/superseded/withdrawn/unchanged decisions were
-    not completed. This is an OPEN ITEM, not a completed track, and is listed as
-    such rather than counted as progress.
+  escalation_refuted: >
+    Frontier had escalated, since rpt-2026-0017 and again in rpt-2026-0019, that
+    "rev-2026-0018 certified fabricated quotations as accurate". That is REFUTED
+    and WITHDRAWN. rev-2026-0018 has verdict `disputes`, does not link
+    spc-2026-0004 at all, and is the artifact that NAMED the fabrication in its
+    collateral field. It detected the defect; it did not certify it. The
+    accurate statement is that NO independent review ever checked a quotation
+    in this family against its source -- a gap in the review template, not a
+    false certification by a named review. The false escalation has been removed
+    from rpt-2026-0019.
+  new_defect_a_chronological_impossibility: >
+    spc-2026-0004 (created 2026-09-01) cited rev-2026-0018 (created 2026-10-03) in
+    provenance.sources while asserting "This was certified accurate by an
+    independent review". A 2026-09-01 artifact cannot have been certified by a
+    2026-10-03 review. The clause is now removed rather than merely
+    contradicted, and the impossible citation is corrected.
+  blast_radius_corrected: >
+    spc-2026-0004's inheriting_artifacts_affected.count of 29 overstated the
+    damage: 29 artifacts LINK it, but only about 10 assert its false content. A
+    link is not an inherited claim, and treating passive link-carriers as
+    contaminated would push remediation into churning evidence that asserts
+    nothing false.
+  disposition_of_the_29_now_recorded: >
+    Per-artifact disposition is in obs-2026-0058: 10 to CORRECT, 3 to WITHDRAW
+    the premise while preserving evidence, 4 to NARROW, the rest passive
+    link-carriers to LEAVE UNCHANGED. msn-2026-0017 is to be SUPERSEDED: it is
+    `verified` on a withdrawn authority, records "NOT MET: Haskell cborg
+    adapter" yet terminalised verified with a 3-lineage claim, alternates between
+    "Appendix C 14/14" and "Appendix A 14/14" for the same step, and verified a
+    length-first property while calling it section 4.2.1.
+  still_not_done: >
+    The Group A/B/C REMEDIATION itself -- actually editing the 10 artifacts that
+    repeat the false content, and the executable cbor_oracle.py -- is NOT done.
+    The disposition is recorded; the corrections are open work.
 
 primary_track_5_x_wing:
   three_inherited_beliefs_refuted:

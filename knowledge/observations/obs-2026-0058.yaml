@@ -1,0 +1,213 @@
+id: obs-2026-0058
+type: observation
+status: current
+created_at: "2026-10-05T05:40:00Z"
+updated_at: "2026-10-05T05:50:00Z"
+summary: >
+  An independent audit of spc-2026-0004 REFUTES a governance escalation that
+  Frontier has been carrying since rpt-2026-0017, and finds a chronological
+  impossibility inside the artifact itself. Both claims were re-verified by the
+  orchestrator against the files rather than relayed. The prior report's
+  escalation "rev-2026-0018 certified fabricated quotations as accurate"
+  inverts cause and effect: rev-2026-0018 has verdict `disputes`, does not link
+  spc-2026-0004 at all, and is the artifact that NAMED the fabrication.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      direct read of rev-2026-0018.yaml and spc-2026-0004.yaml; every claim
+      below was checked against the files rather than taken from the audit
+  sources:
+    - knowledge/reviews/rev-2026-0018.yaml
+    - knowledge/specifications/spc-2026-0004.yaml
+    - knowledge/experiments/exp-2026-0030.yaml
+    - knowledge/reports/rpt-2026-0017.yaml
+    - knowledge/reports/rpt-2026-0019.yaml
+    - .scratch/trackD/spc_audit_1.md
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0004]
+  reviews: [rev-2026-0018]
+
+title: "OBS-2026-0058 - The rev-2026-0018 escalation is refuted; a chronological impossibility found"
+
+refuted_1_the_escalation_inverts_cause_and_effect:
+  what_frontier_has_been_saying: >
+    rpt-2026-0017 and rpt-2026-0019 both escalate: "rev-2026-0018 certified
+    fabricated quotations as accurate."
+  what_rev_2026_0018_actually_says_verified_here: >
+    verdict: disputes
+    links.specifications: absent -- it does not link spc-2026-0004 at all
+    contains the word "fabricat": yes
+    contains "collateral": yes
+    contains "MISLABELLED": yes
+    Its collateral field names the defect: "spc-2026-0004 contains fabricated
+    section 4.2.1 quotations; its map_key_sort axis is DEFINED as section
+    4.2.3."
+  verdict: >
+    REFUTED. rev-2026-0018 is the artifact that DETECTED the fabrication, not
+    the one that certified it. Escalating it as the certifying review names the
+    wrong artifact and inverts cause and effect.
+  the_accurate_replacement: >
+    No independent review in this corpus ever checked a quotation against its
+    source. rev-2026-0014 is PARTIAL_SUPPORT on the matrix framework and never
+    evaluates the extract; rev-2026-0015 is SUPPORT on the fnd-2026-0013
+    promotion. Neither performed a quotation-accuracy check. The real defect is
+    a GAP IN THE REVIEW TEMPLATE -- there is no such step -- which is more
+    actionable than a false accusation against a specific review.
+  still_true_and_not_withdrawn: >
+    msn-2026-0017 does stand `verified` on a withdrawn authority, and that
+    escalation is CONFIRMED and worse than stated (see below).
+
+new_defect_a_chronological_impossibility:
+  where: knowledge/specifications/spc-2026-0004.yaml
+  the_claim: "This was certified accurate by an independent review"
+  the_problem: >
+    spc-2026-0004 has created_at 2026-09-01. rev-2026-0018 has created_at
+    2026-10-03. A 2026-09-01 artifact cannot have been certified by a
+    2026-10-03 review. The artifact cites rev-2026-0018 in
+    provenance.sources while being two months older than it.
+  the_saving_grace_noticed_on_second_reading: >
+    The full sentence is self-refuting: "This was certified accurate by an
+    independent review; that certification is false." The second clause was
+    added by the 2026-10-04 remediation and retracts the first. So the
+    artifact is not currently asserting the falsehood -- but it still carries
+    the false clause, the impossible citation, and a reader who stops at the
+    first clause reads a certification that never happened.
+  not_a_small_thing: >
+    This is the same failure class as the one the artifact was corrected for:
+    a claim about who verified what, which no gate rule checks because
+    provenance.sources is free text.
+
+the_8_wrong_rule_ref_locators_reconfirmed:
+  method: "read exp-2026-0030.audit_axes directly"
+  axes: 8
+  every_locator_wrong: true
+  detail: >
+    integer_shortest_form -> "RFC 8949 section 4.2 rule 1"
+    map_key_sort -> "RFC 8949 section 4.2 rule 2"
+    float_shortest_form -> "RFC 8949 section 4.2 rule 3"
+    definite_length_preferred -> "RFC 8949 section 4.2 rule 4"
+    duplicate_key_rejection -> "RFC 8949 section 4.2 rule 5"
+    tag_shortest_form -> "RFC 8949 section 4.2.1 rule 3"
+    simple_value_shortest_form -> "RFC 8949 section 4.2.1 rule 5"
+    chunked_string_consistency -> "RFC 8949 section 2.2 + section 4.2"
+  why_all_eight_are_wrong: >
+    RFC 8949 section 4.2 is TWO SENTENCES and introduces no numbered rules at
+    all, so "section 4.2 rule 1..5" cannot exist. Section 4.2.1 has exactly THREE
+    unnumbered bullets, so "section 4.2.1 rule 3" and "rule 5" cannot exist
+    either. map_key_sort additionally names the wrong clause in substance:
+    length-first ordering is section 4.2.3, while 4.2.1 requires bytewise
+    lexicographic order -- the OPPOSITE ordering.
+  previously_reported: >
+    The prior session recorded "8 rule_ref locators are wrong" and treated the
+    "8" as a possible confusion with 8 fabricated blocks. The number 8 is
+    simply the axis count. Both numbers are correct and mean different things.
+
+disposition_of_the_29_inheriting_artifacts:
+  framing_correction_first: >
+    Most of the 29 merely carry spc-2026-0004 in links.specifications or
+    provenance.sources. A LINK IS NOT AN INHERITED CLAIM. Treating all 29 as
+    equally contaminated overstates the blast radius and would push a
+    remediation agent to "fix" passive link-carriers that assert nothing false.
+    spc-2026-0004's own inheriting_artifacts_affected.count of 29 should be
+    restated as "29 linked; 10 assert false content".
+  group_a_repeat_the_false_content_CORRECT_10: >
+    exp-2026-0030, exp-2026-0031, msn-2026-0015, msn-2026-0016, msn-2026-0017,
+    vrf-2026-0014, vrf-2026-0015, vrf-2026-0016,
+    cbor-cross-impl/oracle/cbor_oracle.py, knowledge/notes/msn-2026-0015.md
+  group_b_premise_withdrawn_evidence_preserved_WITHDRAW_3: >
+    fnd-2026-0013 (already rejected; withdraw the conformance reading, keep the
+    raw matrix); the step-4 "MATCH" recorded in vrf-2026-0014 and vrf-2026-0015
+    (rev-2026-0018 measured it returning DIVERGE at HEAD -- correct the
+    recorded result, do not delete the step); obs-2026-0040 ("111/111
+    byte-exact in canonical mode" is real bytes but a vacuous conclusion --
+    NARROW, do not delete; it licenses only "cbor2 agrees with Frontier's oracle
+    on this corpus").
+  group_c_measurement_survives_interpretation_narrows_4: >
+    obs-2026-0047 (keep the measurement and the conclusion, but cite RFC 8949
+    section 4.2.3 rather than 4.2.1 -- its self-flag of the spc-2026-0004 problem
+    is correct and should be preserved); exp-2026-0035 (unchanged except a
+    cross-reference label); imp-2026-0018 and imp-2026-0019 (narrow only: they
+    establish lineage and per-library behaviour, not conformance).
+  group_d_passive_link_carriers_LEFT_UNCHANGED: >
+    tgt-2026-0005, tgt-2026-0006, rpr-2026-0013, rpr-2026-0014, rev-2026-0014,
+    rev-2026-0015, rpt-2026-0011, rpt-2026-0018, rpt-2026-0019, and the notes
+    and index files. Per AGENTS.md, do not churn evidence to make a conclusion
+    look cleaner.
+  group_e_the_specification_itself_CORRECT_not_delete: >
+    spc-2026-0004 is correctly status disputed with the extract WITHDRAWN. It
+    needs the 0xf93e00 constant fixed, the Appendix A / 18-integer-vector
+    correction, removal of its internal "All 7 audit_axes" versus 8
+    inconsistency, and the count restated as above.
+  executable_code_outside_the_artifact_family: >
+    cbor-cross-impl/vectors/gen_vectors.py line 3 cites spc-2026-0004 as its
+    authority and defines the vacuous axes. Its inline comments are honest
+    ("Our oracle only outputs definite-length", "Python deduplicates"), which
+    is why the vacuity was detectable -- but the header attribution should
+    point at RFC 8949 sections 4.2.1 / 4.2.3 / 3.3 directly.
+    cbor-cross-impl/oracle/cbor_oracle.py is in Group A: EXECUTABLE CODE
+    carrying a false provenance claim.
+
+msn_2026_0017_escalation_confirmed_and_worse:
+  status: verified, resting on a withdrawn authority
+  three_additional_defects: >
+    1. Its acceptance_criteria and terminal_reason alternate between "Appendix
+       C 14/14" and "Appendix A 14/14" for the same validation step -- mutually
+       exclusive claims about the same evidence.
+    2. It records "NOT MET: Haskell cborg adapter" yet still terminalised
+       `verified` with a full 3-lineage claim. A measurement gap dressed as a
+       lineage decision.
+    3. The "canonical mode" it validated against is section 4.2.3 length-first,
+       while its prose repeatedly says "section 4.2.1". It verified a property
+       under the wrong name.
+  disposition: >
+    SUPERSEDE. Do not leave a verified mission resting on withdrawn authority
+    and a mislabelled oracle. Preserve the real result: two implementations
+    agree with a length-first oracle on a corpus that mostly cannot
+    discriminate.
+
+discriminating_power_disagreement_recorded_not_resolved:
+  prior_figure: >
+    "only 2 of 8 axes discriminate" (rpt-2026-0019, attributed to SPEC-2)
+  audit_figure: >
+    4 axes with theoretical discriminating power (integer, map-key, float,
+    tag), 4 with provably zero, and only map_key_sort actually separating
+    anything -- 3 of its 5 vectors.
+  why_the_audit_does_not_reproduce_two_of_eight: >
+    The criterion is never stated, so the number is not checkable. Within
+    map_key_sort, 2 of the 5 vectors provably cannot discriminate (one has all
+    keys 1 byte; one has boundary lengths that both orderings sort
+    identically).
+  orchestrator_position: >
+    NOT RESOLVED, and deliberately not averaged into a new number. Two counts
+    under two different criteria is not a fact about the corpus; it is a fact
+    about two auditors. The honest statement is that the figure depends on
+    whether "discriminating" means "could separate" or "did separate", and that
+    BOTH the prior figure and this audit's figure are defensible only once the
+    criterion is written down. Any future citation of "2 of 8" or "4 of 8"
+    must state the criterion.
+
+limits_of_this_observation:
+  - >
+    The withdrawn normative_extract text was not recovered, so the exact
+    fabricated-unit count remains UNVERIFIED. Three inconsistent counts exist
+    across the corpus (29 fragments / 25 units / 8 blocks). What is verified is
+    that the five phrases named in spc-2026-0004.fabricated_quotations_removed
+    all return zero hits against a freshly fetched RFC 8949, and that all
+    eight rule_ref locators are wrong. A complete absence count needs blob
+    d8e8dde3 recovered.
+  - >
+    No library was executed by the audit. All library-behaviour statements are
+    inherited from rev-2026-0018 and obs-2026-0047.
+  - >
+    RFC 9053 was not fetched, so spc-2026-0004's duplicate-key claim is
+    confirmed on the 9052 half only and unverifiable on the 9053 half.
+  - >
+    This observation records the audit's findings and the two challenges the
+    orchestrator verified. It does NOT itself perform the Group A/B/C
+    remediation, which remains open work.

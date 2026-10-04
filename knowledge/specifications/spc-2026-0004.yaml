@@ -2,7 +2,7 @@ id: spc-2026-0004
 type: specification
 status: disputed
 created_at: "2026-09-01T00:00:00Z"
-updated_at: "2026-10-04T13:30:00Z"
+updated_at: "2026-10-05T05:55:00Z"
 summary: >
   DISPUTED 2026-10-04 - NORMATIVE EXTRACT FABRICATED. A full citation audit
   fetched RFC 8949 from rfc-editor.org and grepped it: 0 of the 10 quoted
@@ -11,10 +11,24 @@ summary: >
   none of them. Worse, the artifact attributes LENGTH-FIRST map-key ordering to
   section 4.2 when RFC 8949 section 4.2.3 states it and section 4.2.1 states
   the OPPOSITE (bytewise lexicographic). Appendix C is "Pseudocode" and
-  contains no test vectors; vectors are Appendix A. 29 artifacts inherit this
+  contains no test vectors; vectors are Appendix A. 29 artifacts link this
   specification, including the rejected fnd-2026-0013 and the verified
-  msn-2026-0017. This was certified accurate by an independent review; that
-  certification is false.
+  msn-2026-0017.
+  CORRECTION 2026-10-05 (obs-2026-0058): this summary previously carried a
+  certification claim that is chronologically impossible. It read "This was
+  certified accurate by an independent review", while provenance.sources cites
+  rev-2026-0018 -- created 2026-10-03, two months AFTER this specification's
+  created_at of 2026-09-01. A 2026-09-01 artifact cannot have been certified by
+  a 2026-10-03 review. The clause is REMOVED rather than merely contradicted.
+  The accurate statement: NO independent review ever checked a quotation in
+  this family against its source, and rev-2026-0018 -- far from certifying the
+  fabrication -- is the artifact that NAMED it. The governance defect is the
+  absence of a quotation-checking step in the review template.
+  ALSO CORRECTED: inheriting_artifacts_affected.count of 29 overstated the blast
+  radius. 29 artifacts LINK this specification; only about 10 assert its false
+  content. A link is not an inherited claim, and treating passive link-carriers
+  as contaminated would push remediation into churning evidence that asserts
+  nothing false. See obs-2026-0058 for the per-artifact disposition.
 epistemic_status: interpretation
 provenance:
   created_by:
@@ -55,12 +69,16 @@ fabricated_quotations_removed:
   - claim: "RFC 8949 Appendix C provides 14 test vector pairs."
     actual: "RFC 8949 Appendix C is 'Pseudocode'. Vectors are in Appendix A. Appendix A's integer table contains 18 entries, not 14."
 audit_axes_status: >
-  All 7 audit_axes in the previous revision carried `rule_ref` strings of the
+  All 8 audit_axes in the previous revision carried `rule_ref` strings of the
   form "section 4.2 rule N" / "section 4.2.1 rule N". RFC 8949 section 4.2
   has NO numbered rules; section 4.2.1 has three unnumbered restrictions. Every
   `rule_ref` in the previous revision was a WRONG LOCATOR. This artifact is
   left with no audit_axes rather than with axes pointing at invented rules; the
   axes must be re-derived against the real text before reuse.
+  CORRECTION 2026-10-05 (obs-2026-0058): this field previously said "All 7
+  audit_axes" while the operative carrier, exp-2026-0030, has EIGHT. The count
+  is now 8, matching exp-2026-0030.audit_axes directly. The "7" was never
+  reconcilable with anything in the corpus.
 correction_required_before_reuse:
   - "Replace normative_extract with verbatim RFC 8949 section 4.2 / 4.2.1 / 4.2.3 text."
   - "Re-derive all audit_axes with correct rule_refs (section 4.2.1 for bytewise lexicographic; section 4.2.3 for length-first)."
@@ -68,7 +86,12 @@ correction_required_before_reuse:
   - "Re-open the 29 inheriting artifacts, in dependency order, starting with fnd-2026-0013 (already rejected) and msn-2026-0017 (status: verified)."
 inheriting_artifacts_affected:
   count: 29
-  method: "grep -l 'spc-2026-0004' across knowledge/ and missions/"
+  count_refined_2026_10_05: >
+    29 artifacts LINK this specification; roughly 10 of them ASSERT its false
+    content and need correction. A link is not an inherited claim. The per-
+    artifact disposition -- which to correct, which to narrow, and which to
+    leave unchanged because they assert nothing false -- is in
+    knowledge/observations/obs-2026-0058.yaml.  method: "grep -l 'spc-2026-0004' across knowledge/ and missions/"
   note: >
     An additional ~65 artifacts cite "section 4.2.1" textually. The CBOR
     measurement results themselves (obs-2026-0047: canonical=True implements

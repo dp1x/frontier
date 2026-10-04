@@ -245,9 +245,19 @@ spc_2026_0004_corrections: >
   **0xf93e00**. The orchestrator verified this by fetching RFC 8949 and reading
   the clause directly. Only 2 of 8 axes discriminate between implementations.
   SPEC-1 had already withdrawn the extract before SPEC-2 ran, so the brief's
-  premise was stale -- recorded rather than hidden. Escalations: rev-2026-0018
-  certified fabricated quotations as accurate, and msn-2026-0017 stands verified
-  on a withdrawn authority.
+  premise was stale -- recorded rather than hidden.
+  Escalations: msn-2026-0017 stands verified on a withdrawn authority.
+  CORRECTION 2026-10-05 (obs-2026-0058): this report also escalated "rev-2026-0018
+  certified fabricated quotations as accurate". THAT ESCALATION IS REFUTED AND
+  IS WITHDRAWN. rev-2026-0018 has verdict `disputes`, does not link spc-2026-0004
+  at all, and is the artifact that NAMED the fabrication in its collateral field
+  ("spc-2026-0004 contains fabricated section 4.2.1 quotations"). It detected the
+  defect; it did not certify it. The accurate and more actionable statement is
+  that NO independent review in this corpus ever checked a quotation against its
+  source -- rev-2026-0014 and rev-2026-0015 never evaluated the extract -- so
+  the real defect is a GAP IN THE REVIEW TEMPLATE, which has no
+  quotation-checking step. The msn-2026-0017 escalation is unaffected and is
+  independently confirmed, and is in fact worse than stated.
 
 governance_fixes:
   - >
