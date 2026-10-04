@@ -158,7 +158,7 @@ governance_correction_2026_10_04:
     itself violating project governance.
   corrected_routes_to: ".github/workflows/formal.yml, which runs `lake update` then `lake exe cache get!` then `lake build` on a GitHub runner."
   local_check_retained: >
-    Reading the committed .olean proof terms under formal/.lake/build remains
+    Reading the .olean proof terms under formal/.lake/build remains LOCAL-ONLY: formal/.lake/ is gitignored (.gitignore line 78) and `git ls-files formal/.lake` returns nothing, so these terms exist in no clone and are NOT committed evidence (corrected 2026-10-05, see obs-2026-0056).
     valid and stays local. It is ~1.0 MB and is evidence, not a cache.
   historical_text_left_intact: >
     The `statement` and `verification` fields still describe the 2026-08-29 local

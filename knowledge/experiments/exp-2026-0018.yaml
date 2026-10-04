@@ -84,7 +84,7 @@ governance_correction_2026_10_04:
     AGENTS.md explicitly forbids.
   corrected_routes_to: ".github/workflows/formal.yml, invoked with: gh workflow run formal.yml --ref main"
   local_check_retained: >
-    Reading the committed .olean proof terms under formal/.lake/build remains
+    Reading the .olean proof terms under formal/.lake/build remains LOCAL-ONLY: formal/.lake/ is gitignored (.gitignore line 78) and `git ls-files formal/.lake` returns nothing, so these terms exist in no clone and are NOT committed evidence (corrected 2026-10-05, see obs-2026-0056).
     valid and stays local. It is ~1.0 MB and is evidence, not a cache.
   historical_text_left_intact: >
     The `design` field still says "Build via `lake build`; verify exit code 0,

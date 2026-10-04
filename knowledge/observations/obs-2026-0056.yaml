@@ -1,0 +1,123 @@
+id: obs-2026-0056
+type: observation
+status: current
+created_at: "2026-10-05T03:30:00Z"
+updated_at: "2026-10-05T03:40:00Z"
+summary: >
+  Two claims from a governance audit are CONFIRMED by direct inspection, and
+  one of them invalidates a justification the compute-routing HARD RULE itself
+  rests on. Six evidence artifacts describe formal/.lake/build .olean files as
+  "the committed .olean proof terms", but formal/.lake/ is gitignored and zero
+  .olean files are tracked. Separately, crypto/mlkem-input-checks/reproduce.ps1
+  is a committed runnable script that clones two repositories and runs a
+  cargo/go/cmake/Visual-Studio build matrix locally -- the one live
+  compute-routing violation in the repository.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      direct inspection: git ls-files formal/.lake (0 results), .gitignore
+      line 78, and a read of crypto/mlkem-input-checks/reproduce.ps1. The audit
+      that reported these could NOT execute anything; both claims were
+      re-verified here rather than relayed.
+  sources:
+    - .gitignore
+    - crypto/mlkem-input-checks/reproduce.ps1
+    - knowledge/proofs/prf-2026-0001.yaml
+    - .scratch/trackH/gov_audit_1.md
+  parent: null
+  generation: 0
+links:
+  observations: [obs-2026-0053]
+title: "OBS-2026-0056 - 'committed .olean' is false; reproduce.ps1 is a live compute-routing violation"
+
+confirmed_1_the_olean_evidence_exception_does_not_exist_as_described:
+  the_claim_in_six_artifacts: >
+    prf-2026-0001.yaml:93 reads "Reading the committed .olean proof terms
+    under formal/.lake/build remains ...". The same phrasing appears in
+    exp-2026-0016, exp-2026-0018, exp-2026-0020, fnd-2026-0003,
+    fnd-2026-0004 and fnd-2026-0006.
+  what_is_actually_true: >
+    .gitignore line 78 is "formal/.lake/", so the entire lake build tree is
+    excluded. `git ls-files formal/.lake` returns ZERO tracked files. The
+    .olean files are local-only by the repository's own rules and do not
+    exist in any clone.
+  why_this_matters_more_than_a_wording_nit: >
+    AGENTS.md's compute-routing HARD RULE carves out an explicit exception --
+    "the one exception is a build product that IS evidence, e.g. the Lean
+    .olean files cited by the formal findings -- which is kept and justified in
+    writing". That exception is REASONED FROM AN EXISTENCE THAT IS FALSE. Any
+    future check written to "honour the .olean exception" would be honouring
+    nothing, because the files are not in the repository.
+    The exception is not itself wrong as policy -- keeping kernel-accepted proof
+    terms is defensible -- but the repository does not currently keep them, and
+    six artifacts assert that it does.
+  honest_limit: >
+    The .olean files may well exist on the machine where the formal work was
+    done. The claim at issue is that they are COMMITTED, and they are not. A
+    local file is not institutional memory; AGENTS.md is explicit that scratch
+    is assumed not to survive and that anything worth keeping must be promoted
+    into a committed artifact.
+
+confirmed_2_a_live_compute_routing_violation:
+  where: crypto/mlkem-input-checks/reproduce.ps1
+  what_it_does:
+    - "line 33: git clone --depth 1 https://github.com/PQClean/PQClean.git"
+    - "line 34: git clone --depth 1 --branch 0.16.0 https://github.com/open-quantum-safe/liboqs.git"
+    - "line 60: cmake -S . -B build-all-kem -G \"Visual Studio 18 2026\" -A x64"
+    - "line 61: cmake --build build-all-kem --config Release --target oqs"
+    - "line 75: go build -o go_runner.exe"
+    - "line 95: cargo build --release"
+  why_it_is_a_violation: >
+    This is a committed, runnable script on the default path that clones two
+    upstream repositories and runs a cargo, a Go and a Visual Studio C build
+    matrix on the local machine. That is exactly the "heavy compile +
+    cross-platform matrix" class the HARD RULE routes to GitHub Actions. It is
+    also the heaviest local path in the repository: a Visual Studio build of
+    liboqs plus a cargo --release build is not a lightweight probe.
+  what_was_not_done: >
+    The script was NOT executed and the script was NOT changed. Running it would
+    violate the rule it embodies; rewriting a committed reproducer mid-session
+    changes how a recorded result is reproduced, which is a decision that
+    deserves review rather than a drive-by edit. Recorded as an open violation
+    with the exact lines.
+  scope_note: >
+    This is the ONE clear live violation found. No npm, node_modules, or heavy
+    dotnet local path exists anywhere in the repository. A prior session did
+    repair the formal lake-build artifacts to route to formal.yml, which
+    partially contradicts the earlier report's "eleven artifacts" snapshot; the
+    formal side is largely clean.
+
+the_structural_defect_behind_the_whole_drift_class:
+  finding: >
+    There is no `supersedes` / `superseded_by` field anywhere in the schema, and
+    none in the artifacts. Supersession exists only as PROSE.
+  consequence: >
+    This is the root cause of the entire "depends on a withdrawn authority"
+    class of defect, and of the ~40 stale status assertions the audit found
+    living in artifact prose, markdown notes and CHECKPOINT.md. The index
+    validator compares index buckets to artifact STATUS fields, so it is blind
+    to every one of those, because none of them is a status field.
+  what_the_validator_can_and_cannot_see: >
+    It catches: status/type mismatch between an index and its artifact, an
+    artifact omitted from the index, ghost ids, dangling links, a missing
+    evidence chain, and non-deterministic verification methods.
+    It misses: duplicate-bucket contradictions, index DELETION (emptying an
+    index is caught; deleting the file is not), all prose and note drift, a
+    dependency on a rejected authority, invented status strings, and
+    unresolvable `supersedes` references -- because the field does not exist.
+  not_repaired_this_session: >
+    No supersession field was added. Inventing a schema field mid-session, and
+    populating it across the corpus, is a governance change with wide blast
+    radius and it deserves its own reviewed change. Recorded here as the
+    highest-value next governance item, together with the stale prose itself,
+    which was enumerated but NOT corrected this session.
+  audit_method_caveat: >
+    The audit's validator results are static traces against 13 synthetic
+    inconsistent states, not executions, because it had no shell. It left a
+    runnable pytest module at .scratch/trackH/test_adversarial_index.py using
+    tmp_path so the claims can be confirmed. Those claims were NOT executed this
+    session and are reported as the audit's static analysis, not as measurement.

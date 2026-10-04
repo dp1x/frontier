@@ -10,8 +10,11 @@ error.
 
 from __future__ import annotations
 
+import re
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -277,8 +280,152 @@ def validate_repo(root: Path) -> RepoValidationResult:
         _check_references(rel, doc, label, defined_ids, errors, root)
 
     errors.extend(check_index_consistency(root, docs))
+    errors.extend(check_evidence_committed_claims(root, docs))
 
     return RepoValidationResult(ok=not errors, errors=errors, warnings=warnings)
+
+
+def check_evidence_committed_claims(
+    root: Path, docs: list[tuple[Path, dict]]
+) -> list[str]:
+    """Refuse an artifact that calls gitignored evidence "committed".
+
+    Six formal artifacts justified their conclusions by "the committed .olean
+    proof terms under formal/.lake/build".  ``.gitignore`` line 78 excludes
+    ``formal/.lake/`` and ``git ls-files formal/.lake`` returns nothing, so the
+    files are local-only and exist in no clone.  AGENTS.md carves out an
+    exception for build products that *are* evidence -- and that exception was
+    being reasoned from an existence that is false.
+
+    The check is about a claim about the repository's own tracked state, so it
+    resolves the path through ``git ls-files`` rather than guessing.  It fires
+    only when an artifact asserts BOTH that something is committed AND names a
+    path that is not tracked; prose that merely mentions the files is left
+    alone.
+    """
+    root = Path(root)
+    errors: list[str] = []
+    tracked = _tracked_paths(root)
+    if tracked is None:
+        # Not a git checkout, or git is unavailable: cannot resolve the claim,
+        # so decline rather than guess. Never blocks.
+        return errors
+
+    for rel, doc in docs:
+        if not isinstance(doc, dict):
+            continue
+        for text in _iter_text(doc):
+            if "commit" not in text.lower():
+                continue
+            # The claim is specifically that EVIDENCE is committed, and the
+            # two must appear in the same SENTENCE. Across a sentence boundary
+            # they are unrelated prose: obs-2026-0017 says "the prior session
+            # committed claims T1=..." in one sentence and "re-grep the .olean
+            # output" in another, and neither sentence makes the claim. The
+            # window is one sentence, not one adjacent pair -- "The committed
+            # term <path> is the evidence" puts a path between the two words.
+            for sentence in re.split(r"(?<=[.;!?])\s+|\n", text):
+                low = sentence.lower()
+                if "commit" not in low:
+                    continue
+                if not re.search(r"\.olean|evidence|proof term", low):
+                    continue
+                if _corrects_the_claim(sentence):
+                    continue
+                for raw in _olean_paths(sentence):
+                    candidate = raw.lstrip("./")
+                    if candidate in tracked:
+                        continue
+                    errors.append(
+                        f"{rel}: asserts evidence is committed but {raw!r} is "
+                        "not tracked by git. Gitignored build output is local-only; "
+                        "either track it or stop calling it committed. "
+                        "See obs-2026-0056."
+                    )
+    return errors
+
+
+def _olean_paths(sentence: str) -> list[str]:
+    """Every ``*.olean`` PATH named in ``sentence``.
+
+    A bare ``.olean`` with no directory component names no specific artifact, so
+    it is not a claim about one.  The regex has to be greedy over the path
+    prefix: ``[\\w./-]*\\.olean`` on "the .olean proof terms" yields only
+    ``".olean"``, because a space separates the token from the preceding word.
+    That is correct behaviour and is why a bare mention is skipped, but it also
+    means a path like ``formal/.lake/build/lib/Formal/LengthCheck.olean`` is
+    captured whole.  Backslash paths are normalised by the caller.
+    """
+    out: list[str] = []
+    for match in re.finditer(r"[A-Za-z0-9_.\-/\\]*\.olean", sentence):
+        token = match.group(0).replace("\\", "/")
+        if "/" in token:
+            out.append(token)
+    # A trailing mention is still a mention: "the committed term
+    # formal/.lake/build/X.olean is the evidence" ends the match at the
+    # sentence boundary, which a lookahead-free regex handles but a bounded
+    # window does not.
+    if not out:
+        for match in re.finditer(r"[A-Za-z0-9_.\-/\\]*\.olean\W*$", sentence):
+            token = match.group(0).replace("\\", "/").rstrip(".,;:!? ")
+            if "/" in token:
+                out.append(token)
+    return out
+
+
+def _corrects_the_claim(text: str) -> bool:
+    """True when the sentence negates or corrects the claim rather than making it.
+
+    The corpus convention is to preserve a refuted claim verbatim and then
+    correct it in the same field.  A record that says the evidence is *not*
+    committed, or that says the phrase was wrong, must not be caught by a check
+    about making the claim -- otherwise recording a correction would itself
+    become a validation error.
+    """
+    lowered = text.lower()
+    if not re.search(r"\bcommitted\b", lowered):
+        return False
+    # The claim is specifically that EVIDENCE is committed. Ordinary prose --
+    # "the prior session committed claims T1=...", "re-derivable from the
+    # committed source" -- is not that claim and is excluded by the caller's
+    # sentence-level window, not here. This function answers only one question:
+    # does a correction cue retire the claim?
+    cues = (
+        "not committed", "no longer committed", "never committed",
+        "is false", "was false", "were false", "refuted", "incorrect",
+        "was wrong", "were wrong", "not tracked", "gitignored",
+        "do not call", "stop calling", "does not exist", "local-only",
+    )
+    return any(cue in lowered for cue in cues)
+
+
+def _tracked_paths(root: Path) -> set[str] | None:
+    """Paths git currently tracks, normalized to forward slashes."""
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    return {p for p in proc.stdout.split("\0") if p}
+
+
+def _iter_text(node: Any):
+    """Yield every string leaf in a loaded YAML document."""
+    if isinstance(node, str):
+        yield node
+    elif isinstance(node, dict):
+        for value in node.values():
+            yield from _iter_text(value)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _iter_text(item)
 
 
 def load_index(root: Path) -> dict[str, dict]:
