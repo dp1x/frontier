@@ -4,7 +4,7 @@ status: withdrawn
 created_at: "2026-09-02T04:30:00Z"
 updated_at: "2026-10-03T00:00:00Z"
 summary: "pycose 1.1.0 emits COSE_Sign1 protected-header maps in supplied insertion order rather than RFC 8949 section 4.2.1 order, applying neither section 4.2.1 nor section 4.2.3 ordering. The behaviour is measured, confound-free and rooted at cosebase.py:136. Its SPEC_VIOLATION classification is WITHDRAWN (rev-2026-0017): RFC 9052 section 9 does not carry map-key ordering among its three restrictions, and RFC 9052 section 3 states the opposite design intent. The earlier 'mutually unverifiable' impact claim is withdrawn as false; the divergence is directional (signer-side only). The behaviour is already known upstream (pycose PR #91), so no maintainer report is warranted."
-epistemic_status: verified_conclusion
+epistemic_status: interpretation
 provenance:
   created_by:
     kind: model-agent

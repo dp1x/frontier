@@ -281,8 +281,49 @@ def validate_repo(root: Path) -> RepoValidationResult:
 
     errors.extend(check_index_consistency(root, docs))
     errors.extend(check_evidence_committed_claims(root, docs))
+    errors.extend(check_epistemic_status_consistency(docs))
 
     return RepoValidationResult(ok=not errors, errors=errors, warnings=warnings)
+
+
+# Statuses that mean the artifact's own claim does NOT currently hold. An
+# artifact in one of these states cannot also be a verified conclusion: the
+# pair is self-refuting, whatever the prose says.
+NON_HOLDING_STATUSES = frozenset(
+    {"disputed", "rejected", "withdrawn", "superseded", "abandoned"}
+)
+
+
+def check_epistemic_status_consistency(
+    docs: list[tuple[Path, dict]]
+) -> list[str]:
+    """Refuse ``verified_conclusion`` on an artifact that does not hold.
+
+    Seven artifacts asserted both that a conclusion was verified and that it
+    was disputed, rejected or withdrawn -- fnd-2026-0001, -0004, -0005, -0006,
+    -0013, -0014 and prf-2026-0003. A reader resolving the pair by
+    ``epistemic_status`` would treat a withdrawn claim as settled.
+
+    This is deliberately a mechanical pair check, not a judgement about prose.
+    What a *disputed* artifact's residual verified content is worth is an
+    epistemic question this repository has not settled; whether the two fields
+    may disagree at all is not.
+    """
+    errors: list[str] = []
+    for _rel, doc in docs:
+        if not isinstance(doc, dict):
+            continue
+        status = doc.get("status")
+        epistemic = doc.get("epistemic_status")
+        if status in NON_HOLDING_STATUSES and epistemic == "verified_conclusion":
+            errors.append(
+                f"{doc.get('id', '<unknown>')}: epistemic_status "
+                f"'verified_conclusion' contradicts status '{status}'. An "
+                "artifact whose claim is disputed, rejected or withdrawn "
+                "cannot also record that the conclusion was verified; state "
+                "what survives in the prose instead."
+            )
+    return errors
 
 
 def check_evidence_committed_claims(

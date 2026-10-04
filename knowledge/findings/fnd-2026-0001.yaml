@@ -4,7 +4,13 @@ status: disputed
 created_at: "2026-08-25T00:30:00Z"
 updated_at: "2026-10-03T00:00:00Z"
 summary: "DISPUTED 2026-10-03 after independent adversarial audit (rev-2026-0018). All six claimed FIPS 203 section 7.2 check placements survived direct source reading at pinned commits with no bypass found, and the 82/82 figures check out exactly. One sub-claim is REFUTED: the finding says liboqs's fixed-size structs enforce length statically, but src/kem/kem.h declares an unqualified const uint8_t *public_key pointer, so nothing is enforced statically and the finding contradicts itself. Credit is misattributed: liboqs's own wrapper contains no check - it lives in mlkem-native's mlk_kem_enc_derand, shared by all backends. Same one-layer error that refuted fnd-2026-0009. Do not disclose until attribution is corrected."
-epistemic_status: verified_conclusion
+epistemic_status: interpretation
+epistemic_status_corrected_2026_10_05: >
+  This field read `verified_conclusion` while `status` read `disputed`. Six of
+  the seven claimed section 7.2 check placements did survive direct source
+  reading, and the 82/82 figures check out -- but one sub-claim is refuted, so
+  the finding as a whole is disputed. Downgraded to `interpretation`. See
+  obs-2026-0060.yaml.
 provenance:
   created_by:
     kind: model-agent

@@ -4,7 +4,7 @@ status: disputed
 created_at: "2026-08-29T19:15:00Z"
 updated_at: "2026-10-03T00:00:00Z"
 summary: "DISPUTED 2026-10-03 after independent adversarial audit (rev-2026-0018). FORMAL-205 claimed a combined FIPS 203 section 7.2 check (LENGTH + MODULUS) machine-checked for ML-KEM-512. The headline claim is falsified by its own source: ValidKey.lean:47-48 defines isValidKey p B := B = B AND forall i, seg B i < 3329 - the first conjunct is reflexivity, p is never used (proved by the build log's own unused-variable warning), and Fin appears only in comments. T2 is literally exact canonicalLength_k2, a restatement of FORMAL-204, and T3 is FORMAL-203's helper verbatim. It does not compose the two halves, and FIPS 203 section 7.2's type check is not formalized anywhere. THE PROOFS THEMSELVES ARE SOUND - no sorry/axiom/native_decide anywhere, build verified three ways. The defect is claim scope, not proof soundness."
-epistemic_status: verified_conclusion
+epistemic_status: interpretation
 provenance:
   created_by:
     kind: model-agent

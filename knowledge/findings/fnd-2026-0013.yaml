@@ -4,7 +4,13 @@ status: rejected
 created_at: "2026-08-31T15:00:00Z"
 updated_at: "2026-10-03T00:00:00Z"
 summary: "REJECTED 2026-10-03 after independent adversarial audit (rev-2026-0018). The finding claimed cbor2 and ciborium produce byte-exact canonical-mode agreement with the Frontier oracle. REFUTED by a mislabelled ORACLE in Frontier's own code: until commit 8148462 (2026-09-02) cbor_oracle.encode_canonical sorted RFC 8949 section 4.2.3 length-first under a docstring claiming section 4.2.1, and the vectors were never regenerated after the repair. The test is structurally blind - canonical and default expected values are identical for 111/111 vectors. Under HEAD cbor2 matches the oracle on 108/111, failing exactly the 3 discriminating vectors. A defensible replacement claim exists and should be re-measured against regenerated vectors."
-epistemic_status: verified_conclusion
+epistemic_status: interpretation
+epistemic_status_corrected_2026_10_05: >
+  This field read `verified_conclusion` while `status` read `rejected`. A
+  rejected finding cannot record that its conclusion was verified. The matrix
+  measurement is real and preserved; the conformance reading drawn from it is
+  what was rejected, because 108 of 111 vectors had no discriminating power.
+  Downgraded to `interpretation`. See obs-2026-0060.yaml.
 provenance:
   created_by:
     kind: model-agent

@@ -4,7 +4,7 @@ status: disputed
 created_at: "2026-08-29T18:00:00Z"
 updated_at: "2026-10-03T00:00:00Z"
 summary: "DISPUTED 2026-10-03 after independent adversarial audit (rev-2026-0018). FORMAL-204 formalized the LENGTH half of FIPS 203 section 7.2. The constants are correct and the proofs are sound, but the model is severely weakened relative to the prose: the Lean code contains no byte array at all - T1 is rfl on 384*2+32 = 800 and T2/T3 are ground Nat arithmetic with zero hypotheses. The finding implies byte-level verification the code does not perform. Do not describe this as byte-level formalization."
-epistemic_status: verified_conclusion
+epistemic_status: interpretation
 provenance:
   created_by:
     kind: model-agent

@@ -4,7 +4,14 @@ status: disputed
 created_at: "2026-08-29T18:30:00Z"
 updated_at: "2026-10-03T00:00:00Z"
 summary: "DISPUTED 2026-10-03 after independent adversarial audit (rev-2026-0018). The core claim survives - rustls 0.23.43 enforces the FIPS 203 section 7.2 MODULUS check via aws-lc mlk_kem_check_pk, annotated in source as implementing exactly that. But the evidence is overstated and the topic is NOT novel. The section 7.2 LENGTH half was never tested: the truncate stimulus removed a byte from the X25519 tail, leaving ek at exactly 1184 bytes, and the abort came from rustls's own share-length check - a different mechanism giving the same outcome. wire_coeff255_eq_4095 actually targeted coefficient 509 due to a wrong t-hat constant, and a log claiming ek shrank to 1183 B is false. aws-lc PR #2891 (merged 2026-01-20) already documents that modulus-overflow keys are imported and that this is allowed by FIPS 203, so an interop note would be non-novel."
-epistemic_status: verified_conclusion
+epistemic_status: interpretation
+epistemic_status_corrected_2026_10_05: >
+  This field read `verified_conclusion` while `status` read `disputed`. The pair
+  was self-refuting: a reader resolving it by epistemic_status would treat a
+  disputed claim as settled. The core observation does survive -- rustls 0.23.43
+  does enforce the section 7.2 MODULUS check via aws-lc mlk_kem_check_pk -- but
+  the evidence is overstated, the LENGTH half was never tested, and the topic is
+  not novel. Downgraded to `interpretation`. See obs-2026-0060.yaml.
 provenance:
   created_by:
     kind: model-agent

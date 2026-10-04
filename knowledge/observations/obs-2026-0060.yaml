@@ -1,0 +1,140 @@
+id: obs-2026-0060
+type: observation
+status: current
+created_at: "2026-10-05T06:50:00Z"
+updated_at: "2026-10-05T07:00:00Z"
+summary: >
+  The overstrong-language audit track died on an upstream timeout without
+  producing its report, so it was run here instead. Grepping for adjectives
+  would have been useless -- "byte-exact" appears 502 times and is usually a
+  legitimate description of a measurement. The real defect is mechanical and
+  narrower: SEVEN artifacts recorded epistemic_status verified_conclusion while
+  their own status said disputed, rejected or withdrawn. A reader resolving the
+  pair by epistemic_status would treat a withdrawn claim as settled. All seven
+  are now downgraded, and validate refuses the contradiction.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      YAML load of every artifact under knowledge/ and missions/, grouped by
+      status and epistemic_status; claim sites extracted by sentence and
+      weighted by the artifact's own epistemic_status
+  sources:
+    - src/frontier/validate.py
+    - .scratch/trackC/audit_language.py
+    - .scratch/trackC/epistemic_contradictions.py
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0001, fnd-2026-0004, fnd-2026-0005, fnd-2026-0006, fnd-2026-0013, fnd-2026-0014]
+title: "OBS-2026-0060 - Seven artifacts asserted a verified conclusion while their status said it did not hold"
+
+method_note_why_not_a_keyword_sweep:
+  raw_phrase_counts_across_knowledge_and_missions:
+    byte-exact: 502
+    proven: 319
+    byte-identical: 62
+    end-to-end: 60
+    machine-checked: 27
+    guarantee: 5
+    every_implementation: 3
+    all_implementations: 1
+    security_impact: 1
+    is_vulnerable: 1
+  why_those_counts_are_not_defects: >
+    Most such phrases describe a measurement rather than assert a conclusion.
+    "byte-exact" on a recorded diff is a description of what was compared; the
+    overclaim would be inferring conformance from it, which is a separate
+    judgement. Sweeping for adjectives would have produced hundreds of false
+    positives and buried the real defect, which is why this audit went after
+    artifact STATE instead.
+  what_was_actually_audited: >
+    77 artifacts carry at least one high-confidence verdict phrase across 158
+    claim sites. Reviewing those weighted by the artifact's own
+    epistemic_status is what surfaced the contradiction below.
+
+the_defect_found:
+  rule: >
+    epistemic_status: verified_conclusion is incompatible with a status of
+    disputed, rejected, withdrawn, superseded or abandoned.
+  why_it_matters: >
+    The two fields answer different questions -- status is the artifact's
+    lifecycle, epistemic_status is the strength of its claim -- and a reader
+    resolving the pair by epistemic_status alone would treat a withdrawn claim
+    as settled. For fnd-2026-0014 (withdrawn) and fnd-2026-0013 (rejected)
+    that is the difference between reading history and reading a live claim.
+  artifacts_found:
+    - "fnd-2026-0001  status disputed"
+    - "fnd-2026-0004  status disputed"
+    - "fnd-2026-0005  status disputed"
+    - "fnd-2026-0006  status disputed"
+    - "fnd-2026-0013  status rejected"
+    - "fnd-2026-0014  status withdrawn"
+    - "prf-2026-0003  status disputed"
+  by_status: "5 disputed, 1 rejected, 1 withdrawn"
+
+resolution_artifact_by_artifact_not_mechanical:
+  principle: >
+    Each was downgraded to `interpretation` WITH a per-artifact note saying what
+    survives, because in every case some content genuinely does. Blindly
+    rewriting the field would have discarded real findings; leaving it would
+    have kept the contradiction.
+  what_survives_in_each:
+    fnd-2026-0001: >
+      Six of the seven claimed section 7.2 check placements survived direct
+      source reading at pinned commits, and the 82/82 figures check out
+      exactly. One sub-claim is refuted -- liboqs's fixed-size structs do NOT
+      enforce length statically, since src/kem/kem.h declares an unqualified
+      const uint8_t *public_key. So the artifact is genuinely disputed, not
+      wholly false.
+    fnd-2026-0004: >
+      FORMAL-204's constants are correct and its proofs are sound, but the
+      model contains no byte array at all: T1 is rfl on 384*2+32 = 800 and
+      T2/T3 are ground Nat arithmetic with zero hypotheses.
+    fnd-2026-0005: >
+      The core observation survives -- rustls 0.23.43 does enforce the MODULUS
+      check via aws-lc mlk_kem_check_pk -- but the evidence is overstated, the
+      LENGTH half was never tested, and the topic is not novel.
+    fnd-2026-0013: >
+      The 111-cell matrix measurement is real and is preserved. What was
+      rejected is the conformance reading drawn from it, because 108 of 111
+      vectors had no discriminating power.
+    fnd-2026-0014: >
+      Withdrawn, with a spliced quotation corrected and the real
+      cross-implementation agreement preserved.
+    prf-2026-0003: >
+      Disputed; the machine-checked counterexample showing the corpus
+      hypothesis is false for legitimate keys stands, while the
+      end-to-end s7.2 claim was already withdrawn.
+
+the_check_now_in_the_validator:
+  rule_id: >
+    validate.check_epistemic_status_consistency -- fires on any artifact whose
+    epistemic_status is verified_conclusion while its status is one of
+    disputed, rejected, withdrawn, superseded, abandoned.
+  scope_of_the_rule_deliberately_narrow: >
+    It checks the PAIR, not the prose. What a disputed artifact's residual
+    verified content is worth is an epistemic question this repository has not
+    settled; whether the two fields may flatly disagree is not in doubt.
+  why_it_is_mechanical_and_belong_in_ci: >
+    No judgement is required, so this is exactly the kind of check AGENTS.md
+    says to mechanise -- it stops a claim that is mechanically demonstrably
+    unsound, rather than pretending a script can establish truth.
+
+what_this_audit_did_NOT_do:
+  - >
+    It did not adjudicate the 158 individual high-confidence phrases. Most are
+    legitimate descriptions of measurements, and weakening language
+    mechanically would be exactly the "mechanically weaken everything" failure
+    the brief warns against. The phrase-level review needs per-claim reading,
+    not a sweep.
+  - >
+    It did not check markdown missions. Only YAML artifacts carry the
+    status/epistemic_status pair, so markdown is out of scope for this rule.
+  - >
+    It did not resolve which residual content in each disputed artifact is
+    strong enough to be called a conclusion. Each note says what survives; none
+    re-promotes anything.

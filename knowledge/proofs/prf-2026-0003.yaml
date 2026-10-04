@@ -4,7 +4,7 @@ status: disputed
 created_at: "2026-08-29T19:15:00Z"
 updated_at: "2026-10-04T09:00:00Z"
 summary: "SCOPE REFUTED 2026-10-04. The Lean proofs in formal/Formal/ValidKey.lean are SOUND (zero sorry, zero file-introduced axioms, kernel-accepted). The COMBINATION claim is not: isValidKey ignores its own parameter p (proved by the Lean build log's unused-variable warning), its 'length' conjunct is reflexivity B=B, T2 restates FORMAL-204, and T3 restates FORMAL-203's enc_dec_eq verbatim. No theorem anywhere connects the LENGTH half to the MODULUS half. A machine-checked counterexample further shows the corpus hypothesis forall i, seg B i < 3329 is FALSE for legitimate ML-KEM keys, so FIPS 203 Eq (7.1) was never an instance of FORMAL-203's roundtrip theorem. Successor: msn-2026-0021 (FORMAL-208)."
-epistemic_status: verified_conclusion
+epistemic_status: interpretation
 provenance:
   created_by:
     kind: model-agent
