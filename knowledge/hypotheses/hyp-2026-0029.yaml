@@ -1,0 +1,151 @@
+id: hyp-2026-0029
+type: hypothesis
+status: active
+created_at: "2026-10-05T05:00:00Z"
+updated_at: "2026-10-05T05:10:00Z"
+summary: >
+  IETF datatracker issue #28 on draft-connolly-cfrg-xwing-kem has been OPEN
+  since 2025-02-25 and describes an undefined-but-runtime-observable behaviour
+  on which two Appendix A implementations disagree: whether X-Wing decapsulation
+  performs X25519's optional all-zero shared-secret check (RFC 7748 6.1). This is
+  the highest-value X-Wing experiment available and, per the recheck, nobody has
+  run it. It needs NO test vectors -- only a crafted low-order ct_X -- and it is
+  correctly framed as a gap in draft-11 section 5, NEVER as a standards
+  violation.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-scout
+    model: grok-4.7
+    tool: >
+      datatracker issue inspection plus source reading of both implementations,
+      by an independent X-Wing recheck; the issue attribution is inherited from
+      that report and is NOT yet re-fetched by the orchestrator
+  sources:
+    - https://datatracker.ietf.org/doc/draft-connolly-cfrg-xwing-kem/
+    - .scratch/trackE/xwing_recheck.md
+    - knowledge/observations/obs-2026-0052.yaml
+  parent: null
+  generation: 0
+links:
+  observations: [obs-2026-0052]
+  findings: [fnd-2026-0007]
+title: "HYP-2026-0029 - X-Wing decapsulation: does the RFC 7748 6.1 all-zero check apply?"
+
+the_question:
+  normative_gap: >
+    RFC 7748 section 6.1 says an X25519 implementation MUST check for and reject
+    the all-zero shared secret, MAY abort with a fixed error, and SHOULD return
+    a result indistinguishable from other implementations. Draft-11 section 5.5
+    specifies Decapsulate(ct, sk) as
+    ss_X = X25519(sk_X, ct_X)
+    with no statement about the all-zero case. The draft therefore does not say
+    whether the RFC 7748 check is inherited or omitted.
+  observable_consequence: >
+    On a low-order or contributory point ct_X, X25519 yields the all-zero secret.
+    An implementation that omits the check returns a well-formed 32-byte shared
+    secret and nil error; an implementation that performs it returns an error
+    (BoringSSL additionally fills the output with RAND_bytes before failing).
+    Those are different observable behaviours on the same input.
+  why_vectors_cannot_adjudicate_it: >
+    Appendix C carries three HAPPY-PATH vectors. None exercises the error path.
+    A conformance claim built on them has zero coverage of this question.
+
+reported_evidence_status:
+  what_is_first_party: >
+    The divergence is reported in the draft's own issue tracker with a comment
+    dated 2026-04-20 supplying concrete data, and it is corroborated by reading
+    both implementations' source.
+  what_is_inherited_not_reverified_here: >
+    The orchestrator has NOT re-fetched issue #28 or either implementation's
+    source in this session. The claim below is recorded at the recheck's
+    confidence, not at a verified one, and the first execution step is to
+    confirm it from primary sources.
+  reported_positions:
+    circl_go: >
+      Does NOT check. kem/xwing/xwing.go carries a comment deferring to #28.
+    boringssl_c: >
+      Inherits the check. crypto/xwing/xwing.cc returns failure on low-order
+      input and overwrites the output with RAND_bytes.
+
+discriminating_input_design:
+  requirement: >
+    A ct_X that produces the all-zero X25519 output. The minimal such point is
+    a low-order point; ct is ct_M || ct_X with ct_M a VALID ML-KEM-768
+    ciphertext (otherwise decapsulation fails for an unrelated reason and the
+    cell measures the wrong thing).
+  controls_that_must_be_present:
+    - "ct_M valid, ct_X a normal public key: BOTH must accept. Establishes the harness is not trivially rejecting."
+    - "ct_M INVALID, ct_X normal: BOTH must reject, and the reason must be ML-KEM, not the X25519 check."
+    - "ct_M valid, ct_X low-order: THE DISCRIMINATING CELL. Divergence is expected here and only here."
+  without_the_middle_control: >
+    An implementation that rejects everything would pass a naive "both reject
+    on low-order" reading. The controls are what make the cell mean something.
+
+expected_outcomes_and_what_each_establishes:
+  both_reject: >
+    Consistent with the check being inherited. Does NOT establish conformance
+    with draft-11, which is silent.
+  both_accept: >
+    Consistent with the check being omitted. Still not a violation: the draft
+    does not require it. This is the FRAMING TRAP -- reporting this as
+    "CIRCL/BoringSSL violate draft-11" would be overreach, because there is no
+    rule to violate.
+  divergence_confirmed: >
+    The interesting result. Two implementations in the draft's OWN Appendix A
+    behave differently on behaviour the specification leaves undefined, which is
+    an interoperability defect in the specification rather than in either
+    implementation.
+
+independence_caveat_carried_from_the_recheck:
+  - >
+    CIRCL is a CO-AUTHOR lineage for this draft (Westerbaan authored the
+    relevant PR), so it can serve as a control but NEVER as an independent
+    oracle for X-Wing.
+  - >
+    rugo/xwing-kem.rs is annotated by its authors as implementing draft-00. A
+    mismatch from it is version drift, not a bug -- which is why per-lineage
+    revision pinning is a precondition of any cell using it.
+  - >
+    imp-2026-0010/0011 admit a "manual" X-Wing combiner, i.e. Frontier's own
+    composition code over foreign primitives. That is not an X-Wing lineage
+    and must not be counted as one.
+
+framing_rules_this_hypothesis_must_obey:
+  - >
+    It is a gap in draft-11 section 5. It is NOT a standards violation: there is
+    no rule to violate, and the draft has no RFC.
+  - >
+    No sentence may contain "RFC-conformant", "conformance-tested" or
+    "interoperable per the standard" in connection with these vectors. There is
+    no standard.
+  - >
+    No security-impact claim without a demonstrated path from the observed
+    behaviour to practical consequence. An implementation accepting an
+    all-zero secret is a protocol-design question; whether it is exploitable
+    is a separate question this experiment does not answer.
+
+compute_class: lightweight
+routing_note: >
+  Pure-Python X25519 with a crafted ct is local-only work. No ML-KEM
+  implementation is needed for the discriminating cell if ct_M is drawn from
+  a published FIPS 203 vector and reused verbatim, which keeps this out of
+  heavy-build territory entirely and out of scope for the compute-routing
+  HARD RULE.
+
+budget_and_stopping_condition:
+  attempts: 3
+  stopping: >
+    Stop once the three-cell matrix (control, ML-KEM-failure control,
+    discriminating cell) has been run against at least two implementations whose
+    revision identity is pinned from source. A negative result -- both
+    implementations agreeing either way -- is a legitimate outcome and is
+    preserved, not re-run.
+
+acceptance_criteria:
+  - Issue #28 and both implementations' source re-fetched and quoted from primary sources.
+  - The crafted ct_X shown to produce the all-zero X25519 output, by direct computation, not by assertion.
+  - All three cells run against every participating implementation.
+  - Every implementation's draft revision established by reading its code, never inferred from a KAT pass.
+  - A recorded verdict with the framing constraint above applied.

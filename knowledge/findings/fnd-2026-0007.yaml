@@ -4,7 +4,15 @@ status: disputed
 created_at: "2026-08-30T03:05:00Z"
 updated_at: "2026-10-03T00:00:00Z"
 summary: "DISPUTED 2026-10-03 after independent adversarial audit (rev-2026-0018). The substance holds - CIRCL v1.6.5 IS X-Wing conformant, and the combiner is byte-identical across drafts -05, -08 and -11, so no revision mismatch exists. But four assertions fail: HPKE counts are wrong (finding says 127/127; the actual corpus is 128 total / 32 export-only / 96 supported); the ek_KEM -> ek_X caveat is fabricated (no draft revision -05..-11 uses ek_KEM); 3 of 3 test vectors is one hash over a 3-vector corpus, and the hash is a commit-time constant not a published draft hash; and the HPKE corpus is DHKEM-only with zero X-Wing vectors, so the X-Wing+HPKE claim rests on a single self-roundtrip."
-epistemic_status: verified_conclusion
+epistemic_status: interpretation
+epistemic_status_corrected_2026_10_05: >
+  This field previously read `verified_conclusion` while `status` read
+  `disputed`, and while the finding's own correction block listed three
+  confirmed defects including a fabricated caveat. An artifact cannot be a
+  verified conclusion and disputed at the same time. Downgraded to
+  `interpretation`: what survives is that CIRCL v1.6.5 reproduces the
+  draft-11 Appendix C vectors byte-exactly, which is a measurement, and the
+  surrounding conformance framing does not survive at all.
 provenance:
   created_by:
     kind: model-agent
@@ -40,6 +48,22 @@ links:
 title: "FND-2026-0007 - CIRCL v1.6.5 X-Wing (draft-05) + HPKE (RFC 9180) is byte-exact conformant per KAT vectors"
 classification: implementation-spec-compliance
 statement: |
+  WITHDRAWN AS A STANDALONE CLAIM 2026-10-05. The text below is the
+  ORIGINAL statement, preserved verbatim because deleting it would hide what
+  was once asserted. It is NOT a current claim and must not be cited as one.
+  See `correction_2026_10_03` for what survives and what does not, and
+  knowledge/observations/obs-2026-0052.yaml for the X-Wing recheck.
+
+  Three defects in it are independently confirmed and were NOT fixed in place
+  until now: the draft-05 pin is stale (draft-11 is current), the HPKE counts
+  are wrong (the corpus has 96 supported vectors, not 127), and the ek_KEM
+  caveat is fabricated outright. The finding's status is `disputed`, so this
+  text contradicts the artifact's own current state -- which is why it is
+  labelled here rather than left to be read at face value.
+
+  ---
+  ORIGINAL (superseded):
+
   Cloudflare CIRCL v1.6.5 (Go) implements X-Wing KEM per draft-05 and
   HPKE per RFC 9180. The implementation is byte-exact conformant per
   the published KAT vectors:
