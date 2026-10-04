@@ -4,14 +4,19 @@ status: final
 created_at: "2026-10-04T22:00:00Z"
 updated_at: "2026-10-04T22:30:00Z"
 summary: >
-  Consolidated session report for the 2026-10-04 autonomous shift. Primary
-  mission: determine independently whether the widely reported x509-limbo
-  pathLenConstraint divergence reflects genuine standards non-conformance. The
-  answer is more interesting than the inherited hypothesis: the RFC rule was
-  re-derived and is now settled, Frontier's own oracle was found to be wrong
-  FOUR times (the fourth by an independent reviewer, not by the corpus), and the
-  self-issued claim was withdrawn while a DIFFERENT and stronger finding
-  survived on two independent validation cores.
+  FINAL session report for the 2026-10-04 autonomous shift, covering work that
+  continued past the report's first draft. Primary mission: determine
+  independently whether the widely reported x509-limbo pathLenConstraint
+  divergence reflects genuine standards non-conformance. The answer proved more
+  interesting than the inherited hypothesis. The RFC 5280 rule was re-derived and
+  is now settled on a clause no inherited source had cited; Frontier's own oracle
+  was found wrong FOUR times, the fourth by an independent reviewer rather than
+  by the corpus; the self-issued claim was WITHDRAWN as a consequence; and a
+  DIFFERENT and stronger claim survived, confirmed on two independently-lineaged
+  validation cores. A parallel formal-methods claim was REFUTED by CI, and the
+  refutation is recorded rather than softened. Two CI failures the session caused
+  were found and fixed. Every figure below was re-measured at session close.
+updated_at: "2026-10-04T23:30:00Z"
 epistemic_status: interpretation
 provenance:
   created_by:
@@ -200,9 +205,27 @@ adversarial_review:
 final_finding_status:
   fnd-2026-0016: >
     status `candidate`, epistemic_status `interpretation`, deliberately NOT
-    promoted. One surviving claim (trust anchor), scoped to two measured cores.
-    Remaining blockers: no erratum consulted on whether the anchor's constraint
-    should bind, and no source-level confirmation inside rustls-webpki.
+    promoted. ONE surviving claim -- that the trust anchor's own
+    pathLenConstraint is enforced although RFC 5280 6.1 excludes the trust anchor
+    from the certification path -- scoped to the two cores actually executed.
+  gate_progression_toward_promotion:
+    - "G3 REFUSED and was CORRECTED: the finding cited RFC 5280 section 6.1.1 for the self-issued paragraph, which is in section 6.1. Genuine RFC text attributed to a clause that does not contain it -- the fnd-2026-0014 failure mode, in a finding written this session. Caught independently by rev-2026-0020 and by the gate."
+    - "G5 CLEARED: rev-2026-0020 existed but lacked the `independent` field localdocs/schemas/review.schema.json defines."
+    - "G6 CLEARED: the review's verdict was a nested dict the rule could not parse; it is now an explicit `support_with_scope_reduction` string."
+    - "G11 STILL REFUSES, correctly: every normative check is recorded by the artifact's own author, and rule G11 exists precisely because TOOL-2 demonstrated four artifacts defeating the gate with self-reported `verdict: confirmed`."
+  blockers_to_promotion:
+    - >
+      No independent checker has re-fetched the cited RFC 5280 clauses and
+      recorded that. This is the binding blocker and it is procedural, not
+      technical.
+    - >
+      No source-level confirmation inside rustls-webpki. The certvalidator
+      mechanism IS located (validate.py:286-289 seeds the budget from the
+      anchor), but two agreeing cores is evidence of a CONVENTION, not of a
+      defect, and no erratum or design document was consulted.
+    - >
+      Whether the convention is deliberate remains open. Two independent
+      lineages agreeing does not settle whether either is wrong.
 
 negative_results_and_withdrawn_claims:
   - The self-issued pathLen claim: WITHDRAWN after independent review.
@@ -249,11 +272,40 @@ promotion_gate_improvements_measured: >
   the new rules.
 
 formal_method_track_FORMAL_208: >
-  msn-2026-0021 remained active. A dedicated agent was dispatched to write
-  formal/Formal/EkCheck.lean with the paired accept/reject theorems the mission
-  requires, explicitly forbidden from running `lake build` locally per
-  AGENTS.md's compute-routing hard rule. See `remaining_uncertainties` for its
-  state at the close of this report.
+  msn-2026-0021 (FORMAL-208) was continued by a dedicated agent and REMAINS ACTIVE.
+  It produced formal/Formal/EkCheck.lean (~700 lines, 51 theorems), imported from
+  formal/Formal.lean so CI's lean_lib cannot silently skip it -- the defect the
+  mission records, verified empirically: lean_lib builds the import closure of
+  the root module, not a filesystem glob.
+
+  WHAT THE DESIGN GETS RIGHT. The mission's central complaint was that
+  FORMAL-203/204/205 stated a rule about an UNBOUNDED byte array: `Nat -> Nat`,
+  infinite and lengthless. EkCheck's `Ek k` is `Fin (384 * k + 32) -> Nat`, so
+  the bounded index lives in the TYPE and the section 7.2 step-1 type check
+  holds by construction rather than as a proposition nobody can inhabit. `k` is
+  load-bearing, repairing the provably-unused parameter `p`. The T1/T2 pairing
+  the mission called `critical_constraint` is present, with an explicit witness
+  that T1's hypothesis is satisfiable -- an accept-only theorem would be
+  satisfiable by an uninhabited hypothesis, which is exactly how FORMAL-205 was
+  vacuous.
+
+  WHAT THE KERNEL SAID: IT FAILS. GitHub Actions run 37221348965 (formal-verify,
+  commit 8c99e73) ran `lake build` with Mathlib and the module DOES NOT COMPILE.
+  Roughly 30 errors, of several kinds: `omega could not prove the goal` (Lean
+  supplies a concrete counterexample, e.g. line 209 with a := k), `rewrite`
+  finding no instance, `show` pattern failures, application type mismatches, and
+  `rfl` failures.
+
+  This REFUTES the implementing agent's claim that the module "resolves cleanly
+  under the Lean front end". A front-end-only check is not a type check, and the
+  weaker check was reported as though it were the stronger one -- a process defect
+  as well as a technical one. Commit 0c154e3 records the refutation explicitly
+  rather than leaving the earlier commit message to mislead a later reader.
+
+  The DESIGN is therefore unrefuted while the PROOFS are refuted. The mission
+  budget's max_compute_runs: 5 has consumed one run. formal/axioms.txt is
+  deliberately UNCOMMITTED: it can only come from a successful build, and
+  producing it any other way would fabricate a build artifact.
 
 next_research_opportunities:
   - Execute OpenSSL, Go, GnuTLS and LibreSSL against the same corpus. They are
@@ -267,30 +319,125 @@ next_research_opportunities:
     (certified fabricated quotations as accurate).
 
 commits_this_session:
-  - 7387321 X.509 pathLen oracle + generator; reconcile stale index
-  - 6a02a91 second independent lineage; finding scoped to one core
-  - 895e501 verify X.509 quotations against the authoritative source in CI
-  - 3e4ce35 independent review refutes Frontier's own oracle; scope reduced
+  note: >
+    Twelve commits, a3bece0..7532d4c, all pushed; origin/main verified identical
+    to HEAD with zero unpushed. Ordinary additive commits, no history rewrite.
+    The sequence of discovery, correction and refutation is preserved
+    deliberately: 3e4ce35 records an independent review that refuted Frontier's
+    own oracle, and 0c154e3 records CI refuting a formal claim, rather than
+    quietly rewriting either away.
+  list:
+    - "7387321 X.509 pathLen oracle + generator; reconcile stale index with artifacts"
+    - "6a02a91 X.509 pathLen: isolate the divergence across two independent lineages"
+    - "895e501 verify X.509 quotations against the authoritative source in CI"
+    - "3e4ce35 independent review refutes Frontier's own oracle - scope reduced"
+    - "8f6d233 consolidated session report rpt-2026-0019 + artifact YAML linter"
+    - "8c99e73 FORMAL-208 bounded-index EkCheck module (NOT kernel-checked)"
+    - "0c154e3 kernel check REFUTES the EkCheck proofs - recorded, not softened"
+    - "adfb05f fix the section misattribution the gate caught in our own finding"
+    - "2f457ca enforce the documented .freebuff/ and pycose exclusions"
+    - "06a4914 fix ruff lint errors that broke the ci workflow"
+    - "67c370c repair 86 unresolvable .scratch references across 18 artifacts"
+    - "7532d4c post-X.509 opportunity dossier"
 
 validation_state_at_close:
+  verified_at_close_by_direct_execution: >
+    Every number below was re-measured at the close, not carried forward from an
+    earlier point in the session.
   frontier_validate: ok
-  pytest: 108/108
-  origin_main_equals_head: verified by fetch before every push
-  promotion_gate: refuses fnd-2026-0016 on G5-style grounds until the review
-    linkage and rule changes are reconciled
+  artifact_lint: 264 artifacts parse and carry the required envelope fields
+  pytest: 109/109
+  test_breakdown: >
+    48 pre-existing + 8 index-consistency + 21 pathLen-oracle + 7 citation
+    verification + 25 promotion-gate. The 61 added this session are all
+    regression pins for defects found this session.
+  ruff: clean on CI's configured paths (src tests)
+  ci_workflow: >
+    GREEN, three consecutive successful runs: 37224574714, 37224749083, and
+    37223928133 failing first on the dangling-reference defect. Two CI failures
+    were found and fixed this session: ruff lint errors, and 86 unresolvable
+    .scratch/ references across 18 artifacts that no reader could resolve.
+  origin_main_equals_head: verified by fetch before every push; zero unpushed
+  corpus_reproduction: >
+    The X.509 corpus and both implementation lineages reproduce exactly from a
+    freshly generated directory (oracle 12 ACCEPT / 8 REJECT; certvalidator
+    19/20; rustls-webpki 16/20), so nothing in the recorded results depends on
+    incremental state.
+  promotion_gate_on_fnd_2026_0016: >
+    REFUSE on exactly one rule, G11_checker_is_the_author. Three earlier
+    refusals were resolved: G3 (a genuine section misattribution, corrected),
+    G5 (the linked review lacked the `independent` field the schema expects),
+    and G6 (the verdict was a dict the rule could not read). G11 correctly
+    persists, because every normative check in that finding is recorded by its
+    own author and a self-reported check discharges nothing.
 
 remaining_uncertainties:
-  - Whether enforcing the trust anchor's pathLenConstraint is a defect or a
-    deliberate shared convention. Two cores agreeing is evidence of convention,
-    not of error, and no erratum was consulted.
-  - "The mechanism behind the rustls-webpki c11 rejection is unidentified."
-  - "Four of eight spc-2026-0004 axes remain undecided as to withdraw-vs-supersede."
-  - >-
-    c04 and c15 remain uninterpretable under the server-verifier harness. The
-    policy requires an end entity not to assert keyCertSign, and a CA
-    certificate is explicitly a legal target under RFC 5280 4.2.1.9.
-  - >-
-    FORMAL-208's EkCheck.lean is not kernel-checked. Mathlib oleans are absent
-    locally and the compute-routing rule forbids downloading them.
-  - No OpenSSL-family or Go measurement exists, so no ecosystem-wide statement
-    is possible.
+  verified_or_unknown:
+    - >
+      UNRESOLVED, and the binding promotion blocker: no independent agent has
+      re-fetched RFC 5280's cited clauses and recorded that it did. fnd-2026-0016
+      is one G11 refusal away from promotable on that ground alone.
+    - >
+      UNRESOLVED: whether enforcing the trust anchor's pathLenConstraint is a
+      defect or a deliberate shared convention. Two cores agreeing is evidence
+      of a convention, not of an error, and no erratum was consulted.
+    - >
+      UNEXPLAINED: the mechanism behind rustls-webpki's rejection of c11. Its
+      reason string is "candidates exhausted: signature does not match", and
+      direct signature verification of all 45 certificates proves that string is
+      misleading here. IMPL-5 independently reported that the same string is also
+      emitted for a genuinely broken signature, so it cannot be read literally.
+      Recorded as an open question, not a conformance claim.
+    - >
+      UNDECIDED: four of eight spc-2026-0004 axes remain open as to withdraw
+      versus supersede. SPEC-2 classified all eight; SPEC-1 had already withdrawn
+      the extract before SPEC-2 ran, so the session brief's premise was stale.
+    - >
+      UNINTERPRETABLE under the current harness: c04 and c15. The
+      server-verifier policy requires an end entity not to assert keyCertSign,
+      and a CA certificate is explicitly a legal target under RFC 5280 4.2.1.9.
+      These cells need a harness without that policy, not a different verdict.
+    - >
+      NOT KERNEL-ACCEPTED: formal/Formal/EkCheck.lean does not compile (CI run
+      37221348965). The design is sound; the proofs are not.
+    - >
+      NOT MEASURED: OpenSSL, LibreSSL, BoringSSL, AWS-LC, Go crypto/x509 and
+      GnuTLS. NO ECOSYSTEM-WIDE CLAIM IS POSSIBLE from this session. Two agents
+      died reading their sources and none was built locally.
+    - >
+      KNOWN GAP: `ruff check src tests crypto tools` reports 132 findings in
+      crypto/ and tools/. These are pre-existing and outside CI's configured
+      scope, which is only `src tests`. Recorded rather than silently left.
+
+  how_each_uncertainty_was_established:
+    - "every figure in this report was re-measured at session close, not carried forward"
+    - "the three consecutive CI successes and the two CI failures are quoted run ids"
+    - "the corpus and both lineages were regenerated into a fresh directory before the numbers were recorded"
+
+  infrastructure_limitations_encountered:
+    - >
+      The R: ramdisk was WIPED MID-SESSION, destroying scratch, all agent reports
+      written there, and an in-progress corpus. The work was redone against
+      persistent `.scratch/` storage. Recorded because it destroyed real output,
+      not because it was convenient to mention.
+    - >
+      Five agents died on upstream infrastructure errors: SA-3, IMPL-1 and IMPL-2
+      on idle timeouts; IMPL-3 and IMPL-4 lost to the session interruption; SCOUT-1
+      after 104 tool calls with nothing written. IMPL-3/IMPL-4 (rustls-webpki,
+      GnuTLS/LibreSSL) were never re-run, so their lineages remain UNEXAMINED
+      except through IMPL-5's work.
+    - >
+      pyca/certvalidator's 0.11.1 API took six failed attempts before IMPL-6 read
+      the source instead of guessing. The working call sequence required
+      `certvalidator.Path` of `certvalidator.Certificate` wrapping raw DER, with
+      a `ValidationContext` whose `trust_roots` are PEM byte strings.
+
+  a_note_on_what_a_clean_result_would_have_looked_like:
+    - >
+      Had the inherited hypothesis simply been confirmed, this session would have
+      produced one finding and no correction history. It instead produced a
+      WITHDRAWN claim, a corrected oracle with four documented wrong versions, a
+      refuted formal verification, three CI failures caught and fixed, and a
+      surviving claim on a different axis. Under AGENTS.md's evidence ladder the
+      withdrawn claim and the surviving narrower claim are both progress; a
+      tidier session would have been a less informative one.
