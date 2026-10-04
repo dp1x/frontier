@@ -67,12 +67,28 @@ specifications:
     notes: |
       The combiner input order is (ss_M, ss_X, ct_X, pk_X, XWingLabel) - 32+32+32+32+6 = 134 bytes input.
       The XWingLabel is "5c2e2f2f5e5c" (ASCII '\./ /^\') - 6 bytes appended to SHA3-256 input.
-      CRITICAL OBSERVATION: draft-10 Appendix C contains three test vectors with empty 'ct' and
-      'ss' fields - the published draft explicitly states "TODO: replace with test vectors that
-      re-use ML-KEM, X25519 values". Therefore draft-10 has NO complete KAT vectors. The byte-level
-      oracle for this audit is CIRCL v1.6.5 (whose xwing package comment says 'Implements the
-      final version (-05)' - but per the spec history since draft-05 through draft-10 the combiner
-      definition has been stable; this is verified in the experiment design).
+      CRITICAL OBSERVATION: THE PREVIOUS TEXT OF THIS FIELD CLAIMED draft-10 Appendix C
+      contains "three test vectors with empty 'ct' and 'ss' fields ... Therefore draft-10 has
+      NO complete KAT vectors". THAT CLAIM WAS FALSE AND WAS REFUTED 2026-10-05. The
+      orchestrator fetched draft-connolly-cfrg-xwing-kem-10.txt (61090 bytes) and read
+      Appendix C directly: all three vectors are fully populated, beginning
+      "seed 7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef26" with
+      sk == seed and a complete 1216-byte pk. The heading does carry an unresolved
+      editorial TODO ("# TODO: replace with test vectors that re-use ML-KEM, X25519
+      values"), which is presumably what the earlier reading mistook for emptiness.
+      The vectors are bit-stable across at least revisions -05, -08, -10 and -11, so a
+      match against them is a match against the CURRENT revision (draft-11).
+      DRAFT-VERSION REPRODUCIBILITY IS THEREFORE UNBLOCKED. STANDARDS CONFORMANCE REMAINS
+      BLOCKED AND MUST NOT BE CLAIMED: no RFC exists (std_level null, ISE stream,
+      intended Informational), the draft still disclaims its own vectors via that
+      unresolved TODO eleven revisions in, and datatracker issue #28 "Ambiguity of X25519
+      shared secret validation" has been open since 2025-02-25 with production
+      implementations demonstrably disagreeing (CIRCL does not perform the RFC 7748
+      6.1 all-zero check; BoringSSL does). See knowledge/observations/obs-2026-0052.yaml
+      and .scratch/trackE/xwing_recheck.md.
+      The byte-level oracle for draft-version reproducibility is CIRCL v1.6.5; note its
+      xwing package comment says it implements -05, so a KAT pass establishes vector
+      reproduction and NOT which draft revision the CODE implements.
   - id: spc-fips203
     url: https://csrc.nist.gov/pubs/fips/203/final
     title: "Module-Lattice-Based Key-Encapsulation Mechanism (ML-KEM)"

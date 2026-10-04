@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import tempfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -486,38 +487,56 @@ def test_fnd_2026_0016_misattribution_is_caught():
     (rev-2026-0020) found it independently of the gate. The gate's G3 rule also
     flagged it once the record-level G2/G3 checks were added.
 
-    The misattribution has since been CORRECTED in the artifact, so asserting
-    "the gate flags fnd-2026-0016" would now be a test that fails because the
-    repository got BETTER. This test therefore pins the CAPABILITY against the
-    live corpus state instead: the gate must still be able to see normative
-    claims in that artifact, and it must still refuse it. If the capability
-    regressed, the claim count would drop back to zero.
+    The misattribution has since been CORRECTED in the artifact (commit
+    adfb05f) and the self-certification was DISCHARGED by rev-2026-0021, so
+    asserting "the gate still refuses fnd-2026-0016" would now be a test that
+    fails because the repository got BETTER. This test therefore pins the
+    CAPABILITY -- the gate must still SEE the artifact's normative claims --
+    rather than the superseded verdict. If the capability regressed, the claim
+    count would drop back to zero, which is the blindness that let the
+    misattribution through unexamined in the first place.
     """
     artifacts, _broken, by_id = GATE.load_corpus(REPO, include_missions=True)
     store = GATE.SourceStore(online=False, timeout=1.0)
     store.load_fixture()
     target = by_id["fnd-2026-0016"]
 
-    # The gate now extracts live normative claims from this artifact's
-    # normative_checks records. Before the record-level G2/G3 rules existed it
-    # reported "0 live normative claims", which is exactly the blindness that
-    # let the misattribution through unexamined.
     claims = GATE.collect_check_records(target, by_id)[0]
     assert claims, "gate no longer sees fnd-2026-0016's normative checks"
 
-    result = GATE.evaluate_artifact(
-        target, by_id, store, recheck_days=180, today=TODAY, online=False,
-    )
-    assert result.decision == GATE.REFUSE
+    # Every recorded quotation must be locatable in the cited clause. This is
+    # the regression pin for the fnd-2026-0014 misattribution class: a record
+    # whose text is absent from the section it names must be refused by G2/G3.
+    located = []
+    for r in claims:
+        document = store.get(r.rfc_number) if r.rfc_number else None
+        verdict, _detail = GATE.locate_quoted_text(r.quoted, document, r.section)
+        # "confirmed" is the gate's success vocabulary for a quotation found in
+        # the clause it names. "in-section-elsewhere" and "not-in-source" are the
+        # two failure verdicts G3/G2 fire on.
+        if verdict == "confirmed":
+            located.append(r)
+    assert len(located) == len(claims), [
+        (r.section, GATE.locate_quoted_text(r.quoted, store.get(r.rfc_number), r.section))
+        for r in claims
+        if r not in located
+    ]
 
 
-def test_fnd_2026_0016_still_refuses_on_self_reported_checks():
-    """The live artifact is correctly refused, for the RIGHT remaining reason.
+def test_fnd_2026_0016_no_longer_refuses_on_self_reported_checks():
+    """The live artifact's G11 refusal is DISCHARGED, and the test tracks that.
 
-    Its normative checks are all recorded by its own author, which rule G11
-    treats as discharging nothing. That refusal must persist even though the
-    section misattribution has been fixed, because self-reporting is a separate
-    defect from misattribution.
+    History: every normative check on fnd-2026-0016 was originally recorded by
+    its own author, which G11 treats as discharging nothing. rev-2026-0021
+    re-fetched and re-read the clauses as three roles other than the author,
+    and the two decisive RFC 5280 6.2 checks are now recorded with that
+    non-author checker. G11 therefore no longer fires, and this test asserts
+    the CURRENT truth rather than the superseded state.
+
+    The finding is still NOT promoted. It remains ``candidate`` because
+    rev-2026-0021 refuted its ``spec-violation`` classification -- RFC 5280
+    6.2 permits the measured augmentation -- and the gate has no opinion on
+    classification. A passing gate is not a promotion.
     """
     artifacts, _broken, by_id = GATE.load_corpus(REPO, include_missions=True)
     store = GATE.SourceStore(online=False, timeout=1.0)
@@ -527,10 +546,71 @@ def test_fnd_2026_0016_still_refuses_on_self_reported_checks():
         target, by_id, store, recheck_days=180, today=TODAY, online=False,
     )
     rules = _rules(result)
-    assert result.decision == GATE.REFUSE
-    assert GATE.G11_SELF_CHECKED in rules, [r.detail for r in result.reasons]
-    # The misattribution is fixed, so G3 must NOT fire on the real artifact.
+    # G11 is discharged: an independent, non-author checker is now recorded.
+    assert GATE.G11_SELF_CHECKED not in rules, [r.detail for r in result.reasons]
+    # The misattribution stays fixed, so G3 must NOT fire either.
     assert GATE.G3_MISATTRIBUTED not in rules, [r.detail for r in result.reasons]
+    # And the finding must still not be promotable on its own terms.
+    assert target.doc["status"] == "candidate"
+
+
+def test_gate_still_refuses_a_fully_self_certified_record():
+    """The rule G11 encodes must keep working on a self-certified record.
+
+    ``test_fnd_2026_0016_no_longer_refuses_on_self_reported_checks`` asserts
+    that the live artifact cleared G11. This asserts WHY it was ever refused:
+    an artifact whose only checker is its own author is still refused, so
+    clearing the real one did not weaken the rule.
+    """
+    findings = REPO / "knowledge" / "findings"
+    doc = {
+        "id": "fnd-2026-9202",
+        "type": "finding",
+        "status": "verified_conclusion",
+        "created_at": "2026-10-01T00:00:00Z",
+        "updated_at": "2026-10-01T00:00:00Z",
+        "summary": "self-certified",
+        "epistemic_status": "verified_conclusion",
+        "classification": "spec-violation",
+        "provenance": {
+            "created_by": {
+                "kind": "model-agent",
+                "role": "orchestrator-synthesizer",
+                "model": "grok-4.1",
+            },
+            "sources": ["https://www.rfc-editor.org/rfc/rfc9052.txt"],
+        },
+        "links": {},
+        "normative_basis": {"rfc_9052_section_9": GATE.GENUINE_9052_SEC9},
+        "normative_checks": [
+            {
+                "id": "NC-1",
+                "source": "https://www.rfc-editor.org/rfc/rfc9052.txt",
+                "section": "RFC 9052 section 9",
+                "quoted": GATE.GENUINE_9052_SEC9,
+                "checked_at": TODAY.isoformat(),
+                "checker": "orchestrator (grok-4.1), read directly from the fetched source",
+                "verdict": "confirmed",
+                "method": "deterministic-script",
+            }
+        ],
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "knowledge" / "findings").mkdir(parents=True)
+        (root / "knowledge" / "findings" / "fnd-2026-9202.yaml").write_text(
+            yaml.safe_dump(doc), encoding="utf-8"
+        )
+        artifacts, _broken, by_id = GATE.load_corpus(root, include_missions=False)
+        store = GATE.SourceStore(online=False, timeout=1.0)
+        store.load_fixture()
+        result = GATE.evaluate_artifact(
+            by_id["fnd-2026-9202"], by_id, store,
+            recheck_days=180, today=TODAY, online=False,
+        )
+        assert result.decision == GATE.REFUSE
+        assert GATE.G11_SELF_CHECKED in _rules(result), [r.detail for r in result.reasons]
+    assert findings.exists()
 
 
 # --------------------------------------------------------------------------

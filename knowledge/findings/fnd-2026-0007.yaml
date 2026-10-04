@@ -90,8 +90,14 @@ correction_2026_10_03:
     Several probe scripts in .scratch are stubs standing in for real ones:
     test_xwing_kat.go prints "Skipping KAT cross-check" with placeholder vectors;
     vectors/draft-08.json does not exist; harness has two func main() and cannot
-    build; debug_hpke.py:66 uses keySchCtx = 0x00 where RFC 9180 section 5.1
-    requires mode 0x01 for Base mode. Preserved at
+    build; debug_hpke.py:66 uses keySchCtx = 0x00. NOTE: the original text of
+    this field further asserted that "RFC 9180 section 5.1 requires mode 0x01
+    for Base mode". THAT SENTENCE IS FABRICATED AND WAS REMOVED 2026-10-05.
+    RFC 9180 Table 1 gives mode_base = 0x00, and section 5.1's
+    KeySchedule() is called as KeyScheduleS(mode_base, ...), so 0x00 is what
+    the script was already doing correctly. Verified this session by
+    fetching https://www.rfc-editor.org/rfc/rfc9180.txt and reading Table 1
+    directly. Recorded at
     knowledge/process-findings/audit-2026-10-03/audit-fnd-2026-0007-circl-xwing.md
   evidence: rev-2026-0018
 

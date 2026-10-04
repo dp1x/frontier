@@ -1,0 +1,182 @@
+id: obs-2026-0054
+type: observation
+status: current
+created_at: "2026-10-05T01:30:00Z"
+updated_at: "2026-10-05T01:40:00Z"
+summary: >
+  A research instrument is confirmed to grade a cell PASS from an adapter's
+  SELF-REPORTED boolean before comparing against the known-answer test. The
+  defect is LATENT, not an active false positive: every recorded FROST row
+  also carries match_final_sig: true, so the KAT genuinely matched in the
+  runs on record. What is wrong is that the KAT comparison is unreachable
+  for any adapter that sets the flag, so the instrument cannot presently
+  DETECT a KAT mismatch. Nine adversarial findings are recorded, of which
+  this one was executed and reproduced by the orchestrator rather than
+  merely predicted from source.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      direct read of crypto/frost-cross-impl/runner/run_matrix.py, plus an
+      executed probe of classify_cell over four crafted adapter results
+  sources:
+    - crypto/frost-cross-impl/runner/run_matrix.py
+    - crypto/frost-cross-impl/results/matrix.jsonl
+    - tests/test_instrument_adversarial.py
+    - .scratch/trackG/instrument_tests_1.md
+  parent: null
+  generation: 0
+links:
+  implementations: []
+title: "OBS-2026-0054 - FROST runner: a self-reported boolean outranks the known-answer test"
+
+the_defect:
+  location: crypto/frost-cross-impl/runner/run_matrix.py, classify_cell, lines 188-191
+  code: |
+    if adapter_result.get("verify_aggregate") is True:
+        return "PASS"
+    if adapter_result.get("computed_final_sig") == expected_final_sig:
+        return "PASS"
+  why_it_matters: >
+    The second branch is the actual known-answer test against RFC 9591
+    Appendix E. The first branch returns before it is ever reached. An
+    adapter that reports verify_aggregate: true therefore receives PASS
+    without its signature ever being compared to the expected value. This is
+    precisely the failure mode the corpus was built to detect, defeated by
+    the corpus's own runner.
+  reproduced_by_execution: >
+    Probe over four crafted adapter results (orchestrator, this session):
+
+      case                                   verdict          correct?
+      correct sig, no boolean                PASS             OK
+      WRONG sig + verify_aggregate=True      PASS             *** WRONG ***
+      wrong sig, no boolean                  SPEC_AMBIGUITY   OK
+      verify_aggregate=False, wrong sig      SPEC_AMBIGUITY   OK
+
+    A deliberately wrong signature is graded PASS.
+
+severity_assessment_and_why_it_is_not_higher:
+  it_is_latent_not_active: >
+    Every row in crypto/frost-cross-impl/results/matrix.jsonl also records
+    match_final_sig: true. For those six recorded cells the signature really
+    did match the RFC 9591 KAT, so no recorded conclusion is currently wrong.
+  the_exposure_is_forward_looking: >
+    The instrument cannot presently DETECT a KAT mismatch for an adapter that
+    sets the flag. A future adapter bug that produced a wrong signature while
+    self-reporting success would be graded PASS. That is a live hazard for
+    the next cohort, not a defect in a result already published.
+  cohort_is_thin_anyway: >
+    The discriminating-power audit independently found this corpus has ZERO
+    discriminating axes: only the Frontier cleanroom ran; pycose is
+    NOT_SUPPORTED and go-frost is NOT_BUILT. With one real adapter there is
+    nothing for the runner to disagree with, which limits the blast radius
+    today.
+  not_fixed_in_this_session: >
+    Deliberate. Fixing classify_cell changes how a research instrument grades
+    results, and the correct fix -- compare the KAT first, and treat
+    verify_aggregate as corroboration rather than as a verdict -- should be
+    made together with the re-run and re-grading of the recorded matrix, with
+    the change reviewed. Reporting the defect with a reproduction is the
+    correct deliverable here; shipping an unreviewed grading change to a
+    result-producing instrument mid-session is the kind of quiet rewrite
+    AGENTS.md forbids.
+
+other_findings_reported_but_not_independently_executed:
+  honest_status: >
+    The following came from an adversarial-testing role that explicitly could
+    NOT execute anything; every expectation was derived by reading instrument
+    source and each xfail marker is a PREDICTION. They are recorded as
+    reported, NOT as verified, and are carried to the next session as a work
+    list rather than as findings.
+  findings:
+    - id: F2
+      severity: HIGH
+      claim: >
+        CBOR runner grades a cell PASS_REPR_DIFF (a non-failure label) when
+        expected is None, and PASS with both hex columns empty when the
+        oracle hex is "" and the adapter returns b"".
+    - id: F3
+      severity: HIGH
+      claim: >
+        COSE runner calls .hex() outside its try block, so one malformed
+        adapter return destroys the whole matrix and loses already-measured
+        cells. The CBOR runner does this correctly; the fix was not carried
+        across.
+    - id: F4
+      severity: MED-HIGH
+      claim: >
+        COSE runner files genuine crashes as NOT_SUPPORTED ("no structure
+        extraction"), a cause it never observed, because both real adapters
+        swallow exceptions into None.
+    - id: F5
+      severity: MED
+      claim: >
+        pycose adapter hex-sniffs header values, re-typing the valid COSE tstr
+        "6161" to a bstr.
+    - id: F6
+      severity: MED
+      claim: >
+        CBOR matrix.jsonl records no library version at all, unlike the COSE
+        runner. This is the staleness shape behind fnd-2026-0013.
+    - id: F7
+      severity: MED
+      claim: >
+        The gate's _is_retracted_path grants its retraction exemption on KEY
+        SPELLING (endswith "_original"), so a live claim under
+        rfc_9052_section_9_original vanishes from G1 and from clause location.
+    - id: F8
+      severity: MED
+      claim: >
+        The duplicate_key_rejection axis contains no duplicate key, because a
+        Python dict cannot express one. A rejection axis that cannot test
+        rejection.
+    - id: F9
+      severity: MED
+      claim: >
+        All three CBOR adapters' _materialize re-type text strings that parse
+        as Python literals ("42" becomes int), laundering real differences.
+  what_the_instruments_correctly_rejected: >
+    The same role reports the promotion gate held against every
+    lying-metadata attack: self-checker across all spellings (G11), spliced
+    and wholly fabricated quotations (G2), right-RFC/wrong-section (G3),
+    invented sections (G9), six stub-quote forms (G10), each required field
+    removed in turn (G7), six non-confirming verdicts (G8), no record at all
+    (G1), stale and unparsable dates (G4), and lowercase/whitespace
+    obfuscation. That is consistent with the orchestrator's own G10 work this
+    session, which found ONE genuine bypass (an ellipsis-padded stub) and
+    closed it. One bypass existing is not evidence that the gate is sound; it
+    is evidence that the adversarial suite is worth running.
+
+discriminating_power_summary_independently_recomputed:
+  - >
+    cbor-cross-impl: 111 vectors, 8 axes, 2 discriminating (map_key_sort,
+    float_shortest_form). The "2 of 8" figure quoted by rpt-2026-0019 was
+    INDEPENDENTLY RECOUNTED and CONFIRMED by counting outcome columns per
+    axis from results/matrix.tsv, without reference to the earlier audit.
+  - >
+    cose-cross-impl: 40 vectors, 10 axes, 4 discriminating.
+  - >
+    x509-pathlen: the harness's own soundness check reports
+    pairs_discriminate: false, with 5 confounders and 7 uninterpretable
+    cells. It cannot support an oracle-vs-implementation conformance claim.
+  - >
+    frost-cross-impl: 0 discriminating axes (one adapter actually ran).
+  - >
+    compilers/alias-diff: a null matrix -- every row is OK or BASELINE.
+  - >
+    crypto/mlkem-input-checks: the strongest corpus in the repository; it
+    plants a coefficient >= q and every core rejects, with controls proving
+    the harness is not trivially rejecting.
+
+what_this_observation_does_not_claim:
+  - >
+    It does not claim any published FROST conclusion is wrong. All recorded
+    rows carry match_final_sig: true.
+  - >
+    It does not claim F2-F9 are confirmed. They are unexecuted predictions.
+  - >
+    It does not claim the FROST corpus supports a conformance claim. It has
+    one real adapter and zero discriminating axes.

@@ -156,3 +156,43 @@ def test_unparseable_index_file_fails_validation(repo_root: Path):
     result = validate_repo(repo_root)
     assert not result.ok
     assert any("unparseable index file" in e for e in result.errors), result.errors
+def test_nested_index_directory_is_refused(repo_root: Path):
+    """A derived view has exactly one location; a nested copy is a defect.
+
+    Regression: a mis-pathed rebuild wrote
+    knowledge/indices/knowledge/indices/{by-status,by-type}.yaml as two tracked
+    4-byte "{}" stubs. Files under knowledge/indices are not validated as
+    artifacts, so nothing noticed. This asserts the validator now refuses the
+    shape regardless of the stubs' contents.
+    """
+    from frontier.validate import validate_repo
+
+    _two_artifacts(repo_root)
+    _write_index(
+        repo_root,
+        by_status={"active": ["tgt-2026-0001"], "rejected": ["hyp-2026-0001"]},
+        by_type={"target": ["tgt-2026-0001"], "hypothesis": ["hyp-2026-0001"]},
+    )
+    nested = repo_root / "knowledge/indices/knowledge/indices"
+    nested.mkdir(parents=True)
+    (nested / "by-status.yaml").write_text("{}\n", encoding="utf-8")
+    (nested / "by-type.yaml").write_text("{}\n", encoding="utf-8")
+
+    result = validate_repo(repo_root)
+    assert not result.ok
+    assert any("nested index directory" in e for e in result.errors), result.errors
+
+
+def test_clean_index_tree_has_no_nested_copy(repo_root: Path):
+    """The control: a legitimate single-level index tree still validates."""
+    from frontier.validate import validate_repo
+
+    _two_artifacts(repo_root)
+    _write_index(
+        repo_root,
+        by_status={"active": ["tgt-2026-0001"], "rejected": ["hyp-2026-0001"]},
+        by_type={"target": ["tgt-2026-0001"], "hypothesis": ["hyp-2026-0001"]},
+    )
+    result = validate_repo(repo_root)
+    assert result.ok, result.errors
+    assert not any("nested index directory" in e for e in result.errors)

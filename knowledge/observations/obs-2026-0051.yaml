@@ -1,0 +1,159 @@
+id: obs-2026-0051
+type: observation
+status: current
+created_at: "2026-10-04T23:50:00Z"
+updated_at: "2026-10-04T23:55:00Z"
+summary: >
+  Two GitHub Actions workflows had been FAILING ON EVERY PUSH to main while
+  rpt-2026-0019 recorded CI as "GREEN, three consecutive successful runs".
+  rpt-2026-0019's claim rested on the `ci` workflow alone and did not
+  enumerate the workflow set. Both failures are now root-caused and one is
+  fixed-and-verified green; the other is fixed such that it now RECORDS its
+  verdict and fails only on a genuine harness defect, which it does report.
+  This is a process-defect observation about Frontier's own verification
+  claims, not a research finding.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: "gh run list / gh run view --log-failed against origin/main, then against a fix branch"
+  sources:
+    - https://github.com/dp1x/frontier/actions
+    - .github/workflows/clang-embed-crash.yml
+    - .github/workflows/ssh-loopback-stage-c.yml
+    - .github/workflows/ssh-loopback.yml
+    - interop/protocol-placement/ssh_loopback/stagec/main.go
+  parent: null
+  generation: 0
+links:
+  missions: [msn-2026-0011]
+title: "OBS-2026-0051 - Two CI workflows were red on every push while the report recorded CI green"
+the_defect_in_frontiers_own_reporting:
+  inherited_claim: >
+    rpt-2026-0019 records, under validation_state_at_close: "ci_workflow:
+    GREEN, three consecutive successful runs: 37224574714, 37224749083, and
+    37223928133 failing first on the dangling-reference defect."
+  measured_reality_at_09a0bf9:
+    - run: 37226150370
+      workflow: ssh-loopback-stage-c
+      conclusion: failure
+      headSha: 09a0bf9a1074c33d560e54c73393f42e48718099
+    - run: 37226150273
+      workflow: clang-embed-crash
+      conclusion: failure
+      headSha: 09a0bf9a1074c33d560e54c73393f42e48718099
+    - run: 37226150328
+      workflow: ci
+      conclusion: success
+    - run: 37226150308
+      workflow: ssh-loopback
+      conclusion: success
+    - run: 37226150293
+      workflow: mlkem-invariance-matrix
+      conclusion: success
+  pattern: >
+    Both failing workflows had also failed on 7532d4c (37224749115,
+    37224749054) and on 67c370c (37224574745, 37224574721). The failures are
+    therefore at least as old as commit 67c370c, NOT introduced by this
+    session, and NOT transient. The report's three cited run IDs are all `ci`
+    runs; it never checked the other six workflows.
+  epistemic_lesson: >
+    A report that cites run IDs from one workflow has verified one workflow.
+    "CI is green" is a claim about the SET of workflows, and quoting a
+    subset of that set is an overclaim of exactly the kind this repository's
+    own self-audit tracks. Recorded as a process defect, not a research
+    result.
+
+root_cause_1_clang_embed_crash:
+  symptom: "tee: /etc/apt/trusted.gpg.d/apt.llvm.org.asc: Permission denied -> exit 1"
+  cause: >
+    GitHub Actions steps run as an unprivileged user. The clang-19 leg wrote
+    to /etc/apt/trusted.gpg.d and invoked apt-get with no sudo, while the step
+    ran under `set -euxo pipefail`. The clang-default leg is unaffected, which
+    is why a partial matrix still went red.
+  fix: >
+    sudo for every privileged write; the apt.llvm.org key is now installed as
+    a dearmored .gpg keyring via `sudo gpg --dearmor`, because a raw .asc
+    written to a trusted.gpg.d directory named .gpg would not be read as a
+    binary keyring.
+  verification: >
+    VERIFIED GREEN. Branch ci/fix-clang-embed-and-ssh-stage-c, commit 5f95a44,
+    GitHub Actions run 37229110647, conclusion success. This is a run ID
+    observed by the orchestrator, not a predicted outcome.
+
+root_cause_2_ssh_loopback_stage_c:
+  symptom: "Process completed with exit code 255, with no verdict recorded"
+  cause_primary: >
+    The Stage C step ran `set -euxo pipefail` and then invoked the real ssh
+    client. The client's exit code IS the experimental result (255 on
+    handshake abort). Under set -e the shell aborted at the ssh invocation, so
+    SSH_EXIT=$? and every subsequent capture line never executed. The
+    experiment's actual verdict was therefore never recorded on any push.
+  cause_secondary: >
+    The capture lines referenced ${COHORT} and ${STIMULUS}, which were never
+    defined anywhere in the step. Under set -u an unbound expansion aborts the
+    shell before a trailing `|| true` can apply, so even after fixing set -e
+    the captures would still not have run.
+  fix: >
+    Define COHORT/STIMULUS/REPORT_DIR explicitly; disable set -e around the
+    single ssh invocation only; capture SSH_EXIT=$?; restore set -e; parse the
+    mutator's own verdict out of its JSON log; write a per-stimulus
+    _verdict.tsv; and fail the step ONLY when the harness produced no verdict
+    or reported harness_error. A genuine protocol abort is recorded, not
+    treated as a script error.
+  verification: >
+    The fix is verified to WORK: run 37229113319 now emits, per stimulus, a
+    line of the form "VERDICT cohort=... stimulus=... ssh_exit=255
+    verdict=harness_error", which is the capture that was previously
+    impossible. The run is still RED, and that redness is a REAL research
+    result about the harness, not a CI defect:
+
+  the_remaining_redness_is_a_research_finding_not_a_ci_defect:
+    observed: >
+      Runs 37229113319 reports verdict=harness_error for stimuli
+      coeff0_4095, coeff255_4095 and coeff0_q, with ssh_exit=255.
+    mechanism_located_in_source: >
+      stagec/main.go reads the upstream S_REPLY at the line
+      `res.Error = fmt.Sprintf("recv-upstream-sreply: %v", err);
+      res.Verdict = "harness_error"; return`. A real sshd that rejects a
+      mutated ML-KEM C_PK2 closes the connection rather than emitting a
+      protocol DISCONNECT packet, so the mutator cannot distinguish "server
+      rejected the mutated key" from "the relay broke". The harness has
+      exactly three verdicts -- handshake_completed,
+      handshake_aborted_sigfail, handshake_aborted_disconnect -- and an
+      upstream EOF maps to none of them.
+    pre_existing: >
+      This is the Stage C strict-KEX harness defect the previous session
+      already recorded; the mission based its verified conclusion on
+      source-code analysis precisely because the harness could not produce a
+      trustworthy verdict. rpt-2026-0019 recorded coeff0_4095 and
+      coeff255_4095 as harness_error in run 33304434203.
+    honest_disposition: >
+      The CI defect (verdict never recorded) is FIXED and demonstrably fixed.
+      The harness defect (cannot classify upstream EOF) is NOT fixed, is
+      pre-existing, and is now VISIBLE in CI for the first time. Making CI
+      green by suppressing harness_error would hide a known limitation and
+      would be exactly the "manufacture a green build" failure this repository
+      forbids. It is left red on purpose, and recorded.
+
+what_this_observation_does_not_claim:
+  - >
+    It does not claim the mlkem768x25519 KEX is broken, or that any of these
+    stimuli is a security result. A mutated C_PK2 being rejected by a real
+    sshd is the EXPECTED outcome and is not a vulnerability.
+  - >
+    It does not claim ssh-loopback-stage-c is fixed. It is not green; its
+    redness is now meaningful rather than accidental.
+  - >
+    It does not retract rpt-2026-0019's other figures. It corrects one claim:
+    CI was not wholly green at session close.
+
+negative_result_preserved: >
+  An agent briefed to fix these workflows had no shell access and could not
+  run or observe a single CI run. It reported no run IDs rather than inventing
+  them. The orchestrator performed the commit, the push and the run
+  verification. This is recorded because "the fix looks right" and "the fix
+  is verified green" are different epistemic levels, and only the second is
+  claimed here.

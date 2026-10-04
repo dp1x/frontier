@@ -1,0 +1,180 @@
+id: obs-2026-0052
+type: observation
+status: current
+created_at: "2026-10-05T00:25:00Z"
+updated_at: "2026-10-05T00:35:00Z"
+summary: >
+  X-Wing recheck against the current authoritative draft. Three inherited
+  beliefs are REFUTED. (1) spc-2026-0002 asserted, as a verified_conclusion,
+  that draft-10's Appendix C vectors have empty ct and ss fields and that
+  draft-10 therefore has no complete KAT vectors; the orchestrator fetched
+  draft-10 directly and all three vectors are fully populated. (2) The
+  "CFRG chairs requested regeneration of every value" blocker is NOT
+  corroborated by any reachable primary source, and the draft is not even in
+  an RG Last Call. (3) draft-10 is EXPIRED; draft-11 (23 Sep 2026) is live and
+  carries the same vectors. Draft-version reproducibility is therefore
+  UNBLOCKED. Standards conformance remains BLOCKED and must never be claimed.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-verifier
+    model: grok-4.7
+    tool: >
+      direct fetch of draft-10 and draft-11 .txt, datatracker document-record
+      API, issue-tracker inspection, plus an independent X-Wing recheck role;
+      the orchestrator independently re-fetched draft-10 and read Appendix C
+  sources:
+    - https://www.ietf.org/archive/id/draft-connolly-cfrg-xwing-kem-10.txt
+    - https://www.ietf.org/archive/id/draft-connolly-cfrg-xwing-kem-11.txt
+    - https://datatracker.ietf.org/doc/draft-connolly-cfrg-xwing-kem/
+    - knowledge/specifications/spc-2026-0002.yaml
+    - knowledge/observations/obs-2026-0049.yaml
+    - .scratch/trackE/xwing_recheck.md
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0002]
+  observations: [obs-2026-0049]
+title: "OBS-2026-0052 - X-Wing: the 'empty vectors' blocker was false; draft-version reproducibility is unblocked"
+
+current_authoritative_state:
+  revision: draft-connolly-cfrg-xwing-kem-11
+  date: "2026-09-23"
+  expires: "2027-03-27"
+  state: active
+  stream: ISE (Individual Submissions and Experimental), "Submission Received"
+  shepherd: none assigned
+  intended_status: Informational
+  rfc: null
+  std_level: null
+
+refuted_1_the_empty_vectors_claim:
+  was_recorded_in: knowledge/specifications/spc-2026-0002.yaml
+  was: >
+    status: current, epistemic_status: verified_conclusion, asserting
+    draft-10 Appendix C has "three test vectors with empty 'ct' and 'ss'
+    fields ... Therefore draft-10 has NO complete KAT vectors."
+  is: >
+    FALSE. Orchestrator fetched draft-10 (61090 bytes) and read Appendix C at
+    offset 37153: all three vectors are complete, starting
+    "seed 7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef26"
+    with sk == seed and a full 1216-byte pk. The likely source of the original
+    misreading is that the appendix HEADING carries an unresolved editorial
+    marker, "# TODO: replace with test vectors that re-use ML-KEM, X25519
+    values" -- a TODO in the title, not empty fields in the data.
+  why_this_mattered: >
+    This false claim was the stated justification for never testing the oracle
+    against the specification. It blocked draft-version reproducibility on a
+    factual error, not on the document's maturity.
+  corrected_in: knowledge/specifications/spc-2026-0002.yaml
+
+refuted_2_the_cfrg_regeneration_order:
+  was: >
+    obs-2026-0049 records, with epistemic_status verified_conclusion, a "CFRG
+    chairs' Last Call of 2026-07-24" that requested regeneration of every
+    vector value.
+  is: >
+    NOT CORROBORATED by any reachable primary source. The datatracker shows no
+    Last Call of any kind for this document -- it is ISE-stream with no
+    shepherd, and by contrast genuine CFRG documents in the same index do
+    carry "In RG Last Call". The draft's issue tracker contains no such order:
+    the vectors TODO is issue #18, opened 2024-05-06 and closed not_planned the
+    same day. The only author response, Bas Westerbaan's, reads: "The test
+    vectors are current, but of course, not final, as ML-KEM might change. What
+    we would like to have, is a test suite that exercises corner-cases in
+    X25519 and ML-KEM. I feel it might be wasteful to spend a lot of time
+    preparing exhaustive test vectors if we have to redo it." That is a refusal
+    to author an exhaustive CORNER-CASE suite, not an order to regenerate the
+    happy-path vectors.
+  epistemic_consequence: >
+    A verified_conclusion artifact rests on a mailing-list citation that no
+    reviewer can currently re-reach (the archive is behind an interstitial).
+    Per AGENTS.md an unverifiable citation must not be carried as verified.
+    The CONCLUSION it drew -- provisional, not normative -- is independently
+    supported by the next section, so nothing downstream changes; only the
+    attribution is downgraded.
+  honest_limit: >
+    The recheck could not read mailarchive.ietf.org and its web_search was
+    unavailable. So the order is UNCONFIRMED, not disproven. Recorded as
+    such rather than as a refutation of the event itself.
+
+refuted_3_draft_10_is_not_current:
+  was: spc-2026-0002 pins mission scope to draft-10 "the latest revision"
+  is: >
+    draft-10 EXPIRED on 2026-09-03. draft-11 is the live revision. The pin is
+    stale, though -- and this does not damage the vectors, see below.
+
+the_vectors_are_current_after_all:
+  finding: >
+    Appendix C is bit-stable across at least revisions -05, -08, -10 and -11:
+    same three seeds (7f9c2ba4., badfd6df., ef58538b.), same eseeds, same
+    1120-byte ct values, same shared secrets (d2df0522., f2e86241., 953f7f4e.).
+    Verified this session against the draft-10 and draft-11 .txt renderings and
+    the authors' spec/test-vectors.txt.
+  consequence: >
+    There is NO superseded-draft mismatch. A match against Appendix C is a
+    match against the CURRENT revision. The earlier "draft-version trap"
+    concern does not fire for the vectors themselves.
+
+what_remains_blocked_and_why:
+  standards_conformance: >
+    BLOCKED, and by four independent conditions, none of which is the CFRG
+    order:
+      1. No standard exists. std_level null, rfc null, intended Informational,
+         ISE stream, no shepherd. There is nothing to conform to.
+      2. The draft disclaims its own vectors IN THE CURRENT REVISION. The
+         Appendix C heading still carries the unresolved TODO eleven revisions
+         in.
+      3. A runtime-observable behaviour is UNDEFINED and production
+         implementations demonstrably disagree. Datatracker issue #28 "Ambiguity
+         of X25519 shared secret validation" has been OPEN since 2025-02-25. On
+         a low-order input, CIRCL's Decapsulate returns a valid-looking secret
+         with nil error while BoringSSL's X-Wing inherits the RFC 7748 6.1
+         all-zero check, fills the output with RAND_bytes and fails. This is a
+         real, currently-open interoperability divergence.
+      4. Consequently a vector match can never be reported as RFC conformance.
+         The admissible label is: "X reproduces the three draft-11 Appendix C
+         vectors byte-exactly."
+
+a_separate_defect_found_in_the_repository:
+  suite_id_construction: >
+    exp-2026-0024 and hyp-2026-0014 build suite_id as "KEM" || 0x647A || "KDF" ||
+    0x0002 || "AEAD" || 0x0001. RFC 9180 5.1 defines
+    suite_id = concat("HPKE", I2OSP(kem_id,2), I2OSP(kdf_id,2),
+    I2OSP(aead_id,2)) -- 10 bytes -- and HKDF-SHA256 is 0x0001, not 0x0002.
+    That harness cell measures its own bug.
+  mode_base_scope_error: >
+    Appendix C vectors are pure KEM vectors (seed, sk, pk, eseed, ct, ss). There
+    is no HPKE parameter and no mode_base on any of them. mode_base = 0x00 is an
+    RFC 9180 Table 1 key-schedule byte that appears only in the HPKE layer,
+    which Appendix C does not cover. Any artifact asserting a mode_base for an
+    Appendix C vector is asserting something the vector does not contain.
+  self_validating_instrument: >
+    .scratch/msn-2026-0009/xwing_ref.py line 18 asserts the label constant
+    against itself (assert XWING_LABEL == bytes.fromhex("5c2e2f2f5e5c")), and
+    lines 86-90 define expected_empty = "46b8c1b3." which is never compared to
+    anything -- __main__ only prints it. Dead and self-validating.
+
+recommended_next_step:
+  - >
+    Build the cleanroom oracle and run the independent X-Wing implementation
+    matrix against draft-11 Appendix C, labelled strictly as DRAFT-VERSION
+    REPRODUCIBILITY. CirCL v1.6.5 is already known to reproduce all three.
+  - >
+    Issue #28 is the higher-information target: it is an OPEN, currently
+    divergent, runtime-observable question with two production implementations
+    on record disagreeing. That is a better experiment than another vector
+    match.
+  - >
+    Promote the vector capture out of gitignored .scratch into a tracked,
+    provenance-stamped file. The only vector-bearing artifact in the repository
+    today lives in scratch and is unreviewable.
+
+negative_results_preserved:
+  - >
+    The recheck could not reach the IETF mailing-list archive and could not run
+    web_search, so the CFRG order is recorded as UNCONFIRMED rather than
+    disproven.
+  - >
+    No RFC conformance result is claimed, and none is available.

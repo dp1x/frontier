@@ -1,0 +1,213 @@
+id: rev-2026-0021
+type: review
+status: complete
+created_at: "2026-10-04T23:30:00Z"
+updated_at: "2026-10-04T23:55:00Z"
+summary: >
+  SECOND independent adversarial review of fnd-2026-0016, run by three mutually
+  independent roles (standards derivation, implementation source archaeology,
+  and a dedicated falsifier) with a mandate to disprove the surviving claim and
+  no access to the synthesizer's reasoning. The claim did NOT survive intact.
+  The review REFUTES the finding's `classification: spec-violation`: RFC 5280
+  6.2 expressly permits an implementation to "apply a path length constraint to
+  a specific trust anchor during the initialization phase", which is precisely
+  the behaviour measured. A second, independent refutation: the cohort label
+  "rustls-webpki" is factually wrong -- the executed core is pyca's own in-tree
+  cryptography-x509-verification crate. A third: the previously unlocated
+  rustls-webpki mechanism is located and the source-level blocker is DISCHARGED.
+  Verdict: DO NOT PROMOTE. Reclassify as a conformance observation.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-reviewer
+    model: grok-4.7
+    tool: >
+      independent RFC 5280 re-derivation with exhaustive enumeration of every
+      path-length evaluation site; source-level archaeology of pyca/cryptography
+      50.0.1 and certvalidator 0.11.1; a dedicated falsification pass on the
+      c17 case and the independence claim; plus direct orchestrator verification
+      of the decisive clause against a freshly fetched RFC 5280
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - knowledge/findings/fnd-2026-0016.yaml
+    - knowledge/reviews/rev-2026-0020.yaml
+    - crypto/x509-pathlen/corpus.py
+    - .scratch/trackA/spec_deriv_1.md
+    - .scratch/trackA/impl_arch_1.md
+    - .scratch/trackA/verify_c17/verify_c17.md
+  parent: msn-2026-0022
+  generation: 1
+links:
+  findings: [fnd-2026-0016]
+  reviews: [rev-2026-0020]
+title: "REV-2026-0021 - Second independent review: the trust-anchor claim is not a spec violation"
+verdict: do_not_promote_reclassify
+independence:
+  reviewer_is_synthesizer: false
+  roles_used:
+    - SPEC-DERIV-1 (independent standards derivation)
+    - IMPL-ARCH-1 (independent source archaeology)
+    - VERIFY-C17 (adversarial falsifier with a disprove mandate)
+  synthesis_by_author_of_finding: false
+  note: >
+    No role in this review was given the conclusion to confirm. The three roles
+    were briefed to disagree and each reached a different part of the picture;
+    the refutations below were found independently, not inherited. rev-2026-0020
+    concluded PROMOTE WITH SCOPE REDUCTION; this review concludes DO NOT
+    PROMOTE. That disagreement is recorded rather than reconciled away.
+
+what_this_review_refutes:
+  refuted_1_classification:
+    inherited: "classification: spec-violation"
+    finding: >
+      RFC 5280 6.2 (page 89) states verbatim: "An implementation MAY augment
+      the algorithm presented in Section 6.1 to further limit the set of valid
+      certification paths that begin with a particular trust anchor. For
+      example, an implementation MAY modify the algorithm to apply a path
+      length constraint to a specific trust anchor during the initialization
+      phase ... Thus, the path validation algorithm presented in Section 6.1
+      defines the minimum conditions for a path to be considered valid." It
+      further states that implementations using self-signed certificates to
+      specify trust anchor information are "free to process or ignore such
+      information".
+    consequence: >
+      The measured behaviour is the LITERAL EXAMPLE the RFC gives of a permitted
+      augmentation. An implementation that is stricter than a stated MINIMUM is
+      conformant. The finding's surviving sentence -- "RFC 5280 requires ACCEPT"
+      -- is true of the 6.1 baseline but false as a statement of what a
+      conforming implementation must do, because 6.1 is a floor and 6.2 layers
+      explicit MAY-permitted tightenings on top. `spec-violation` is therefore
+      the wrong classification and is REFUTED.
+    independently_verified_by_orchestrator: >
+      Yes. The orchestrator fetched RFC 5280 afresh in this session (352580
+      bytes, sha256 a2f2628c0a83b873fc4786abd921f9b2c02395954b655d190bf16b831633345d,
+      matching the recorded source identity) and located all three phrases in the
+      whitespace-normalized text at offsets 194666, 195006 and 195937. This is a
+      direct observation, not a relay of the subagent's report.
+  refuted_2_core_identity:
+    inherited: "rustls-webpki, via pyca/cryptography 50.0.1"
+    finding: >
+      There is no rustls-webpki in cryptography 50.0.1's dependency closure. The
+      shipped SBOM (cryptography-rust.cyclonedx.json) enumerates the complete
+      Cargo closure and contains cryptography-x509-verification 0.50.1, a
+      first-party pyca crate whose Cargo.toml depends only on asn1 and the
+      in-tree cryptography-x509. The Python layer
+      (cryptography/x509/verification.py) is a pure re-export shim. The
+      recorded error string "path length constraint violated" is pyca's own
+      literal in policy/mod.rs; rustls-webpki's PathLenConstraintViolated
+      renders via Debug and never emits that prose.
+    consequence: >
+      A load-bearing lineage label is factually wrong, and exp-2026-0037's
+      argument that the string is "webpki's wording" is inverted.
+  refuted_3_the_decisive_citation_is_not_alone:
+    inherited: >
+      "Step (3) is performed for all certificates in the path except the final
+      certificate" -- cited as THE decisive clause.
+    finding: >
+      That sentence excludes certificate n (the target). The trust anchor is a
+      DIFFERENT exclusion and rests on 6.1's separate sentence that a
+      self-signed trust anchor "is not included as part of the prospective
+      certification path", plus the structural definition in section 6 (cert 1
+      is "issued by" the anchor). A reader given only the step-(3) quotation
+      would infer that 6.1.4 is applied TO the anchor, which is backwards. The
+      conclusion is right; presenting one clause as decisive is a fragility.
+    consequence: >
+      Both clauses must be cited together. The step-(3) sentence is not
+      independently load-bearing for the anchor.
+
+what_this_review_discharges:
+  g11_and_source_level_blocker:
+    previously_blocking: >
+      "No source-level confirmation inside rustls-webpki is missing" and the G11
+      refusal that every normative check was recorded by the artifact's own
+      author.
+    now: >
+      Source-level confirmation EXISTS and is located. In pyca's crate the
+      trust anchor is validated as an issuer at current_depth=0 (where
+      pathLenConstraint=0 is not violated by itself) and then RE-ENTERED as the
+      working certificate at current_depth=1, where 1 > 0 triggers
+      "path length constraint violated". Depth 0 belongs to the leaf, which is
+      why reading valid_issuer alone gives the wrong answer. certvalidator
+      instead seeds the budget from the anchor at initialisation
+      (validate.py:283-289, "Step 1 k") -- a different mechanism, a different
+      off-by-one. Both mechanisms are recorded with file:line.
+    independence_survives: >
+      The two cores remain genuinely independent: pyca/cryptography (Rust,
+      The Python Cryptographic Authority) and wbond/certvalidator (pure-Python,
+      MIT, independent author, not pyca). They arrive at the same verdict by two
+      different internal mechanisms. The independence claim SURVIVES, but on
+      better grounds than stated, and the surviving label must be corrected.
+    independence_correction: >
+      An intermediate archaeology report asserted that BOTH cores are pyca-
+      maintained. That is REFUTED: certvalidator's installed metadata names
+      Will Bond (wbond) as author. Recorded because the intermediate claim is
+      exactly the kind of error this repository has been bitten by.
+
+what_survives_unchanged:
+  - >
+    The DESCRIPTIVE observation: with a trust anchor carrying
+    pathLenConstraint=0 and chain root(pl0) -> ICA -> EE, both measured cores
+    REJECT with reason class path_len, where the 6.1 baseline accepts.
+  - >
+    The RFC reading of the 6.1 baseline, independently re-derived twice in this
+    session, including by exhaustive enumeration of every path-length evaluation
+    site in the document (the complete set is 6.1.4(l) and 6.1.4(m); 4.2.1.9 is
+    a definition plus an issuer-side MUST, not an algorithm).
+  - >
+    All five of fnd-2026-0016's own normative quotations, which verified
+    verbatim at their claimed sections on two independent re-readings.
+
+independent_refutation_attempts_and_outcomes:
+  - attempt: >
+      Find a reading of RFC 5280 under which the observed rejection is correct.
+    outcome: >
+      SUCCEEDED. Section 6.2 names the behaviour as a permitted augmentation.
+      This is the review's decisive result.
+  - attempt: >
+      Find a defect in the c17 corpus making the result uninterpretable.
+    outcome: >
+      FAILED. The chain shape was re-derived from the generator and manifest;
+      root_pl0 does carry pathLenConstraint=0. Noted limitation: the value was
+      read from the generator's intent rather than decoded from DER bytes, and
+      the control sweep was designed but not executed.
+  - attempt: >
+      Show the two cores share code, collapsing "two independent lineages".
+    outcome: >
+      FAILED, twice over. No shared code; and the vendor-collapse hypothesis
+      (both pyca) is itself false. Independence stands.
+  - attempt: >
+      Argue the step-(3) clause is decisive for the anchor.
+    outcome: >
+      FAILED as stated; it excludes cert n, not the anchor.
+
+disagreement_with_prior_review:
+  prior: "rev-2026-0020 -- PROMOTE WITH SCOPE REDUCTION"
+  this: "rev-2026-0021 -- DO NOT PROMOTE, reclassify"
+  nature_of_disagreement: >
+    rev-2026-0020 never cited RFC 5280 6.2. Its own recorded blocker said "No
+    erratum or design documentation was consulted on whether the trust anchor's
+    own pathLenConstraint should bind" -- the design documentation is 6.2, and
+    it authorises the behaviour. Neither review is discarded: rev-2026-0020
+    correctly found the fourth wrong oracle and correctly forced the self-issued
+    withdrawal; this review correctly finds that the claim that survived is not
+    a violation. The finding's history keeps both.
+
+limits_of_this_review:
+  - >
+    The digest was verified by the orchestrator directly, not by the subagents;
+    SPEC-DERIV-1 explicitly could not hash, and said so rather than claiming
+    the eight in-repo copies of the constant were eight confirmations.
+  - >
+    The control sweep over anchor pathLenConstraint in {absent, 1, 0} was
+    DESIGNED and specified so it can be run verbatim, but was NOT EXECUTED. It
+    is the cheap remaining check that would close the causal claim at DER level.
+  - >
+    errata.rfc-editor.org/rfc5280 was read: Verified(6), Held(11), Rejected(6),
+    none touching 6.1.4, pathLenConstraint or the trust-anchor exclusion. The
+    RFC's update RFCs (6818, 8398, 8399, 9549, 9598, 9608, 9618, 9925, 10007)
+    were NOT inspected. That remains an open falsification route.
+  - >
+    rustls-webpki was checked at `main`, not a pinned release, so the historical
+    claim "webpki never emits this string" is established for current webpki
+    only.
