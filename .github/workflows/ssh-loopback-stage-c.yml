@@ -111,19 +111,28 @@ jobs:
 
       - name: Run Stage C mutator (relays client -> mutated -> sshd)
         run: |
-          set -euxo pipefail
-          mkdir -p "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports"
+          set -uo pipefail
+          COHORT="${{ matrix.cohort.name }}"
+          STIMULUS="${{ matrix.stimulus }}"
+          REPORT_DIR="$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports"
+          mkdir -p "$REPORT_DIR"
+          : > /tmp/stage_c_mutator.log
           # Run mutator in background; it will block on first accept.
           /tmp/ssh_loopback_stagec \
             --mode mutator \
-            --cohort ${{ matrix.cohort.name }} \
-            --stimulus ${{ matrix.stimulus }} \
+            --cohort "$COHORT" \
+            --stimulus "$STIMULUS" \
             --listen 127.0.0.1:2222 \
             --upstream 127.0.0.1:2223 \
             --out /tmp/stage_c_mutator.log &
           MUTATOR_PID=$!
           sleep 1
-          # Spawn the real ssh client as the victim.
+          # Spawn the real ssh client as the victim. Its exit code IS the
+          # experimental result (255 on handshake abort), so it must be
+          # captured -- `set -e` is deliberately NOT enabled for this command
+          # so that an aborted handshake cannot kill the step before the
+          # verdict is recorded.
+          set +e
           /tmp/openssh-install/bin/ssh \
             -p 2222 \
             -o StrictHostKeyChecking=no \
@@ -136,16 +145,37 @@ jobs:
             "echo handshake-success" \
             > /tmp/ssh_stdout.log 2> /tmp/ssh_stderr.log
           SSH_EXIT=$?
+          set -e
           # Give mutator time to write result.
           sleep 1
           kill $MUTATOR_PID 2>/dev/null || true
+          wait $MUTATOR_PID 2>/dev/null || true
           echo "SSH_EXIT=$SSH_EXIT" > /tmp/ssh_exit.txt
-          cp /tmp/stage_c_mutator.log "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${COHORT}_${STIMULUS}_mutator.log" || true
-          cp /tmp/ssh_stdout.log "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${COHORT}_${STIMULUS}_client_stdout.log" || true
-          cp /tmp/ssh_stderr.log "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${COHORT}_${STIMULUS}_client_stderr.log" || true
-          cp /tmp/ssh_exit.txt "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${COHORT}_${STIMULUS}_client_exit.txt" || true
-          echo "stimulus=${{ matrix.stimulus }} ssh_exit=$SSH_EXIT" >> /tmp/stage_c_summary.tsv
-          cat /tmp/ssh_stderr.log | tail -n 5 >> "$GITHUB_WORKSPACE/frontier/interop/protocol-placement/ssh_loopback/reports/${COHORT}_${STIMULUS}_client_stderr_tail.log"
+          cp /tmp/stage_c_mutator.log "${REPORT_DIR}/${COHORT}_${STIMULUS}_mutator.log"
+          cp /tmp/ssh_stdout.log "${REPORT_DIR}/${COHORT}_${STIMULUS}_client_stdout.log"
+          cp /tmp/ssh_stderr.log "${REPORT_DIR}/${COHORT}_${STIMULUS}_client_stderr.log"
+          cp /tmp/ssh_exit.txt "${REPORT_DIR}/${COHORT}_${STIMULUS}_client_exit.txt"
+          # The mutator's verdict is the experiment's actual result.
+          VERDICT=$(sed -n 's/.*"verdict":"\([^"]*\)".*/\1/p' /tmp/stage_c_mutator.log | tail -n1)
+          printf 'cohort\tstimulus\tssh_exit\tverdict\n%s\t%s\t%s\t%s\n' \
+            "$COHORT" "$STIMULUS" "$SSH_EXIT" "${VERDICT:-none}" \
+            > "${REPORT_DIR}/${COHORT}_${STIMULUS}_verdict.tsv"
+          echo "stimulus=$STIMULUS ssh_exit=$SSH_EXIT" >> /tmp/stage_c_summary.tsv
+          tail -n 5 /tmp/ssh_stderr.log > "${REPORT_DIR}/${COHORT}_${STIMULUS}_client_stderr_tail.log" || true
+
+          # The mutator must have produced a verdict for this stimulus, and that
+          # verdict must not be a harness_error. Only a harness failure is a
+          # CI failure; a legitimate protocol abort is a recorded result.
+          if [ -z "$VERDICT" ]; then
+            echo "HARNESS FAILED: mutator emitted no verdict for stimulus $STIMULUS"
+            exit 1
+          fi
+          echo "VERDICT cohort=$COHORT stimulus=$STIMULUS ssh_exit=$SSH_EXIT verdict=$VERDICT"
+          if [ "$VERDICT" = "harness_error" ]; then
+            echo "HARNESS FAILED: mutator reported harness_error for stimulus $STIMULUS"
+            cat /tmp/stage_c_mutator.log
+            exit 1
+          fi
 
       - name: Capture sshd log
         if: always()
