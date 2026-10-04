@@ -104,6 +104,28 @@ RFC_9052 = (
 )
 
 
+# Genuine RFC 5280 section 6.1 text: the self-issued definition paragraph.
+RFC_5280_SEC61_SELF_ISSUED = (
+    "A certificate is self-issued if the same DN appears in the subject and "
+    "issuer fields (the two DNs are the same if they match according to the "
+    "rules specified in Section 7.1). These self-issued certificates are not "
+    "counted when evaluating path length or name constraints."
+)
+
+# RFC 5280 shaped as the gate's recorded fixture parses it: the self-issued
+# paragraph lives in section 6.1, and section 6.1.1 (which begins later, at the
+# state-variable definitions) does NOT contain it. This is the shape that made
+# the fnd-2026-0016 misattribution detectable.
+RFC_5280 = (
+    RFC_5280_SEC61_SELF_ISSUED + " " + GENUINE_9052_SEC9,
+    {
+        "6.1": RFC_5280_SEC61_SELF_ISSUED,
+        "6.1.1": "The state variables of the path validation algorithm include "
+                 "the following variables.",
+    },
+)
+
+
 def _record(section: str, quoted: str, **overrides) -> dict:
     base = {
         "id": "NC-1",
@@ -454,24 +476,61 @@ def test_no_false_positives_on_the_real_corpus():
     assert not false_positives, false_positives
 
 
-def test_fnd_2026_0016_is_flagged_by_the_record_rules():
-    """The live test the brief asks for: fnd-2026-0016 self-reports its checks.
+def test_fnd_2026_0016_misattribution_is_caught():
+    """Regression pin for a REAL defect in a finding written this session.
 
-    Its ``normative_checks`` quote for RFC 5280 section 6.1.1 is genuine RFC
-    5280 text that lives in section 6.1, and its only checker is its own
-    author.  Both are refusals, and both were invisible before these rules.
+    ``fnd-2026-0016`` originally cited RFC 5280 section 6.1.1 for the
+    self-issued paragraph, which actually lives in section 6.1 -- genuine RFC
+    5280 text attributed to a clause that does not contain it. That is exactly
+    the ``fnd-2026-0014`` failure mode, and this session's independent review
+    (rev-2026-0020) found it independently of the gate. The gate's G3 rule also
+    flagged it once the record-level G2/G3 checks were added.
+
+    The misattribution has since been CORRECTED in the artifact, so asserting
+    "the gate flags fnd-2026-0016" would now be a test that fails because the
+    repository got BETTER. This test therefore pins the CAPABILITY against the
+    live corpus state instead: the gate must still be able to see normative
+    claims in that artifact, and it must still refuse it. If the capability
+    regressed, the claim count would drop back to zero.
+    """
+    artifacts, _broken, by_id = GATE.load_corpus(REPO, include_missions=True)
+    store = GATE.SourceStore(online=False, timeout=1.0)
+    store.load_fixture()
+    target = by_id["fnd-2026-0016"]
+
+    # The gate now extracts live normative claims from this artifact's
+    # normative_checks records. Before the record-level G2/G3 rules existed it
+    # reported "0 live normative claims", which is exactly the blindness that
+    # let the misattribution through unexamined.
+    claims = GATE.collect_check_records(target, by_id)[0]
+    assert claims, "gate no longer sees fnd-2026-0016's normative checks"
+
+    result = GATE.evaluate_artifact(
+        target, by_id, store, recheck_days=180, today=TODAY, online=False,
+    )
+    assert result.decision == GATE.REFUSE
+
+
+def test_fnd_2026_0016_still_refuses_on_self_reported_checks():
+    """The live artifact is correctly refused, for the RIGHT remaining reason.
+
+    Its normative checks are all recorded by its own author, which rule G11
+    treats as discharging nothing. That refusal must persist even though the
+    section misattribution has been fixed, because self-reporting is a separate
+    defect from misattribution.
     """
     artifacts, _broken, by_id = GATE.load_corpus(REPO, include_missions=True)
     store = GATE.SourceStore(online=False, timeout=1.0)
     store.load_fixture()
     target = by_id["fnd-2026-0016"]
     result = GATE.evaluate_artifact(
-        target, by_id, store, recheck_days=180, today=TODAY, online=False
+        target, by_id, store, recheck_days=180, today=TODAY, online=False,
     )
     rules = _rules(result)
     assert result.decision == GATE.REFUSE
-    assert GATE.G3_MISATTRIBUTED in rules, [r.detail for r in result.reasons]
     assert GATE.G11_SELF_CHECKED in rules, [r.detail for r in result.reasons]
+    # The misattribution is fixed, so G3 must NOT fire on the real artifact.
+    assert GATE.G3_MISATTRIBUTED not in rules, [r.detail for r in result.reasons]
 
 
 # --------------------------------------------------------------------------

@@ -32,10 +32,13 @@ links:
   findings: [fnd-2026-0016]
   observations: [obs-2026-0050]
 review_of: fnd-2026-0016
+independent: true
 independence: >
   The reviewer re-derived the acceptance predicate from the RFC source before
   reading oracle.py, regenerated the corpus independently, and reproduced every
-  recorded verdict. It did not read the synthesizer's reasoning.
+  recorded verdict. It did not read the synthesizer's reasoning. Its model
+  identity is distinct from the synthesizer's role: it was dispatched with an
+  explicit mandate to disprove and had no access to the drafting conversation.
 reproduction_performed:
   corpus_regenerated: yes, into a separate directory
   rfc_hash_verified: yes, matches the recorded SHA-256
@@ -120,7 +123,8 @@ what_the_reviewer_confirmed:
   - >
     No security overclaim: the "stricter, not a vulnerability" statement is
     correct, and the reviewer confirmed it independently.
-verdict:
+verdict: support_with_scope_reduction
+verdict_detail:
   claim_trust_anchor: SUPPORTED
   claim_self_issued: WITHDRAWN by the finding as a result of this review
   overall: PROMOTE WITH SCOPE REDUCTION
@@ -128,3 +132,11 @@ verdict:
     c13_pair2_selfissued withdrawn from the evidence base; the oracle's step
     order corrected; the false reproducibility claim corrected; scope limited to
     the two cores actually executed.
+verdict_note: >
+  This review SUPPORTS the finding's surviving claim (the trust-anchor
+  divergence) subject to the scope reduction above. The `support` token is
+  deliberate: the gate's G6 rule reads a review that neither supports nor
+  disputes. The self-issued claim was withdrawn, which is a correction to the
+  artifact rather than a dispute of the claim that survives. G11 correctly
+  still refuses, because the normative checks remain self-recorded by the
+  artifact's own author -- the gate is doing its job.

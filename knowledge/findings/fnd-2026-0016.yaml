@@ -61,7 +61,7 @@ normative_checks:
     verdict: confirmed
     method: deterministic-script
   - source: https://www.rfc-editor.org/rfc/rfc5280.txt
-    section: "6.1.1"
+    section: "6.1"
     quoted: >
       A certificate is self-issued if the same DN appears in the subject and
       issuer fields (the two DNs are the same if they match according to the
@@ -71,6 +71,12 @@ normative_checks:
     checker: "orchestrator (grok-4.1), read directly from the fetched source"
     verdict: confirmed
     method: deterministic-script
+    section_correction: >
+      Previously recorded as section 6.1.1. The self-issued paragraph is in
+      section 6.1; 6.1.1 begins later, at the state-variable definitions. Caught
+      by tools/promotion_gate.py rule G3 and independently by rev-2026-0020. This
+      is the fnd-2026-0014 failure mode -- text attributed to a clause that does
+      not contain it -- occurring in a finding written this session.
   - source: https://www.rfc-editor.org/rfc/rfc5280.txt
     section: "6.1.4"
     quoted: >
