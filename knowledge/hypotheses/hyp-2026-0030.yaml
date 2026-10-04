@@ -1,0 +1,175 @@
+id: hyp-2026-0030
+type: hypothesis
+status: active
+created_at: "2026-10-05T07:20:00Z"
+updated_at: "2026-10-05T07:30:00Z"
+summary: >
+  RFC 5280 6.1.4(l) is guarded on "If the certificate was not self-issued"
+  while (m) is not. A self-issued intermediate therefore does NOT consume
+  path-length budget but its own pathLenConstraint STILL lowers the budget
+  for every certificate below it. This is a pure, single-clause asymmetry that
+  Frontier has already touched twice and never tested, and it is exactly the
+  shape of question the current x509-pathlen corpus cannot answer.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-scout
+    model: grok-4.7
+    tool: >
+      direct read of RFC 5280 6.1.4 (l)/(m) from a freshly fetched copy, located
+      at offset 189158 of the whitespace-normalized text; the clause text is
+      quoted verbatim below
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - knowledge/observations/obs-2026-0057.yaml
+    - knowledge/reviews/rev-2026-0021.yaml
+    - knowledge/findings/fnd-2026-0016.yaml
+    - .scratch/trackF/scout_general.md
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0016]
+  observations: [obs-2026-0057]
+title: "HYP-2026-0030 - The self-issued pathLen asymmetry: (m) fires where (l) does not"
+
+the_normative_text_verbatim:
+  section: "RFC 5280 6.1.4"
+  l: >
+    (l) If the certificate was not self-issued, verify that max_path_length is
+    greater than zero and decrement max_path_length by 1.
+  m: >
+    (m) If pathLenConstraint is present in the certificate and is less than
+    max_path_length, set max_path_length to the value of pathLenConstraint.
+  the_asymmetry: >
+    (l) carries a self-issued guard. (m) does NOT. The two clauses are adjacent
+    and perform different operations on the same counter: (l) decrements,
+    (m) clamps. So a self-issued intermediate neither spends a slot nor is
+    exempt from clamping the slots of its descendants.
+
+why_this_is_still_correct_under_rfc_5280_6_2:
+  important_guard_against_overclaiming: >
+    §6.2 permits an implementation to augment §6.1, so a divergence here is
+    NOT automatically a violation -- the same lesson that refuted
+    fnd-2026-0016's classification. The hypothesis below is therefore framed as
+    a question about what implementations DO, with the normative baseline
+    stated as the §6.1 walk and any deviation classified only after the
+    normative reading is settled.
+  what_the_baseline_requires: >
+    Walking 6.1 literally: max_path_length starts at n. For a self-issued
+    intermediate at position i, (l) is skipped so no decrement; (m) still runs
+    and clamps to the certificate's own pathLenConstraint. A chain
+    root -> self-issued-CA(pathlen:0) -> ICA -> EE would therefore have its
+    budget clamped to 0 by the self-issued CA, and the following ICA would fail
+    (l) on the next certificate -- a self-issued certificate whose
+    pathLenConstraint restricts its DESCENDANTS without itself consuming a
+    slot.
+  note_on_4_2_1_9: >
+    The 4.2.1.9 definition speaks of "the maximum number of non-self-issued
+    intermediate certificates that may FOLLOW this certificate", which is
+    consistent with the (m) behaviour and does not obviously contradict it. The
+    tension is between two clauses of 6.1.4, not between 6.1.4 and 4.2.1.9.
+
+why_the_current_corpus_cannot_answer_it:
+  - >
+    The x509-pathlen corpus contains exactly TWO self-issued cases,
+    c11_pair1_selfissued and c13_pair2_selfissued, and c11's webpki rejection
+    is an UNEXPLAINED open question with reason class "signature" (see
+    fnd-2026-0016). A corpus with two cells, one of them unexplained, cannot
+    establish a rule about self-issued pathLen behaviour.
+  - >
+    Neither self-issued cell carries a pathLenConstraint on the SELF-ISSUED
+    certificate itself. The asymmetry requires a self-issued CA that both
+    (a) skips (l) and (b) clamps via (m) -- a cell that does not exist in the
+    corpus at all.
+  - >
+    The corpus's harness reports pairs_discriminate: false with 5 confounders
+    and 7 uninterpretable cells, so it is already known not to support a
+    conformance claim.
+
+discriminating_corpus_design:
+  the_isolating_cell: >
+    root(no constraint) -> SELFISSUED-CA(pathlen:0) -> ICA -> EE
+    Every property except the self-issued CA's own pathLenConstraint matches a
+    control whose verdict is already known.
+  required_controls_and_what_each_proves:
+    - "root -> CA(pathlen:1) -> ICA -> EE : the (m) clamp at 1 permits one ICA. Establishes the harness accepts this shape at all."
+    - "root -> CA(pathlen:0) -> ICA -> EE : NOT self-issued. (l) fires at the CA and (m) clamps to 0, so the ICA should fail. This is the contrast cell."
+    - "root -> SELFISSUED-CA(pathlen:0) -> EE : no ICA. If (m) still clamps, the EE itself is unaffected (it is cert n), so this MUST accept under either reading -- a harness sanity check, not a discriminator."
+    - "root -> SELFISSUED-CA(no pathlen) -> ICA -> EE : (l) skipped, (m) absent, so budget stays n-1 and the ICA is permitted. The cleanest positive: a self-issued CA that changes nothing."
+  the_decisive_pair: >
+    Comparing the NOT-self-issued pathlen:0 cell against the SELF-ISSUED
+    pathlen:0 cell isolates (m)'s reach. If both reject, (m) is being applied
+    to self-issued certificates and the asymmetry is real in practice. If only
+    the non-self-issued one rejects, some implementation has folded (m) into
+    (l)'s guard and the asymmetry is NOT observable -- which is itself the
+    finding, and would mean the RFC's separate clauses are being read as one.
+
+independence_and_lineage_requirements:
+  - >
+    pyca/cryptography (in-tree cryptography-x509-verification) and
+    wbond/certvalidator are the two already-measured cores. They are genuinely
+    independent (no shared code, vendor or ancestry), which was established in
+    rev-2026-0021 and survives the corrected cohort labels.
+  - >
+    OpenSSL, LibreSSL, BoringSSL, AWS-LC, Go crypto/x509 and GnuTLS remain
+    ENTIRELY UNMEASURED. Adding one is worth more than re-running the existing
+    two, because the existing two already agree on every recorded cell.
+  - >
+    BoringSSL and AWS-LC share 7042 bit-identical commit SHAs per the prior
+    session's lineage work, so they must NOT be counted as two lineages.
+
+relation_to_the_cfrg_draft_the_scout_proposed:
+  the_dossier_at_knowledge/notes/scout-opportunities-2026-10-04.md_already_ranks: >
+    DNSSEC RRSIG validation (RFC 4035 5.3.1/5.3.2) as candidate 1.
+  why_this_is_not_a_duplicate_but_a_reordering: >
+    This hypothesis reuses the INFRASTRUCTURE the X.509 track already has --
+    a working generator, an oracle, two adapters with recorded verdicts and a
+    byte-level DER corpus -- and needs no new lineage, no new parser and no new
+    protocol stack. DNSSEC RRSIG validation requires a DNSSEC validator cohort
+    that Frontier has not assembled, so its setup cost is strictly higher for a
+    comparable amount of uncertainty reduction. This does not make DNSSEC wrong;
+    it makes the ordering different from what the earlier dossier assumed,
+    because that dossier did not account for infrastructure already being paid
+    for.
+  honest_caveat: >
+    This is a comparative judgement about marginal cost, not a measurement.
+    It is offered as an ordering hypothesis and can be overturned by showing
+    the DNSSEC cohort is easier to assemble than the existing infrastructure
+    suggests.
+
+falsifiers:
+  - >
+    An implementation whose source shows (m) evaluated inside (l)'s self-issued
+    guard, which would refute the asymmetry being OBSERVABLE rather than its
+    being real in the text.
+  - >
+    An erratum or a successor RFC (6818, 8398, 8399, 9549, 9598, 9608, 9618,
+    9925, 10007 -- none inspected) that resolves the asymmetry. That would make
+    the question historical rather than open.
+  - >
+    A demonstration that the corpus's existing self-issued cells already
+    separate on this axis, which would mean the two cells are adequate and this
+    hypothesis is redundant.
+
+compute_class: lightweight
+routing_note: >
+  Pure-Python certificate generation and validation against cores already
+  present in the project venv. No heavy build. If a third core such as Go
+  crypto/x509 is added, that build is a CI job per the compute-routing HARD
+  RULE, not a local one.
+
+budget_and_stopping_condition:
+  attempts: 3
+  stopping: >
+    Stop once the decisive pair and its three controls have been run against at
+    least the two existing cores. A negative result -- every core agreeing, or
+    every core folding (m) into (l) -- is a legitimate outcome and is preserved
+    rather than re-run with more cells.
+
+acceptance_criteria:
+  - The (l)/(m) text re-fetched and quoted verbatim from the authoritative source, with its digest recorded.
+  - Each isolating cell's BasicConstraints decoded from the DER bytes, not inferred from the generator's intent.
+  - All four cells run against every participating core, with reason classes recorded.
+  - Any divergence classified only AFTER the 6.2 augmentation question is settled for that core, so a strict-but-permitted implementation is not called a violation.
+  - Every implementation's identity established from its own source, never inferred from a prior pass.

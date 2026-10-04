@@ -523,7 +523,42 @@ new_research_selected:
     - DEFLATE BTYPE=10 header (RFC 1951 3.2.7/3.3)
   not_started: >
     The X.509/DNSSEC scout died before reporting, so the post-X.509 dossier
-    beyond HPACK was not refreshed this session.
+    beyond HPACK was not refreshed by that agent. The gap was closed directly:
+    hyp-2026-0030 records a new candidate derived from this session's own X.509
+    work, and it REORDERS the existing dossier's ranking.
+
+new_candidate_found_while_closing_the_scout_gap:
+  hyp_2026_0030: >
+    RFC 5280 6.1.4(l) is guarded on "If the certificate was not self-issued"
+    while (m) is not. A self-issued intermediate therefore does not consume
+    path-length budget, but its own pathLenConstraint still clamps the budget
+    for everything below it. Verified verbatim from a freshly fetched RFC 5280
+    at offset 189158. Frontier has touched this area twice -- once withdrawing
+    a claim about it, once refuting its own oracle over it -- and never tested
+    it.
+  why_it_outranks_the_dossiers_first_choice_on_marginal_cost: >
+    The existing dossier ranks DNSSEC RRSIG validation first. That ranking did
+    not account for infrastructure already paid for: this candidate reuses a
+    working generator, an oracle, two adapters with recorded verdicts, and a
+    byte-level DER corpus, and needs no new lineage or protocol stack. DNSSEC
+    would require assembling a validator cohort Frontier does not have. That is
+    a comparative judgement about cost, NOT a measurement, and it is recorded
+    as such -- it can be overturned by showing the DNSSEC cohort is cheaper to
+    assemble than the existing infrastructure suggests.
+  guard_against_repeating_the_refuted_mistake: >
+    The hypothesis states that a divergence here is NOT automatically a
+    violation, because 6.2 permits augmentation -- the same lesson that
+    refuted fnd-2026-0016's classification. Every cell must be classified only
+    after that question is settled per core.
+  discriminating_design_recorded: >
+    Four cells: a self-issued CA with no pathLen (must accept), a self-issued CA
+    with pathlen:0 (the isolating cell), the non-self-issued pathlen:0
+    contrast, and a pathlen:1 positive control. The decisive pair is the
+    self-issued vs non-self-issued pathlen:0 comparison, which isolates (m)'s
+    reach. If both reject, (m) applies to self-issued certificates; if only the
+    non-self-issued one rejects, some core has folded (m) into (l)'s guard --
+    which is itself the finding, and would mean the RFC's two adjacent clauses
+    are being read as one.
 
 final_verification_re_measured_at_close:
   head: c46144b (after the runner fix); report commit follows
