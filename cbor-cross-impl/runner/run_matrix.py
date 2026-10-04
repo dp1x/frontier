@@ -142,7 +142,15 @@ def run_matrix(adapters, vectors_dir=VECTORS_DIR, results_dir=RESULTS_DIR):
             desc = vec.get("description", "")
             vid = vec.get("vector_id", "")
             for adapter in adapters:
-                adapter_name = getattr(adapter, "ADAPTER_NAME", adapter.__name__)
+                # The default must not be evaluated eagerly: `adapter.__name__`
+                # does not exist on an adapter INSTANCE (only on a class or
+                # module), so `getattr(a, "ADAPTER_NAME", a.__name__)` raised
+                # AttributeError before getattr could return its default. An
+                # adapter that simply omits ADAPTER_NAME took the whole matrix
+                # down. Found by tests/test_instrument_adversarial.py.
+                adapter_name = getattr(adapter, "ADAPTER_NAME", None) or getattr(
+                    adapter, "__name__", None
+                ) or type(adapter).__name__
                 for mode in ("default", "canonical"):
                     if mode == "canonical" and not getattr(adapter, "supports_canonical", True):
                         continue

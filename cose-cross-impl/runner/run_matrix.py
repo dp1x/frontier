@@ -133,7 +133,12 @@ def run_matrix(adapters, vectors_dir=VECTORS_DIR, results_dir=RESULTS_DIR):
             vid = vec.get("vector_id", "")
 
             for adapter in adapters:
-                adapter_name = getattr(adapter, "ADAPTER_NAME", adapter.__name__)
+                # Same eager-default defect as the CBOR runner: `adapter.__name__`
+                # does not exist on an adapter instance, so the default raised
+                # before getattr could use it.
+                adapter_name = getattr(adapter, "ADAPTER_NAME", None) or getattr(
+                    adapter, "__name__", None
+                ) or type(adapter).__name__
                 lib_version = getattr(adapter, "LIB_VERSION", "?")
 
                 # --- STRUCTURE level ---
