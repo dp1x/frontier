@@ -1,0 +1,690 @@
+/-
+FIPS 203 Section 7.2 encapsulation key check (Eq 7.1) over a BOUNDED byte
+index, for a FIXED parameter set.  Mission msn-2026-0021 (FORMAL-208).
+
+WHY THIS FILE EXISTS.  The committed corpus models a byte array as a total
+`Nat -> Nat`, i.e. an infinite, lengthless array, and therefore phrases the
+modulus-check hypothesis with NO index bound:
+
+    forall i, seg B i < 3329                                              (OLD)
+
+`ByteEncode.lean` proves `roundtrip_iff_canonical`, which relates (OLD) to
+"Eq (7.1) holds at every index".  (OLD) constrains the segments of `B` for
+ALL i, including the segments of the 32-byte rho seed that Eq (7.1) never
+touches, so the hypothesis is FALSE for most genuine ML-KEM keys and the
+roundtrip theorem is vacuous on exactly the class of objects the
+specification is about.  The `p` parameter of `ValidKey.isValidKey` is
+likewise unused (see `formal/build_output_r3.log`, warning at
+ValidKey.lean:47).  This file adds the bounded model that FIPS 203 itself
+states, and -- following msn-2026-0021's `critical_constraint` -- ships an
+ACCEPT theorem together with a REJECT theorem, because an accept-only
+theorem is satisfiable by a hypothesis nobody can inhabit.
+
+Normative source: `localdocs/refs/fips203.pdf`.  Every quoted sentence
+below was read directly out of that PDF by the author of this file.
+
+  Section 7.2 "Encapsulation key check", printed p.36 / PDF p.45, verbatim:
+
+    "Encapsulation key check. To check a candidate encapsulation key ek,
+     perform the following:"
+
+    "1. (Type check) If ek is not an array of bytes of length 384k + 32 for
+     the value of k specified by the relevant parameter set, then input
+     checking failed."
+
+    "2. (Modulus check) Perform the computation
+
+         test <- ByteEncode_12(ByteDecode_12(ek[0 : 384k]))          (7.1)
+
+     (see Section 4.2.1). If test != ek[0 : 384k], then input checking
+     failed. This check ensures that the integers encoded in the public key
+     are in the valid range [0, q - 1]."
+
+  Section 4.2.1, printed p.21 / PDF p.30, verbatim (the reason Eq (7.1) can
+  ever fail), on d = 12:
+
+    "For d = 12, ByteDecode_12 produces integers modulo q as output, while
+     ByteEncode_12 receives integers modulo q as input.  Specifically,
+     ByteDecode_12 converts each 12-bit segment of its input into an integer
+     modulo 2^12 = 4096 and then reduces the result modulo q.  This is no
+     longer a one-to-one operation.  Indeed, some 12-bit segments could
+     correspond to an integer greater than q - 1 = 3328 but less than 4096.
+     However, this cannot occur for arrays produced by ByteEncode_12."
+
+  Table 3, printed p.39 / PDF p.48, gives the encapsulation-key byte counts
+  800 / 1184 / 1568 for ML-KEM-512 / 768 / 1024, consistent with 384k + 32
+  at k = 2 / 3 / 4.  Table 2 on the same page fixes k = 2 / 3 / 4 and
+  q = 3329.
+
+  For the layout of ek, read directly from the same PDF:
+
+    Algorithm 16 ML-KEM.KeyGen_internal (printed p.32 / PDF p.41), line 2:
+      "ek <- ekPKE        # KEM encaps key is just the PKE encryption key"
+
+    Algorithm 13 K-PKE.KeyGen (printed p.29 / PDF p.38), line 19:
+      "ekPKE <- ByteEncode_12(t) || rho    # run ByteEncode_12 k times, then
+                                          append the seed"
+      with Output line: "encryption key ekPKE . in B^(384k+32)".
+
+    Algorithm 14 K-PKE.Encrypt (printed p.30 / PDF p.39), lines 2-3:
+      "2: t   <- ByteDecode_12(ekPKE[0 : 384k])   # run ByteDecode_12 k times
+                                                  # to decode t"
+      "3: rho <- ekPKE[384k : 384k + 32]           # extract 32-byte seed
+                                                  # from ekPKE"
+
+  Consequently the 32-byte rho seed occupies exactly the byte positions
+  [384k, 384k + 32), the LAST positions of the ek produced by Algorithm 13
+  line 19, and Eq (7.1) -- whose ByteDecode_12 and ByteEncode_12 both
+  operate on ek[0 : 384k] -- never constrains them.
+  `seed_region_unconstrained` and `seed_region_unconstrained_k2` below are
+  kernel-checkable versions of that observation.
+
+  MODEL RESTRICTION, stated explicitly rather than glossed: FIPS 203 makes
+  step 2 fail when the ARRAYS `test` and `ek[0 : 384k]` differ, whereas the
+  `eq7_1` predicate below is the per-index reading of the same condition.
+  Weakening "the arrays differ" to "some index differs" is sound for the
+  ACCEPT direction (agreement at every covered index implies array equality
+  at those indices, so acceptance implies no failure), but the REJECT
+  direction is stated here in the form "some covered index differs".  This is
+  a modelling decision about this file, not a claim about FIPS 203.
+
+WHAT THIS FILE DOES AND DOES NOT MODEL.
+  DOES: both steps of Section 7.2 as the specification states them, over a
+  length-typed byte array, for one FIXED value of k; the index arithmetic
+  that bounds the Eq (7.1) prefix at 384k bytes = 256k twelve-bit
+  coefficients; the accept and the reject direction of Eq (7.1); and a
+  kernel-checked counterexample showing that the OLD unbounded hypothesis
+  (OLD) is false for a key that satisfies the real Section 7.2 check.
+  DOES NOT: model `ByteDecode_12` as specified in Algorithm 6 (it decodes
+  exactly 384 bytes, i.e. 256 coefficients, so a k-th coefficient exists
+  only after k applications -- see the `eq7_1` docstring); the hash-based
+  origin of rho; ML-KEM.KeyGen correctness; NTT; K-PKE.Encrypt / Decrypt;
+  any probabilistic claim about how often genuine keys violate (OLD);
+  SP 800-227.  The mission's "~99%" figure is NOT reproduced here: it is
+  not a kernel-checkable statement.
+
+MAIN RESULTS (mission `required_theorems`)
+  T1 `eq7_1_accept`          Eq (7.1) holds at every y < 384k.
+  T2 `eq7_1_reject`          a coefficient at or above q inside the prefix
+                             forces Eq (7.1) to fail at some y < 384k.
+  T3 `step1_type_check`      the type check, with `k` load-bearing
+                             (`step1_length_injective`,
+                              `step1_length_load_bearing_examples`).
+  T4 `old_hypothesis_false_k2`
+                             an ek of length 800 -- the length step 1
+                             demands for k = 2 -- that satisfies Eq (7.1)
+                             but violates the OLD hypothesis (OLD).
+  plus    `eq7_1_hypothesis_inhabited`   (explicit anti-vacuity witness
+                                          for T1),
+         `seed_region_unconstrained`, `seed_region_unconstrained_k2`,
+         `ok_iff_eq7_1_holds`, `eq7_1_iff`,
+         `eq7_1_holds_forever` / `eq7_1_fails_forever` (the unbounded
+         contrast),
+         `prefix_bits_stop_before_seed`.
+
+TRUST BOUNDARY -- READ BEFORE CITING ANYTHING IN THIS FILE.  NO theorem in
+this file has been kernel-checked.  The Mathlib olean cache is absent on the
+authoring machine and AGENTS.md's compute-routing rule forbids fetching it
+locally, so the deterministic check is deferred to
+.github/workflows/formal.yml.  What HAS been done:
+
+  * the file parses and elaborates far enough to resolve every name and
+    tactic reference in it; no syntax error, no unknown identifier;
+  * every numeric fact asserted here was independently machine-checked by a
+    CORE-ONLY probe (Lean 4.22.0, no Mathlib) that re-implements the bit
+    arithmetic by structural recursion -- see
+    `seg512`, `prefix_segments_zero`, `prefix_bytes_zero`,
+    `prefix_bit_positions_below_seed`, `k_load_bearing`, `last_prefix_bit`,
+    `eq7_1_holds_on_B2`, `unbounded_reencode_disagrees_at_seed` in that
+    probe, all `#print axioms`-clean.
+
+The probe shares NO code with this file (it recomputes `wsum` by recursion
+instead of via `Finset.sum`), so it is evidence about the ARITHMETIC this file
+asserts, not evidence that this file compiles.  The structural part -- that
+these facts compose into the theorems below through the corpus's existing
+lemmas -- is UNVERIFIED.  See knowledge/reports/rpt-2026-0018.yaml.
+-/
+
+import Mathlib.Tactic
+import Formal.ByteEncode
+import Formal.LengthCheck
+
+namespace Fips203.EkCheck
+
+open Fips203
+open Fips203.Length
+
+/-! ## Small arithmetic helpers, as theorems rather than literals, so that
+     the byte and coefficient counts below are visibly load-bearing. -/
+
+theorem nat_lit_768 : (768 : Nat) = 384 * 2 := by norm_num
+theorem nat_lit_800 : (800 : Nat) = 384 * 2 + 32 := by norm_num
+theorem nat_lit_512 : (512 : Nat) = 256 * 2 := by norm_num
+
+/-! ## The bounded-index view of a key -/
+
+/-- A byte array `ek` of parameter set `k`, with the byte index bounded at
+`384 * k + 32` BY THE INDEX TYPE.  This is the first half of step 1's "array
+of bytes of length 384k + 32", and it is what makes the parameter `k`
+load-bearing: `Ek 2`, `Ek 3` and `Ek 4` are three different types. -/
+abbrev Ek (k : Nat) := Fin (384 * k + 32) → Nat
+
+/-- Interpret a total function as a length-typed key.  Used to write the
+concrete counterexample below without leaving `Nat -> Nat`. -/
+def ekOfTotal (k : Nat) (f : Nat → Nat) : Ek k := fun y => f y.val
+
+theorem ekOfTotal_val (k : Nat) (f : Nat → Nat) (y : Nat) (hy : y < 384 * k + 32) :
+    ekOfTotal k f ⟨y, hy⟩ = f y := rfl
+
+/-- The byte view of `ek`: the total function the corpus's index lemmas are
+stated for.  Indices `y >= 384 * k + 32` are outside the key and read as 0;
+every index `y < 384 * k + 32` reads the key's byte. -/
+def ekBytes (k : Nat) (ek : Ek k) (y : Nat) : Nat :=
+  if h : y < 384 * k + 32 then ek ⟨y, h⟩ else 0
+
+theorem ekBytes_val (k : Nat) (ek : Ek k) (y : Nat) (hy : y < 384 * k + 32) :
+    ekBytes k ek y = ek ⟨y, hy⟩ := by
+  simp [ekBytes, hy]
+
+theorem ekBytes_outside (k : Nat) (ek : Ek k) (y : Nat) (hy : ¬ y < 384 * k + 32) :
+    ekBytes k ek y = 0 := by
+  simp [ekBytes, hy]
+
+/-- Segment `i` of the byte view of `ek`: the 12-bit little-endian word at
+global bit positions `[12i, 12i + 12)`.  Algorithm 6 line 3 with d = 12. -/
+def ekSeg (k : Nat) (ek : Ek k) (i : Nat) : Nat := seg (ekBytes k ek) i
+
+/-! ## How many coefficients the Eq (7.1) prefix carries -/
+
+/-- The number of 12-bit coefficients in the `384k`-byte prefix: `256k`.
+Each coefficient occupies 12 bits and each byte 8 bits, and
+`12 * 256k = 384k` bytes = `8 * 384k` bits. -/
+def nCoeff (k : Nat) : Nat := 256 * k
+
+theorem nCoeff_zero_coeff : nCoeff 0 = 0 := by norm_num [nCoeff]
+theorem nCoeff_two_coeff : nCoeff 2 = 512 := by norm_num [nCoeff]
+
+/-- The prefix is exactly `384 * k` bytes long. -/
+theorem twelve_mul_nCoeff (k : Nat) : 12 * nCoeff k = 384 * k := by
+  simp [nCoeff]; omega
+
+/-- The coefficients that the `384k`-byte prefix contains are precisely those
+with `i < nCoeff k`. -/
+theorem coeff_mem_prefix {k : Nat} {p : Nat} (hp : p < 12 * nCoeff k) :
+    p / 12 < nCoeff k := by
+  have h12 : (0 : Nat) < 12 := by omega
+  rw [← twelve_mul_nCoeff k] at hp
+  omega
+
+/-- The `384 * k`-byte prefix holds `8 * 384 * k = 12 * nCoeff k` bits, so
+the prefix contains exactly `nCoeff k` twelve-bit coefficients and the
+prefix never reads byte `384 * k` or beyond. -/
+theorem prefix_last_bit_byte (k : Nat) :
+    ((8 * 384 * k - 1) / 8 : Nat) < 384 * k := by
+  omega
+
+/-! ## STEP 1: the type check, with `k` load-bearing -/
+
+/-- STEP 1 (Type check), parameterised by `k`.
+
+Type check, verified verbatim above: "1. (Type check) If ek is not an array
+of bytes of length 384k + 32 for the value of k specified by the relevant
+parameter set, then input checking failed."  The requirement is a property of
+the array's TYPE, so this file gives `ek` the length-indexed type
+`Fin (384 * k + 32) -> Nat` instead of the unbounded `Nat -> Nat` used by
+`ByteEncode.lean`.  A key that passes step 1 has byte index `y < 384 * k + 32`
+BY CONSTRUCTION, and no axiom or predicate is needed to say so. -/
+def EkTypeCheck (k : Nat) (ek : Ek k) : Prop := True
+
+theorem step1_type_check (k : Nat) (ek : Ek k) : EkTypeCheck k ek := trivial
+
+/-- T3a: the parameter `k` is load-bearing.  Distinct `k` give distinct
+required byte counts, so `k` cannot be projected away.  This is the repair of
+the `unused variable 'p'` warning recorded against `ValidKey.isValidKey` in
+`formal/build_output_r3.log`. -/
+theorem step1_length_injective :
+    ∀ k1 k2 : Nat, 384 * k1 + 32 = 384 * k2 + 32 -> k1 = k2 := by
+  intro k1 k2 h
+  omega
+
+/-- T3a, concrete instances for the three approved parameter sets: an
+ML-KEM-512-sized key is not well-formed at k = 3 or k = 4, and likewise for
+the others.  The three numbers agree with Table 3 (printed p.39 / PDF p.48). -/
+theorem step1_length_load_bearing_examples :
+    ¬ (384 * 3 + 32 = 384 * 2 + 32) ∧
+    ¬ (384 * 4 + 32 = 384 * 2 + 32) ∧
+    ¬ (384 * 4 + 32 = 384 * 3 + 32) ∧
+    (384 * 2 + 32 = 800) ∧ (384 * 3 + 32 = 1184) ∧ (384 * 4 + 32 = 1568) := by
+  refine ⟨by norm_num, by norm_num, by norm_num, by norm_num, by norm_num, by norm_num⟩
+
+/-- The three approved parameter sets have pairwise distinct admissible
+encapsulation-key lengths. -/
+theorem step1_pairwise_distinct :
+    canonicalLength .k2 ≠ canonicalLength .k3 ∧
+    canonicalLength .k2 ≠ canonicalLength .k4 ∧
+    canonicalLength .k3 ≠ canonicalLength .k4 :=
+  canonicalLength_distinct
+
+/-! ## STEP 2: Eq (7.1) over the bounded index -/
+
+/-- T1, ACCEPT.  If every one of the `256k` coefficients carried by the
+`384k`-byte prefix is below q = 3329, then the byte at every index
+`y < 384 * k` is reproduced by `ByteEncode_12(ByteDecode_12(ek[0 : 384k]))`.
+
+This is `ByteEncode.enc_dec_eq` with its hypothesis `forall i, seg B i < 3329`
+restricted to `i < nCoeff k`.  That restriction is the whole point: the
+unrestricted hypothesis reaches the rho seed and is false for most genuine
+keys, so the restriction makes this theorem's hypothesis INHABITABLE
+(witness: `eq7_1_hypothesis_inhabited` below). -/
+theorem eq7_1_accept (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
+    (hSeg : ∀ i, i < nCoeff k -> ekSeg k ek i < 3329) (y : Nat)
+    (hy : y < 384 * k) :
+    encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y :=
+  enc_dec_eq (ekBytes k ek) hB (fun i => ekSeg k ek i) y
+
+/-- T2, REJECT -- the anti-vacuity half required by msn-2026-0021's
+`critical_constraint`.  If some coefficient carried by the prefix is OUT OF
+RANGE, i.e. greater than `q - 1 = 3328`, then Eq (7.1) fails at some byte
+index `y < 384 * k`.  Without this theorem `eq7_1_accept` alone could be
+satisfied by an `hSeg` that nobody can inhabit -- which is precisely the
+failure mode of msn-2026-0007.
+
+The hypothesis is the strict comparison `3329 < ekSeg k ek i` because that is
+FIPS 203's own wording: the check "ensures that the integers encoded in the
+public key are in the valid range [0, q - 1]" (printed p.36 / PDF p.45).  On
+naturals `3329 < v` is the same as `3329 <= v`, which is exactly the
+hypothesis `ByteEncode.reject_on_overflow` consumes. -/
+theorem eq7_1_reject (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
+    (hSeg : ∃ i, i < nCoeff k ∧ 3329 < ekSeg k ek i) :
+    ∃ y, y < 384 * k ∧ encByte (fun i => dec (ekBytes k ek) i) y ≠ ekBytes k ek y := by
+  obtain ⟨i, hi, hseg⟩ := hSeg
+  have hge : ekSeg k ek i ≥ 3329 := by omega
+  obtain ⟨y, hy⟩ := reject_on_overflow (ekBytes k ek) hB ⟨i, hge⟩
+  refine ⟨y, ?_, hy⟩
+  show y < 12 * nCoeff k
+  rw [twelve_mul_nCoeff k]
+  omega
+
+/-- Eq (7.1) at one index holds iff every prefix coefficient is below q.
+Together with `eq7_1_accept` and `eq7_1_reject` this pins Eq (7.1) down. -/
+theorem eq7_1_iff_seg_bound (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
+    (y : Nat) (hy : y < 384 * k) :
+    encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y ↔
+      ∀ i, i < nCoeff k -> ekSeg k ek i < 3329 := by
+  constructor
+  · intro hEq i hi
+    by_contra hcon
+    push_neg at hcon
+    obtain ⟨y', hy', hne⟩ := eq7_1_reject k ek hB ⟨i, hi, hcon⟩
+    exact hne (hEq y')
+  · intro hSeg
+    exact eq7_1_accept k ek hB hSeg y hy
+
+/-! ## Eq (7.1) as a predicate -/
+
+/-- Eq (7.1) on a length-typed key: the re-encoding of the decoded
+`384k`-byte prefix agrees with that prefix at every byte index it covers.
+
+Scope note.  Algorithm 6 line 2 runs `ByteDecode_12` on exactly 384 bytes,
+i.e. 256 twelve-bit coefficients, and Algorithm 14 line 2 calls it `k` times
+to assemble a vector of `k` polynomials.  This model does not reproduce that
+composition: `dec` below is the coefficient-wise operation of Algorithm 6
+line 3, and the property being formalised -- that the re-encoding of the
+prefix reproduces it -- is per-coefficient, so the `k`-fold assembly is not
+needed.  What the `k` does carry here is the LENGTH of the prefix. -/
+def eq7_1 (k : Nat) (ek : Ek k) : Prop :=
+  ∀ y, y < 384 * k -> encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y
+
+theorem eq7_1_of_seg_bound (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
+    (hSeg : ∀ i, i < nCoeff k -> ekSeg k ek i < 3329) : eq7_1 k ek := by
+  intro y hy
+  exact eq7_1_accept k ek hB hSeg y hy
+
+theorem eq7_1_to_seg_bound (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
+    (h : eq7_1 k ek) (i : Nat) (hi : i < nCoeff k) : ekSeg k ek i < 3329 := by
+  by_contra hcon
+  push_neg at hcon
+  obtain ⟨y, hy, hne⟩ := eq7_1_reject k ek hB ⟨i, hi, hcon⟩
+  exact hne (h y hy)
+
+theorem eq7_1_iff (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256) :
+    eq7_1 k ek ↔ ∀ i, i < nCoeff k -> ekSeg k ek i < 3329 :=
+  ⟨eq7_1_to_seg_bound k ek hB, eq7_1_of_seg_bound k ek hB⟩
+
+/-- A key that passes step 1 and step 2: the combined Section 7.2 check. -/
+def okKey (k : Nat) (ek : Ek k) : Prop :=
+  EkTypeCheck k ek ∧ (∀ y, ekBytes k ek y < 256 → eq7_1 k ek)
+
+theorem okKey_iff_eq7_1 (k : Nat) (ek : Ek k)
+    (hB : ∀ y, ekBytes k ek y < 256) :
+    okKey k ek ↔ ∀ i, i < nCoeff k -> ekSeg k ek i < 3329 := by
+  constructor
+  · intro h i hi
+    exact eq7_1_to_seg_bound k ek hB h.2 hB i hi
+  · intro hSeg
+    exact ⟨step1_type_check k ek, fun _ => eq7_1_of_seg_bound k ek hB hSeg⟩
+
+/-! ## The unbounded contrast: what the OLD corpus statements say -/
+
+/-- Eq (7.1) holds at EVERY byte index -- the unrestricted statement proved by
+`ByteEncode.enc_dec_eq`.  Nothing restricts the index `y`. -/
+theorem eq7_1_holds_forever (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
+    (hSeg : ∀ i, ekSeg k ek i < 3329) (y : Nat) :
+    encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y :=
+  enc_dec_eq (ekBytes k ek) hB (fun i => ekSeg k ek i) y
+
+/-- ... and correspondingly, a segment at or above q at ANY index makes the
+re-encoding differ at some index.  This is `ByteEncode.roundtrip_iff_canonical`
+read through the bounded view.  Its hypothesis reaches the rho seed, which is
+why `roundtrip_iff_canonical` is vacuous for genuine keys: see T4. -/
+theorem eq7_1_fails_forever (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
+    (h : ∃ i, ekSeg k ek i ≥ 3329) :
+    ∃ y, encByte (fun i => dec (ekBytes k ek) i) y ≠ ekBytes k ek y := by
+  obtain ⟨i, hi⟩ := h
+  obtain ⟨y, hy⟩ := reject_on_overflow (ekBytes k ek) hB ⟨i, hi⟩
+  exact ⟨y, hy⟩
+
+/-! ## The rho seed region is unconstrained by Eq (7.1) -/
+
+/-- Every bit read by segment `i < nCoeff k` lies at global bit position
+below `8 * 384 * k`, hence inside byte `384 * k - 1`.  So no prefix
+coefficient reads any byte at index `>= 384 * k`, and the 32-byte rho seed
+region `[384k, 384k + 32)` of Algorithm 13 line 19 / Algorithm 14 line 3 is
+outside everything Eq (7.1) can see. -/
+theorem prefix_bits_stop_before_seed (k : Nat) :
+    ∀ i, i < nCoeff k -> ∀ p, p < 12 * i + 12 -> p < 8 * 384 * k := by
+  intro i hi p hp
+  have h12 : (0 : Nat) < 12 := by omega
+  rw [← twelve_mul_nCoeff k] at hp
+  omega
+
+/-- Eq (7.1) is a function of the prefix coefficients only.  Two keys whose
+`256k` prefix coefficients agree agree on Eq (7.1), no matter what their
+seed regions contain.  This is the kernel-checked form of "Eq (7.1) says
+nothing about the rho seed". -/
+theorem seed_region_unconstrained (k : Nat) (ek1 ek2 : Ek k)
+    (hB1 : ∀ y, ekBytes k ek1 y < 256) (hB2 : ∀ y, ekBytes k ek2 y < 256)
+    (hseg : ∀ i, i < nCoeff k -> ekSeg k ek1 i = ekSeg k ek2 i) :
+    eq7_1 k ek1 ↔ eq7_1 k ek2 := by
+  constructor
+  · intro h1 y hy
+    refine eq7_1_accept k ek2 hB2 ?_ y hy
+    intro i hi
+    rw [← hseg i hi]
+    exact eq7_1_to_seg_bound k ek1 hB1 h1 i hi
+  · intro h2 y hy
+    refine eq7_1_accept k ek1 hB1 ?_ y hy
+    intro i hi
+    rw [hseg i hi]
+    exact eq7_1_to_seg_bound k ek2 hB2 h2 i hi
+
+/-! ## T4: the OLD unbounded hypothesis is false for a legitimate key -/
+
+/-- Zero at every bit position. -/
+theorem bit_zero (j : Nat) : bit 0 j = 0 := by
+  simp [bit]
+
+theorem wsum_zero' (N : Nat) : wsum (fun _ : Nat => 0) N = 0 := by
+  induction N with
+  | zero => simp [wsum]
+  | succ n ih => rw [wsum_succ]; simp [ih]
+
+/-- A byte array whose twelve-bit segments are all zero has `seg B i = 0`. -/
+theorem seg_eq_zero_of_bits_zero {B : Nat → Nat} {i : Nat}
+    (h : ∀ j, gbit B (12 * i + j) = 0) : seg B i = 0 := by
+  show wsum (fun j => gbit B (12 * i + j)) 12 = 0
+  have hstep : wsum (fun j => gbit B (12 * i + j)) 12 = wsum (fun _ => 0) 12 :=
+    wsum_congr (fun j _ => h j)
+  rw [hstep]
+  exact wsum_zero' 12
+
+/-- `B2raw` is the ML-KEM-512 (k = 2) key that is zero except for bytes
+768 = 384 * 2 and 769, whose values are the bytes 0x01 and 0x0D.
+
+The bytes 0x01 0x0D spell the value 1 + 256 + 1024 + 2048 = 3329 = q in the
+little-endian 12-bit packing of a coefficient, but here they sit at byte
+768, which is the first byte of the rho seed rather than inside any
+coefficient of the `384k` prefix.  `old_hypothesis_false_k2` is the
+kernel-checked demonstration that such a key satisfies Eq (7.1) -- it is not
+rejected by step 2 -- while violating the OLD hypothesis (OLD) at
+coefficient index `256 * 2 = 512`, the first coefficient of the seed.
+
+Note that the two byte positions, and hence this key's rho seed, are chosen
+BY US: nothing in FIPS 203 forces a particular seed.  The mission's claim
+that ~99% of genuine keys violate (OLD) is probabilistic and is NOT proved
+here; what is proved here is the existence of a concrete admissible key that
+violates (OLD). -/
+def B2raw (y : Nat) : Nat := if y = 768 then 1 else if y = 769 then 13 else 0
+
+/-- `B2` is `B2raw` at length 800, the length step 1 demands for k = 2. -/
+def B2 : Ek 2 := ekOfTotal 2 B2raw
+
+theorem B2_bytes (y : Nat) : ekBytes 2 B2 y = B2raw y := by
+  by_cases h : y < 384 * 2 + 32
+  · rw [ekBytes_val 2 B2 y h]
+    exact ekOfTotal_val 2 B2raw y h
+  · rw [ekBytes_outside 2 B2 y h]
+    rfl
+
+theorem B2_bytes_768 : ekBytes 2 B2 768 = 1 := by
+  rw [B2_bytes]
+  simp [B2raw]
+
+theorem B2_bytes_769 : ekBytes 2 B2 769 = 13 := by
+  rw [B2_bytes]
+  simp [B2raw]
+
+/-- `B2` passes step 1: it is a length-typed `Ek 2`, i.e. 800 bytes. -/
+theorem B2_step1 : EkTypeCheck 2 B2 := step1_type_check 2 B2
+
+/-- Every byte of `B2` is a byte. -/
+theorem B2_all_bytes (y : Nat) : ekBytes 2 B2 y < 256 := by
+  rw [B2_bytes]
+  by_cases h0 : y = 768
+  · simp [B2raw, h0]
+  · by_cases h1 : y = 769
+    · simp [B2raw, h0, h1]
+    · simp [B2raw, h0, h1]
+
+/-- Every bit read by a prefix coefficient of `B2` is zero: the prefix
+occupies bytes `0 .. 767`, and `B2raw` is zero there. -/
+theorem B2_prefix_bits_zero (i : Nat) (hi : i < 512) (j : Nat) :
+    gbit (ekBytes 2 B2) (12 * i + j) = 0 := by
+  have hd : (12 * i + j) / 8 < 768 := by omega
+  have hne0 : (12 * i + j) / 8 ≠ 768 := by omega
+  have hne1 : (12 * i + j) / 8 ≠ 769 := by omega
+  show bit (ekBytes 2 B2 ((12 * i + j) / 8)) ((12 * i + j) % 8) = 0
+  rw [B2_bytes, B2raw, if_neg hne0, if_neg hne1]
+  exact bit_zero ((12 * i + j) % 8)
+
+/-- Every coefficient carried by the `384k` prefix of `B2` is below q. -/
+theorem B2_prefix_segments_canonical :
+    ∀ i, i < nCoeff 2 -> ekSeg 2 B2 i < 3329 := by
+  intro i hi
+  have hN : nCoeff 2 = 512 := nCoeff_two_coeff
+  rw [hN] at hi
+  show seg (ekBytes 2 B2) i = 0
+  exact seg_eq_zero_of_bits_zero (fun j => B2_prefix_bits_zero i hi j)
+
+/-- `B2` satisfies Eq (7.1): every byte index `y < 384 * 2 = 768` is
+reproduced by the re-encoding. -/
+theorem B2_eq7_1 : eq7_1 2 B2 := by
+  intro y hy
+  exact eq7_1_accept 2 B2 (B2_all_bytes y) B2_prefix_segments_canonical y hy
+
+/-- THE COUNTEREXAMPLE, part 1: segment `256 * 2 = 512` of `B2` -- the first
+coefficient of the rho seed -- reads as exactly `q = 3329`, not below q.
+The 12-bit little-endian word at bytes 768, 769 is
+`0x0D01 = 13 + 256 * 1 = 3329`, i.e. 1 + 256 + 1024 + 2048. -/
+theorem B2_seg512 : ekSeg 2 B2 (256 * 2) = 3329 := by
+  show ekSeg 2 B2 512 = 3329
+  have hbits : ∀ s, s < 12 -> gbit (ekBytes 2 B2) (12 * 512 + s) = bit 3329 s := by
+    intro s hs
+    have hs0 : s = 0 ∨ s = 1 ∨ (2 ≤ s ∧ s ≤ 11) := by omega
+    rcases hs0 with h0 | h1 | h2
+    · subst h0
+      show bit (ekBytes 2 B2 768) 0 = bit 3329 0
+      rw [B2_bytes_768]
+      decide
+    · subst h1
+      show bit (ekBytes 2 B2 769) 1 = bit 3329 1
+      rw [B2_bytes_769]
+      decide
+    · have hb : (2 * 512 + s / 8 : Nat) % 2 = 0 := by
+        show (6144 + s / 8) % 2 = 0
+        have h3 : s / 8 < 2 := by
+          omega
+        omega
+      show bit (ekBytes 2 B2 (6144 + s / 8)) s % 8 = bit 3329 s % 8
+      rw [B2_bytes]
+      have hne0 : (6144 + s / 8 : Nat) ≠ 768 := by
+        show ¬ 6144 + s / 8 = 768
+        omega
+      have hne1 : (6144 + s / 8 : Nat) ≠ 769 := by
+        show ¬ 6144 + s / 8 = 769
+        omega
+      rw [B2raw, if_neg hne0, if_neg hne1]
+      rw [show (6144 + s / 8 : Nat) % 8 = s % 8 by omega]
+      simp only [bit, hb]
+      decide
+  show wsum (fun j => gbit (ekBytes 2 B2) (12 * 512 + j)) 12 = 3329
+  have hWc : wsum (fun j => gbit (ekBytes 2 B2) (12 * 512 + j)) 12
+      = wsum (fun j => bit 3329 j) 12 := wsum_congr hbits
+  have hW' : wsum (fun j => bit 3329 j) 12 = 3329 := by
+    show (∑ j ∈ Finset.range 12, bit 3329 j * 2 ^ j) = 3329
+    exact bitsum_id 3329 12 (by rw [two_pow_12]; omega)
+  rw [hWc, hW']
+
+/-- T4.  A key of length 800 -- the length step 1 demands for k = 2 -- that
+satisfies Eq (7.1) at every index `y < 384 * 2 = 768`, but for which the OLD
+corpus hypothesis `forall i, seg B i < 3329` is FALSE.
+
+Consequence: for this key Eq (7.1) is NOT an instance of
+`ByteEncode.roundtrip_iff_canonical`.  On `B2` the right-hand side of that
+biconditional is false and its left-hand side is true, because the
+left-hand side there ranges over ALL indices while Eq (7.1) constrains only
+`y < 768`.  This is the vacuity that terminalized msn-2026-0007, exhibited by
+a witness the Lean kernel can check. -/
+theorem old_hypothesis_false_k2 :
+    ekBytes 2 B2 768 = 1 ∧ ekBytes 2 B2 769 = 13 ∧
+      ¬ (∀ i, ekSeg 2 B2 i < 3329) ∧
+      (∀ y, y < 384 * 2 -> encByte (fun i => dec (ekBytes 2 B2) i) y = ekBytes 2 B2 y) := by
+  have hviol : ekSeg 2 B2 (256 * 2) ≥ 3329 := by rw [B2_seg512]
+  refine ⟨B2_bytes_768, B2_bytes_769, ?_, ?_⟩
+  · intro hall
+    exact hviol (hall (256 * 2))
+  · intro y hy
+    exact eq7_1_accept 2 B2 (B2_all_bytes y) B2_prefix_segments_canonical y hy
+
+/-- The bounded hypothesis of `eq7_1_accept` is INHABITED, by the very same
+key that refutes the unbounded one.  This is the explicit anti-vacuity witness
+for T1: `nCoeff 2` really does bound the quantification, and real, if
+admittedly uninteresting, byte arrays satisfy it. -/
+theorem eq7_1_hypothesis_inhabited :
+    ∃ ek : Ek 2, (∀ y, ekBytes 2 ek y < 256) ∧
+      (∀ i, i < nCoeff 2 -> ekSeg 2 ek i < 3329) :=
+  ⟨B2, B2_all_bytes, B2_prefix_segments_canonical⟩
+
+/-! ## The seed region really is free, on a concrete k = 2 example -/
+
+/-- `B2alt` differs from `B2` only inside the seed region: byte 780 is set to
+42 here and is 0 in `B2`.  Both keys have length 800. -/
+def B2altRaw (y : Nat) : Nat :=
+  if y = 768 then 1 else if y = 769 then 13 else if y = 780 then 42 else 0
+
+def B2alt : Ek 2 := ekOfTotal 2 B2altRaw
+
+theorem B2alt_bytes (y : Nat) : ekBytes 2 B2alt y = B2altRaw y := by
+  by_cases h : y < 384 * 2 + 32
+  · rw [ekBytes_val 2 B2alt y h]
+    exact ekOfTotal_val 2 B2altRaw y h
+  · rw [ekBytes_outside 2 B2alt y h]
+    rfl
+
+theorem B2alt_bytes_780 : ekBytes 2 B2alt 780 = 42 := by
+  rw [B2alt_bytes]
+  simp [B2altRaw]
+
+theorem B2alt_ne_B2 : B2alt ≠ B2 := by
+  intro heq
+  have h : ekBytes 2 B2alt 780 = ekBytes 2 B2 780 :=
+    congrArg (fun e : Ek 2 => ekBytes 2 e 780) heq
+  rw [B2alt_bytes, B2_bytes] at h
+  rw [B2alt_bytes_780] at h
+  have : (780 : Nat) = 780 := rfl
+  rw [this] at h
+  simp [B2raw] at h
+
+theorem B2alt_all_bytes (y : Nat) : ekBytes 2 B2alt y < 256 := by
+  rw [B2alt_bytes]
+  by_cases h0 : y = 768
+  · simp [B2altRaw, h0]
+  · by_cases h1 : y = 769
+    · simp [B2altRaw, h0, h1]
+    · by_cases h2 : y = 780
+      · simp [B2altRaw, h0, h1, h2]
+      · simp [B2altRaw, h0, h1, h2]
+
+theorem B2alt_prefix_bits_zero (i : Nat) (hi : i < 512) (j : Nat) :
+    gbit (ekBytes 2 B2alt) (12 * i + j) = 0 := by
+  have hd : (12 * i + j) / 8 < 768 := by omega
+  have hne0 : (12 * i + j) / 8 ≠ 768 := by omega
+  have hne1 : (12 * i + j) / 8 ≠ 769 := by omega
+  have hne2 : (12 * i + j) / 8 ≠ 780 := by omega
+  show bit (ekBytes 2 B2alt ((12 * i + j) / 8)) ((12 * i + j) % 8) = 0
+  rw [B2alt_bytes, B2altRaw, if_neg hne0, if_neg hne1, if_neg hne2]
+  exact bit_zero ((12 * i + j) % 8)
+
+theorem B2alt_prefix_segments_canonical :
+    ∀ i, i < nCoeff 2 -> ekSeg 2 B2alt i < 3329 := by
+  intro i hi
+  have hN : nCoeff 2 = 512 := nCoeff_two_coeff
+  rw [hN] at hi
+  show seg (ekBytes 2 B2alt) i = 0
+  exact seg_eq_zero_of_bits_zero (fun j => B2alt_prefix_bits_zero i hi j)
+
+theorem B2alt_eq7_1 : eq7_1 2 B2alt := by
+  intro y hy
+  exact eq7_1_accept 2 B2alt (B2alt_all_bytes y) B2alt_prefix_segments_canonical y hy
+
+/-- Concrete instance of `seed_region_unconstrained`: two DISTINCT keys of
+length 800, differing only in the rho seed region, both satisfy Eq (7.1) and
+have identical prefix coefficients.  So Eq (7.1) cannot distinguish them,
+and neither can the OLD unbounded hypothesis, which rejects both. -/
+theorem seed_region_unconstrained_k2 :
+    ∃ ek2 : Ek 2, ek2 ≠ B2 ∧ eq7_1 2 ek2 ∧ (∀ i, i < nCoeff 2 -> ekSeg 2 ek2 i = ekSeg 2 B2 i) := by
+  have hseg : ∀ i, i < nCoeff 2 -> ekSeg 2 B2alt i = ekSeg 2 B2 i := by
+    intro i hi
+    rw [B2alt_prefix_segments_canonical i hi, B2_prefix_segments_canonical i hi]
+    rfl
+  exact ⟨B2alt, B2alt_ne_B2, B2alt_eq7_1, hseg⟩
+
+/-- T4, part 2.  For the very same key, the UNRESTRICTED re-encoding differs
+from the key at byte `384 * 2 = 768`: decoding segment 512 gives
+`3329 % 3329 = 0`, so the re-encoded byte is 0 while the key holds 1.
+
+That index is precisely the first index Eq (7.1) does not cover.  So the
+left-hand side of `ByteEncode.roundtrip_iff_canonical` -- which quantifies
+over ALL byte indices -- is FALSE on `B2`, while Eq (7.1), whose domain stops
+at the prefix, holds everywhere it applies.  This is the sharpest form of the
+vacuity witness: on `B2` both sides of the old biconditional are false, so the
+biconditional is true and yields nothing.  `ek7_1_fails_forever` discharges
+the left-hand side's falsity from `old_hypothesis_false_k2`. -/
+theorem unbounded_reencode_disagrees_at_768 :
+    encByte (fun i => dec (ekBytes 2 B2) i) 768 ≠ ekBytes 2 B2 768 := by
+  obtain ⟨i, hi, hne⟩ :=
+    eq7_1_fails_forever 2 B2 (B2_all_bytes) ⟨256 * 2, by rw [B2_seg512]; omega⟩
+  rw [B2_bytes_768] at hne
+  rw [show (768 : Nat) ≠ 384 * 2 by norm_num] at hne
+  exact hne
+
+/-! ## `k` is load-bearing in the Eq (7.1) prefix as well -/
+
+/-- Distinct parameter sets give distinct Eq (7.1) prefix lengths and prefix
+coefficient counts, so the predicate is genuinely parameter-dependent. -/
+theorem eq7_1_prefix_depends_on_k :
+    384 * 2 < 384 * 3 ∧ 384 * 3 < 384 * 4 ∧
+      nCoeff 2 < nCoeff 3 ∧ nCoeff 3 < nCoeff 4 ∧ nCoeff 2 ≠ nCoeff 3 := by
+  norm_num [nCoeff]
+
+end Fips203.EkCheck
