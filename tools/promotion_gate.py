@@ -63,6 +63,28 @@ Rules
 The offline rules (G1, G4-G8) refuse on their own, because a missing or stale
 provenance record is a defect whether or not the network is up.
 
+``G9``/``G10``/``G11`` exist because a ``verdict: confirmed`` written into a
+YAML field is a *claim about a check*, not the check.  They reduce failure mode
+F1 (self-reported fields fooling mechanical checks) to the residue that is
+actually mechanical:
+
+* ``G10`` refuses a confirmed verdict whose ``quoted`` text is too short to
+  locate in or rule out of any clause -- a stub quotation demonstrates no
+  retrieval;
+* ``G9`` refuses a confirmed verdict citing a section the source does not
+  contain -- an invented section number cannot have been read;
+* ``G2``/``G3`` applied to the record's own ``quoted`` text refuse a
+  self-reported confirmation whose quotation is absent from, or belongs to a
+  different section than, the one it names.  This is the fnd-2026-0014 class
+  checked without believing the verdict;
+* ``G11`` refuses a normative claim whose only recorded checker is the
+  artifact's own creator.
+
+What none of them can do is establish that the checker actually read the
+source.  A model that invents a quotation *and* the clause it lives in passes
+every rule here.  That residue is irreducibly human and is named as such in
+``docs`` below and in ``docs/gate_limits.md``.
+
 Exit codes: ``0`` allow, ``1`` refuse, ``2`` tool error.  Network failure alone
 never produces ``1``.
 
@@ -74,6 +96,17 @@ abstraction layer too shallow.  ``fnd-2026-0009`` cited
 ``kexmlkem768x25519.c`` when the FIPS 203 section 7.2 check lived one call
 frame below in vendored ``libcrux-mlkem-mldsa.c``.  Nothing mechanical catches
 that, and nothing here pretends to.  See ``docs`` in the report.
+
+Residue that no rule here can close
+-----------------------------------
+A checker that invents both the quotation *and* the clause it appears in is
+consistent with every rule in this file: the invented section will be one that
+exists, the invented quote will be one that appears in it, and ``verdict`` is
+whatever the checker wrote.  The gate's reach is therefore bounded by the
+honesty of the independent checker, which is why ``G5``/``G6``/``G11`` exist
+and why ``AGENTS.md`` requires the independent review to be a non-synthesizer
+role.  Automated checking can prove a claim was checked; it cannot prove the
+checker read anything.
 
 Usage::
 
@@ -181,6 +214,9 @@ G5_NO_REVIEW = "G5_no_independent_review"
 G6_REVIEWS_DISPUTE = "G6_all_reviews_dispute"
 G7_INCOMPLETE_RECORD = "G7_incomplete_check_record"
 G8_VERDICT_NOT_CONFIRMED = "G8_verdict_not_confirmed"
+G9_SECTION_ABSENT = "G9_cited_section_absent"
+G10_UNPROBED_QUOTE = "G10_check_quotes_nothing_probeable"
+G11_SELF_CHECKED = "G11_checker_is_the_author"
 
 RULE_TITLES = {
     G1_NO_CHECK: "normative claim has no recorded independent source check",
@@ -191,8 +227,14 @@ RULE_TITLES = {
     G6_REVIEWS_DISPUTE: "every linked review disputes or is inconclusive",
     G7_INCOMPLETE_RECORD: "normative check record is missing required provenance",
     G8_VERDICT_NOT_CONFIRMED: "a recorded normative check did not confirm",
+    G9_SECTION_ABSENT: "a normative check cites a section the source does not contain",
+    G10_UNPROBED_QUOTE: "a normative check quotes too little text to be probeable",
+    G11_SELF_CHECKED: "the only checker of a normative claim is its own author",
 }
 
+# ``G9`` needs the source's section table, which is available offline from the
+# recorded fixture -- unlike ``G2``/``G3``, which need the body text.  A fixture
+# that does not hold the document degrades this rule to UNVERIFIABLE.
 RULE_ONLINE_REQUIRED = frozenset({G2_NOT_IN_SOURCE, G3_MISATTRIBUTED})
 
 # Fraction of quoted units that must appear verbatim in the cited section.
@@ -622,6 +664,131 @@ def _normalize_checker(value: Any) -> str:
     return str(value) if value else ""
 
 
+# Minimum quoted words for a ``quoted`` field to be *probeable* against a source.
+# Mirrors ``_split_ellipsis`` (8 words) with margin, so a check that merely
+# quotes a fragment like "decrement max_path_length" -- which cannot be located
+# in or ruled out of any section with confidence -- is refused rather than
+# credited as an independent check.  A record whose ``quoted`` is too short (or
+# whose every sentence is too short to probe) has demonstrated no retrieval:
+# G10 exists so ``verdict: confirmed`` cannot be self-reported over a stub.
+QUOTE_PROBE_MIN_WORDS = 8
+
+
+def quote_is_probeable(quoted: str) -> bool:
+    """True when ``quoted`` carries enough text for a locate probe to mean anything.
+
+    Mirrors the probe decompositions ``_best_ratio`` uses: a whole-string
+    match only counts if it is at least ``QUOTE_PROBE_MIN_WORDS`` long, or if
+    the ellipsis/sentence splits yield at least one probeable unit.
+    """
+    text = (quoted or "").strip()
+    if not text:
+        return False
+    if len(text.split()) >= QUOTE_PROBE_MIN_WORDS:
+        return True
+    return bool(_split_ellipsis(text)) or bool(VERIFY._quote_probe_sentences(text))
+
+
+# --------------------------------------------------------------------------
+# G11: the checker must not be the artifact's own author
+# --------------------------------------------------------------------------
+
+# Only *structural* identity fields are compared.  ``checker`` in the wild is
+# free text ("orchestrator (grok-4.1), read directly from the fetched source"),
+# so token-matching the whole string would fire on ordinary English words like
+# "directly" or "independent".  An explicit model/tool/name disagreement is a
+# real signal; prose is not.
+_IDENTITY_KEYS = ("kind", "model", "tool", "name", "identity")
+_IDENTITY_TOKEN_RE = re.compile(r"[a-z0-9_.\-]+")
+
+# Values that name a *kind* of actor rather than a particular one.  ``kind:
+# model-agent`` is the corpus default on almost every artifact, so treating it
+# as an identity would make G11 fire on artifacts whose author never claimed to
+# be a distinct checker.
+_GENERIC_IDENTITY_TOKENS = frozenset(
+    {
+        "model", "agent", "tool", "kind", "name", "identity", "none", "null",
+        "human", "agentic", "modelagent", "orchestrator", "synthesizer",
+        "model-agent", "model_agent", "deterministic-tool", "tooling",
+    }
+)
+
+
+def _identity_tokens(value: Any) -> set[str]:
+    """Identifying tokens for a ``provenance.created_by`` mapping.
+
+    Only explicit ``kind``/``model``/``tool``/``name``/``identity`` fields are
+    used.  ``role`` is excluded: the corpus writes it descriptively
+    ("orchestrator-synthesizer") and the same role word turns up in unrelated
+    checkers, so matching on it would accuse artifacts their authors did not
+    write.  Generic values (``model-agent``, ``human``) are excluded because
+    they identify nobody.
+    """
+    if not isinstance(value, dict):
+        return set()
+    tokens: set[str] = set()
+    for key in _IDENTITY_KEYS:
+        raw = value.get(key)
+        if not raw:
+            continue
+        tokens.update(
+            t for t in _IDENTITY_TOKEN_RE.findall(str(raw).lower())
+            if len(t) >= 4 and t not in _GENERIC_IDENTITY_TOKENS
+        )
+    return tokens
+
+
+# An identifier-shaped token: contains a digit, a dot or a hyphen.  Checkers in
+# the corpus are free text ("orchestrator (grok-4.1), read directly from the
+# fetched source"), so prose words carry no identity and must not be compared.
+# A dot or a digit is required -- a bare hyphenated English word ("re-fetched")
+# is prose, not an identifier.
+_IDENTIFIER_LIKE_RE = re.compile(r"^(?=.*[\d.])[a-z0-9_.\-]+$")
+
+
+def _checker_identifiers(checker: Any) -> set[str]:
+    """Identifier-shaped tokens of a checker, structured or free text."""
+    if isinstance(checker, dict):
+        return _identity_tokens(checker)
+    return {
+        t for t in _IDENTITY_TOKEN_RE.findall(str(checker or "").lower())
+        if _IDENTIFIER_LIKE_RE.match(t)
+    }
+
+
+def checker_is_author(
+    author: Any, checkers: Sequence[Any]
+) -> tuple[bool, list[str]]:
+    """Is every recorded checker the artifact's own creator?
+
+    Returns ``(self_checked, matching_tokens)``.
+
+    A check is treated as self-certified when the checker names an identity the
+    author already holds and names *nothing else* -- i.e. every
+    identifier-shaped token the checker carries is one the author also carries.
+    Prose in a free-text checker ("read directly from the fetched source") is
+    not identifier-shaped and so is ignored; a checker that names a different
+    model or tool introduces a token the author does not have and is therefore
+    treated as a different checker.
+
+    This is a deliberately weak check.  It catches the gross case -- one agent
+    writing ``verdict: confirmed`` about its own quotation while naming itself
+    -- and nothing subtler.  Two different models of the same vendor, or an
+    honest author, both pass.  It is not a proof of independence and is not
+    claimed to be.
+    """
+    author_tokens = _identity_tokens(author)
+    if not author_tokens:
+        return False, []
+    checked = [t for c in checkers if (t := _checker_identifiers(c))]
+    if not checked:
+        return False, []
+    for tokens in checked:
+        if not tokens <= author_tokens:
+            return False, []
+    return True, sorted({t for tokens in checked for t in tokens})
+
+
 def parse_check_record(raw: Any, origin_id: str, origin_kind: str) -> CheckRecord | None:
     if not isinstance(raw, dict):
         return None
@@ -967,6 +1134,60 @@ def _split_ellipsis(text: str) -> list[str]:
     return units
 
 
+def locate_quoted_text(
+    quoted: str, document: RfcDocument | None, section: str | None
+) -> tuple[str, str]:
+    """Locate a check record's ``quoted`` text, as ``(verdict, detail)``.
+
+    Same verdict vocabulary as :func:`_locate`, but the haystack is chosen by
+    the record rather than by a claim's key path.  This is what lets the gate
+    test a record's own quotation instead of taking ``verdict: confirmed`` on
+    trust (failure mode F1): a record that claims RFC 9052 section 9 and quotes
+    text from section 4.2.1 is caught even though the record asserts it was
+    confirmed.
+    """
+    units = (quoted, _quote_probe_sentences(quoted))
+    if not quoted.strip():
+        return "unverifiable", "empty quoted text"
+    if document is None:
+        return "unverifiable", "no text source for the cited document"
+
+    section_text = document.section_text(section) if section else None
+    if section_text is not None:
+        ratio, hits, total = _best_ratio(units, section_text)
+        if ratio is None:
+            return "unverifiable", "quoted text has no probeable unit"
+        if ratio >= LOCATE_QUORUM:
+            return (
+                "confirmed",
+                f"{hits}/{total} quoted units found in RFC {document.number} "
+                f"section {section} (text from {document.origin})",
+            )
+    elif not section:
+        return "unverifiable", "record names a source but no section, so no clause to check"
+    else:
+        return (
+            "unverifiable",
+            f"RFC {document.number} has no parsed section {section}",
+        )
+
+    doc_ratio, doc_hits, doc_total = _best_ratio(units, document.full_text)
+    if doc_ratio is None:
+        return "unverifiable", "quoted text has no probeable unit"
+    if doc_ratio >= LOCATE_QUORUM:
+        where = _which_section(document, units)
+        return (
+            "in-section-elsewhere",
+            f"{doc_hits}/{doc_total} quoted units are in RFC {document.number} "
+            f"but not in section {section}; found in {where}",
+        )
+    return (
+        "absent-from-all-cited",
+        f"only {doc_hits}/{doc_total} quoted units occur anywhere in "
+        f"RFC {document.number} ({document.origin})",
+    )
+
+
 def _locate(claim: NormativeClaim, store: SourceStore) -> tuple[str, str]:
     """Locate a claim's quoted text.  Returns ``(verdict, detail)``.
 
@@ -1108,6 +1329,137 @@ def evaluate_artifact(
                 evidence=_truncate(record.quoted, 200),
             )
         )
+
+    # ---- G10: a confirmed verdict over an unprobeable stub --------------
+    # F1.  A record that quotes a fragment too short to locate in or rule out
+    # of any section has demonstrated no retrieval, so ``verdict: confirmed``
+    # over it is self-reporting and must not discharge the gate.
+    for record in records:
+        if record.missing_fields():
+            continue  # already reported by G7 (an empty `quoted` is caught there)
+        if record.verdict not in CONFIRMED_VERDICTS:
+            continue  # G8 already refuses a non-confirmation
+        if quote_is_probeable(record.quoted):
+            continue
+        result.reasons.append(
+            RuleOutcome(
+                G10_UNPROBED_QUOTE,
+                REFUSE,
+                f"normative check {record.check_id or '<unnamed>'} from "
+                f"{record.origin_id} records verdict={record.verdict!r} but its "
+                f"quoted text ({_truncate(record.quoted, 80)!r}) is too short to "
+                f"locate in or rule out of any clause; a stub quotation proves no "
+                f"retrieval, so this is a self-reported check (failure mode F1)",
+                evidence=_truncate(str(record.raw), 200),
+            )
+        )
+
+    # ---- G9 + record-quote location: do not take a verdict on trust ----
+    # Two mechanical reductions of F1/F3, both driven by the record's OWN
+    # fields rather than by the artifact talking about a clause:
+    #
+    #   G9  the cited section does not exist in the cited document (an
+    #        invented section number -- mechanically detectable from the
+    #        section table the recorded fixture supplies offline);
+    #   G2/G3  the record's quoted text is not in the section it names, or is
+    #        in a different section of the same document -- the fnd-2026-0014
+    #        class, now testable without believing `verdict: confirmed`.
+    for record in records:
+        if record.missing_fields():
+            continue
+        number = record.rfc_number
+        section = record.section_number
+        if number is None:
+            continue  # a non-RFC source has no deterministic section locator
+        document = store.get(number)
+        if document is None:
+            continue  # no text source for this RFC: UNVERIFIABLE, not a failure
+
+        known = document.section_numbers
+        # Stricter than ``RfcDocument.section_text``: a section exists if it is
+        # itself a parsed heading, or if a *descendant* of it is (which covers
+        # citing "4.2" when only "4.2.1" was parsed).  Accepting merely that
+        # the citation is a descendant of some parsed heading would let
+        # "RFC 9052 section 9.7.13" pass on the strength of section 9, which
+        # is exactly the invented-section-number error G9 exists to catch.
+        section_exists = bool(section) and any(
+            section == key or key.startswith(section + ".") for key in known
+        )
+        if section and not section_exists:
+            result.reasons.append(
+                RuleOutcome(
+                    G9_SECTION_ABSENT,
+                    REFUSE,
+                    f"normative check {record.check_id or '<unnamed>'} from "
+                    f"{record.origin_id} cites RFC {number} section {section}, which "
+                    f"does not exist in the recorded source ({document.origin}); "
+                    f"RFC {number} has {len(known)} parsed sections "
+                    f"({', '.join(known[:8])}{' ...' if len(known) > 8 else ''}). An "
+                    f"invented section number cannot have been read from the source",
+                    evidence=f"section={section}",
+                )
+            )
+            continue
+
+        verdict, detail = locate_quoted_text(record.quoted, document, section)
+        if verdict == "unverifiable":
+            # A record whose quote cannot be probed is G10's business; a
+            # document whose section table is absent is not a finding.
+            continue
+        if verdict == "confirmed":
+            continue
+        if verdict == "in-section-elsewhere":
+            result.reasons.append(
+                RuleOutcome(
+                    G3_MISATTRIBUTED,
+                    REFUSE,
+                    f"normative check {record.check_id or '<unnamed>'} from "
+                    f"{record.origin_id} records verdict={record.verdict!r} for "
+                    f"RFC {number} section {section}, but its quoted text is real "
+                    f"RFC {number} text attributed to the wrong clause -- {detail}. "
+                    f"A verdict recorded without re-reading the source is exactly "
+                    f"the fnd-2026-0014 failure mode",
+                    evidence=_truncate(record.quoted, 240),
+                )
+            )
+            continue
+        result.reasons.append(
+            RuleOutcome(
+                G2_NOT_IN_SOURCE,
+                REFUSE,
+                f"normative check {record.check_id or '<unnamed>'} from "
+                f"{record.origin_id} records verdict={record.verdict!r} for "
+                f"RFC {number} section {section}, but its quoted text is not in "
+                f"that source -- {detail}",
+                evidence=_truncate(record.quoted, 240),
+            )
+        )
+
+    # ---- G11: the checker must not be the artifact's own author ---------
+    # F1 again, at the level automation cannot reach further.  A check whose
+    # only checker is the creator is *not* falsified by this rule -- a creator
+    # can fetch an RFC honestly -- but it carries no independence, and under
+    # AGENTS.md ("an independent review by a non-synthesizer role") a
+    # self-certified normative claim is not promotion-grade evidence.  Stated
+    # as a refusal, not a warning, because the alternative is that a rule set
+    # is written once and never exercised against the person it constrains.
+    confirming = [r for r in records
+                  if r.verdict in CONFIRMED_VERDICTS and r.checker]
+    if confirming:
+        author = (art.doc.get("provenance") or {}).get("created_by")
+        self_checked, tokens = checker_is_author(author, [r.checker for r in confirming])
+        if self_checked:
+            result.reasons.append(
+                RuleOutcome(
+                    G11_SELF_CHECKED,
+                    REFUSE,
+                    f"every normative check on {art.id} was recorded by the artifact's "
+                    f"own creator (shared identity token(s): "
+                    f"{', '.join(tokens)}); a self-reported check discharges nothing "
+                    f"-- an independent checker must re-fetch the cited clause",
+                    evidence=_truncate(str(confirming[0].raw), 200),
+                )
+            )
 
     # ---- G4: staleness -------------------------------------------------
     if records:
@@ -1515,6 +1867,17 @@ def build_selftest_corpus(root: Path, today: date) -> dict[str, Any]:
     * ``fnd-2026-9004`` ALL-DISPUTE -- clean checks, but every review disputes.
     * ``fnd-2026-9005`` STALE -- clean checks, but last checked far outside the
       window.
+    * ``fnd-2026-9007`` SELF-REPORTED -- ``verdict: confirmed`` with a stub
+      ``quoted`` string.  Trips G10: the check quotes nothing probeable, so it
+      demonstrated no retrieval.  Reproduces failure mode F1.
+    * ``fnd-2026-9008`` INVENTED-SECTION -- ``verdict: confirmed`` citing an
+      RFC 9052 section that does not exist.  Trips G9.
+    * ``fnd-2026-9009`` RECORD-MISATTRIBUTED -- ``verdict: confirmed`` whose
+      quoted text is genuine RFC 9052 section 9 text but the record claims a
+      different section.  Trips G3 on the record itself (F3 caught without
+      believing the verdict).
+    * ``fnd-2026-9010`` SELF-CHECKED -- a clean, located record, but the only
+      checker is the artifact's own creator.  Trips G11.
     """
     findings = root / "knowledge" / "findings"
     reviews = root / "knowledge" / "reviews"
@@ -1701,6 +2064,99 @@ def build_selftest_corpus(root: Path, today: date) -> dict[str, Any]:
         ),
     )
 
+    # --- G: F1 stub quotation, self-reported as confirmed ---------------
+    write(
+        findings / "fnd-2026-9007.yaml",
+        envelope(
+            id="fnd-2026-9007",
+            summary="SELF-REPORTED: verdict confirmed over a stub quotation",
+            normative_basis={"rfc_9052_section_9": GENUINE_9052_SEC9},
+            normative_checks=[
+                {
+                    "id": "NC-1",
+                    "source": "https://www.rfc-editor.org/rfc/rfc9052.html#section-9",
+                    "section": "RFC 9052 section 9",
+                    "quoted": "definite lengths",  # too short to probe anywhere
+                    "checked_at": _recent(7, today),
+                    "checker": {"kind": "human", "identity": "selftest"},
+                    "verdict": "confirmed",
+                }
+            ],
+        ),
+    )
+
+    # --- H: invented section number, self-reported as confirmed --------
+    write(
+        findings / "fnd-2026-9008.yaml",
+        envelope(
+            id="fnd-2026-9008",
+            summary="INVENTED-SECTION: verdict confirmed citing a nonexistent section",
+            normative_basis={"rfc_9052_section_9": GENUINE_9052_SEC9},
+            normative_checks=[
+                {
+                    "id": "NC-1",
+                    "source": "https://www.rfc-editor.org/rfc/rfc9052.html#section-9",
+                    "section": "RFC 9052 section 9.7.13",
+                    "quoted": GENUINE_9052_SEC9,
+                    "checked_at": _recent(7, today),
+                    "checker": {"kind": "human", "identity": "selftest"},
+                    "verdict": "confirmed",
+                }
+            ],
+        ),
+    )
+
+    # --- I: record's own quotation attributed to the wrong clause ------
+    write(
+        findings / "fnd-2026-9009.yaml",
+        envelope(
+            id="fnd-2026-9009",
+            summary="RECORD-MISATTRIBUTED: confirmed, but the quote is section 9 text "
+                    "claimed as section 4.2.1",
+            normative_basis={"rfc_9052_section_9": GENUINE_9052_SEC9},
+            normative_checks=[
+                {
+                    "id": "NC-1",
+                    "source": "https://www.rfc-editor.org/rfc/rfc9052.html",
+                    "section": "RFC 9052 section 4.1",  # a real section, wrong one
+                    "quoted": GENUINE_9052_SEC9,
+                    "checked_at": _recent(7, today),
+                    "checker": {"kind": "human", "identity": "selftest"},
+                    "verdict": "confirmed",
+                }
+            ],
+        ),
+    )
+
+    # --- J: the only checker is the artifact's own creator --------------
+    write(
+        findings / "fnd-2026-9010.yaml",
+        envelope(
+            id="fnd-2026-9010",
+            summary="SELF-CHECKED: clean, located record, but checked by its own author",
+            provenance={
+                "created_by": {
+                    "kind": "model-agent",
+                    "role": "specification-analyst",
+                    "model": "probe-4.1",
+                },
+                "sources": ["https://www.rfc-editor.org/rfc/rfc9052"],
+            },
+            normative_basis={"rfc_9052_section_9": GENUINE_9052_SEC9},
+            normative_checks=[
+                {
+                    "id": "NC-1",
+                    "source": "https://www.rfc-editor.org/rfc/rfc9052.html#section-9",
+                    "section": "RFC 9052 section 9",
+                    "quoted": GENUINE_9052_SEC9,
+                    "checked_at": _recent(7, today),
+                    "checker": "probe-4.1, read directly from the fetched source",
+                    "verdict": "confirmed",
+                }
+            ],
+        ),
+    )
+
     return {
         "splice": "fnd-2026-9001",
         "never_rechecked": "fnd-2026-9002",
@@ -1708,6 +2164,10 @@ def build_selftest_corpus(root: Path, today: date) -> dict[str, Any]:
         "all_dispute": "fnd-2026-9004",
         "stale": "fnd-2026-9005",
         "wrong_section": "fnd-2026-9006",
+        "self_reported": "fnd-2026-9007",
+        "invented_section": "fnd-2026-9008",
+        "record_misattributed": "fnd-2026-9009",
+        "self_checked": "fnd-2026-9010",
     }
 
 
@@ -1781,6 +2241,31 @@ def run_selftest(online: bool = False, recheck_days: int = DEFAULT_RECHECK_DAYS)
         )
         check("every review disputes", ids["all_dispute"], REFUSE, {G6_REVIEWS_DISPUTE})
         check("stale normative check", ids["stale"], REFUSE, {G4_STALE_CHECK})
+        # F1: a self-reported verdict over a stub proves no retrieval.
+        check(
+            "self-reported confirmed over an unprobeable stub quotation (F1)",
+            ids["self_reported"],
+            REFUSE,
+            {G10_UNPROBED_QUOTE},
+        )
+        check(
+            "self-reported confirmed citing an invented section number",
+            ids["invented_section"],
+            REFUSE,
+            {G9_SECTION_ABSENT},
+        )
+        check(
+            "self-reported confirmed whose quote belongs to another clause (F3)",
+            ids["record_misattributed"],
+            REFUSE,
+            {G3_MISATTRIBUTED},
+        )
+        check(
+            "the only checker is the artifact's own creator",
+            ids["self_checked"],
+            REFUSE,
+            {G11_SELF_CHECKED},
+        )
         check("clean fixture", ids["clean"], ALLOW, set())
 
         passed = all(ok for ok, _ in results_log)
@@ -1806,6 +2291,14 @@ def run_selftest(online: bool = False, recheck_days: int = DEFAULT_RECHECK_DAYS)
 # --------------------------------------------------------------------------
 
 
+# RFCs the offline fixture records.  9052/8949 are the two the original
+# selftest fixtures are built from; the rest are the documents the current
+# corpus actually cites, so their clause checks are deterministic offline
+# instead of silently degrading to UNVERIFIABLE.  Extend this when a new RFC
+# becomes load-bearing -- an uncited document is exactly how F1 hides.
+FIXTURE_RFCS = (9052, 8949, 5280, 9591, 8032, 9496, 9053, 9338, 9180)
+
+
 def record_fixtures(out_path: Path, timeout: float = 30.0) -> int:
     """Fetch real RFC text and record it so ``--selftest`` is offline-stable.
 
@@ -1815,7 +2308,7 @@ def record_fixtures(out_path: Path, timeout: float = 30.0) -> int:
     """
     sources: list[dict[str, Any]] = []
     skipped: list[int] = []
-    for number in (9052, 8949):
+    for number in FIXTURE_RFCS:
         probe = _find_rfc_body(f"https://www.rfc-editor.org/rfc/rfc{number}", timeout)
         if probe.state != "reachable" or not probe.body:
             skipped.append(number)

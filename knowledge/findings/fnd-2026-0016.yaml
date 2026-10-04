@@ -4,22 +4,25 @@ status: candidate
 created_at: "2026-10-04T17:45:00Z"
 updated_at: "2026-10-04T18:15:00Z"
 summary: >
-  CANDIDATE, NOT PROMOTED. Two related conformance observations about
-  pathLenConstraint, measured against ONE validation core (rustls-webpki via
-  pyca/cryptography 50.0.1) on a Frontier-built corpus: (1) a self-issued
-  intermediate consumes a pathLenConstraint slot it should not consume, so
-  chains RFC 5280 accepts are rejected; (2) the trust anchor's own
-  pathLenConstraint appears to be enforced, although RFC 5280 6.1 excludes the
-  trust anchor from the certification path. Both survive executed controls that
-  eliminate path construction and generator defect. Scope is deliberately
-  narrow: one core, one harness, no security claim, no independent second
-  lineage measured yet.
-epistemic_status: hypothesis
+  CANDIDATE, SCOPE-REDUCED after independent adversarial review (rev-2026-0020).
+  ONE conformance observation about pathLenConstraint, confirmed on TWO
+  independently-lineaged validation cores: the TRUST ANCHOR's own
+  pathLenConstraint is enforced even though RFC 5280 6.1 says the trust anchor
+  "is not included as part of the prospective certification path". Both
+  rustls-webpki and pyca/certvalidator do this, so it is a shared convention
+  rather than a single-implementation quirk.
+  The self-issued claim was WITHDRAWN from the evidence base after review: the
+  Frontier oracle was itself wrong (it reformulated the 6.1 walk and dropped
+  6.1.4(m)'s effect on self-issued certificates), so the cells that appeared
+  to support it were measuring Frontier, not the implementations. No security
+  claim is made.
+epistemic_status: interpretation
 classification: spec-violation
 classification_scope: >
-  Scoped to rustls-webpki as reached through pyca/cryptography 50.0.1. NOT a
-  statement about OpenSSL, BoringSSL, AWS-LC, LibreSSL, Go, GnuTLS or any other
-  implementation, none of which was executed in this session.
+  Scoped to the two cores actually executed: rustls-webpki (via
+  pyca/cryptography 50.0.1) and pyca/certvalidator 0.11.1. NOT a statement about
+  OpenSSL, BoringSSL, AWS-LC, LibreSSL, Go, GnuTLS or any other implementation,
+  none of which was executed in this session.
 provenance:
   created_by:
     kind: model-agent
@@ -42,7 +45,7 @@ links:
   hypotheses: [hyp-2026-0028]
   experiments: [exp-2026-0037]
   observations: [obs-2026-0050]
-  reviews: []
+  reviews: [rev-2026-0020]
 normative_checks:
   - source: https://www.rfc-editor.org/rfc/rfc5280.txt
     section: "6.1"
@@ -103,41 +106,68 @@ source_identity:
   sha256: A2F2628C0A83B873FC4786ABD921F9B2C02395954B655D190BF16B831633345D
   status: Standards Track
   date: May 2008
-claim_1_self_issued_consumes_a_slot:
-  statement: >
-    With a chain of the form root -> ICA(P) -> ICA(1, SELF-ISSUED) -> ICA(0)
-    -> EE, RFC 5280 requires ACCEPT for P=1 (the first intermediate is followed
-    by exactly one non-self-issued intermediate, the final EE not being one),
-    and the measured core REJECTS it while ACCEPTING the same chain with P=2.
-  discriminating_evidence: >
-    Three chains differing only in P: (0 REJECT, 1 REJECT, 2 ACCEPT) under
-    observation against (0 REJECT, 1 ACCEPT, 2 ACCEPT) under the oracle. The
-    boundary therefore sits between P=1 and P=2.
-  controls:
-    path_construction: eliminated by supplying all 50 corpus CAs as candidates
-    generator_defect: eliminated by direct signature verification of all certificates
-  confidence: medium-high
-  caveat: >
-    The rejection string webpki emits is "candidates exhausted: signature does
-    not match", which IMPL-5 independently reported is ALSO emitted for a
-    genuinely broken signature. The string is therefore not evidence of the
-    mechanism; the P-sweep is.
-claim_2_trust_anchor_constraint_enforced:
+surviving_claim_trust_anchor_constraint_enforced:
   statement: >
     With a trust anchor carrying pathLenConstraint=0 and a chain
-    root(pathlen:0) -> ICA -> EE, RFC 5280 requires ACCEPT because the trust
-    anchor is not part of the certification path, and the measured core
-    REJECTS with reason class path_len.
-  discriminating_evidence: >
-    This cell needs no self-issued subtlety: the reason class is path length and
-    the chain has one intermediate. SA-1 corroborated the reading
-    independently via the initialisation of max_path_length to n rather than
-    n+1.
-  confidence: medium
+    root(pathlen:0) -> ICA -> EE, RFC 5280 requires ACCEPT, because 6.1 says the
+    self-signed trust anchor "is not included as part of the prospective
+    certification path" and the algorithm has no step that reads the anchor's
+    own constraints. BOTH measured cores REJECT, with reason class path_len.
+  measured_on:
+    - rustls-webpki via pyca/cryptography 50.0.1
+    - pyca/certvalidator 0.11.1
+  why_this_cell_is_clean: >
+    It needs no self-issued subtlety. The chain has a single intermediate, the
+    reason class is path length rather than a proxy, and SA-1 independently
+    corroborated the reading by observing that max_path_length is initialised to
+    n rather than n+1 -- so the anchor's position is not counted even when the
+    anchor certificate is passed to the validator.
+  corroborating_source_evidence: >
+    certvalidator's own source seeds the budget from the anchor's
+    pathLenConstraint at validate.py:286-289, while a comment in the same
+    codebase states the anchor is not part of the path. The code contradicts its
+    own stated model, which is stronger evidence of an unintended convention
+    than a divergence between two cores would be.
+  confidence: medium-high
   caveat: >
-    This is a difference in OBSERVED behaviour. Whether it is a defect or a
-    deliberate, documented policy is not established; the source-level
-    archaeology for webpki did not complete.
+    Whether this is a defect or a deliberate, widely-shared convention is NOT
+    established. Two independent cores agreeing is evidence of a convention, not
+    of an error, and no design document or erratum was consulted on the point.
+
+withdrawn_claim_self_issued_consumes_a_slot:
+  original_claim: >
+    That a self-issued intermediate consumes a pathLenConstraint slot it should
+    not, so chains RFC 5280 accepts are rejected.
+  status: WITHDRAWN 2026-10-04 after independent review rev-2026-0020.
+  reason: >
+    The claim rested on the Frontier oracle, and the oracle was wrong. REV-1
+    found a FOURTH wrong version of the oracle -- it had replaced the literal
+    6.1 walk with a per-position reformulation taken from 4.2.1.9's prose, and
+    that reformulation silently dropped 6.1.4(m) for self-issued certificates,
+    because (m) carries no self-issued condition while the reformulation's guard
+    did. REV-1 also found the (l)/(m) execution order inverted relative to the
+    RFC.
+    After the oracle was corrected to transcribe the walk literally, the
+    independent lineage certvalidator moved from 18/20 to 19/20 agreement, and
+    the two cells that had appeared to corroborate the self-issued claim were
+    resolved in the OPPOSITE direction: c13_pair2_selfissued is correctly
+    REJECTed, and certvalidator rejects it too. The apparent "two cores
+    disagreeing on self-issued" was Frontier disagreeing with a correct
+    implementation.
+  what_survives: >
+    The self-issued EXEMPTION itself is uncontroversial and both correct
+    measurements honour it: certvalidator ACCEPTS c11_pair1_selfissued, and
+    rustls-webpki rejects c11 with reason class "signature", which the
+    certificate-signature controls rule out as a genuine signature fault. The
+    webpki c11 rejection is therefore still unexplained and remains an OPEN
+    QUESTION, but it is no longer claimed as a pathLenConstraint conformance
+    failure.
+  lesson_recorded: >
+    Three of the oracle's four wrong versions were caught by the corpus; this
+    fourth one was NOT, because every corpus case exposing it has the same
+    expected verdict under both readings. The corpus bounds what it can catch,
+    and a reviewer found what it could not.
+
 what_this_is_not:
   - >
     NOT a claim about any implementation other than rustls-webpki as reached
@@ -153,18 +183,40 @@ what_this_is_not:
   - >
     NOT a reproduction of the x509-limbo published results table. Its generator
     was read as source; its harness was not built.
+independent_review:
+  review: rev-2026-0020
+  verdict: PROMOTE WITH SCOPE REDUCTION
+  blockers_addressed:
+    - independent review obtained (rev-2026-0020, non-synthesizer)
+    - second lineage now measured (certvalidator 0.11.1)
+    - self-issued claim withdrawn from the evidence base
+    - oracle corrected to a literal transcription of the 6.1 walk
+  blockers_remaining:
+    - >
+      Whether enforcing the trust anchor's constraint is a DEFECT or a shared
+      convention is not settled; no erratum or design document was consulted.
+    - >
+      No source-level confirmation inside either core. Both are behavioural
+      observations; certvalidator's seeding code is located (validate.py:286-289)
+      but the webpki mechanism is not.
+    - >
+      The "signature" reason class on webpki's c11 rejection is unexplained and
+      IMPL-5 warned that string is also emitted for a genuine signature fault.
+
 promotion_blockers:
   - >
-    No independent non-synthesizer review has adjudicated this finding. Under
-    AGENTS.md that alone blocks promotion to verified.
-  - >
-    The "independent second lineage" leg is unmet: pyca/certvalidator could not
-    be driven within budget, so the divergence rests on a single measured
-    validation core.
-  - >
-    Source-level confirmation inside rustls-webpki (the exact line and the
-    commit that introduced the behaviour) is missing. A behavioural
+    Source-level confirmation inside rustls-webpki is missing, so a behavioural
     observation alone cannot distinguish a defect from a deliberate policy.
+  - >
+    No erratum or design documentation was consulted on whether the trust
+    anchor's own pathLenConstraint should bind; two agreeing cores is evidence
+    of a convention, not of an error.
+  - >
+    fnd-2026-0016's own normative_checks were originally self-recorded by the
+    artifact's author with method "deterministic-script" asserting a check that
+    was never run. TOOL-2's gate work (rules G9-G11) was built partly in
+    response; the records themselves are now backed by
+    tests/test_x509_pathlen_citations.py, which executes the comparison.
 negative_results_preserved:
   - >
     The inherited hypothesis that "several implementations failing proves a

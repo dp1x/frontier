@@ -5,12 +5,15 @@ created_at: "2026-10-04T17:30:00Z"
 updated_at: "2026-10-04T18:10:00Z"
 summary: >
   Against a Frontier-built 20-case corpus whose every case satisfies RFC 5280
-  6.1(a)-(c), the rustls-webpki validation core reachable through
-  pyca/cryptography 50.0.1 REJECTS four chains that the Frontier oracle, derived
-  from the RFC text, says must be ACCEPTED. The divergence is confined to
-  chains containing a self-issued intermediate, plus one trust-anchor case. It
-  survives two executed controls that eliminate path construction and generator
-  defect as explanations.
+  6.1(a)-(c), two independently-lineaged validation cores REJECT four chains
+  that the corrected Frontier oracle says must be ACCEPTED. The single
+  interpretable, shared divergence is the trust-anchor case (c17), where BOTH
+  cores enforce the anchor's own pathLenConstraint although RFC 5280 6.1
+  excludes the trust anchor from the certification path.
+  CORRECTED after independent review rev-2026-0020: the earlier reading of
+  three of these four cells as a self-issued divergence was an artefact of a
+  defective Frontier oracle, not an implementation defect. The self-issued
+  claim is withdrawn; see fnd-2026-0016.
 epistemic_status: observation
 provenance:
   created_by:
@@ -30,44 +33,47 @@ links:
   experiments: [exp-2026-0037]
   findings: [fnd-2026-0016]
 what_was_measured:
-  cohort: >
-    ONE validation core: rustls-webpki, reached through
-    pyca/cryptography 50.0.1's cryptography.x509.verification. This is not
-    OpenSSL; the platform libcrypto reporting "OpenSSL 4.0.2" is irrelevant to
-    this code path, and the rejection wording is webpki's.
-  corpus: 20 cases, 42 certificates, deterministic P-256 / ECDSA-SHA256
-  agreement_with_oracle: 14 of 20
+  cohort:
+    - rustls-webpki, via pyca/cryptography 50.0.1's x509.verification (compiled Rust extension)
+    - pyca/certvalidator 0.11.1 (pure-Python RFC 5280 6.1 transcription, no OpenSSL delegation)
+  corpus: 20 cases, 45 generated certificates, 42 distinct subject DNs
+  determinism: >
+    PARTIALLY deterministic, corrected from an earlier overstatement. Keys are
+    deterministic P-256 scalars from a fixed-seed SHAKE-256 stream, so the
+    subject public keys are byte-stable. Signatures are NOT byte-stable across
+    runs, because `cryptography`'s backend ECDSA is not RFC 6979 deterministic.
+    The earlier claim "byte-identical across runs and machines" was false (0 of
+    45 certificates matched between two runs) and is withdrawn here.
+  agreement_with_oracle_after_correction:
+    certvalidator: 19 of 20
+    rustls-webpki: 16 of 20
 per_case:
   - case: c11_pair1_selfissued
     shape: "root -> ICA(1) -> ICA(1 SELF-ISSUED) -> ICA(0) -> EE"
     oracle: ACCEPT
-    observed: REJECT
-    reason_class: signature
+    certvalidator: ACCEPT
+    rustls_webpki: "REJECT (reason class: signature)"
     interpretation: >
-      NOT yet established as a path-length observation. webpki reports
-      "candidates exhausted: signature does not match", and IMPL-5 warned that
-      this same string is also produced by a genuinely broken signature, so the
-      string must not be read literally. Direct signature verification proves
-      the certificate's signature is valid, so the string is misleading here.
-      The underlying cause is isolated by probe P1 instead.
+      UNEXPLAINED, NOT A CONFORMANCE CLAIM. certvalidator -- a faithful
+      transcription of 6.1 -- agrees with the RFC, so the webpki rejection is a
+      real difference. But its reason string is "candidates exhausted: signature
+      does not match", and IMPL-5 independently reported that this same string
+      is also emitted for a genuinely broken signature. Direct signature
+      verification proves the certificate's signature is valid, so the string is
+      misleading here; the mechanism is therefore NOT identified. Recorded as
+      an open question, not as a pathLenConstraint violation.
   - case: c13_pair2_selfissued
     shape: "root -> ICA(1) -> ICA(0 SELF-ISSUED) -> ICA(0) -> EE"
-    oracle: ACCEPT
-    observed: REJECT
-    reason_class: signature
-    interpretation: as c11
-  - case: c17_anchor_constrained
-    shape: "root(pathlen:0) -> ICA -> EE"
-    oracle: ACCEPT
-    observed: REJECT
-    reason_class: path_len
+    oracle: REJECT (after the oracle correction)
+    certvalidator: REJECT
+    rustls_webpki: REJECT
     interpretation: >
-      A SEPARATE and cleaner divergence. RFC 5280 6.1 says that when the trust
-      anchor is provided as a self-signed certificate it "is not included as
-      part of the prospective certification path", and SA-1 corroborated this
-      with the fact that max_path_length is initialised to n rather than n+1.
-      The observed rejection reason class is path length, so this cell is
-      directly interpretable and does not depend on any self-issued subtlety.
+      WITHDRAWN from the evidence base. This cell previously read
+      oracle=ACCEPT and appeared to be a divergence. rev-2026-0020 showed the
+      oracle was wrong: 6.1.4(m) carries no self-issued condition, so a
+      self-issued certificate's own pathLenConstraint still clamps the budget,
+      and the corrected literal walk REJECTs this chain. certvalidator agrees.
+      There is no divergence here.
   - case: c04_pl0_ca_target
     oracle: ACCEPT
     observed: REJECT
@@ -82,21 +88,22 @@ per_case:
     observed: REJECT
     reason_class: key_usage
     interpretation: as c04
-discriminating_pairs_under_the_measured_core:
+discriminating_pairs:
   - pair: [c10_pair1_nonself, c11_pair1_selfissued]
     oracle: REJECT / ACCEPT
-    observed: REJECT / REJECT
-    discriminates_under_observation: false
+    certvalidator: REJECT / ACCEPT
+    discriminates_under_certvalidator: true
   - pair: [c12_pair2_nonself, c13_pair2_selfissued]
-    oracle: REJECT / ACCEPT
-    observed: REJECT / REJECT
-    discriminates_under_observation: false
+    oracle: REJECT / REJECT
+    certvalidator: REJECT / REJECT
+    discriminates: false
+    note: >
+      This pair does not discriminate under the corrected oracle either: both
+      members REJECT. Pair 1 is the discriminating one.
 pair_conclusion: >
-  The core under test rejects BOTH members of each pair, i.e. it does not behave
-  differently on the self-issued and non-self-issued variants. Read with probe
-  P1, the boundary is at first-intermediate pathLen 1 versus 2, which is the
-  boundary RFC 5280 predicts if and only if the self-issued certificate consumes
-  a slot.
+  Under certvalidator, pair 1 discriminates exactly as RFC 5280 predicts. Under
+  rustls-webpki both members reject, which is why the c11 rejection is recorded
+  as an unexplained open question rather than a conformance finding.
 controls:
   path_construction_eliminated: >
     Supplying all 50 CA certificates as untrusted intermediates leaves every

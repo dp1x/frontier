@@ -1,0 +1,130 @@
+id: rev-2026-0020
+type: review
+status: complete
+created_at: "2026-10-04T20:00:00Z"
+updated_at: "2026-10-04T21:00:00Z"
+summary: >
+  Independent adversarial review of fnd-2026-0016, conducted with an explicit
+  mandate to disprove it and no access to the synthesizer's reasoning. Neither
+  claim could be refuted, but the review found a FOURTH wrong version of the
+  Frontier oracle -- a live defect, not historical -- which forced the
+  self-issued claim to be withdrawn from the evidence base. Verdict: PROMOTE
+  WITH SCOPE REDUCTION.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-reviewer
+    model: grok-4.1
+    tool: >
+      full re-derivation of the acceptance predicate from the RFC text, a
+      regenerated corpus, and exhaustive enumeration of the algorithm to depth 5
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - knowledge/findings/fnd-2026-0016.yaml
+    - knowledge/hypotheses/hyp-2026-0028.yaml
+    - crypto/x509-pathlen/oracle.py
+    - crypto/x509-pathlen/corpus.py
+    - .scratch/fx/reports/rev1.md
+  parent: msn-2026-0022
+  generation: 1
+links:
+  findings: [fnd-2026-0016]
+  observations: [obs-2026-0050]
+review_of: fnd-2026-0016
+independence: >
+  The reviewer re-derived the acceptance predicate from the RFC source before
+  reading oracle.py, regenerated the corpus independently, and reproduced every
+  recorded verdict. It did not read the synthesizer's reasoning.
+reproduction_performed:
+  corpus_regenerated: yes, into a separate directory
+  rfc_hash_verified: yes, matches the recorded SHA-256
+  recorded_verdicts_reproduced: all
+  findings_on_the_record:
+    - >
+      "byte-identical across runs and machines" was FALSE: 0 of 45 certificates
+      match between two runs. `cryptography`'s ECDSA is not RFC 6979, so
+      signatures differ while the TBS bodies are stable. The corpus's
+      DETERMINISM claim was overstated in obs-2026-0050 and is corrected there.
+    - >
+      "42 certificates" counted distinct DNs, not certificates; the corpus
+      generates 45.
+    - >
+      The recorded results_webpki.tsv had 19 rows; c20 was missing.
+    - >
+      The corpus has SIX oracle-accept / implementation-reject cells, not four,
+      and harness_soundness.py returns HARNESS SOUND: False, which no artifact
+      recorded. c18 is a third confounder.
+substantive_findings:
+  - id: R1
+    severity: high
+    title: Fourth wrong version of the oracle, and the corpus cannot catch it
+    detail: >
+      RFC 5280 6.1.4 lists (l) at offset 4836 and (m) at offset 4840 and
+      executes its steps in that order; oracle.py applied (m) before (l). More
+      seriously, the oracle had replaced the literal 6.1 walk with a
+      per-position reformulation derived from 4.2.1.9's prose. The two
+      formulations DISAGREE, because 6.1.4(l) is guarded on "not self-issued"
+      while 6.1.4(m) is NOT -- so any per-position rule that skips the check for
+      a self-issued certificate silently drops (m)'s effect for exactly the
+      certificates where it bites. Enumeration to depth 5 found 37,100
+      disagreeing chains, every one in the over-strict direction, so the defect
+      could not manufacture a false ACCEPT.
+      Crucially the corpus CANNOT catch this: every case exposing it has the
+      same expected verdict under both readings. The claim in exp-2026-0037
+      that "all three wrong versions were caught by the corpus" holds only for
+      the three that are gone.
+  - id: R2
+    severity: high
+    title: Section misattribution in the finding's own normative checks
+    detail: >
+      fnd-2026-0016 cited RFC 5280 section 6.1.1 for the self-issued paragraph,
+      which is in section 6.1; 6.1.1 begins later. The gate's G3 refusal is
+      really a fixture defect (rfc_sections.yaml omits 6.1.1's boundary), but
+      the misattribution was real. This is the fnd-2026-0014 failure mode, in a
+      finding written this session.
+  - id: R3
+    severity: medium
+    title: Every normative check was self-recorded
+    detail: >
+      All checks carried method "deterministic-script", asserting a check that
+      was never run. TOOL-2 independently confirmed the gate does not compare a
+      record's `quoted` field against anything. The checks are now backed by
+      tests/test_x509_pathlen_citations.py, which actually executes the
+      comparison.
+  - id: R4
+    severity: medium
+    title: Harness soundness was never asserted
+    detail: >
+      harness_soundness.py returns False (three confounders, and the
+      discriminating pairs do not discriminate under the measured core). No
+      artifact recorded this.
+strengthenments:
+  - >
+    For the self-issued axis, the reviewer built fresh mints with a single
+    changed variable and an unconstrained anchor: the self-issued vs
+    non-self-issued comparison flips the P=1 boundary (5/9 agreement on the
+    self-issued axis, 9/9 off it), establishing the axis is independent of the
+    self-issued certificate's own pathLen.
+  - >
+    The trust-anchor claim was STRENGTHENED: certvalidator also enforces the
+    anchor's constraint (validate.py:286-289), so it is a two-core convention
+    rather than a webpki quirk.
+strengthenments_note: >
+  Both strengthenings came from the reviewer constructing NEW evidence
+  (fresh mints with one changed variable; locating the seeding code in a second
+  core), not from re-reading the existing results.
+what_the_reviewer_confirmed:
+  - "No fabrication: every quotation resolves to real RFC text."
+  - "No overreach: the lineage exclusion is honest."
+  - >
+    No security overclaim: the "stricter, not a vulnerability" statement is
+    correct, and the reviewer confirmed it independently.
+verdict:
+  claim_trust_anchor: SUPPORTED
+  claim_self_issued: WITHDRAWN by the finding as a result of this review
+  overall: PROMOTE WITH SCOPE REDUCTION
+  conditions: >
+    c13_pair2_selfissued withdrawn from the evidence base; the oracle's step
+    order corrected; the false reproducibility claim corrected; scope limited to
+    the two cores actually executed.

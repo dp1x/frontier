@@ -113,19 +113,36 @@ class TestSelfIssued:
                 ee("EE", "ICA3")]
         assert not accepted(path)
 
-    def test_self_issued_pathlen0_allows_exactly_one_following_intermediate(self):
-        # The boundary case for the same rule: one intermediate follows the
-        # self-issued pathlen:0 certificate, which is permitted; two is not.
-        ok = [ca("ICA", ROOT, 1), ca("ICA", "ICA", 0),
-              ca("ICA2", "ICA", 0), ee("EE", "ICA2")]
-        assert accepted(ok)
-        too_many = [ca("ICA", ROOT, 1), ca("ICA", "ICA", 0),
-                    ca("ICA2", "ICA", 0), ca("ICA3", "ICA2", 0),
-                    ee("EE", "ICA3")]
-        assert not accepted(too_many)
+    def test_self_issued_pathlen0_blocks_any_following_intermediate(self):
+        # root -> ICA(1) -> ICA(0 SELF-ISSUED) -> ICA(0) -> EE.
+        #
+        # Traced literally against 6.1.4, n = 4:
+        #   i=1 ICA(1), not self-issued: mpl 4 -> 3, clamp min(3,1) = 1
+        #   i=2 ICA(0), SELF-ISSUED: (l) skipped, then (m) clamp min(1,0) = 0
+        #   i=3 ICA2(0), not self-issued: mpl is 0, which is NOT greater than
+        #       zero, so (l) fails
+        # => REJECT
+        #
+        # The subtlety this pins down: (m) carries NO self-issued condition, so
+        # a self-issued certificate's OWN pathLenConstraint still clamps the
+        # budget. An earlier formulation of the oracle skipped the check
+        # entirely for self-issued certificates and wrongly ACCEPTed this.
+        path = [ca("ICA", ROOT, 1), ca("ICA", "ICA", 0),
+                ca("ICA2", "ICA", 0), ee("EE", "ICA2")]
+        assert not accepted(path)
 
-    def test_self_issued_certificate_with_no_constraint_does_not_bind(self):
-        path = [ca("ICA", ROOT, 1), ca("ICA", "ICA", None), ee("EE", "ICA")]
+    def test_self_issued_without_a_constraint_does_not_block(self):
+        # The same shape but the self-issued certificate carries NO
+        # pathLenConstraint, so (m) does not clamp and one intermediate may
+        # follow. This is the real-world key-rollover shape and it is ACCEPT.
+        #
+        #   i=1 ICA(1): mpl 4 -> 3, clamp to 1
+        #   i=2 ICA, SELF-ISSUED, no pathLen: (l) skipped, (m) no-op -> mpl 1
+        #   i=3 ICA2(0): mpl 1 > 0, so 1 -> 0, clamp min(0,0) = 0
+        #   i=4 EE: final certificate, 6.1.4 not applied
+        # => ACCEPT
+        path = [ca("ICA", ROOT, 1), ca("ICA", "ICA", None),
+                ca("ICA2", "ICA", 0), ee("EE", "ICA2")]
         assert accepted(path)
 
 

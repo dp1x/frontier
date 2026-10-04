@@ -156,6 +156,38 @@ def validate_path(path: list[CertFacts]) -> Verdict:
     ``path`` is ordered trust-anchor first, so ``path[0]`` is certificate 1 and
     ``path[-1]`` is certificate n (the target).  The trust anchor is NOT in this
     list -- see [G].
+
+    This is a LITERAL transcription of the 6.1 walk, not a reformulation of it.
+    Four earlier versions of this function were wrong, and three of them were
+    wrong because they re-expressed the rule in a "cleaner" form:
+
+      v1  Applied 6.1.4 to the final certificate, rejecting legal pathlen:0
+          penultimate chains.  Caught by the corpus.
+      v2  Replaced (l)'s budget test with a pre-decrement threshold, rejecting
+          `pathLen 1 -> 2` increases.  Caught by the corpus.
+      v3  Computed a per-position check but never gated the verdict on it, so
+          every case accepted.  Caught by the corpus.
+      v4  Replaced the walk with 4.2.1.9's prose formulation -- "at most
+          c.pathlen non-self-issued certificates may FOLLOW c" -- guarded on c
+          being non-self-issued.  Found by REV-1, the independent reviewer, and
+          NOT catchable by the corpus.
+
+    v4 is the instructive one.  The two formulations DISAGREE, and the RFC
+    contains both, so a reformulation is not a neutral simplification:
+
+      * 6.1.4 (l) is guarded on "the certificate was not self-issued" -- it
+        governs which certificates consume budget.
+      * 6.1.4 (m) carries NO self-issued guard -- a self-issued intermediate
+        still imposes its own pathLenConstraint on what follows it.
+
+    Any per-position rule that skips the check for a self-issued certificate
+    therefore silently drops (m)'s effect for exactly the certificates where it
+    bites.  Transcribing the walk avoids having to notice that.
+
+    Ordering: RFC 5280 lists (l) at offset 4836 and (m) at offset 4840, and
+    6.1.4 executes its steps in that order.  An earlier version applied (m)
+    first; REV-1 enumerated the disagreement exhaustively to depth 5 (37,100
+    chains, all in the over-strict direction).
     """
     n = len(path)
     if n == 0:
@@ -167,17 +199,11 @@ def validate_path(path: list[CertFacts]) -> Verdict:
     # [B]: max_path_length is initialised to n.
     max_path_length = n
 
-    # [C]: step (3) -- 6.1.4 -- runs for certificates 1..n-1 only.  The final
-    # certificate is excluded from path-length processing entirely.
-    #
-    # Indexing note: `position` below is the 1-based position RFC 5280 uses for
-    # certificate i (certificate 1 is closest to the trust anchor, certificate n
-    # is the target).  `path` is a 0-based Python list, so certificate i lives
-    # at `path[i - 1]` and `path[position:]` is exactly the certificates that
-    # FOLLOW it.  Keeping the two spellings distinct is what prevents the
-    # off-by-one that an earlier version of this function had.
-    for position, cert in enumerate(path, start=1):
-        index = position - 1
+    # [C]: step (3) is 6.1.4, and 6.1 says step (3) "is performed for all
+    # certificates in the path except the final certificate".  So the walk below
+    # covers certificates 1..n-1 and the target is never touched.
+    for index, cert in enumerate(path):
+        position = index + 1
         label = cert.subject
 
         if position == n:
@@ -186,93 +212,42 @@ def validate_path(path: list[CertFacts]) -> Verdict:
                               max_path_length))
             break
 
-        # 6.1.4 (k) is not a path-length rule but a CA-ness rule; recorded
+        # 6.1.4 (k) is a CA-ness rule, not a path-length rule.  Recorded
         # separately so it can never be mistaken for one.
         if not (cert.ca and cert.basic_constraints_present):
             other_defects.append(
-                f"cert {position} ({label}) issues a following certificate but is not a CA"
+                f"cert {position} ({label}) issues a following certificate "
+                "but is not a CA"
             )
 
-        # [D] 6.1.4 (l): if the certificate was NOT self-issued, verify
-        # max_path_length > 0, then decrement.
-        #
-        # HISTORY OF THIS FUNCTION -- kept because the wrong versions are the
-        # obvious ones to write, and all three were caught by the corpus
-        # rather than by a reviewer.
-        #
-        #   v1  Tested `max_path_length <= 0` after decrementing.  Rejected any
-        #       path whose penultimate certificate had pathLenConstraint=0.
-        #       Wrong: 6.1.4 is "preparation for certificate i+1", so the budget
-        #       test is about whether a SUBSEQUENT certificate may be
-        #       processed, and 4.2.1.9 [H] says the last certificate "is not
-        #       included in this limit".
-        #
-        #   v2  Tested `max_path_length <= 1` before decrementing.  Rejected
-        #       `root -> ICA(1) -> ICA(2) -> EE`.  Wrong because the clamp in
-        #       (m) is a MINIMUM over the constraints seen so far and applies to
-        #       the certificate just processed, so the real question is not
-        #       "is the budget nonzero" but "will my successor still fit".
-        #
-        #   v3  Added a per-position check but computed it from `max_path_length`
-        #       and then let the walk continue, so the check never gated the
-        #       verdict and every case accepted.  Detected by the corpus: c05 and
-        #       c06 are violations by construction and were accepting.
-        #
-        # The literal sentence
-        #
-        #     verify that max_path_length is greater than zero
-        #        and decrement max_path_length by 1
-        #
-        # states an INVARIANT of the walk, not a standalone test.  The budget is
-        # initialised to n [B] and can be clamped down to 0 by (m); the walk
-        # fails exactly when a certificate whose constraint is 0 would be
-        # followed by another non-self-issued certificate.  Equivalently -- and
-        # this is the formulation 4.2.1.9 [H] actually gives -- a path is
-        # accepted iff every constrained non-self-issued certificate c is
-        # followed by at most c.pathlen non-self-issued certificates, with the
-        # FINAL certificate excluded because it is not an intermediate.
-        #
-        # `max_path_length` is retained in the trace as the running minimum of
-        # the constraints seen so far, so a reader can check the walk by hand.
+        # [D] 6.1.4 (l), FIRST and guarded: "If the certificate was not
+        # self-issued, verify that max_path_length is greater than zero and
+        # decrement max_path_length by 1."
         if not cert.self_issued:
-            # Every certificate after this one, except the final one, could be
-            # an intermediate.  `index + 1` converts the 0-based position to
-            # the first following certificate's list index; dropping the last
-            # element removes exactly the final certificate, which [H] says is
-            # not an intermediate.  The loop's final iteration never reaches
-            # here, so `tail` is never empty.
-            tail = path[index + 1:]
-            remaining = sum(1 for follower in tail[:-1] if not follower.self_issued)
-            if cert.pathlen is not None and remaining > cert.pathlen:
+            if max_path_length <= 0:
                 trace.append(Step(position, label, cert.self_issued,
-                                  f"REJECT: {remaining} non-self-issued certificate(s) "
-                                  f"follow, limit is {cert.pathlen}",
+                                  "REJECT: 6.1.4 (l) budget not greater than zero",
                                   max_path_length))
                 return Verdict(
                     False,
-                    f"4.2.1.9 pathLenConstraint={cert.pathlen} at certificate "
-                    f"{position} ({label}) exceeded: {remaining} non-self-issued "
-                    f"certificates follow it, and the final certificate is not "
-                    f"counted",
+                    f"6.1.4 (l): max_path_length is {max_path_length} (not "
+                    f"greater than zero) at non-self-issued certificate "
+                    f"{position} ({label})",
                     trace,
                     other_defects,
                 )
+            max_path_length -= 1
             action = "6.1.4 (l) decrement"
         else:
-            # [A]/[D]: a self-issued certificate is not counted.  [E] still
-            # applies to it below -- 6.1.4 (m) has no self-issued condition.
             action = "6.1.4 (l) skipped: self-issued, not counted"
 
-        # [E] 6.1.4 (m): clamp to pathLenConstraint if present and smaller.
-        # Runs for self-issued certificates too -- (m) carries no self-issued
-        # condition, so a self-issued intermediate's own pathLenConstraint still
-        # binds the certificates that follow it.
+        # [E] 6.1.4 (m), SECOND and UNGUARDED: "If pathLenConstraint is present
+        # in the certificate and is less than max_path_length, set
+        # max_path_length to the value of pathLenConstraint."  No self-issued
+        # condition, so this also runs for a self-issued intermediate.
         if cert.pathlen is not None and cert.pathlen < max_path_length:
             max_path_length = cert.pathlen
             action += f"; 6.1.4 (m) clamp to {cert.pathlen}"
-
-        if not cert.self_issued:
-            max_path_length -= 1
 
         trace.append(Step(position, label, cert.self_issued, action,
                           max_path_length))
