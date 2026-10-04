@@ -483,12 +483,24 @@ final_verification_re_measured_at_close:
 
 remaining_uncertainties_stated_precisely:
   - >
+    CORRECTED, not remaining: the corpus's byte-reproducibility. exp-2026-0037
+    and two chainforge docstrings claimed RFC 6979 made the DER reproducible.
+    Measured 0 of 45 byte-identical across two same-seed runs, because
+    builder.sign draws a random ECDSA nonce. The VERDICTS are stable, which is
+    the claim the experiment actually has, and that was verified across two
+    regenerations on both adapters. See obs-2026-0057. fnd-2026-0016 is
+    unaffected.
+  - >
     UNRESOLVED: the X.509 control sweep over anchor pathLenConstraint in
-    {absent, 1, 0} was designed and specified but NOT executed. The c17 claim's
-    causal basis rests on generator intent plus the corpus's own contrast
-    (unconstrained root ACCEPT vs root_pl0 REJECT at identical depth), which is
-    correlational across different case definitions rather than a controlled
-    single-variable sweep. No implementation was executed this session.
+    {absent, 1, 0} was designed and specified but NOT executed. It remains the
+    single highest-value open gap, because it would close the causal claim at
+    DER level rather than by generator intent. The reproducibility question
+    that sat beside it is now closed; this one is not.
+  - >
+    UNRESOLVED: .scratch/fx/corpus/certs holds 83 .der files where the current
+    generator emits 45. The recorded corpus directory is a superseded
+    generation. Not deleted (it is gitignored scratch), but recorded so a
+    future session regenerates rather than reuses it.
   - >
     UNRESOLVED: whether enforcing the trust anchor's pathLenConstraint is
     deliberate ecosystem-wide. It is now demonstrably deliberate in pyca's
