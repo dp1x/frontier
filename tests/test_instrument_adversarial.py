@@ -962,7 +962,9 @@ def test_cbor_matrix_cells_are_attributable_to_the_adapter_that_produced_them():
             [_NoVersionNoSupportsCanonical()], vectors_dir, Path(tmp) / "r"
         )
         jsonl = (Path(tmp) / "r" / "matrix.jsonl").read_text(encoding="utf-8")
-    for record in (json.loads(l) for l in jsonl.splitlines() if l.strip()):
+    for record in (
+        json.loads(line) for line in jsonl.splitlines() if line.strip()
+    ):
         assert record["adapter"] == "probe_anonymous", record
 
 
