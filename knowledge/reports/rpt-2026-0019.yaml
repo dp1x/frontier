@@ -1,0 +1,296 @@
+id: rpt-2026-0019
+type: report
+status: final
+created_at: "2026-10-04T22:00:00Z"
+updated_at: "2026-10-04T22:30:00Z"
+summary: >
+  Consolidated session report for the 2026-10-04 autonomous shift. Primary
+  mission: determine independently whether the widely reported x509-limbo
+  pathLenConstraint divergence reflects genuine standards non-conformance. The
+  answer is more interesting than the inherited hypothesis: the RFC rule was
+  re-derived and is now settled, Frontier's own oracle was found to be wrong
+  FOUR times (the fourth by an independent reviewer, not by the corpus), and the
+  self-issued claim was withdrawn while a DIFFERENT and stronger finding
+  survived on two independent validation cores.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.1
+    tool: synthesis of 18 agent reports plus direct execution and verification
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - https://github.com/C2SP/x509-limbo (main @ 554528a9b0c0, 2026-09-24)
+    - crypto/x509-pathlen/ (generator, corpus, oracle, adapters)
+    - .scratch/fx/reports/ (sa1 sa2 sa4 sa5 sa6 or1 impl5 impl6 rev1 spec2 tool2)
+  parent: null
+  generation: 0
+links:
+  missions: [msn-2026-0022, msn-2026-0021]
+  hypotheses: [hyp-2026-0028]
+  experiments: [exp-2026-0037]
+  observations: [obs-2026-0050]
+  findings: [fnd-2026-0016]
+  reviews: [rev-2026-0020]
+
+starting_state:
+  head_at_session_start: a3bece0 (identical to origin/main)
+  frontier_validate: ok
+  pytest: 48/48
+  promotion_gate: REFUSE for 4 artifacts (fnd-2026-0003, rpt-2026-0015/16/17)
+  stale_index_defect: >
+    knowledge/indices/*.yaml asserted eight findings as verified whose artifacts
+    say disputed, rejected or withdrawn, and nothing detected the drift.
+  x509_instrumentation: none existed in the repository
+
+parallel_workstreams:
+  standards_analysis:
+    agents: SA-1 SA-2 SA-3 SA-4 SA-5 SA-6 OR-1
+    outcome: >
+      Three independent derivations (SA-1, SA-5, OR-1) converged on one
+      acceptance predicate. SA-6's adversarial attempt to refute the inherited
+      x509-limbo expectation FAILED and was reported as a failure.
+    agents_that_died: >
+      SA-3 (self-issued) died on an upstream idle timeout after 28 model calls.
+      Its mandate was covered by SA-1, SA-5 and OR-1.
+  implementation_archaeology:
+    agents: IMPL-1 IMPL-2 IMPL-3 IMPL-4 IMPL-5 IMPL-6
+    outcome: >
+      IMPL-5 and IMPL-6 completed and produced the decisive lineage facts.
+      IMPL-1 (OpenSSL) and IMPL-2 (Go) died on upstream timeouts; IMPL-3/IMPL-4
+      were lost to the session interruption.
+  governance_and_tools:
+    agents: GOV-2 TOOL-2 SPEC-2
+    outcome: index reconciliation landed; promotion gate hardened; spc-2026-0004 audited
+  formal: >
+    msn-2026-0021 (FORMAL-208) continued by a dedicated agent; see
+    `formal_method_track` below.
+
+x509_research_question: >
+  Does RFC 5280 require the self-issued pathLen exemption that C2SP x509-limbo
+  expects, and do the implementations that reject its testcase deviate from it?
+
+normative_source_derivation:
+  source: RFC 5280, 352580 bytes, SHA-256 A2F2628C0A83B873FC4786ABD921F9B2C02395954B655D190BF16B831633345D, May 2008, Standards Track
+  decisive_clause_never_previously_cited: >
+    RFC 5280 6.1: "Step (3) is performed for all certificates in the path
+    except the final certificate." Step (3) IS 6.1.4, which is where the
+    path-length decrement and clamp live, so the final certificate is excluded
+    from path-length processing entirely. This clause is four paragraphs away
+    from the loop body everyone had been reading, and no inherited source cited
+    it -- not x509-limbo, not implementation folklore, not Frontier's reports.
+  structural_finding_from_SA_4: >
+    "intermediate certificate" is NEVER DEFINED in RFC 5280. It occurs exactly
+    once, in the 4.2.1.9 parenthetical. The counting rule rests on a positional
+    reading of section 6.1, not on a defined term.
+  convergence: >
+    Per AGENTS.md, agent agreement is NOT treated as proof. The decisive evidence
+    is the normative text plus independently reproducible execution, both
+    recorded. All 10 quotations in the two artifacts are verified byte-exact
+    against the fetched source by tests/test_x509_pathlen_citations.py, which
+    pins the source's byte count and digest so a stale or substituted text
+    cannot make the check pass vacuously.
+
+test_corpus_design:
+  scale: 20 cases, 45 generated certificates, 42 distinct subject DNs
+  construction: >
+    Deterministic P-256 scalars from a fixed-seed SHAKE-256 stream. Self-issued
+    status is controlled BY CONSTRUCTION as the key-rollover shape RFC 5280
+    6.1.1 describes: subject DN equals issuer DN, signed by the issuer's key --
+    explicitly NOT self-signed.
+  three_enforced_structural_invariants:
+    - chain integrity per RFC 5280 6.1(a)-(c), checked mechanically
+    - DN uniqueness modulo issuance, with distinct serials
+    - discriminating-pair isolation (one changed observable)
+  why_invariants_matter: >
+    They were added because two earlier corpus versions had 6.1(a) violations
+    that would have made every path-length observation on those chains
+    uninterpretable.
+
+oracle_design_and_its_four_failures: >
+  The oracle implements ONLY the path-length part of RFC 5280 6.1. It was wrong
+  four times, and the progression is the most useful methodological result of
+  the session:
+    v1  Applied 6.1.4 to the final certificate. Caught by the corpus.
+    v2  Replaced (l)'s budget test with a pre-decrement threshold. Caught by
+        the corpus.
+    v3  Computed a check but never gated the verdict on it. Caught by the
+        corpus.
+    v4  Replaced the literal 6.1 walk with a per-position reformulation from
+        4.2.1.9's prose, silently dropping 6.1.4(m) for self-issued
+        certificates; also inverted the (l)/(m) execution order. Found by the
+        INDEPENDENT REVIEWER, and NOT catchable by the corpus.
+
+  v4 is the instructive one. The two formulations disagree because 6.1.4(l) is
+  guarded on "not self-issued" while 6.1.4(m) is NOT, so any per-position rule
+  that skips the check for a self-issued certificate drops (m)'s effect for
+  exactly the certificates where it bites. **A reformulation of a specification
+  is not a neutral simplification when the specification contains both
+  formulations.** All four wrong versions are preserved in oracle.py.
+
+implementation_cohort_and_independence:
+  measured:
+    - rustls-webpki, via pyca/cryptography 50.0.1's x509.verification
+    - pyca/certvalidator 0.11.1 (pure-Python RFC 5280 6.1 transcription)
+  not_measured: >
+    OpenSSL, LibreSSL, BoringSSL, AWS-LC, Go crypto/x509, GnuTLS. NO CLAIM IS
+    MADE ABOUT ANY OF THEM. Two agents died reading their sources and none was
+    built locally.
+  lineage_established_from_history: >
+    BoringSSL's root commit names its upstream ("Initial fork from
+    f2d678e6e89b6508147086610e985d4e8416e867 (1.0.2 beta)"), and AWS-LC shares
+    7042 bit-identical commit SHAs with BoringSSL. So the BoringSSL and AWS-LC
+    rows in the x509-limbo table are CORRELATED, not independent.
+  correction_to_a_session_brief_premise: >
+    The brief asserted pyca/cryptography had no pathLen enforcement. IMPL-5
+    established it does, and that its verification path is compiled Rust
+    vendoring rustls-webpki -- NOT the platform OpenSSL. The platform libcrypto
+    reports "OpenSSL 4.0.2", which is irrelevant to this code path and is a
+    coincidence worth noticing.
+
+exact_matrix_results_after_correction:
+  agreement: certvalidator 19/20, rustls-webpki 16/20 (both reproduced from a clean state)
+  surviving_shared_divergence:
+    c17_anchor_constrained: >
+      root(pathlen:0) -> ICA -> EE. Both cores REJECT with reason class
+      path_len. RFC 5280 6.1 says the self-signed trust anchor "is not included
+      as part of the prospective certification path", and the algorithm has no
+      step reading the anchor's own constraints. SA-1 corroborated this
+      independently by noting max_path_length is initialised to n, not n+1.
+  withdrawn_after_review:
+    c13_pair2_selfissued: >
+      Previously appeared to be a divergence. The oracle was wrong; corrected,
+      it REJECTs, and certvalidator agrees. Frontier was disagreeing with a
+      correct implementation.
+  unexplained_open_question:
+    c11_pair1_selfissued: >
+      certvalidator ACCEPTS, rustls-webpki REJECTs with reason string
+      "candidates exhausted: signature does not match". Direct signature
+      verification proves the string is misleading here, so the mechanism is not
+      identified. NOT claimed as a conformance failure.
+
+source_level_discrepancy_analysis: >
+  certvalidator seeds max_path_length from the trust anchor's own
+  pathLenConstraint at validate.py:286-289, while a comment in the same
+  codebase states the anchor is not part of the path. Code contradicting its own
+  stated model is stronger evidence of an unintended convention than two cores
+  disagreeing would be. The corresponding location inside rustls-webpki was NOT
+  identified.
+
+independent_reproduction: >
+  REV-1 regenerated the corpus independently, re-derived the predicate from the
+  RFC before reading the oracle, and reproduced every recorded verdict. Its
+  reproduction DISAGREED with the oracle on c13 -- which is what exposed v4.
+  The orchestrator then re-verified REV-1's central claim directly against the
+  RFC offsets (6.1.4(l) at 4836, (m) at 4840) before acting on it.
+
+adversarial_review:
+  review: rev-2026-0020
+  verdict: PROMOTE WITH SCOPE REDUCTION
+  what_it_caught: >
+    The v4 oracle defect; a section misattribution in the finding's own
+    normative checks (6.1.1 vs 6.1, the fnd-2026-0014 failure mode in a finding
+    written this session); that every normative check was self-recorded with a
+    method asserting a check never run; that "byte-identical across runs" was
+    false; that harness_soundness.py returns False and no artifact said so.
+  what_it_confirmed: >
+    No fabrication, no overreach on lineage, and no security overclaim.
+
+final_finding_status:
+  fnd-2026-0016: >
+    status `candidate`, epistemic_status `interpretation`, deliberately NOT
+    promoted. One surviving claim (trust anchor), scoped to two measured cores.
+    Remaining blockers: no erratum consulted on whether the anchor's constraint
+    should bind, and no source-level confirmation inside rustls-webpki.
+
+negative_results_and_withdrawn_claims:
+  - The self-issued pathLen claim: WITHDRAWN after independent review.
+  - "byte-identical across runs and machines": WITHDRAWN as false.
+  - >-
+    The claim that the corpus caught all oracle defects is CORRECTED: it caught
+    three of the four.
+  - "The SA-6 refutation attempt is reported as a failure, not softened."
+  - Two corpus confounders found and fixed, each of which would have made the
+    whole matrix uninterpretable while still producing plausible PASS/FAIL.
+
+spc_2026_0004_corrections: >
+  SPEC-2 audited all 8 axes and independently fetched RFC 8949 (185226 bytes) and
+  RFC 9052 (149835 bytes). 29 of 29 quoted fragments are absent from RFC 8949;
+  all 8 rule_ref locators are wrong. A defect the artifact's own correction list
+  MISSES: it claims 1.5 encodes as 0xf93c00, but RFC 8949 4.2.1 says
+  **0xf93e00**. The orchestrator verified this by fetching RFC 8949 and reading
+  the clause directly. Only 2 of 8 axes discriminate between implementations.
+  SPEC-1 had already withdrawn the extract before SPEC-2 ran, so the brief's
+  premise was stale -- recorded rather than hidden. Escalations: rev-2026-0018
+  certified fabricated quotations as accurate, and msn-2026-0017 stands verified
+  on a withdrawn authority.
+
+governance_fixes:
+  - >
+    knowledge/indices/*.yaml reconciled with the artifacts. The artifacts are the
+    truth; the index is derived. validate.py now enforces agreement via
+    check_index_consistency, with 8 tests.
+  - >
+    tools/promotion_gate.py hardened by TOOL-2 with rules G9 (invented section
+    number), G10 (unprobeable stub quote) and G11 (checker is the author --
+    the encoded review step), plus record-level G2/G3. A machine diff over all
+    artifacts shows ZERO weakened refusals.
+  - >
+    The gate's known limit is now stated by a test rather than only in prose:
+    source-level ABSTRACTION DEPTH is irreducibly human, and a test asserts the
+    gate ALLOWS the fnd-2026-0009 shape so no future claim that it "checks depth"
+    can go unchallenged.
+
+promotion_gate_improvements_measured: >
+  TOOL-2 demonstrated failure mode F1 concretely: four artifacts that defeat the
+  gate offline (fabricated quotation with verdict confirmed, unrelated quoted
+  text, a two-word stub, an invented section number) all returned ALLOW before
+  the new rules.
+
+formal_method_track_FORMAL_208: >
+  msn-2026-0021 remained active. A dedicated agent was dispatched to write
+  formal/Formal/EkCheck.lean with the paired accept/reject theorems the mission
+  requires, explicitly forbidden from running `lake build` locally per
+  AGENTS.md's compute-routing hard rule. See `remaining_uncertainties` for its
+  state at the close of this report.
+
+next_research_opportunities:
+  - Execute OpenSSL, Go, GnuTLS and LibreSSL against the same corpus. They are
+    entirely unmeasured, and the BoringSSL/AWS-LC lineage result suggests the
+    corpus would be informative.
+  - Identify the rustls-webpki mechanism for the unexplained c11 rejection, by
+    source rather than behaviour.
+  - Determine whether the trust-anchor convention is documented anywhere, via
+    errata or design history.
+  - Revisit msn-2026-0017 (verified on a withdrawn authority) and rev-2026-0018
+    (certified fabricated quotations as accurate).
+
+commits_this_session:
+  - 7387321 X.509 pathLen oracle + generator; reconcile stale index
+  - 6a02a91 second independent lineage; finding scoped to one core
+  - 895e501 verify X.509 quotations against the authoritative source in CI
+  - 3e4ce35 independent review refutes Frontier's own oracle; scope reduced
+
+validation_state_at_close:
+  frontier_validate: ok
+  pytest: 108/108
+  origin_main_equals_head: verified by fetch before every push
+  promotion_gate: refuses fnd-2026-0016 on G5-style grounds until the review
+    linkage and rule changes are reconciled
+
+remaining_uncertainties:
+  - Whether enforcing the trust anchor's pathLenConstraint is a defect or a
+    deliberate shared convention. Two cores agreeing is evidence of convention,
+    not of error, and no erratum was consulted.
+  - "The mechanism behind the rustls-webpki c11 rejection is unidentified."
+  - "Four of eight spc-2026-0004 axes remain undecided as to withdraw-vs-supersede."
+  - >-
+    c04 and c15 remain uninterpretable under the server-verifier harness. The
+    policy requires an end entity not to assert keyCertSign, and a CA
+    certificate is explicitly a legal target under RFC 5280 4.2.1.9.
+  - >-
+    FORMAL-208's EkCheck.lean is not kernel-checked. Mathlib oleans are absent
+    locally and the compute-routing rule forbids downloading them.
+  - No OpenSSL-family or Go measurement exists, so no ecosystem-wide statement
+    is possible.
