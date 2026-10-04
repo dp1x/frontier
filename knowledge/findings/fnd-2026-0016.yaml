@@ -2,27 +2,42 @@ id: fnd-2026-0016
 type: finding
 status: candidate
 created_at: "2026-10-04T17:45:00Z"
-updated_at: "2026-10-04T18:15:00Z"
+updated_at: "2026-10-05T00:05:00Z"
 summary: >
-  CANDIDATE, SCOPE-REDUCED after independent adversarial review (rev-2026-0020).
-  ONE conformance observation about pathLenConstraint, confirmed on TWO
-  independently-lineaged validation cores: the TRUST ANCHOR's own
-  pathLenConstraint is enforced even though RFC 5280 6.1 says the trust anchor
-  "is not included as part of the prospective certification path". Both
-  rustls-webpki and pyca/certvalidator do this, so it is a shared convention
-  rather than a single-implementation quirk.
-  The self-issued claim was WITHDRAWN from the evidence base after review: the
-  Frontier oracle was itself wrong (it reformulated the 6.1 walk and dropped
-  6.1.4(m)'s effect on self-issued certificates), so the cells that appeared
-  to support it were measuring Frontier, not the implementations. No security
-  claim is made.
+  CANDIDATE, RECLASSIFIED after a SECOND independent adversarial review
+  (rev-2026-0021). The behavioural observation SURVIVES: two independent
+  validation cores enforce the trust anchor's own pathLenConstraint on
+  root(pathlen:0) -> ICA -> EE, where the RFC 5280 6.1 baseline accepts.
+  The `spec-violation` classification is REFUTED: RFC 5280 6.2 expressly
+  permits "an implementation MAY modify the algorithm to apply a path length
+  constraint to a specific trust anchor during the initialization phase",
+  and declares 6.1 a MINIMUM. This is a conformance observation / interop
+  note, not a violation. A second refutation: the cohort label
+  "rustls-webpki" is factually WRONG -- the executed core is pyca's own
+  in-tree cryptography-x509-verification crate. NOT PROMOTED.
 epistemic_status: interpretation
-classification: spec-violation
+classification: conformance-observation
+classification_basis: >
+  Set by rev-2026-0021 on the authority of RFC 5280 section 6.2, whose text
+  the review transcribed from a freshly fetched source and whose three
+  decisive phrases the orchestrator independently relocated at offsets
+  194666 / 195006 / 195937 of the whitespace-normalized document (352580
+  bytes, sha256 a2f2628c...345d). The prior value `spec-violation` was
+  REFUTED, not softened. The check record for this claim is NC-6 below;
+  the full text lives in rev-2026-0021.
+classification_previously_asserted: spec-violation
+classification_why_wrong: >
+  Section 6.1 is the MINIMUM condition set. Section 6.2 layers explicit
+  MAY-permitted tightenings on top and names the measured behaviour as its
+  own worked example. Being stricter than a stated minimum is conformant,
+  so two cores doing it is evidence of a shared, sanctioned policy choice
+  rather than of an error.
 classification_scope: >
-  Scoped to the two cores actually executed: rustls-webpki (via
-  pyca/cryptography 50.0.1) and pyca/certvalidator 0.11.1. NOT a statement about
-  OpenSSL, BoringSSL, AWS-LC, LibreSSL, Go, GnuTLS or any other implementation,
-  none of which was executed in this session.
+  Scoped to the two cores actually executed: pyca/cryptography 50.0.1
+  (in-tree cryptography-x509-verification crate, NOT rustls-webpki) and
+  wbond/certvalidator 0.11.1 (pure-Python, MIT, independent author, NOT
+  pyca). NOT a statement about OpenSSL, BoringSSL, AWS-LC, LibreSSL, Go,
+  GnuTLS or any other implementation, none of which was executed.
 provenance:
   created_by:
     kind: model-agent
@@ -39,14 +54,56 @@ provenance:
     - .scratch/fx/reports/or1.md
     - .scratch/fx/reports/sa6.md
     - .scratch/fx/reports/impl5.md
+    - .scratch/trackA/spec_deriv_1.md
+    - .scratch/trackA/impl_arch_1.md
+    - .scratch/trackA/verify_c17/verify_c17.md
   parent: msn-2026-0022
   generation: 1
 links:
   hypotheses: [hyp-2026-0028]
   experiments: [exp-2026-0037]
   observations: [obs-2026-0050]
-  reviews: [rev-2026-0020]
+  reviews: [rev-2026-0020, rev-2026-0021]
 normative_checks:
+  - source: https://www.rfc-editor.org/rfc/rfc5280.txt
+    section: "6.2"
+    quoted: >
+      An implementation MAY augment the algorithm presented in Section 6.1 to
+      further limit the set of valid certification paths that begin with a
+      particular trust anchor.  For example, an implementation MAY modify the
+      algorithm to apply a path length constraint to a specific trust anchor
+      during the initialization phase, or the application MAY require the
+      presence of a particular alternative name form in the target
+      certificate, or the application MAY impose requirements on
+      application-specific extensions.  Thus, the path validation algorithm
+      presented in Section 6.1 defines the minimum conditions for a path to be
+      considered valid.
+    checked_at: "2026-10-04"
+    checker: "grok-4.7 (SPEC-DERIV-1 independent standards derivation), not the author of this artifact"
+    verdict: confirmed
+    method: independent-fetch-and-locate
+    why_this_matters: >
+      THIS IS THE CLAIM THAT DECIDES THE CLASSIFICATION. It is the reason
+      `spec-violation` was REFUTED. The author of this artifact did not
+      write this check: SPEC-DERIV-1 re-derived the rule from a fresh fetch
+      and was briefed to disagree, and the orchestrator then independently
+      re-located all three decisive phrases in the normalized text. Recorded
+      here so the classification does not rest on uncited prose.
+    discharger: rev-2026-0021
+  - source: https://www.rfc-editor.org/rfc/rfc5280.txt
+    section: "6.2"
+    quoted: >
+      Implementations that use self-signed certificates to specify trust
+      anchor information are free to process or ignore such information.
+    checked_at: "2026-10-04"
+    checker: "grok-4.7 (SPEC-DERIV-1 independent standards derivation), not the author of this artifact"
+    verdict: confirmed
+    method: independent-fetch-and-locate
+    why_this_matters: >
+      The second half of the refutation: the RFC explicitly declines to
+      specify processing rules for trust-anchor certificate extensions and
+      leaves implementations free to process or ignore them.
+    discharger: rev-2026-0021
   - source: https://www.rfc-editor.org/rfc/rfc5280.txt
     section: "6.1"
     quoted: >
@@ -120,8 +177,44 @@ surviving_claim_trust_anchor_constraint_enforced:
     certification path" and the algorithm has no step that reads the anchor's
     own constraints. BOTH measured cores REJECT, with reason class path_len.
   measured_on:
-    - rustls-webpki via pyca/cryptography 50.0.1
-    - pyca/certvalidator 0.11.1
+    - pyca/cryptography 50.0.1, in-tree cryptography-x509-verification crate
+    - wbond/certvalidator 0.11.1, pure-Python, MIT, independent author
+  measured_on_previously_claimed:
+    - "rustls-webpki via pyca/cryptography 50.0.1"
+    - "pyca/certvalidator 0.11.1"
+  core_identity_correction:
+    finding: >
+      There is no rustls-webpki in cryptography 50.0.1's dependency closure.
+      The shipped SBOM (cryptography-rust.cyclonedx.json) enumerates the full
+      Cargo closure and contains cryptography-x509-verification 0.50.1, a
+      first-party pyca crate depending only on asn1 and in-tree
+      cryptography-x509. The Python layer is a pure re-export shim. The
+      recorded error literal "path length constraint violated" is pyca's own
+      string in policy/mod.rs; rustls-webpki's PathLenConstraintViolated
+      renders via Debug and never emits that prose. exp-2026-0037's argument
+      that the string is "webpki's wording" is INVERTED and is withdrawn.
+    consequence: >
+      The independence claim survives on better grounds than originally
+      stated: the two cores share no code, no vendor, and no ancestry. What
+      fails is the LABEL, and the stated reason for trusting the label.
+  mechanism_now_source_confirmed:
+    pyca_cryptography: >
+      policy/mod.rs permits_ca tests
+      `bc.path_length.is_some_and(|len| u64::from(current_depth) > len)`.
+      The trust anchor is first validated as an ISSUER at current_depth=0,
+      where pathLenConstraint=0 is not violated by itself, and is then
+      RE-ENTERED as the working certificate at current_depth=1, where 1 > 0
+      fires. Depth 0 belongs to the LEAF, which is why reading valid_issuer
+      alone yields the wrong answer. The same unconditional increment carries
+      an upstream NOTE(ww) citing x509-limbo
+      pathlen::self-issued-certs-pathlen as a test the authors intentionally
+      fail.
+    certvalidator: >
+      validate.py:283-289, labelled "Step 1 k", seeds max_path_length from
+      trust_anchor.max_path_length at INITIALISATION, while a comment 22 lines
+      earlier in the same function states the anchor is not part of the path.
+      A different mechanism and a different off-by-one from pyca's, which is
+      why the agreement between them is meaningful.
   why_this_cell_is_clean: >
     It needs no self-issued subtlety. The chain has a single intermediate, the
     reason class is path length rather than a proxy, and SA-1 independently
@@ -176,38 +269,87 @@ withdrawn_claim_self_issued_consumes_a_slot:
 
 what_this_is_not:
   - >
-    NOT a claim about any implementation other than rustls-webpki as reached
-    through pyca/cryptography 50.0.1. No other core was executed.
+    NOT a claim about any implementation other than the two actually
+    executed: pyca/cryptography 50.0.1's in-tree
+    cryptography-x509-verification crate, and wbond/certvalidator 0.11.1. No
+    other core was executed. OpenSSL, LibreSSL, BoringSSL, AWS-LC, Go and
+    GnuTLS remain entirely unmeasured, and NO CLAIM IS MADE ABOUT THEM.
+  - >
+    NOT a claim about rustls-webpki. That label was carried until
+    rev-2026-0021 and is factually wrong; rustls-webpki is not in
+    cryptography 50.0.1's dependency closure.
+  - >
+    NOT a standards violation. RFC 5280 6.2 expressly permits this exact
+    augmentation and declares 6.1 a minimum. The earlier
+    `classification: spec-violation` is refuted, not softened.
   - NOT a security finding. No practical consequence has been demonstrated. In
-    both claims the measured core is stricter than the RFC, which is an
+    both claims the measured core is stricter than the 6.1 baseline, which is an
     interoperability concern, not a trust bypass.
   - >
     NOT a claim that the Frontier oracle is correct by construction. It was
     derived from the RFC text by three independent agents and implemented with
-    three documented wrong versions, all caught by the corpus; it is an
-    interpretation with a verification trail, not an axiom.
+    four documented wrong versions; three were caught by the corpus and the
+    fourth by a human reviewer. It is an interpretation with a verification
+    trail, not an axiom.
   - >
     NOT a reproduction of the x509-limbo published results table. Its generator
     was read as source; its harness was not built.
 independent_review:
-  review: rev-2026-0020
-  verdict: PROMOTE WITH SCOPE REDUCTION
-  blockers_addressed:
-    - independent review obtained (rev-2026-0020, non-synthesizer)
-    - second lineage now measured (certvalidator 0.11.1)
-    - self-issued claim withdrawn from the evidence base
-    - oracle corrected to a literal transcription of the 6.1 walk
+  first_review:
+    review: rev-2026-0020
+    verdict: PROMOTE WITH SCOPE REDUCTION
+    superseded_by: rev-2026-0021
+    what_it_still_earned: >
+      It correctly found the FOURTH wrong oracle version and correctly forced
+      the self-issued claim's withdrawal. That work stands and is not
+      revisited here.
+  second_review:
+    review: rev-2026-0021
+    verdict: DO NOT PROMOTE, RECLASSIFY
+    reviewer_roles:
+      - SPEC-DERIV-1 (independent standards derivation)
+      - IMPL-ARCH-1 (independent source archaeology)
+      - VERIFY-C17 (adversarial falsifier)
+    what_it_changed:
+      - "classification spec-violation -> conformance-observation (REFUTED, not softened)"
+      - "cohort label rustls-webpki -> pyca/cryptography in-tree crate (REFUTED)"
+      - "certvalidator is not pyca-maintained; independence SURVIVES on better grounds"
+      - "the 'except the final certificate' clause is NOT by itself decisive for the anchor"
+      - "the step-(3) clause excludes certificate n, not the trust anchor"
+    blockers_addressed:
+      - independent review obtained (rev-2026-0021, three non-synthesizer roles)
+      - second lineage measured (certvalidator 0.11.1, confirmed wbond-authored)
+      - self-issued claim withdrawn from the evidence base
+      - oracle corrected to a literal transcription of the 6.1 walk
+      - >
+        SOURCE-LEVEL CONFIRMATION NOW EXISTS IN BOTH CORES, which rev-2026-0020
+        listed as a blocking gap. pyca: policy/mod.rs permits_ca evaluates the
+        anchor at current_depth=1 because depth 0 is the leaf.
+        certvalidator: validate.py:283-289 seeds from the anchor at step 1 k.
+      - >
+        The G11 self-certification blocker is addressed by rev-2026-0021, which
+        re-fetched and re-read the clauses as three roles other than the
+        finding's author. Promotion is nonetheless refused, for a different and
+        stronger reason: the normative reading does not support promotion.
   blockers_remaining:
     - >
-      Whether enforcing the trust anchor's constraint is a DEFECT or a shared
-      convention is not settled; no erratum or design document was consulted.
+      DECISIVE: the classification was REFUTED, not confirmed. Promotion of a
+      spec-violation is not available on this evidence, and the finding is
+      correctly left as `candidate` with a conformance-observation label.
     - >
-      No source-level confirmation inside either core. Both are behavioural
-      observations; certvalidator's seeding code is located (validate.py:286-289)
-      but the webpki mechanism is not.
+      The control sweep over anchor pathLenConstraint in {absent, 1, 0} was
+      DESIGNED and specified so it can be run verbatim, but was NOT EXECUTED.
+      It is the cheap remaining check that would close the causal claim at DER
+      byte level rather than by generator intent.
     - >
-      The "signature" reason class on webpki's c11 rejection is unexplained and
-      IMPL-5 warned that string is also emitted for a genuine signature fault.
+      Whether the trust-anchor convention is deliberate remains open for the
+      ecosystem. rev-2026-0021 established that pyca's crate carries an explicit
+      upstream NOTE citing x509-limbo, which is evidence of deliberation for
+      that core; no equivalent statement was found for certvalidator.
+    - >
+      The "signature" reason class on the c11 rejection is still unexplained, and
+      the earlier warning stands: that string is also emitted for a genuine
+      signature fault.
 
 promotion_blockers:
   - >
