@@ -86,4 +86,93 @@ artifacts:
 follow_ups: []
 notes_path: knowledge/notes/msn-2026-0007.md
 blocked_reason: null
-terminal_reason: "FORMAL-205 kernel-verified on this Windows host (lake build PASSED, 0 sorries, 0 file-introduced axioms); axiom inventory limited to {propext, Classical.choice, Quot.sound} (subset of standard Lean 4 core, identical to FORMAL-203's inventory).  All three top-level theorems (T1 isValidKey_zero_k2, T2 isValidKey_length_k2, T3 isValidKey_roundtrip_general) hold.  Together with FORMAL-203 (MODULUS half) and FORMAL-204 (LENGTH half), the complete s7.2 encapsulation-key check is now machine-checked end-to-end."
+terminal_reason: "SUPERSEDED-CORRECTED 2026-10-04.  ORIGINAL CLAIM (2026-08-29, preserved verbatim as history): 'FORMAL-205 kernel-verified on this Windows host (lake build PASSED, 0 sorries, 0 file-introduced axioms); axiom inventory limited to {propext, Classical.choice, Quot.sound} (subset of standard Lean 4 core, identical to FORMAL-203's inventory).  All three top-level theorems (T1 isValidKey_zero_k2, T2 isValidKey_length_k2, T3 isValidKey_roundtrip_general) hold.  Together with FORMAL-203 (MODULUS half) and FORMAL-204 (LENGTH half), the complete s7.2 encapsulation-key check is now machine-checked end-to-end.'"
+correction_2026_10_04:
+  by: orchestrator-synthesizer (model-agent), on independent Track A audits
+  disposition: terminal_reason_refuted; successor mission msn-2026-0021 (FORMAL-208) opened
+  what_is_still_true: >
+    The three Lean proofs are SOUND. formal/Formal/ValidKey.lean compiles with
+    zero sorry, zero file-introduced axioms, zero native_decide (verified by
+    grep over formal/Formal/ and by build_output_r3.log). T1, T2 and T3 are
+    each true statements of Lean. Nothing in this correction impeaches a proof.
+  what_is_false: >
+    The final sentence of the ORIGINAL terminal_reason -- "Together with
+    FORMAL-203 (MODULUS half) and FORMAL-204 (LENGTH half), the complete s7.2
+    encapsulation-key check is now machine-checked end-to-end" -- is REFUTED by
+    the mission's own cited source file. Six independent lines of evidence,
+    each reproducible:
+
+    (1) There is NO bounded byte-array type anywhere in formal/. Every byte
+        array is `B : Nat -> Nat`, a total, lengthless function. `Fin` appears
+        only inside three docstrings (ValidKey.lean:11,44,74); `Vector`,
+        `Array`, `Subtype`, `List` appear zero times. FIPS 203 section 2.3
+        (printed p.5 / PDF p.14) defines B^L as length-L arrays, so the model
+        admits an infinite universe where the spec admits a finite one.
+
+    (2) The parameter is provably unused. ValidKey.lean:47-48 reads
+        `isValidKey (p : MLKEMParam) (B : Nat -> Nat) : Prop := B = B AND forall i, seg B i < 3329`.
+        `B = B` is reflexivity, not a length check, and `p` appears in no
+        conjunct. The Lean compiler says so independently:
+        build_output_r3.log:6 "warning: Formal/ValidKey.lean:47:16: unused variable 'p'".
+        Consequence: `fun _ => 0` is simultaneously isValidKey .k2, isValidKey .k3
+        and isValidKey .k4. The model cannot distinguish parameter sets at the
+        key level, which FIPS 203 section 7.1 requires it to do.
+
+    (3) T2 is a restatement, not a composition. isValidKey_length_k2
+        (ValidKey.lean:78-79) is `canonicalLength .k2 = 800 := exact canonicalLength_k2`.
+        Its statement mentions no byte array and does not mention isValidKey.
+
+    (4) T3 is FORMAL-203 re-exported verbatim. isValidKey_roundtrip_general
+        (ValidKey.lean:92-95) is character-for-character enc_dec_eq from
+        ByteEncode.lean:363-365. Its sibling isValidKey_roundtrip_k2 takes
+        `hy : y < canonicalLength .k2` and then DISCARDS it
+        (build_output_r3.log:23 "unused variable 'hy'").
+
+    (5) length_modulus_independent (LengthCheck.lean:194-198) is
+        `384*2+32=800 AND 384*3+32=1184 AND 384*4+32=1568` proved by
+        `exact <rfl,rfl,rfl>`. The connective is AND; it never mentions seg, dec
+        or any array. It asserts no relationship between the two halves.
+
+    (6) THE DECISIVE NEW FINDING (Track A feasibility probe, kernel-checked):
+        the corpus hypothesis `forall i, seg B i < 3329` is FALSE for
+        legitimate ML-KEM keys. A valid k=2 key with bytes 0x01 0x0D at offset
+        768 -- which lies inside the 32-byte rho seed region that FIPS 203
+        Algorithm 13 line 19 places at ek[384k:384k+32] and which Eq (7.1)
+        never inspects -- has seg B 512 = 3329 = q and therefore VIOLATES the
+        hypothesis, while satisfying the specification's bounded hypothesis
+        `forall i, i < 256k, seg B i < 3329`. Consequently Eq (7.1) was never
+        an instance of enc_dec_eq: FORMAL-203 proved the wrong domain. The
+        unbounded index over-checks straight through the seed region.
+
+    Consequence: FIPS 203 section 7.2 step 1 (the Type check, "an array of
+    bytes of length 384k + 32", printed p.36 / PDF p.45) is NOT formalized
+    anywhere in this corpus, and step 2 is formalized over an unbounded total
+    function rather than over the 384k prefix that Eq (7.1) actually compares.
+  additionally_found_this_session: >
+    formal/Formal/LengthCheck.lean:8-11 attributes to FIPS 203 section 7.2 a
+    sentence that DOES NOT EXIST in FIPS 203 ("The encapsulation key ek shall
+    consist of k polynomials f_i in NTT domain with coefficients in [0, q-1]
+    and a 32-byte seed. Its byte length is 384*k + 32."). The actual printed
+    step 1 is only: "If ek is not an array of bytes of length 384k + 32 for the
+    value of k specified by the relevant parameter set, then input checking
+    failed." The VALUES 800/1184/1568 are correct (Table 2 printed p.29/PDF
+    p.38; Table 3 printed p.39/PDF p.48) but the quoted sentence is fabricated.
+    This is the same defect class as the RFC 9052 section 9 / RFC 8949 section
+    4.2.1 splice in fnd-2026-0014, in a source-code header rather than a
+    finding.
+  action_taken: >
+    Per AGENTS.md ("a verified terminal transition whose stated justification
+    is false cannot stand"; "never rewrite history to look cleaner" -- so the
+    original claim is PRESERVED above verbatim and marked refuted, not deleted),
+    this mission's terminal_reason is corrected by annotation rather than
+    rewrite. Successor msn-2026-0021 (FORMAL-208) is opened to do the real
+    work. The associated live artifacts prf-2026-0003 (still
+    status: verified, disclosure: public) and obs-2026-0026 are corrected in
+    the same pass.
+  epistemic_note: >
+    Model consensus is not evidence. This correction rests on reading the Lean
+    source and on one machine-checked counterexample, NOT on the number of
+    agents that reached it. Five independent auditors were used to raise
+    epistemic coverage; two of them (the model audit and the divergence map)
+    had to be reconciled with a third (the overclaim hunter) before this
+    record was written.

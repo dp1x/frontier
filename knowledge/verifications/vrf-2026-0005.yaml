@@ -49,10 +49,26 @@ result: |
   Scope disclosure: covers only the LENGTH half of FIPS 203 §7.2.
   MODULUS half is in formal/Formal/ByteEncode.lean (FORMAL-203).
   The combination of the two halves is a follow-up (FORMAL-205).
-command: "cd C:\\Users\\Dhane\\frontier\\formal; lake build"
+command: "HISTORICAL RECORD of the 2026-08-29 kernel check: `cd C:\\Users\\Dhane\\frontier\\formal; lake build`. PROHIBITED LOCALLY 2026-10-04: formal/.lake/packages was deleted 2026-09-26, so this re-downloads ~5.5 GB of Mathlib, which AGENTS.md forbids. Route to .github/workflows/formal.yml: `gh workflow run formal.yml --ref main` (runs lake update -> lake exe cache get! -> lake build on a GitHub runner)."
 environment:
   os: Windows 11
   lean: 4.22.0 (commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05)
   mathlib: 4.22.0
   build_time_seconds: 13
   build_log: formal/build_output_r2.log
+compute_route: github-actions
+governance_correction_2026_10_04:
+  reason: >
+    The command field previously read `cd C:\Users\Dhane\frontier\formal; lake
+    build` with no qualification. After the 2026-09-26 disk-hygiene cleanup
+    deleted formal/.lake/packages (~5.4 GB), that command re-downloads Mathlib
+    locally, which AGENTS.md explicitly forbids. The verification artifact was
+    therefore itself violating project governance by issuing a live local-build
+    instruction.
+  corrected_routes_to: ".github/workflows/formal.yml, which runs `lake update` then `lake exe cache get!` then `lake build` on a GitHub runner. Invoke with: gh workflow run formal.yml --ref main"
+  local_check_retained: >
+    Reading the committed .olean proof terms under formal/.lake/build remains
+    valid and stays local. It is ~1.0 MB and is evidence, not a cache.
+  scope: >
+    Routing only. The verification result, status, and epistemic_status are
+    unchanged, and no old research claim is reopened by this correction.

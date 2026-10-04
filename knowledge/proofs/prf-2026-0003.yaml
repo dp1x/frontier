@@ -1,9 +1,9 @@
 id: prf-2026-0003
 type: proof
-status: verified
+status: disputed
 created_at: "2026-08-29T19:15:00Z"
-updated_at: "2026-08-29T19:15:00Z"
-summary: "Lean 4 v4.22.0 kernel-checked proof of the combined FIPS 203 s7.2 check (LENGTH + MODULUS halves) for ML-KEM-512 (FORMAL-205). Three top-level theorems (isValidKey_zero_k2, isValidKey_length_k2, isValidKey_roundtrip_general) hold with zero sorries, zero file-introduced axioms, axiom inventory limited to {propext, Classical.choice, Quot.sound} (subset of standard Lean 4 core). Combined with FORMAL-203 (MODULUS half) and FORMAL-204 (LENGTH half), the complete s7.2 encapsulation-key check is now machine-checked end-to-end."
+updated_at: "2026-10-04T09:00:00Z"
+summary: "SCOPE REFUTED 2026-10-04. The Lean proofs in formal/Formal/ValidKey.lean are SOUND (zero sorry, zero file-introduced axioms, kernel-accepted). The COMBINATION claim is not: isValidKey ignores its own parameter p (proved by the Lean build log's unused-variable warning), its 'length' conjunct is reflexivity B=B, T2 restates FORMAL-204, and T3 restates FORMAL-203's enc_dec_eq verbatim. No theorem anywhere connects the LENGTH half to the MODULUS half. A machine-checked counterexample further shows the corpus hypothesis forall i, seg B i < 3329 is FALSE for legitimate ML-KEM keys, so FIPS 203 Eq (7.1) was never an instance of FORMAL-203's roundtrip theorem. Successor: msn-2026-0021 (FORMAL-208)."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -40,15 +40,26 @@ theorem_statements:
 kernel_check:
   toolchain: leanprover/lean4:v4.22.0
   toolchain_commit: ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05
-  build_command: "cd formal; lake build"
+  build_command: "PROHIBITED LOCALLY 2026-10-04: lake build re-downloads ~5.5 GB of Mathlib. Route to .github/workflows/formal.yml (lake update -> lake exe cache get! -> lake build)."
   build_log: formal/build_output_r3.log
   build_status: success
   build_output_tail: "[3053/3054] Built Formal\nBuild completed successfully."
   sorries: 0
   axioms_introduced: 0
   total_axioms_used: [propext, Classical.choice, Quot.sound]
-  warnings: 1
-  warning_detail: "Formal/ValidKey.lean:85:5: unused variable 'hy' (stylish only)"
+  warnings: 5
+  warning_detail: >
+    CORRECTED 2026-10-04. This artifact previously recorded ONE warning
+    ("Formal/ValidKey.lean:85:5: unused variable 'hy' (stylish only)"). The
+    build log formal/build_output_r3.log in fact records FIVE, and two are
+    load-bearing for the scope correction:
+      - Formal/ValidKey.lean:47:16: unused variable p
+        -> the parameter of isValidKey is provably never used.
+      - Formal/ValidKey.lean:85:5: unused variable hy
+        -> the length hypothesis of isValidKey_roundtrip_k2 is discarded, so
+           that theorem does not mention a length either. This is NOT
+           "stylish only"; it is the only trace of the LENGTH half in that
+           theorem, and it is dead.
 spec_citations:
   - "FIPS 203 Section 7.2 (Encapsulation key check), Eq 7.1, PDF p.45"
   - "FIPS 203 Algorithm 5 (ByteEncode_d), printed p.22 / PDF p.31: confirmed (via FORMAL-203)"
@@ -61,7 +72,59 @@ scope_disclosure: >
   operates on unbounded byte arrays (Nat -> Nat) while the
   LENGTH half gives us length-bounded arrays.  The predicate
   approach unifies the two halves at the byte-array level.
-reproducer: "Rebuild from scratch: cd C:\\Users\\Dhane\\frontier\\formal; lake build"
+reproducer: "PROHIBITED LOCALLY 2026-10-04: see knowledge/reproducers/rpr-2026-0006.yaml for the CI route (gh workflow run formal.yml --ref main)."
+correction_2026_10_04:
+  by: orchestrator-synthesizer (model-agent)
+  what_is_withdrawn: >
+    The phrase "Combined with FORMAL-203 (MODULUS half) and FORMAL-204 (LENGTH
+    half), the complete s7.2 encapsulation-key check is now machine-checked
+    end-to-end" is WITHDRAWN. It is refuted by this artifact's own cited source
+    file, formal/Formal/ValidKey.lean:
+
+    - ValidKey.lean:47-48: isValidKey (p : MLKEMParam) (B : Nat -> Nat) : Prop
+      := B = B AND forall i, seg B i < 3329. "B = B" is reflexivity, not a
+      length check. p is unused - independently confirmed by
+      formal/build_output_r3.log:6. The same array is therefore a ValidKey for
+      k=2, k=3 and k=4 simultaneously, so the model cannot distinguish
+      parameter sets at the key level, which FIPS 203 s7.1 requires it to do.
+    - ValidKey.lean:78-79: isValidKey_length_k2 is
+      "canonicalLength .k2 = 800 := exact canonicalLength_k2" - a restatement
+      of FORMAL-204. Its statement mentions no byte array and not isValidKey.
+    - ValidKey.lean:92-95: isValidKey_roundtrip_general is enc_dec_eq from
+      ByteEncode.lean:363-365 verbatim. ValidKey.lean:83-88 discards its length
+      hypothesis hy (build_output_r3.log:23).
+    - LengthCheck.lean:194-198: length_modulus_independent is a conjunction of
+      three rfl unfoldings; it mentions no array and asserts no relationship
+      between the LENGTH and MODULUS halves.
+
+    FIPS 203 s7.2 step 1 (Type check, "an array of bytes of length 384k + 32",
+    printed p.36 / PDF p.45) is not formalized anywhere in this corpus, and
+    step 2 is formalized over an unbounded Nat -> Nat rather than over the 384k
+    prefix that Eq (7.1) actually compares.
+  additionally: >
+    A machine-checked counterexample (Track A feasibility probe) shows the
+    corpus hypothesis "forall i, seg B i < 3329" is FALSE for legitimate
+    ML-KEM keys: bytes 0x01 0x0D at offset 768 lie inside the 32-byte rho seed
+    region that FIPS 203 Algorithm 13 line 19 places at ek[384k:384k+32] and
+    that Eq (7.1) never inspects, yet they drive seg B 512 to 3329 = q. The
+    bounded, specification-shaped hypothesis "forall i, i < 256k, seg B i < 3329"
+    holds for that same key. So Eq (7.1) was never an instance of enc_dec_eq:
+    FORMAL-203 proved the wrong domain, and the unbounded index over-checks
+    straight through the seed region.
+  what_survives: >
+    The proofs are sound and must not be re-litigated: no sorry, no admitted,
+    no native_decide, no file-introduced axiom anywhere in formal/Formal/. The
+    bit-level semantics of ByteEncode_12/ByteDecode_12 were independently
+    re-confirmed faithful to FIPS 203 Algorithms 3-6 (little-endian; correct
+    12-congruent-4 byte/coefficient interleave). The arithmetic
+    384k+32 = 800/1184/1568 is correct. A faithful s7.2 model can be built on
+    the existing infrastructure without discarding any proof.
+  successor: msn-2026-0021 (FORMAL-208)
+  epistemic_note: >
+    This correction rests on reading the Lean source plus one machine-checked
+    counterexample, not on agent agreement. Five independent auditors were used
+    to raise coverage; their disagreements were reconciled against source
+    before this record was written. Model consensus is not evidence.
 follow_up:
   - "FORMAL-206: extend to k=3 (ML-KEM-768) and k=4 (ML-KEM-1024)"
   - "FORMAL-207: combine with decapsulation formalization for end-to-end ML-KEM-512 correctness"

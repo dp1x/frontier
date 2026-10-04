@@ -36,15 +36,20 @@ design: >
   axioms.  Run `#print axioms` on each theorem to confirm the axiom
   inventory is limited to standard Lean 4 core axioms.
 commands:
-  - "cd formal"
-  - "lake env lean --version  # expect Lean (version 4.22.0, commit ...)"
-  - "lake update  # fetch Mathlib4 v4.22.0 from cache"
-  - "lake build  # build Formal library; expect 'Build completed successfully.'"
-  - "lake env lean --root=. -c 'import Formal.ByteEncode; #print axioms Formal.ByteEncode.canonicalRoundtrip'"
+  - "# CANONICAL ROUTE IS GITHUB ACTIONS, NOT A LOCAL BUILD."
+  - "# Reason: formal/.lake/packages was deleted 2026-09-26, so a local `lake update`"
+  - "# + `lake build` re-downloads Mathlib (~5.5 GB). AGENTS.md forbids heavy local build trees."
+  - "# formal.yml runs: lake update -> lake exe cache get! -> lake build"
+  - "gh workflow run formal.yml --ref main"
+  - "gh run view --log $(gh run list --workflow formal.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+  - "# Expected in the 'Build (kernel check)' step: 'Build completed successfully.'"
+  - "# LOCAL READ-ONLY check of the committed proof terms. No build, no download."
+  - ".venv\\Scripts\\python.exe -c \"import pathlib;fs=sorted(pathlib.Path('formal/.lake/build').rglob('*.olean'));print(len(fs),'olean files');[print(' ',f.name) for f in fs]\""
+  - "# Expected: 4 .olean files (Formal, ByteEncode, LengthCheck, ValidKey)."
 compute_decision:
-  location: local
-  isolation: "scratch R: ramdisk for elan toolchain install (~400MB); formal/ project is committed"
-  reason: "One-time elan install is the only heavy step; thereafter `lake build` is seconds on commodity laptop. Lightweight class."
+  location: github-actions
+  isolation: "GitHub runner (ubuntu); formal/ project is committed; no secrets needed"
+  reason: "SUPERSEDED 2026-10-04. The original decision read: 'One-time elan install is the only heavy step; thereafter `lake build` is seconds on commodity laptop. Lightweight class.' That classification was wrong on the AGENTS.md test: the decisive cost is not the incremental build time but the 5.4 GB formal/.lake/packages tree that `lake update` re-fetches. AGENTS.md: 'if a directory is gitignored AND regenerable by a CI job, it does not get to live on this machine', and the compute table routes 'heavy compiles, cross-platform matrices' to GitHub Actions. formal.yml regenerates the tree exactly, so the build belongs in CI."
 determinism:
   deterministic: true
   seed_policy: null
@@ -67,3 +72,23 @@ results:
   warnings: 1
   warning_detail: "Formal/ByteEncode.lean:381:44: unused variable 'hB' (stylistic only)"
 disclosure: public
+compute_route: github-actions
+governance_correction_2026_10_04:
+  reason: >
+    The commands list previously instructed `cd formal`, `lake env lean
+    --version`, `lake update`, `lake build` and `lake env lean --root=. -c ...`
+    on this host. After the 2026-09-26 disk-hygiene cleanup deleted
+    formal/.lake/packages (~5.4 GB), `lake update` + `lake build` re-download
+    Mathlib locally, which AGENTS.md explicitly forbids.
+  corrected_routes_to: ".github/workflows/formal.yml, invoked with: gh workflow run formal.yml --ref main"
+  local_check_retained: >
+    Reading the committed .olean proof terms under formal/.lake/build remains
+    valid and stays local. It is ~1.0 MB and is evidence, not a cache.
+  historical_text_left_intact: >
+    The `design` field still describes the elan install and `lake update` cache
+    fetch, and `compute_decision.reason` quotes the superseded rationale inline.
+    Those are the record of what was actually executed on 2026-08-29 and are
+    deliberately NOT rewritten; the build output in `stdout` likewise stands.
+  scope: >
+    Compute routing only. No result, status, or epistemic_status is changed by
+    this correction, and no old research claim is reopened.

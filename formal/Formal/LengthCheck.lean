@@ -5,10 +5,29 @@ length half of the §7.2 check that was explicitly out of scope in
 the modulus half formalization (ByteEncode.lean L9-13).
 
 Normative source: `localdocs/refs/fips203.pdf` Section 7.2
-("Encapsulation key check"), Eq 7.1 step 1, PDF p.45:
-  "The encapsulation key ek shall consist of k polynomials
-   f_i in NTT domain with coefficients in [0, q-1] and a 32-byte
-   seed.  Its byte length is 384*k + 32."
+("Encapsulation key check"), printed p.36 / PDF p.45.
+
+VERBATIM step 1 (Type check), as printed:
+
+  "1. (Type check) If ek is not an array of bytes of length
+   384k + 32 for the value of k specified by the relevant
+   parameter set, then input checking failed."
+
+CORRECTION 2026-10-04: the previous revision of this header attributed to
+FIPS 203 section 7.2 the sentence "The encapsulation key ek shall consist of
+k polynomials f_i in NTT domain with coefficients in [0, q-1] and a 32-byte
+seed.  Its byte length is 384*k + 32."  THAT SENTENCE DOES NOT APPEAR IN
+FIPS 203.  It was fabricated.  The values it states are correct and
+traceable -- 384k+32 and k in {2,3,4} from Table 2 (printed p.29 / PDF p.38),
+the byte counts from Table 3 (printed p.39 / PDF p.48) -- but the quoted
+normative text was never checked against the source and is not in it.  This
+is the same defect class as the RFC 9052 section 9 / RFC 8949 section 4.2.1
+splice recorded against fnd-2026-0014, in a source header rather than in a
+finding.
+
+Eq (7.1) is attached to step 2 (Modulus check); the length requirement lives
+in step 1 (Type check) as prose, with no equation number.  "Eq 7.1 step 1" is
+therefore not a valid locator.
 
 For ML-KEM-512 (k = 2): len(ek) = 800 bytes.
 For ML-KEM-768 (k = 3): len(ek) = 1184 bytes.

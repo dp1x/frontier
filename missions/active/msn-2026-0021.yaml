@@ -1,0 +1,146 @@
+id: msn-2026-0021
+type: mission
+status: active
+created_at: "2026-10-04T08:00:00Z"
+updated_at: "2026-10-04T09:00:00Z"
+summary: >
+  FORMAL-208 - re-scope the FIPS 203 section 7.2 encapsulation-key formalization
+  honestly, after FORMAL-205 (msn-2026-0007) was terminalized `verified` on a
+  false claim. The committed model has no bounded byte-array type: every byte
+  array is a total `Nat -> Nat` (infinite, lengthless), the parameter `p` of
+  `isValidKey` is provably unused (the Lean build log says so), and the corpus
+  hypothesis `forall i, seg B i < 3329` is FALSE for legitimate ML-KEM keys -
+  a machine-checked counterexample shows a valid k=2 key (bytes 0x01 0x0D at
+  offset 768, inside the 32-byte rho seed region FIPS 203 leaves unchecked)
+  violates it. So Eq (7.1) was never an instance of FORMAL-203's roundtrip
+  theorem. Objective: introduce a bounded-index model that makes section 7.2
+  step 1 (type check) and step 2 (Eq 7.1 over the 384k prefix, EXCLUDING the
+  rho seed) stateable, and prove both directions.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.1
+    tool: synthesis of five independent Track A audits (spec extraction, model audit, overclaim hunt, divergence map, Lean feasibility probe)
+  sources:
+    - localdocs/refs/fips203.pdf#section-7.2-step-2-eq-7.1
+    - formal/Formal/ByteEncode.lean
+    - formal/Formal/LengthCheck.lean
+    - formal/Formal/ValidKey.lean
+    - formal/build_output_r3.log
+    - missions/completed/msn-2026-0007.yaml
+    - knowledge/process-findings/audit-2026-10-03/audit-formal-203-204-205.md
+  parent: msn-2026-0007
+  generation: 2
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+title: FORMAL-208 - Faithful bounded-index model of FIPS 203 s7.2 (Type check + Eq 7.1 over the 384k prefix)
+objective: >
+  Establish, with kernel-checked proofs, a model of the FIPS 203 section 7.2
+  "Encapsulation key check" that is faithful to the specification's own
+  statement, namely BOTH:
+
+  (a) step 1 (Type check): ek is an array of bytes of length 384k + 32 for the
+      parameter set's k, and
+  (b) step 2 (Modulus check): Eq (7.1)
+      test = ByteEncode_12(ByteDecode_12(ek[0:384k]))
+      rejects when test != ek[0:384k] - over the 384k PREFIX ONLY, which by
+      FIPS 203 Algorithm 13 line 19 and Algorithm 14 line 3 EXCLUDES the
+      32-byte rho seed at ek[384k:384k+32].
+
+  The corpus currently proves neither. This mission does NOT retro-fit
+  FORMAL-203/204/205; it adds the model they lacked and preserves the
+  correction history of why they were insufficient.
+
+  Explicitly IN scope: the bounded byte index (y < 384k), the bounded
+  coefficient index (i < 256k), parameter dependence (k = 2, 3, 4 must be
+  distinguishable), and a statement that the seed region is unconstrained by
+  Eq (7.1).
+
+  Explicitly OUT of scope: NTT, K-PKE.Encrypt/Decrypt, ML-KEM.KeyGen
+  correctness, and the SP 800-227 external-assurance mechanism.
+domain: formal
+scope: >
+  A new Lean module formal/Formal/EkCheck.lean (plus an `import` line in
+  formal/Formal.lean) providing: a bounded-index byte-array view; the
+  parameter-dependent section 7.2 predicate; an accept direction; a reject
+  direction; and a kernel-checked counterexample showing the corpus hypothesis
+  is false for legitimate keys.
+constraints:
+- Pinned Lean toolchain v4.22.0 + Mathlib4 v4.22.0 (rev 79e94a093aff4a60fb1b1f92d9681e407124c2ca).
+- Deterministic verifier is the Lean kernel via .github/workflows/formal.yml. NEVER run `lake build` locally (re-downloads ~5.5 GB).
+- Zero `sorry`, zero file-introduced axioms. `#print axioms` output MUST be committed as an artifact.
+- A new module is silently skipped by CI unless it is imported from formal/Formal.lean (verified empirically: lean_lib builds the import closure of the root module, not a filesystem glob).
+- Every normative claim carries an exact locator.
+desired_evidence_level: verified
+candidate_targets: [tgt-2026-0001]
+dependencies: []
+compute:
+  expected_class: medium
+  notes: >
+    The mathematics is SMALL (a feasibility probe machine-checked ~90 lines of
+    new proof text, core-only, in 1.6 s). The cost is ITERATION: Mathlib
+    oleans are absent locally and CI round trips are ~8-15 min each. Budget
+    3-5 CI runs. Per AGENTS.md this is medium -> GitHub Actions.
+budget:
+  max_attempts: 5
+  max_independent_reviews: 2
+  max_compute_runs: 5
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+- formal/Formal/EkCheck.lean is committed AND imported from formal/Formal.lean (otherwise CI reports green on an unchecked file - verified defect).
+- A theorem states Eq (7.1) over a byte index bounded by 384k, with the coefficient index bounded by 256k.
+- A REJECT theorem exists alongside the ACCEPT theorem. An accept-only theorem is satisfiable by a hypothesis nobody can inhabit - that is the FORMAL-205 vacuity failure repeated one level down.
+- A kernel-checked counterexample demonstrates the old corpus hypothesis `forall i, seg B i < 3329` is FALSE for a legitimate k=2 key (proving Eq (7.1) was never an instance of enc_dec_eq).
+- The parameter `k` is load-bearing: distinct k must yield distinct admissible byte counts.
+- .github/workflows/formal.yml runs green and the run ID is recorded here.
+- A committed `#print axioms` transcript bounds the axiom inventory.
+- An independent non-synthesizer adversarial review with an explicit mandate to disprove the scope claim.
+stopping_conditions:
+- Kernel-accepted proofs for both directions plus adversarial review supporting the scope.
+- Budget exhausted.
+artifacts:
+  - knowledge/reviews/rev-2026-0019.yaml
+  - knowledge/observations/obs-2026-0049.yaml
+  - knowledge/reports/rpt-2026-0018.yaml
+planned_artifacts_not_yet_created:
+  - formal/Formal/EkCheck.lean
+  - formal/axioms.txt
+design_record:
+  status: >
+    DESIGNED, NOT YET IMPLEMENTED. A feasibility probe machine-checked the new
+    index lemmas core-only (no Mathlib) in 1.6 s with zero errors, but that
+    probe transcribes `wsum` by structural recursion instead of via
+    `Finset.sum`, so it is NOT evidence that the Mathlib-dependent module
+    compiles. No Lean source is committed by this session, because committing
+    an unverified file with `sorry` would violate the zero-sorry rule.
+  recommended_model: >
+    Do NOT retro-fit ByteEncode.lean. Add a new module that introduces the
+    bounded-index view, keeping ~85% of the existing corpus reusable unchanged
+    (the wsum / extract_wsum / eqOfBits_gen / bit arithmetic induction chain is
+    domain-independent). Reject Mathlib `Vector` (no expressive power beyond
+    core `Fin`; machinery for appearance) and reject the Sigma/subtype route
+    (the same proposition with a wrapper - and msn-2026-0007 already failed by
+    delivering a predicate where a dependent type was specified).
+  required_theorems:
+    - "T1 eq7_1_accept: the Eq (7.1) equality for y < 384k, given forall i < 256k, seg B i < 3329"
+    - "T2 eq7_1_reject: exists y < 384k with encByte (dec B) y != B y, given some i < 256k with seg B i >= 3329 - the anti-vacuity half"
+    - "T3 step1: the type check, with k load-bearing"
+    - "T4 counterexample: a legitimate k=2 key violating the OLD unbounded corpus hypothesis"
+  critical_constraint: >
+    T1 and T2 MUST ship together. An accept-only theorem is satisfiable by a
+    hypothesis nobody can inhabit - that is the FORMAL-205 vacuity failure
+    repeated one level down, and it is exactly how the current corpus reads.
+  effort_estimate: >
+    1.5-3 days, replacing the prior "roughly one day". The mathematics is
+    small (~90 lines of new proof text, demonstrated by probe); the cost is
+    iteration against a Mathlib-olean-free local tree at ~8-15 min per CI round
+    trip, budget 3-5 runs. Upper bound 1 week if the reject theorem resists in
+    the Mathlib context.
+follow_ups: []
+notes_path: knowledge/notes/msn-2026-0021.md
+blocked_reason: null
+terminal_reason: null

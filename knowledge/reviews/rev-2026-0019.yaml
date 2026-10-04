@@ -1,0 +1,169 @@
+id: rev-2026-0019
+type: review
+status: completed
+created_at: "2026-10-04T08:30:00Z"
+updated_at: "2026-10-04T12:00:00Z"
+summary: >
+  Adversarial adjudication of the rustls ML-KEM encapsulation-key reachability
+  question. THREE agents were deliberately commissioned on the same question
+  because two of them returned OPPOSITE verdicts. The contradiction was
+  resolved against source, not by vote. Outcome: the KILL verdict is REFUTED as
+  a general claim; the default-configuration observation behind it SURVIVES.
+  The reconciled statement is recorded verbatim below. Separately, the
+  inherited "FIPS 203 section 7.2(a)" locator is an INVENTED subsection label
+  that does not exist in FIPS 203, and a third fabricated normative sentence
+  was found in a committed source header.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-critic
+    model: grok-4.1
+    tool: source trace at pinned rustls commit, with a deliberate third-agent tiebreak
+  sources:
+    - interop/protocol-placement/rustls_loopback/rustls_server/Cargo.toml
+    - interop/protocol-placement/rustls_loopback/rustls_server/Cargo.lock
+    - https://github.com/rustls/rustls/commit/fcf61cdbba30913cfd5b40aefa83989c6233812d
+    - https://www.rfc-editor.org/rfc/rfc8446.txt
+    - https://datatracker.ietf.org/doc/html/draft-ietf-tls-ecdhe-mlkem
+    - localdocs/refs/fips203.pdf
+  parent: msn-2026-0005
+  generation: 1
+links:
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0002]
+  findings: [fnd-2026-0005]
+  observations: [obs-2026-0049]
+  reviews: []
+  verifications: []
+  reproducers: [rpr-2026-0005]
+title: "Track B adjudication: rustls 0.23.43 ML-KEM ek reachability, and an invented FIPS 203 locator"
+classification: implementation-behavior-audit
+statement: >
+  In rustls 0.23.43 (commit fcf61cdbba30913cfd5b40aefa83989c6233812d), a
+  malformed-length (1183-byte) ML-KEM-768 encapsulation key REACHES the
+  genuine FIPS 203 section 7.2 step 1 (Type check) comparison in
+  aws_lc_rs::kem::EncapsulationKey::new on the pure MLKEM768 (NamedGroup
+  0x0201) path, where that comparison is the first and only length gate. The
+  pure group is absent from DEFAULT_KX_GROUPS and is therefore unreachable
+  under the harness's current default provider configuration, so it is not
+  exercisable by the loopback harness as configured; reaching it requires a
+  deployment to place kx_group::MLKEM768 into the public
+  CryptoProvider::kx_groups field. On the hybrid X25519MLKEM768 (0x11ec) path
+  actually used by the harness, Layout::split's 1216-byte total-share check
+  IMPLIES a valid 1184-byte ek, satisfying section 7.2 step 1 implicitly, and
+  section 7.2 step 2 (Eq 7.1 modulus check) is then enforced by
+  mlk_kem_check_pk in aws-lc-sys. A length-VALID non-canonical ek is
+  therefore a valid step-2 stimulus on the hybrid path.
+method: >
+  Full call-graph derivation from the wire parser to the leaf primitive,
+  independently performed twice with opposite conclusions, then adjudicated by
+  a third agent instructed to refute both. All source read at the pinned
+  commit SHA; crate-vs-git-tag byte identity proved by SHA-256 comparison for
+  the six relevant files.
+the_disputed_question: >
+  Can a 1183-byte ML-KEM-768 ek reach the GENUINE FIPS 203 section 7.2 step 1
+  check, as opposed to being stopped earlier by Layout::split()'s total-share
+  length check?
+agent_1_position: >
+  YES. pq::MLKEM768 is a bare MlKem, not a Hybrid (pq/mod.rs:44-47); grep
+  Layout over pq/mlkem.rs returns zero hits; MlKem::start_and_complete
+  (pq/mlkem.rs:34-36) calls EncapsulationKey::new directly. Reachable via the
+  public CryptoProvider::kx_groups field.
+agent_2_position: >
+  KILL CONFIRMED. Asserted that an operator opting into the pure group yields
+  "the length gate ... the same as the hybrid's", and that selection consults
+  only provider.kx_groups by NamedGroup equality so the group can never be
+  selected under the harness config.
+verdict: supports_with_correction
+verdict_detail: >
+  Agent 1 is correct on (a), (b), (e), (f) and on reachability under
+  opt-in. Agent 2 is CORRECT that MLKEM768 is absent from DEFAULT_KX_GROUPS
+    (aws_lc_rs/mod.rs:243-255, with an explicit source comment saying so) and
+    CORRECT that server group selection matches on NamedGroup only
+    (server/hs.rs:548-555), so an attacker cannot introduce an unconfigured
+    group. Agent 2 is REFUTED on its load-bearing parenthetical: the two gates
+    are structurally DIFFERENT. The hybrid gates on a TOTAL share length of
+    1216 (pq/hybrid.rs:183-187), from which a valid ek length is only an
+    arithmetic side-effect; the pure path gates DIRECTLY on
+    alg.encapsulate_key_size() == 1184, which is section 7.2 step 1 itself
+    (traced through MLKEM_K=3, MLKEM_SYMBYTES=32, MLKEM_POLYVECBYTES=1152,
+    MLKEM_INDCCA_PUBLICKEYBYTES=1184 in aws-lc params.h).
+    Agent 2's "KILL" label therefore over-generalized a correct
+    default-configuration observation into a false universal claim.
+negative: >
+  The inherited claim that "Layout::split() hard-codes split_at(1184),
+  making a 1183-byte key structurally incapable of reaching the subsequent
+  check" is REFUTED as a statement about rustls. It is true only of the
+  default X25519MLKEM768 configuration the harness uses.
+correction_of_inherited_claims:
+  - "Claim: the aws-lc-rs section 7.2(a) length check is unreachable dead code on this path. REFUTED: it is reachable on the pure MLKEM768 group; it is merely not reachable under the harness's default provider."
+  - "Claim: 'A 1183-byte ek can never arrive there' (knowledge/process-findings/spec-2026-10-03/rustls-harness-fix-spec.md:316). REFUTED as a general statement about rustls."
+  - "Claim: mlk_kem_check_pk returns MLK_ERR_INVALID_PK at the locked aws-lc-sys 0.44.0. REFUTED: kem.c:62 returns MLK_ERR_FAIL."
+  - "Locator 'FIPS 203 section 7.2(a)' used in 10 places across rpt-2026-0017, rustls-harness-fix-spec.md, and audit-fnd-2026-0005-rustls.md is INVENTED. FIPS 203 section 7.2 has exactly two numbered steps and NO lettered sub-items. Replace with 'step 1 (Type check)' and 'step 2 (Modulus check), Eq. (7.1)'."
+substantive_findings:
+  - id: R19-F1
+    severity: material
+    claim: "The harness's truncate_last_byte variant is a LENGTH-mismatch probe masquerading as a section 7.2 probe."
+    evidence: >
+      rustls_loopback_report.tsv records truncate_last_byte with a verdict
+      byte-identical to the three length-valid non-canonical variants
+      ("peer misbehaved: InvalidKeyShare"). The source shows why they are
+      indistinguishable: Layout::split rejects on share length before the ek is
+      ever sliced, and both paths emit the same alert. The evidence therefore
+      cannot distinguish "section 7.2 fired" from "the length gate fired", and
+      attributing it to section 7.2 enforcement is one abstraction layer too
+      shallow. The three wire_coeff* variants ARE valid section 7.2 step-2
+      stimuli, because they rewrite coefficients in place with no length
+      change (main.go:216-250) and keep shareSize == 1216.
+    action: "exp-2026-0019 and vrf-2026-0006 require scope correction."
+  - id: R19-F2
+    severity: material
+    claim: "An invented subsection label propagated through 10 citations."
+    evidence: >
+      FIPS 203 section 7.2 (printed p.36 / PDF p.45) has steps "1. (Type
+      check)" and "2. (Modulus check)" and one equation, (7.1). There is no
+      "(a)". The substance at every one of the 10 sites is correct and maps
+      (a)->step 1, (b)->step 2, so this is an invented-locator defect, not a
+      misquotation. rustls-harness-fix-spec.md is INTERNALLY INCONSISTENT: it
+      uses the correct "step 1"/"step 2" form at lines 208-209 and 372-377 and
+      the invented "(a)"/"(b)" form at 317, 325, 465, 466, 600, making it the
+      likely propagation origin.
+    action: "Mechanically replace all 10 sites."
+  - id: R19-F3
+    severity: minor
+    claim: "Wrong release-tag URL in two artifacts."
+    evidence: "fnd-2026-0005.yaml:20 and exp-2026-0019.yaml:21 cite .../releases/tag/v0.23.43, which 404s; the tag is v/0.23.43."
+  - id: R19-F4
+    severity: minor
+    claim: "No commit SHA recorded; provider dependency is a caret range."
+    evidence: >
+      Cargo.toml pins rustls = "=0.23.43" (exact, good) and aws-lc-rs = "1.14"
+      (caret). The lockfile resolves aws-lc-rs 1.18.0, which is the
+      load-bearing crypto provider for the entire finding, and nothing pins it
+      in the manifest. No artifact records the resolved commit
+      fcf61cdbba30913cfd5b40aefa83989c6233812d.
+    action: "Record the SHA in exp-2026-0018/0019 and pin aws-lc-rs to the exact version 1.18.0."
+normative_chain_established:
+  - "RFC 8446 section 4.2.8 (key_share): no length or validity constraint on key_exchange contents; the field is an opaque vector declared 'opaque key_exchange<1..2^16-1>'. RFC 8446 defers to the group definition."
+  - "draft-ietf-tls-ecdhe-mlkem-05 section 4.2, final paragraph (verbatim): 'For all groups, the server MUST perform the encapsulation key check described in Section 7.2 of [NIST-FIPS-203] on the client's encapsulation key, and abort with an illegal_parameter alert if it fails.'"
+  - "FIPS 203 section 7.2 steps 1 and 2 (printed p.36 / PDF p.45)."
+  - "NOTE: draft-ietf-tls-ecdhe-mlkem has its OWN section 7.2 (SecP256r1MLKEM768 IANA registration). A bare 'section 7.2' is therefore ambiguous between the FIPS and the I-D and must always be qualified."
+scope_limits: >
+  All conclusions are SOURCE-DERIVED at the pinned versions. NO BUILD OR
+  HANDSHAKE WAS EXECUTED in this review. "The source says the length gate
+  fires" and "CI observed the length gate fire" are different claims; only the
+  second is an observation. The step-2 modulus enforcement claim rests on
+  reading aws-lc-sys 0.44.0 kem.c, which carries the vendor's own annotation
+  "Specification: Implements @[FIPS203, Section 7.2, Modulus check]" - that is
+  a source claim by the vendor, not an independent normative confirmation.
+  Under feature = "fips" the pure group may be filtered out by
+  default_kx_groups(); the harness does not enable fips, so this does not
+  affect the current experiment.
+independence: true
+disclosure: embargoed
+inference_limits: >
+  A source-derived call graph is not an executed trace. The decisive
+  measurement - whether rustls actually rejects the stimulus at run time -
+  belongs to exp-2026-0019 and requires CI execution, which this session
+  dispatched separately (gh run 37188151545).

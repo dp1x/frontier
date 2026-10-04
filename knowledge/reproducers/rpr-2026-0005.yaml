@@ -26,8 +26,13 @@ links:
   observations: [obs-2026-0024]
 path: interop/protocol-placement/rustls_loopback/
 reproduction_commands:
+  - "# CANONICAL ROUTE IS GITHUB ACTIONS, NOT A LOCAL BUILD."
+  - "# Reason: the local alternative (cargo build --release in rustls_server/) is a"
+  - "# heavy Rust build tree; AGENTS.md forbids heavy build trees persisting locally."
+  - "# Workflow runs the rustls build, the Go driver, and emits the report + console log."
   - "gh workflow run rustls-loopback.yml --repo dp1x/frontier"
-  - "Or locally: cd interop/protocol-placement/rustls_loopback/rustls_server; cargo build --release; cd ..; go run . reports/rustls_loopback_report.tsv"
+  - "gh run view --log $(gh run list --workflow rustls-loopback.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+  - "# Expected: rustls_loopback_report.tsv with 5 rows, matching the committed TSV."
 reproduced_on:
   - environment: github-actions ubuntu-24.04, rustls 0.23.43, aws-lc-rs 1.18.0, go 1.26.4
     date: "2026-08-29"
@@ -53,3 +58,23 @@ notes: >
   - Go stdlib crypto/tls: enforces s7.2 with illegal_parameter
   - rustls+aws-lc-rs: enforces s7.2 with illegal_parameter
   Two independent deployed code paths confirm the boundary.
+compute_route: github-actions
+governance_correction_2026_10_04:
+  reason: >
+    These reproduction_commands previously offered "Or locally: cd
+    interop/protocol-placement/rustls_loopback/rustls_server; cargo build
+    --release; cd ..; go run . reports/rustls_loopback_report.tsv" as a
+    co-equal alternative to the GitHub Actions route. A local `cargo build
+    --release` creates a heavy Rust build tree (target/) that AGENTS.md forbids
+    persisting on this machine: "if a directory is gitignored AND regenerable by
+    a CI job, it does not get to live on this machine." rustls-loopback.yml is
+    exactly such a CI job.
+  corrected_routes_to: >
+    .github/workflows/rustls-loopback.yml, which builds the rustls server, runs
+    the Go driver, and emits rustls_loopback_report.tsv on a GitHub runner.
+  local_check_retained: >
+    Reading the committed interop/protocol-placement/rustls_loopback/reports/
+    artifacts remains valid and stays local. They are the evidence.
+  scope: >
+    Reproduction route only. The recorded verdict and every claim are unchanged,
+    and no old research claim is reopened by this correction.

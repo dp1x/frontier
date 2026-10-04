@@ -1,0 +1,156 @@
+id: obs-2026-0049
+type: observation
+status: current
+created_at: "2026-10-04T09:00:00Z"
+updated_at: "2026-10-04T12:00:00Z"
+summary: >
+  Track C decisive reversal: X-Wing is NOT blocked on upstream vectors. The
+  current Internet-Draft is draft-connolly-cfrg-xwing-kem-11 (2026-09-23), and
+  its Appendix C contains THREE COMPLETE test vectors with exactly the field
+  sizes section 5.1 declares (seed/sk 32, pk 1216, eseed 64, ct 1120, ss 32).
+  This directly refutes the committed claim in knowledge/notes/msn-2026-0009.md
+  that "draft-10 Appendix C has empty ct/ss fields (TODO placeholder) so there
+  are no published draft-10 KAT vectors" - the justification offered for never
+  testing the Frontier X-Wing oracle against the specification. Additionally,
+  the Frontier X-Wing instrument is defective: it lives entirely in gitignored
+  .scratch/, was validated only against a vendored CIRCL (CIRCL vs CIRCL), has
+  a fabricated hardcoded hash constant, and implements no X-Wing-specific HPKE
+  binding.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-critic
+    model: grok-4.1
+    tool: live retrieval of the authoritative draft + independent re-parse by the orchestrator
+  sources:
+    - https://www.ietf.org/archive/id/draft-connolly-cfrg-xwing-kem-11.txt
+    - https://datatracker.ietf.org/doc/draft-connolly-cfrg-xwing-kem/
+    - knowledge/notes/msn-2026-0009.md
+    - knowledge/specifications/spc-2026-0002.yaml
+    - knowledge/findings/fnd-2026-0007.yaml
+    - knowledge/process-findings/audit-2026-10-03/xwing-hpke-test_spec.md
+  parent: msn-2026-0009
+  generation: 1
+links:
+  specifications: [spc-2026-0002]
+  targets: [tgt-2026-0004]
+  findings: [fnd-2026-0007]
+  observations: [obs-2026-0049]
+  reviews: []
+  verifications: []
+  reproducers: []
+title: "X-Wing draft-11 Appendix C contains three complete, correctly-sized test vectors; the Frontier X-Wing oracle was never pinned to them"
+classification: normative-source-check
+statement: >
+  ORCHESTRATOR-VERIFIED DIRECTLY, not taken on agent report. I fetched
+  https://www.ietf.org/archive/id/draft-connolly-cfrg-xwing-kem-11.txt
+  (SHA-256 1353f61f0d706199d86b6802eab83cabbb5195b2d99fb35bca20f5e4f83db786,
+  61096 bytes, dated 23 September 2026), parsed Appendix C with an
+  independent parser, and measured every field:
+
+    field      bytes  section 5.1 declares   status
+    seed          32          32              OK
+    sk            32          32              OK
+    pk          1216        1216              OK
+    eseed         64          64              OK
+    ct          1120        1120              OK
+    ss            32          32              OK
+
+  Three vectors, three distinct seeds, three distinct shared secrets.
+  sk == seed in every vector. XWingLabel = 5c2e2f2f5e5c confirmed present.
+
+  PROCESS NOTE recorded per AGENTS.md: my first three parser attempts
+  produced WRONG answers (field lengths of 96/7116, then 10 bogus vectors)
+  due to a state-machine bug that let a bare label line discard accumulated
+  fields. I only trusted the result after the parse produced the
+  specification-declared sizes exactly. This is the same failure mode - a
+  plausible-looking automated answer that is wrong - that the repository's own
+  process findings warn about.
+environment: >
+  Windows 11, PowerShell, Python 3.11.15, .venv. Network retrieval only; no
+  build, no package install, no execution of any X-Wing implementation.
+  Reference bytes stored at R:\xwverify\d11.txt (ramdisk scratch, disposable).
+normative_basis:
+  - "draft-connolly-cfrg-xwing-kem-11, section 5.1: decapsulation key 32 bytes, encapsulation key 1216 bytes, ciphertext 1120 bytes, shared secret 32 bytes."
+  - "draft-connolly-cfrg-xwing-kem-11, Appendix C 'Test vectors' - heading retains a '# TODO: replace with test vectors that re-use ML-KEM, X25519 values' note, but the vectors THEMSELVES are populated."
+  - "draft-connolly-cfrg-xwing-kem-11, section 5.3: XWingLabel is given in hexadecimal by 5c2e2f2f5e5c."
+method: >
+  Retrieve the authoritative .txt; hash it for source identity; parse
+  Appendix C field-by-field; compare every field length against section 5.1;
+  confirm seed/sk relationship and vector count. Compare against the
+  machine-readable JSON published in the authors' repository.
+result: >
+  Three vectors, all six fields, all sizes exactly as specified. The
+  JSON copy at
+  https://raw.githubusercontent.com/dconnolly/draft-connolly-cfrg-xwing-kem/main/spec/test-vectors.json
+  was independently reported byte-identical field-by-field.
+counter_evidence:
+  - >
+    The Appendix C heading itself carries an unresolved editorial TODO, so the
+    vectors are not frozen as a normative corpus. The CFRG chairs' Last Call
+    of 2026-07-24 found rough consensus to continue TOWARD publication (not
+    approval) and imposed MANDATORY corrections, including: (i) the
+    non-contributory X25519 all-zero-output behaviour is unresolved (draft repo
+    issue #28 remains OPEN), and (ii) "the repeated-byte encapsulation-randomness
+    inputs are insufficiently discriminating as conformance tests" with an
+    explicit order that "every affected encapsulation key, ciphertext, shared
+    secret, and published intermediate value must be regenerated."
+    Therefore draft-11 vectors are SUITABLE for a happy-path byte-exactness
+    experiment but NOT as a conformance oracle and NOT as a basis for any
+    adversarial-input or error-path claim.
+  - >
+    The same construction is simultaneously being standardized as
+    MLKEM768-X25519 in the IRTF track (draft-irtf-cfrg-concrete-hybrid-kems-04,
+    2026-07-06), whose Datatracker state is "Waiting for Document Shepherd /
+    Revised I-D Needed", with vectors being regenerated now.
+scope_limits: >
+  Applies to draft-connolly-cfrg-xwing-kem-11 exactly as retrieved
+  2026-10-04. Drafts are provisional; nothing here is a protocol violation
+  claim. Implementation targets are scattered across revisions -00, -05, -06,
+  -10 and concrete-hybrid-kems-02/-03/-04 - so any cross-implementation
+  experiment MUST pin and record the revision each implementation targets, and
+  MUST NOT mix vectors from different revisions. PQClean was archived
+  2026-08-04 and contains no x-wing entry, so that lineage is dead.
+instrument_defect_found: >
+  The Frontier X-Wing "cleanroom oracle" must NOT be built on. Findings:
+    (D1) The label assertion is SELF-VALIDATING (an internal `assert` next to
+         the constant it guards), violating the stated discipline that an
+         oracle is never self-validating. A superseded sibling file encodes the
+         label as 8 bytes instead of 6 - a different wrong value.
+    (D2) A hardcoded "expected" hash constant matches nothing - the actual
+         SHA3-256 of the all-zero input differs - and because __main__ only
+         PRINTS it, the file runs silently green while lying.
+    (D3) THE VALIDATION WAS NEVER RUN AGAINST THE DRAFT. The harness builds
+         its own seeds and compares only against a vendored CIRCL, i.e.
+         CIRCL vs CIRCL. The stated justification was that draft vectors are
+         empty; they are not.
+    (D4) The HPKE key-schedule reference implements no X-Wing-specific
+         binding: it uses a SHA-256 extract with a suite_id that encodes
+         HKDF-SHA384, omits both LabeledExtract hashes required by RFC 9180
+         section 5.1, and adds an Extract RFC 9180 does not have. Its
+         hpke_base_setup cell is therefore proving nothing.
+    (D5) Everything lives under .scratch/, which is gitignored, while two
+         committed verification artifacts certify it. An instrument a review
+         cannot reproduce is not evidence.
+  CONFLICT RESOLVED THIS SESSION: the previously recorded "incorrect RFC 9180
+  mode byte" was itself an error in the correction - RFC 9180 section 5 Table 1
+  defines mode_base = 0x00, and the instrument's 0x00 is CORRECT. But
+  knowledge/findings/fnd-2026-0007.yaml:92 still carries the inverted claim
+  verbatim ("RFC 9180 section 5.1 requires mode 0x01 for Base mode"), so a
+  committed finding is still wrong about the RFC.
+recommended_next_step: >
+  Build a clean, git-committed cleanroom oracle from draft-11 section 5.2-5.6,
+  require 3/3 on Appendix C BEFORE any cross-implementation comparison is
+  admissible, then matrix independent implementations with explicit lineage.
+  The staged intermediate comparison is X(sk_X, BASE) vs pk[1184:1216] and
+  X(ek_X, BASE) vs ct[1088:1120], which localize a discrepancy to the X25519
+  step alone without invoking ML-KEM.
+classification_detail: >
+  The X-Wing X25519 step uses RAW X25519 per RFC 7748 section 6.1 (base point
+  u = 9 encoded as 0x09 followed by 31 zero bytes), NOT an RFC 9180 HPKE mode
+  byte. draft-11 section 4 defines X25519_BASE = 0900...00 and notes "9 is the
+  standard basepoint for X25519, cf Section 6.1 of [RFC7748]". The two
+  constants must be kept strictly distinct; they meet only in section 5.6,
+  where an HPKE-X-Wing caller passes mode_base = 0x00 into RFC 9180's
+  KeySchedule, and no mode byte is hashed into X-Wing's shared secret.

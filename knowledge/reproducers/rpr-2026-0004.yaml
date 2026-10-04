@@ -44,7 +44,12 @@ reproduction_commands:
 - '# LOCAL READ-ONLY check of already-built proof terms. No build, no download.'
 - .venv\Scripts\python.exe -c "import pathlib;fs=sorted(pathlib.Path('formal/.lake/build').rglob('*.olean'));print(len(fs),'olean
   files');[print(' ',f.name) for f in fs]"
-- '# Expected: 34 .olean files, each newer than its .lean source, header olean4.22.0...'
+- '# Expected: 4 .olean files (Formal.olean 35888 B, ByteEncode.olean 734936 B,'
+- '#   LengthCheck.olean 177504 B, ValidKey.olean 77136 B), each newer than its'
+- '#   .lean source, header olean4.22.0...'
+- '# NOTE: the earlier "34" figure was the FILE count under formal/.lake (34 files'
+- '#   plus 6 directories), not the .olean count. Corrected 2026-10-04 by a'
+- '#   read-only count; no build was run.'
 - 'lake env lean check_axioms.lean  # requires a CI-provided toolchain + cache'
 reproduced_on:
 - environment: Windows 11 host, elan toolchain, Lean 4 v4.22.0 + Mathlib4 v4.22.0

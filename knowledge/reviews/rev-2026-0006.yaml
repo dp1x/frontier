@@ -46,7 +46,7 @@ review:
       - "Reuses FORMAL-203 and FORMAL-204 foundations correctly"
       - "Spec citations accurate against localdocs/refs/fips203.pdf"
       - "Scope disclosure honest: k=2 only, k=3/k=4 follow-up"
-      - "Build reproducible from scratch: cd formal; lake build"
+      - "Build reproducible from scratch via CI: gh workflow run formal.yml --ref main (a local `lake build` is forbidden; see governance_correction_2026_10_04)"
     neutral:
       - "Predicate approach (not subset type) is a deliberate design choice for unifying the two halves' byte-array representations"
       - "isValidKey_zero_k2 requires the wsum_zero helper lemma, which is a small but real piece of arithmetic"
@@ -63,9 +63,11 @@ review:
     Disclosure is honest and accurate.
   reproducer_audit: |
     The .lake build artifacts at formal/.lake/build/lib/Formal/ValidKey.olean
-    are the kernel-accepted proof terms.  Rebuild from scratch:
-    cd C:\Users\Dhane\frontier\formal; lake build.  Verified on
-    this Windows host with Lean 4.22.0.
+    are the kernel-accepted proof terms.  Rebuild from scratch in CI via
+    .github/workflows/formal.yml: gh workflow run formal.yml --ref main.
+    A local `lake build` is NOT the route and is forbidden.  This was
+    nonetheless verified on this Windows host with Lean 4.22.0 on
+    2026-08-29 (see governance_correction_2026_10_04).
   artifact_consistency_audit: |
     fnd-2026-0006's statement, scope disclosure, and limitations
     are consistent with formal/Formal/ValidKey.lean's content.
@@ -83,3 +85,21 @@ review:
         LengthCheck.lean" - YES (both imported)
 verdict: support
 disclosure: public
+
+governance_correction_2026_10_04:
+  reason: >
+    Two live instructions in this review pointed at a local `lake build`: the
+    "Build reproducible from scratch: cd formal; lake build" positive finding,
+    and the reproducer_audit's "Rebuild from scratch: cd C:\Users\Dhane\frontier
+    \formal; lake build." After the 2026-09-26 disk-hygiene cleanup deleted
+    formal/.lake/packages (~5.4 GB), that command re-downloads Mathlib locally,
+    which AGENTS.md explicitly forbids.
+  corrected_routes_to: ".github/workflows/formal.yml, invoked with: gh workflow run formal.yml --ref main"
+  historical_text_left_intact: >
+    termination_recommendation still reads "lake build completes with exit 0,
+    0 sorries, 0 file-introduced axioms - YES". That is the acceptance criterion
+    the review actually checked on 2026-08-29, not a route instruction, so it
+    is deliberately NOT rewritten.
+  scope: >
+    Routing only. The review verdict, status, and epistemic_status are
+    unchanged, and no old research claim is reopened by this correction.
