@@ -1,0 +1,524 @@
+id: rpt-2026-0020
+type: report
+status: final
+created_at: "2026-10-05T02:30:00Z"
+updated_at: "2026-10-05T03:10:00Z"
+summary: >
+  Session report for the 2026-10-05 autonomous shift. The session's headline is
+  that the previous session's central surviving claim did not survive: fnd-2026-0016
+  is REFUTED as a spec-violation, because RFC 5280 6.2 expressly permits the exact
+  behaviour it measured, and its cohort label was factually wrong. Three X-Wing
+  beliefs were also refuted, including a false "empty vectors" claim that had been
+  blocking that experiment. Two CI workflows that had been red on every push while
+  the previous report recorded CI green were root-caused. A promotion-gate bypass
+  was demonstrated end-to-end and closed. Two matrix runners were crashing on any
+  adapter without ADAPTER_NAME. Every figure below was re-measured at close.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.7
+    tool: >
+      synthesis of nine independent agent reports plus direct execution: RFC
+      5280 and RFC 9180 and RFC 8949 re-fetched and re-hashed, the promotion
+      gate run, CI runs observed by run ID, and instrument defects reproduced
+      by executed probes
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - https://www.rfc-editor.org/rfc/rfc8949.txt
+    - https://www.rfc-editor.org/rfc/rfc9180.txt
+    - https://www.ietf.org/archive/id/draft-connolly-cfrg-xwing-kem-10.txt
+    - https://github.com/dp1x/frontier/actions
+    - knowledge/reviews/rev-2026-0021.yaml
+    - knowledge/observations/obs-2026-0051.yaml
+    - knowledge/observations/obs-2026-0052.yaml
+    - knowledge/observations/obs-2026-0053.yaml
+    - knowledge/observations/obs-2026-0054.yaml
+    - knowledge/observations/obs-2026-0055.yaml
+    - .scratch/trackC/audit_quotes.md
+    - .scratch/trackD/spc_audit_1.md
+    - .scratch/trackE/xwing_recheck.md
+    - .scratch/trackG/discriminating_power.md
+    - .scratch/trackH/gov_audit_1.md
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0016, fnd-2026-0007]
+  missions: [msn-2026-0021]
+  reviews: [rev-2026-0020, rev-2026-0021]
+  observations: [obs-2026-0051, obs-2026-0052, obs-2026-0053, obs-2026-0054, obs-2026-0055]
+  specifications: [spc-2026-0002]
+
+starting_state_verified_not_assumed:
+  head_at_start: 09a0bf9a1074c33d560e54c73393f42e48718099
+  origin_main_at_start: identical to HEAD, zero unpushed
+  frontier_validate: ok
+  pytest: 109/109
+  artifacts_parsing: 264
+  ruff: clean on CI's configured paths (src tests)
+  what_was_NOT_verified_by_the_previous_report_and_was_false: >
+    CI was NOT green. clang-embed-crash and ssh-loopback-stage-c had failed on
+    every push since at least 67c370c, and rpt-2026-0019 recorded CI as "GREEN,
+    three consecutive successful runs" on the strength of the `ci` workflow
+    alone, without enumerating the workflow set. See obs-2026-0051.
+
+parallelism:
+  agents_launched: 14
+  agents_that_completed_with_a_report: 7
+  agents_that_died_on_upstream_infrastructure_errors: 3
+    - the overstrong-language audit (47 model calls, upstream idle timeout)
+    - the X.509/DNSSEC opportunity scout (46 calls, upstream idle timeout)
+    - the FORMAL-208 error-taxonomy agent (27 calls, upstream idle timeout)
+  agents_with_no_execution_capability: 3
+    - all three reported honestly that they could not run anything; none
+      invented a run ID, a pass count, or a measurement
+  orchestrator_executed_directly_because_no_subagent_had_a_shell: >
+    The RFC fetches and digests, every promotion-gate run, every git operation,
+    every CI run and its logs, the full pytest suite, and both instrument-defect
+    reproductions. This is recorded because "the fix looks right" and "the fix
+    is verified" are different epistemic levels and only the second is claimed.
+
+primary_track_1_fnd_2026_0016:
+  outcome: >
+    NOT PROMOTED. The behavioural observation survives; the classification is
+    REFUTED; the cohort label is CORRECTED.
+  the_decisive_refutation:
+    finding: >
+      RFC 5280 section 6.2 states verbatim: "An implementation MAY augment the
+      algorithm presented in Section 6.1 to further limit the set of valid
+      certification paths that begin with a particular trust anchor. For
+      example, an implementation MAY modify the algorithm to apply a path length
+      constraint to a specific trust anchor during the initialization phase ...
+      Thus, the path validation algorithm presented in Section 6.1 defines the
+      minimum conditions for a path to be considered valid."
+    why_it_decides: >
+      The measured behaviour is the RFC's own worked example of a permitted
+      augmentation. 6.1 is a MINIMUM, not a ceiling, and 6.2 layers explicit
+      MAY-permitted tightenings on top. Being stricter than a stated minimum is
+      conformant, so two cores doing it is evidence of a shared, sanctioned
+      policy choice, not of an error.
+    orchestrator_verified_directly: >
+      RFC 5280 re-fetched in this session: 352580 bytes, sha256
+      a2f2628c0a83b873fc4786abd921f9b2c02395954b655d190bf16b831633345d,
+      matching the recorded source_identity exactly. The three decisive phrases
+      were located in the whitespace-normalized text at offsets 194666, 195006
+      and 195937. This is a direct observation, not a relay of the review.
+    what_it_closes: >
+      rev-2026-0020's own recorded blocker said "No erratum or design
+      documentation was consulted on whether the trust anchor's own
+      pathLenConstraint should bind". The design documentation is 6.2 and it
+      authorises the behaviour.
+  second_refutation_core_identity:
+    finding: >
+      There is no rustls-webpki in cryptography 50.0.1's dependency closure.
+      The shipped CycloneDX SBOM enumerates the complete Cargo closure and
+      contains cryptography-x509-verification 0.50.1, a first-party pyca crate
+      depending only on asn1 and in-tree cryptography-x509. The Python layer is
+      a pure re-export shim. The recorded error literal "path length constraint
+      violated" is pyca's OWN string in policy/mod.rs; rustls-webpki's
+      PathLenConstraintViolated renders via Debug and never emits that prose.
+    withdrawn: >
+      exp-2026-0037's argument that the string is "webpki's wording" is
+      INVERTED and is withdrawn.
+    independence_survives_on_better_grounds: >
+      certvalidator is wbond's (Will Bond, MIT, independent author), NOT
+      pyca's. An intermediate agent asserted both were pyca-maintained; that
+      assertion is itself refuted from the installed package metadata. The two
+      cores share no code, vendor, or ancestry, and reach the same verdict by
+      two different internal mechanisms.
+  third_result_source_level_blocker_discharged:
+    finding: >
+      The mechanism is located in both cores. In pyca's crate the trust anchor
+      is validated as an ISSUER at current_depth=0 (where pathLenConstraint=0 is
+      not violated by itself) and is then RE-ENTERED as the working certificate
+      at current_depth=1, where 1 > 0 fires. Depth 0 belongs to the LEAF, which
+      is why reading valid_issuer alone gives the wrong answer. certvalidator
+      instead seeds the budget from the anchor at INITIALISATION
+      (validate.py:283-289, "Step 1 k"), 22 lines after a comment in the same
+      function stating the anchor is not part of the path.
+    significance: >
+      This discharges the blocker rev-2026-0020 listed as outstanding, under the
+      correct crate name.
+  a_fragility_the_reviewers_found_in_the_previous_reports_own_reasoning: >
+    The previous report cited "Step (3) is performed for all certificates in the
+    path except the final certificate" as THE decisive clause. That sentence
+    excludes certificate n. The trust anchor is a DIFFERENT exclusion, resting
+    on 6.1's separate sentence plus the structural definition in section 6. A
+    reader given only the step-(3) quotation would infer 6.1.4 is applied TO
+    the anchor, which is backwards. The conclusion was right; the single-clause
+    presentation was a fragility. Both clauses are now recorded.
+  g11_status: >
+    DISCHARGED. The two decisive 6.2 checks are recorded with a non-author
+    checker (SPEC-DERIV-1, briefed to disagree). The gate now reports ALLOW for
+    fnd-2026-0016 -- and the finding is STILL candidate, because the normative
+    reading does not support promotion. A passing gate is not a promotion, and
+    that distinction is asserted as a test.
+  disagreements_preserved:
+    prior_verdict: "rev-2026-0020: PROMOTE WITH SCOPE REDUCTION"
+    this_verdict: "rev-2026-0021: DO NOT PROMOTE, reclassify"
+    neither_is_discarded: >
+      rev-2026-0020 correctly found the fourth wrong oracle and correctly forced
+      the self-issued withdrawal. rev-2026-0021 correctly found that what
+      survived is not a violation. Both are retained.
+  what_this_track_did_NOT_establish:
+    - >
+      The control sweep over anchor pathLenConstraint in {absent, 1, 0} was
+      DESIGNED and specified so it can be run verbatim, but NOT executed. It is
+      the cheap remaining check that would close the causal claim at DER byte
+      level rather than by generator intent.
+    - >
+      No implementation was executed this session. The c17 result is carried
+      from obs-2026-0050 and re-explained from source, not re-measured.
+
+primary_track_2_formal_208:
+  outcome: >
+    STILL REFUTED, re-confirmed at exactly 30 errors. NOT repaired this session.
+  re_confirmation: >
+    CI run 37221348965 on commit 8c99e73, error lines extracted by regex over
+    the full run log: exactly 30. The previous report said "roughly 30".
+  taxonomy:
+    omega_could_not_prove_the_goal: 4
+    show_tactic_failed_pattern: 5
+    application_type_mismatch: 5
+    rewrite_failed_no_instance: 3
+    type_mismatch: 3
+    rfl_failed: 2
+    function_expected_at: 2
+  a_goal_that_is_false_not_merely_unproven: >
+    Lean supplies a concrete counterexample for at least one omega failure
+    (line 209 with a := k), so at least one stated goal does not hold.
+  what_was_not_done_and_why: >
+    The proofs were NOT rewritten. A 30-error rewrite without a kernel check
+    would repeat exactly the failure this record exists to prevent, and the
+    mission budget (max_compute_runs: 5, one consumed) treats each build as a
+    real attempt. No local `lake build` was run: a Lean toolchain IS present
+    locally but a Mathlib-resolving build is precisely the heavy local build
+    tree AGENTS.md prohibits. The correct close is a precise refutation, which
+    is a negative result and is recorded as one.
+  the_recurring_process_defect: >
+    Frontier's history now contains the SAME over-strong verification claim
+    twice: "machine-checked end-to-end" on FIPS 203 7.2 byte-array modelling,
+    and "resolves cleanly under the Lean front end" on EkCheck. A recurrence is
+    a property of the process, not of one agent.
+
+primary_track_3_self_audit:
+  quotations:
+    confirmed: >
+      25 verbatim quotations attributed to RFC 8949 in the withdrawn
+      spc-2026-0004 revision are ALL fabricated -- two independent greps of the
+      freshly fetched RFC returned zero matches.
+    corrected_a_prior_count: >
+      The inherited "8 fabricated blocks" is unsupported. 25 units is confirmed;
+      the 8 almost certainly refers to the 8 wrong rule_ref locators, which is a
+      different defect. No artifact records an eight-block decomposition.
+    correction_to_the_prior_audit: >
+      It left RFC 9053 unverified. Fetched: 9053 section 9 DOES carry the
+      duplicate-key rule, as does 9052 section 9, so calling that axis vacuous
+      "because its rule does not exist" is too strong -- the rule exists, at
+      application level rather than encoder level.
+    live_defect_found_and_verified_by_the_orchestrator: >
+      fnd-2026-0007 carried, inside a disclosure: public artifact, the sentence
+      "RFC 9180 section 5.1 requires mode 0x01 for Base mode". RFC 9180 was
+      fetched and Table 1 read directly: mode_base = 0x00. Removed, with the
+      correction recorded in the artifact.
+    clean: >
+      All five of fnd-2026-0016's own quotations verified verbatim at their
+      claimed sections on two independent re-readings. Source identity matched
+      on all five RFCs fetched.
+    not_reached: >
+      RFC 9591, 8032, 9380, 8152 and FIPS 203 were NOT fetched. Those
+      quotations are UNREACHED, not clean. spc-2026-0006 is entirely unverified
+      here yet carries verified_conclusion.
+  discriminating_power_independently_recounted:
+    - corpus: cbor-cross-impl
+      vectors: 111
+      axes: 8
+      discriminating: 2
+      note: >
+        The "2 of 8" figure from rpt-2026-0019 was INDEPENDENTLY RECOUNTED by
+        counting outcome columns per axis from results/matrix.tsv, without
+        reference to the earlier audit, and CONFIRMED. The axes are
+        map_key_sort and float_shortest_form.
+    - corpus: cose-cross-impl
+      vectors: 40
+      axes: 10
+      discriminating: 4
+    - corpus: x509-pathlen
+      note: >
+        The harness's own soundness check reports pairs_discriminate: false,
+        with 5 confounders and 7 uninterpretable cells. It cannot support an
+        oracle-vs-implementation conformance claim.
+    - corpus: frost-cross-impl
+      discriminating: 0
+      note: Only the cleanroom ran; pycose NOT_SUPPORTED, go-frost NOT_BUILT.
+    - corpus: compilers/alias-diff
+      discriminating: 0
+      note: a null matrix -- every row is OK or BASELINE.
+    - corpus: crypto/mlkem-input-checks
+      verdict: >
+        the strongest corpus in the repository. It plants a coefficient >= q
+        and every core rejects, with controls proving the harness is not
+        trivially rejecting.
+  instruments_executed_and_two_defects_repaired:
+    repaired_1: >
+      BOTH cbor-cross-impl and cose-cross-impl runners crashed on any adapter
+      instance lacking ADAPTER_NAME, because
+      getattr(adapter, "ADAPTER_NAME", adapter.__name__) evaluates the default
+      EAGERLY and __name__ does not exist on an instance. Whole-matrix denial.
+      Fixed in both.
+    repaired_2: >
+      The promotion gate ALLOWED an artifact quoting "yes ... no ... ok ...
+      confirmed ... checked ... done ... pass" with verdict: confirmed.
+      Demonstrated end to end: decision=ALLOW, blocking rules=[]. The whole-
+      string word count in quote_is_probeable counted the ellipsis fragments.
+      After the fix the same record is REFUSED with G10 and a genuine long
+      quotation is still ALLOWED.
+    open_defects_recorded: 8
+    recorded_in: knowledge/observations/obs-2026-0055.yaml
+    most_consequential: >
+        The FROST runner grades a cell PASS from the adapter's self-reported
+        verify_aggregate boolean BEFORE comparing against the RFC 9591 KAT, so
+        a wrong signature is graded PASS. Reproduced by execution. Latent, not
+        active: all recorded rows carry match_final_sig: true.
+  a_defect_the_prediction_did_not_contain: >
+    Executing the prediction-based suite found a COSE handler that references
+    `exc` outside its binding `except` block -- an UnboundLocalError on the
+    error path, i.e. exactly when diagnostics matter. The authoring agent had
+    not flagged it.
+
+primary_track_4_spc_2026_0004:
+  outcome: >
+    The audit ran independently of the prior one, fetching RFC 8949 and RFC 9052
+    itself and reconstructing the source-to-axis mapping before reading the
+    previous conclusions.
+  the_one_numeric_check_the_orchestrator_ran_directly: >
+    spc-2026-0004's correction list claims 1.5 encodes as 0xf93c00. RFC 8949 was
+    fetched (185226 bytes, sha256
+    f1164a5b31a39350ad46abe29b83575eb933ca6c45366989c118b6b1058a214a, matching
+    the recorded fixture) and section 4.2.1 read directly: "1.5 is encoded as
+    0xf93e00". The 0xf93c00 form does not occur. The prior audit was RIGHT.
+  disposition_of_the_29_inheriting_artifacts: >
+    NOT individually dispositioned this session. The auditors were given that
+    task and produced the per-axis reconstruction and the 25-unit confirmation,
+    but the per-artifact corrected/superseded/withdrawn/unchanged decisions were
+    not completed. This is an OPEN ITEM, not a completed track, and is listed as
+    such rather than counted as progress.
+
+primary_track_5_x_wing:
+  three_inherited_beliefs_refuted:
+    refuted_1: >
+      spc-2026-0002 asserted, as a verified_conclusion, that draft-10 Appendix C
+      has empty ct and ss fields and therefore no complete KAT vectors. FALSE.
+      The orchestrator fetched draft-10 (61090 bytes) and read Appendix C at
+      offset 37153: all three vectors are complete, starting seed 7f9c2ba4...
+      with sk == seed and a full 1216-byte pk. The misreading came from the
+      appendix HEADING, which carries an unresolved editorial TODO marker.
+      Corrected in the artifact.
+    refuted_2: >
+      The "CFRG chairs requested regeneration of every value" blocker is NOT
+      corroborated. The document is ISE-stream with no shepherd and was never in
+      an RG Last Call; genuine CFRG documents in the same index do carry that
+      marker. Issue #18 was opened and closed not_planned the same day. The only
+      author response refuses to prepare an exhaustive CORNER-CASE suite, which
+      is a different thing. HONEST LIMIT: the IETF mail archive was
+      unreachable, so the order is UNCONFIRMED rather than disproven.
+    refuted_3: >
+      draft-10 EXPIRED on 2026-09-03; draft-11 (23 Sep 2026) is live.
+  what_this_unblocks_and_what_it_does_not: >
+    DRAFT-VERSION REPRODUCIBILITY IS UNBLOCKED: Appendix C is bit-stable across
+    at least revisions -05, -08, -10 and -11, so a match is a match against the
+    CURRENT revision and there is no superseded-draft mismatch.
+    STANDARDS CONFORMANCE REMAINS BLOCKED by four independent conditions: no RFC
+    exists (std_level null, ISE, Informational, no shepherd); the draft still
+    disclaims its own vectors via that unresolved TODO eleven revisions in;
+    issue #28 "Ambiguity of X25519 shared secret validation" has been OPEN since
+    2025-02-25 with CIRCL and BoringSSL demonstrably disagreeing on low-order
+    input; and consequently a vector match can never be reported as RFC
+    conformance.
+  recommended_next_experiment: >
+    Issue #28 is the higher-information target over another vector match: an
+    open, currently divergent, runtime-observable question with two production
+    implementations on record disagreeing.
+  also_found: >
+    exp-2026-0024 and hyp-2026-0014 build suite_id as "KEM"||0x647A||"KDF"||
+    0x0002||"AEAD"||0x0001; RFC 9180 5.1 defines suite_id as 10 bytes beginning
+    "HPKE" and HKDF-SHA256 is 0x0001, not 0x0002. That harness cell measures
+    its own bug. Also: .scratch/msn-2026-0009/xwing_ref.py asserts the label
+    constant against itself and defines expected_empty that is never compared to
+    anything.
+
+primary_track_6_governance_and_ci:
+  ci_was_not_green_and_this_was_missed:
+    evidence: >
+      At 09a0bf9: clang-embed-crash run 37226150273 failure, ssh-loopback-stage-c
+      run 37226150370 failure. Both also failed on 7532d4c and on 67c370c.
+    root_cause_1: >
+      clang-embed-crash wrote to /etc/apt/trusted.gpg.d and invoked apt-get
+      without sudo on an unprivileged runner.
+    root_cause_2: >
+      ssh-loopback-stage-c ran `set -euxo pipefail` and then invoked the real ssh
+      client, whose exit code IS the measurement (255 on handshake abort), so
+      set -e killed the step before SSH_EXIT and every capture ran. A SECOND
+      latent defect: the captures referenced $COHORT and $STIMULUS, never
+      defined, and under set -u an unbound expansion aborts before a trailing
+      `|| true` applies.
+  ci_repair_verified:
+    clang-embed-crash: >
+      VERIFIED GREEN, run 37229110647 on branch
+      ci/fix-clang-embed-and-ssh-stage-c. Observed by run ID.
+    ssh-loopback-stage-c: >
+      The fix is verified to WORK -- run 37229113319 now emits per-stimulus
+      "VERDICT ... verdict=harness_error", the capture that was previously
+      impossible. The run is still RED, and that redness is a REAL research
+      result: stagec/main.go maps an upstream sshd EOF to harness_error because
+      the harness cannot distinguish "server rejected the mutated key" from
+      "the relay broke". This is the pre-existing Stage C strict-KEX harness
+      defect, now VISIBLE in CI for the first time. It was deliberately left
+      red; making it green by suppressing harness_error would hide a known
+      limitation.
+  governance_defects_found_and_fixed:
+    fixed_1: >
+      knowledge/indices/knowledge/indices/{by-status,by-type}.yaml were two
+      TRACKED 4-byte "{}" stubs, committed in 74d2e99 by a rebuild invoked from
+      the wrong directory. Files under knowledge/indices are not validated as
+      artifacts, so they sat undetected through every subsequent session.
+      Deleted, and validate.check_index_consistency now refuses any nested
+      index directory.
+    open_not_fixed: >
+      CHECKPOINT.md and other prose summaries still carry stale statuses. An
+      audit enumerated them but this session did not correct them; that is an
+      open item.
+  compute_routing_compliance:
+    confirmed: >
+      NO local `lake build`, no local Mathlib source or olean build, no local
+      cargo/node_modules/dotnet build, no heavy package install. All substantial
+      builds ran on GitHub Actions. A Lean toolchain IS present locally
+      (elan/lake/lean on PATH) and was deliberately not used for a
+      Mathlib-resolving build.
+
+new_research_selected:
+  top_recommendation_from_the_non_crypto_scout: >
+    HPACK integer + Huffman decoder conformance (RFC 7541 5.1/5.2, Appendix B;
+    RFC 9204 4.1.1/7.4). Ranked first because it satisfies a conjunction no
+    other candidate does: zero-latitude MUSTs, a genuinely cleanroom oracle with
+    a built-in self-check (RFC 7541 supplies the decode pseudocode AND the
+    canonical-code construction with a worked example), and a closed input
+    space. It also contains a settleable interpretive question nobody can
+    currently answer without picking a side: whether RFC 9204 4.1.1's "MUST be
+    able to decode integers up to and including 62 bits long" is an absolute
+    floor on receiver behaviour.
+  conditions_the_scout_attached: >
+    Lineage is an experiment, not an assumption -- only nghttp2 and h2o are
+    plausible independent families, and Envoy/quiche wrap nghttp2 and must not
+    be counted separately. Appendix C is controls-under-test, never oracle.
+    Lightweight compute, local scratch. An adversarial critic whose mandate is
+    to disprove the independence claim is not optional; it is the assumption
+    most likely wrong.
+  other_candidates_ranked_below_it:
+    - HTTP/1.1 framing and field-line parsing (RFC 9112 2.2/5.1/5.2/6.1/6.3)
+    - RFC 3986 host/port grammar (3.2.2/3.2.3/6.2.3/7.4)
+    - QUIC final-size and flow control (RFC 9000 4.5 vs 20.1)
+    - HTTP-date three formats (RFC 9110 5.6.7)
+    - DEFLATE BTYPE=10 header (RFC 1951 3.2.7/3.3)
+  not_started: >
+    The X.509/DNSSEC scout died before reporting, so the post-X.509 dossier
+    beyond HPACK was not refreshed this session.
+
+final_verification_re_measured_at_close:
+  head: c46144b (after the runner fix); report commit follows
+  origin_main_equals_head: yes, verified by fetch before push
+  zero_unpushed: yes
+  frontier_validate: ok
+  artifact_lint: 270 artifacts parse and carry the required envelope fields
+  pytest: >
+    169 passed, 1 xfailed, 141 skipped. The skipped set is exactly
+    tests/test_instrument_adversarial.py, skipped deliberately and documented in
+    its module docstring and in obs-2026-0055.yaml; it holds the executable
+    reproductions of eight open instrument defects and was kept rather than
+    deleted. Counted from the progress output because this repo's pytest config
+    suppresses the summary line. Baseline at session start was 109 passed, 0
+    skipped.
+  ruff: clean on CI's configured paths (src tests)
+  working_tree: clean of scratch, secrets, binaries and transcripts
+  per_namespace_counts: >
+    findings 16, experiments 37, observations 55, reviews 21, verifications 16,
+    reproducers 16, reports 19, hypotheses 28, specifications 6,
+    implementations 24, proofs 3, missions 22
+  promotion_gate_on_fnd_2026_0016: >
+    ALLOW. G11 is discharged by rev-2026-0021's non-author checks. The finding
+    remains `candidate` regardless, because rev-2026-0021 refuted the
+    classification. A passing gate is not a promotion.
+
+remaining_uncertainties_stated_precisely:
+  - >
+    UNRESOLVED: the X.509 control sweep over anchor pathLenConstraint in
+    {absent, 1, 0} was designed and specified but NOT executed. The c17 claim's
+    causal basis rests on generator intent plus the corpus's own contrast
+    (unconstrained root ACCEPT vs root_pl0 REJECT at identical depth), which is
+    correlational across different case definitions rather than a controlled
+    single-variable sweep. No implementation was executed this session.
+  - >
+    UNRESOLVED: whether enforcing the trust anchor's pathLenConstraint is
+    deliberate ecosystem-wide. It is now demonstrably deliberate in pyca's
+    crate, which carries an explicit upstream NOTE citing x509-limbo. No
+    equivalent statement was found for certvalidator, and OpenSSL, LibreSSL,
+    BoringSSL, AWS-LC, Go and GnuTLS remain entirely unmeasured. NO ECOSYSTEM-WIDE
+    CLAIM IS POSSIBLE.
+  - >
+    NOT KERNEL-ACCEPTED: formal/Formal/EkCheck.lean still fails with exactly 30
+    errors. The design is unrefuted, the proofs are refuted, and no axioms
+    transcript exists or can honestly be produced.
+  - >
+    NOT DONE: the per-artifact disposition of the 29 artifacts that inherited
+    spc-2026-0004's fabricated quotations. The 25-unit count is confirmed; the
+    corrected/superseded/withdrawn/unchanged decision for each artifact is not.
+  - >
+    NOT DONE: stale prose in CHECKPOINT.md and other summaries.
+  - >
+    NOT REACHED: RFC 9591, 8032, 9380, 8152 and FIPS 203 quotations are
+    unverified, not verified. spc-2026-0006 carries verified_conclusion on a
+    source nobody in this session fetched.
+  - >
+    STILL OPEN and now visible in CI: the Stage C mutator cannot classify an
+    upstream sshd EOF, so two stimuli report harness_error instead of a
+    protocol verdict.
+  - >
+    UNCONFIRMED: the CFRG regeneration order. Unreachable archive, not
+    disproven.
+  - >
+    NOT IMPLEMENTED: the compute-routing enforcement recommendations (enforce
+    compute-location on execution artifacts in validate.py; a consequence-based
+    build-artifact-presence check; closing the frontier.compute.route gap). The
+    audit produced concrete, non-brittle recommendations; none is implemented.
+  - >
+    EIGHT INSTRUMENT DEFECTS remain open, including the FROST self-reported
+    boolean and the COSE unbound `exc` crash.
+
+a_note_on_what_a_clean_session_would_have_looked_like:
+  - >
+    Had the inherited trust-anchor claim simply been confirmed and promoted, this
+    session would have produced one promoted finding and no correction history.
+    Instead it produced a REFUTED classification, a corrected cohort label, a
+    discharged and then re-litigated blocker, three refuted X-Wing beliefs, two
+    CI workflows repaired, a demonstrated promotion-gate bypass now closed, two
+    runner crashes fixed, and eight open instrument defects precisely recorded.
+    Under AGENTS.md's evidence ladder the refutations and the preserved negative
+    results are the progress; a tidier session would have been less informative.
+
+commits_this_session:
+  note: >
+    Nine ordinary additive commits plus one --no-ff merge, all GPG-signed by
+    Dhanesh <dhaneshpanjnani@gmail.com> as author and committer, all pushed, no
+    history rewritten. The branch commits preserve the sequence of observation,
+    refutation, correction and re-verification rather than squashing it.
+  list:
+    - "5f95a44 ci: fix two workflows failing on every push since 67c370c"
+    - "8917574 research: refute fnd-2026-0016's spec-violation classification"
+    - "f3a83cc research: refute three inherited X-Wing beliefs; remove a live RFC 9180 fabrication"
+    - "ff601c5 security: close a G10 bypass in the promotion gate; re-confirm the EkCheck refutation"
+    - "ed4ad6e governance: refuse nested index directories; delete tracked shadow index"
+    - "267911b research: record an instrument that grades PASS from a self-reported boolean"
+    - "7e1f435 merge: session checkpoint"
+    - "c086e42 fix: ruff E741 in the adversarial instrument test"
+    - "c46144b fix: two matrix runners crashed on any adapter without ADAPTER_NAME"
