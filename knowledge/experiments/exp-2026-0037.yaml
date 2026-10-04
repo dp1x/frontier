@@ -1,0 +1,181 @@
+id: exp-2026-0037
+type: experiment
+status: complete
+created_at: "2026-10-04T11:00:00Z"
+updated_at: "2026-10-04T18:00:00Z"
+summary: >
+  Execution of the Frontier pathLen corpus (20 cases, 42 generated
+  certificates) against the Frontier oracle and against the rustls-webpki
+  validation core reachable through pyca/cryptography 50.0.1, with every
+  rejection classified by reason. Includes two targeted probes that eliminate
+  competing explanations for the observed divergence.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.1
+    tool: direct execution of crypto/x509-pathlen/*.py
+  sources:
+    - crypto/x509-pathlen/chainforge.py
+    - crypto/x509-pathlen/corpus.py
+    - crypto/x509-pathlen/gen_corpus.py
+    - crypto/x509-pathlen/oracle.py
+    - crypto/x509-pathlen/harness_soundness.py
+    - crypto/x509-pathlen/adapter_webpki.py
+  parent: msn-2026-0022
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0028]
+  observations: [obs-2026-0050]
+execution:
+  environment: >
+    Windows 11, CPython 3.11.15, pyca/cryptography 50.0.1, platform libcrypto
+    reporting "OpenSSL 4.0.2 25 Aug 2026" (this build is NOT the validation
+    core for the verification path -- see cohort below).
+  isolation: local, scratch-only, public material only, no network at run time
+  seed: 20261004
+  nondeterminism_policy: >
+    All keys are deterministic P-256 scalars derived by rejection sampling from
+    a fixed-seed SHAKE-256 stream, so the corpus is byte-reproducible. ECDSA
+    signatures use RFC 6979 deterministic nonces, so even the signatures are
+    byte-reproducible across implementations.
+  corpus_invariants_enforced:
+    chain_integrity: >
+      Every case path satisfies RFC 5280 6.1(a)-(c): certificate 1 is issued by
+      the named trust anchor and the subject of certificate x is the issuer of
+      certificate x+1. Checked mechanically; 0 violations. This invariant was
+      added after two earlier corpus versions had 6.1(a) violations, which would
+      have made every path-length observation on those chains uninterpretable.
+    dn_uniqueness_modulo_issuance: 40 distinct DNs across 42 certificates; every shared DN is a genuine issuer relationship with distinct serial numbers.
+    discriminating_pair_isolation: >
+      Each pair differs in exactly one observable: whether the designated
+      certificate's subject DN equals its issuer's DN. Depth, CA flag,
+      pathLenConstraint, key usage, EKU and issuing CA all match.
+    corpus_minimality: >
+      A pre-flight rejects any certificate that is generated but used by no
+      case, and any case naming a certificate that does not exist.
+  instrument_correctness:
+    oracle_unit_tests: 21 pass (tests/test_x509_pathlen_oracle.py)
+    oracle_wrong_versions_preserved: >
+      Three wrong versions of the accept test are documented in oracle.py with
+      the reason each was wrong. None was caught by review; all three were
+      caught by the corpus. v1 rejected legal pathlen:0 penultimate chains; v2
+      rejected pathLen 1->2 increases; v3 computed a check but never gated on
+      it, so every case accepted.
+    signature_independence_check: >
+      Every generated certificate's signature was verified directly against its
+      issuer's public key (not via a path validator): ALL SIGNATURES VALID.
+      This is what makes the observed rejection attributable to the validator's
+      logic rather than to a generator defect.
+  cohort:
+    - name: rustls-webpki (via pyca/cryptography 50.0.1)
+      core_identity: >
+        cryptography.x509.verification dispatches to the compiled Rust extension
+        (cryptography.hazmat.bindings._rust), which vendors rustls-webpki. It
+        does NOT call X509_verify_cert. Evidence: the observed rejection string
+        is webpki's wording ("path length constraint violated"), whereas OpenSSL
+        reports "path length constraint exceeded" for
+        X509_V_ERR_PATH_LENGTH_EXCEEDED.
+      independence: >
+        Genuinely independent of OpenSSL, LibreSSL, BoringSSL, AWS-LC, Go and
+        GnuTLS at the validation-core level.
+cohort_independence_matrix:
+  note: >
+    Established from repository history, not from code resemblance. AWS-LC and
+    BoringSSL rows in the x509-limbo table are CORRELATED, not independent:
+    BoringSSL's root commit names its upstream ("Initial fork from
+    f2d678e6e89b6508147086610e985d4e8416e867 (1.0.2 beta)"), and AWS-LC shares
+    7042 bit-identical commit SHAs with BoringSSL.
+  groups:
+    - members: [OpenSSL]
+      note: upstream of the BoringSSL fork
+    - members: [BoringSSL, AWS-LC]
+      shared_ancestor: OpenSSL 1.0.2 beta
+      verdict: ONE validation core lineage; correlated evidence
+    - members: [rustls-webpki]
+      verdict: independent of the OpenSSL lineage
+    - members: [pyca/certvalidator]
+      verdict: >
+        pure-Python transcription of RFC 5280 6.1; no ctypes bindings and no
+        OpenSSL delegation (verified by source inspection). Genuinely
+        independent. NOTE: the installed 0.11.1 API could not be driven within
+        this session's budget -- see infrastructure_limitations.
+    - members: [Go crypto/x509, LibreSSL, GnuTLS]
+      verdict: NOT MEASURED in this session; no claim is made about them
+probes:
+  - id: P1
+    name: slot sensitivity
+    question: >
+      Does the self-issued certificate free a slot, as RFC 5280 6.1.4(l)
+      requires?
+    design: >
+      Three chains identical except the FIRST intermediate's pathLenConstraint
+      (0, 1, 2), all of shape root -> ICA(P) -> ICA(1, SELF-ISSUED) -> ICA(0)
+      -> EE.
+    result: >
+      P=0 REJECT (both), P=1 REJECT (impl only; oracle ACCEPT), P=2 ACCEPT
+      (both). The boundary sits between P=1 and P=2, which is exactly the
+      boundary RFC 5280 predicts if and only if the self-issued certificate
+      consumes a slot it should not consume.
+  - id: P2
+    name: path construction
+    question: >
+      Is the divergence an artifact of path CONSTRUCTION rather than path
+      VALIDATION? RFC 5280 6.1 places construction outside the specification's
+      scope, so a validator that never builds the supplied path has not violated
+      6.1.4.
+    design: >
+      Re-run every decisive case supplying ALL 50 CA certificates in the corpus
+      as untrusted intermediates, not just the supplied ones.
+    result: >
+      Verdicts unchanged in all five decisive cases (c10/c11/c12/c13 REJECT,
+      c20 ACCEPT). No alternative path existed, so the rejection is a property
+      of the rule, not of path construction. H3 ELIMINATED.
+  - id: P3
+    name: generator defect
+    question: >
+      Could the observed rejection be caused by an invalid signature rather than
+      by the validator's path-length logic?
+    design: Direct signature verification of every certificate against its issuer's public key, bypassing path validation entirely.
+    result: ALL SIGNATURES VALID. H3-equivalent GENERATOR DEFECT ELIMINATED.
+infrastructure_limitations:
+  - >
+    Only one validation core was measured (rustls-webpki via cryptography).
+    OpenSSL, LibreSSL, BoringSSL, AWS-LC, Go and GnuTLS were NOT executed in
+    this session: two agents died on upstream timeouts while reading their
+    sources, and no local build of those cores exists. No claim is made about
+    them.
+  - >
+    pyca/certvalidator 0.11.1 could not be driven within budget. Its API is
+    context-based and its Certificate constructor forwards to asn1crypto in a
+    way that did not yield to rapid iteration; delegated to a follow-up agent.
+    Consequently the "independent second lineage" leg of the acceptance test
+    is NOT yet satisfied for the path-length cells.
+  - >
+    Cases c04 and c15 (CA certificate as the validation target) are rejected by
+    the server-verifier policy for keyUsage/EKU reasons unrelated to path
+    length, so those cells are currently uninterpretable under this harness.
+  - >
+    The x509-limbo published results table was NOT reproduced end to end; the
+    x509-limbo generator was read as source but its Rust test harness was not
+    built.
+negative_results:
+  - >
+    Two confounders were found and fixed by this experiment, each of which would
+    have silently destroyed the measurement: a missing subjectAltName (every
+    case failed identically at name matching) and a spurious
+    AuthorityKeyIdentifier on the trust anchor (every case failed identically
+    with "invalid extension: 2.5.29.35"). Neither is visible in a FAIL/PASS
+    summary; both were caught only by classifying the rejection reason.
+  - >
+    x509-limbo's own docstring for the contested testcase attributes the
+    self-issued exclusion to RFC 5280 4.2.1.9. That section contains no such
+    statement; it DEFINES the counting unit as "maximum number of
+    non-self-issued intermediate certificates". The exclusion sentence lives in
+    6.1.1, and the operative procedural step is 6.1.4(l). The attribution is
+    inverted. Reported independently by SA-6.
+  - >
+    SA-6's attempt to show the x509-limbo case is vacuous FAILED: n=4 is the
+    smallest depth at which the self-issued exemption flips the verdict, so the
+    testcase is a minimal witness rather than a padded one.

@@ -1,0 +1,179 @@
+id: fnd-2026-0016
+type: finding
+status: candidate
+created_at: "2026-10-04T17:45:00Z"
+updated_at: "2026-10-04T18:15:00Z"
+summary: >
+  CANDIDATE, NOT PROMOTED. Two related conformance observations about
+  pathLenConstraint, measured against ONE validation core (rustls-webpki via
+  pyca/cryptography 50.0.1) on a Frontier-built corpus: (1) a self-issued
+  intermediate consumes a pathLenConstraint slot it should not consume, so
+  chains RFC 5280 accepts are rejected; (2) the trust anchor's own
+  pathLenConstraint appears to be enforced, although RFC 5280 6.1 excludes the
+  trust anchor from the certification path. Both survive executed controls that
+  eliminate path construction and generator defect. Scope is deliberately
+  narrow: one core, one harness, no security claim, no independent second
+  lineage measured yet.
+epistemic_status: hypothesis
+classification: spec-violation
+classification_scope: >
+  Scoped to rustls-webpki as reached through pyca/cryptography 50.0.1. NOT a
+  statement about OpenSSL, BoringSSL, AWS-LC, LibreSSL, Go, GnuTLS or any other
+  implementation, none of which was executed in this session.
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.1
+    tool: direct execution plus independent standards derivations
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - crypto/x509-pathlen/oracle.py
+    - crypto/x509-pathlen/corpus.py
+    - crypto/x509-pathlen/adapter_webpki.py
+    - .scratch/fx/reports/sa1.md
+    - .scratch/fx/reports/sa5.md
+    - .scratch/fx/reports/or1.md
+    - .scratch/fx/reports/sa6.md
+    - .scratch/fx/reports/impl5.md
+  parent: msn-2026-0022
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0028]
+  experiments: [exp-2026-0037]
+  observations: [obs-2026-0050]
+  reviews: []
+normative_checks:
+  - source: https://www.rfc-editor.org/rfc/rfc5280.txt
+    section: "6.1"
+    quoted: >
+      This section presents the algorithm in four basic steps: (1)
+      initialization, (2) basic certificate processing, (3) preparation for the
+      next certificate, and (4) wrap-up.  Steps (1) and (4) are performed
+      exactly once.  Step (2) is performed for all certificates in the path.
+      Step (3) is performed for all certificates in the path except the final
+      certificate.
+    checked_at: "2026-10-04"
+    checker: "orchestrator (grok-4.1), read directly from the fetched source"
+    verdict: confirmed
+    method: deterministic-script
+  - source: https://www.rfc-editor.org/rfc/rfc5280.txt
+    section: "6.1.1"
+    quoted: >
+      A certificate is self-issued if the same DN appears in the subject and
+      issuer fields (the two DNs are the same if they match according to the
+      rules specified in Section 7.1). ... These self-issued certificates are
+      not counted when evaluating path length or name constraints.
+    checked_at: "2026-10-04"
+    checker: "orchestrator (grok-4.1), read directly from the fetched source"
+    verdict: confirmed
+    method: deterministic-script
+  - source: https://www.rfc-editor.org/rfc/rfc5280.txt
+    section: "6.1.4"
+    quoted: >
+      (l)  If the certificate was not self-issued, verify that max_path_length
+      is greater than zero and decrement max_path_length by 1.
+    checked_at: "2026-10-04"
+    checker: "orchestrator (grok-4.1), read directly from the fetched source"
+    verdict: confirmed
+    method: deterministic-script
+  - source: https://www.rfc-editor.org/rfc/rfc5280.txt
+    section: "4.2.1.9"
+    quoted: >
+      In this case, it gives the maximum number of non-self-issued
+      intermediate certificates that may follow this certificate in a valid
+      certification path.
+    checked_at: "2026-10-04"
+    checker: "orchestrator (grok-4.1), read directly from the fetched source"
+    verdict: confirmed
+    method: deterministic-script
+  - source: https://www.rfc-editor.org/rfc/rfc5280.txt
+    section: "6.1"
+    quoted: >
+      When the trust anchor is provided in the form of a self-signed
+      certificate, this self-signed certificate is not included as part of the
+      prospective certification path.
+    checked_at: "2026-10-04"
+    checker: "orchestrator (grok-4.1), read directly from the fetched source"
+    verdict: confirmed
+    method: deterministic-script
+source_identity:
+  url: https://www.rfc-editor.org/rfc/rfc5280.txt
+  bytes: 352580
+  sha256: A2F2628C0A83B873FC4786ABD921F9B2C02395954B655D190BF16B831633345D
+  status: Standards Track
+  date: May 2008
+claim_1_self_issued_consumes_a_slot:
+  statement: >
+    With a chain of the form root -> ICA(P) -> ICA(1, SELF-ISSUED) -> ICA(0)
+    -> EE, RFC 5280 requires ACCEPT for P=1 (the first intermediate is followed
+    by exactly one non-self-issued intermediate, the final EE not being one),
+    and the measured core REJECTS it while ACCEPTING the same chain with P=2.
+  discriminating_evidence: >
+    Three chains differing only in P: (0 REJECT, 1 REJECT, 2 ACCEPT) under
+    observation against (0 REJECT, 1 ACCEPT, 2 ACCEPT) under the oracle. The
+    boundary therefore sits between P=1 and P=2.
+  controls:
+    path_construction: eliminated by supplying all 50 corpus CAs as candidates
+    generator_defect: eliminated by direct signature verification of all certificates
+  confidence: medium-high
+  caveat: >
+    The rejection string webpki emits is "candidates exhausted: signature does
+    not match", which IMPL-5 independently reported is ALSO emitted for a
+    genuinely broken signature. The string is therefore not evidence of the
+    mechanism; the P-sweep is.
+claim_2_trust_anchor_constraint_enforced:
+  statement: >
+    With a trust anchor carrying pathLenConstraint=0 and a chain
+    root(pathlen:0) -> ICA -> EE, RFC 5280 requires ACCEPT because the trust
+    anchor is not part of the certification path, and the measured core
+    REJECTS with reason class path_len.
+  discriminating_evidence: >
+    This cell needs no self-issued subtlety: the reason class is path length and
+    the chain has one intermediate. SA-1 corroborated the reading
+    independently via the initialisation of max_path_length to n rather than
+    n+1.
+  confidence: medium
+  caveat: >
+    This is a difference in OBSERVED behaviour. Whether it is a defect or a
+    deliberate, documented policy is not established; the source-level
+    archaeology for webpki did not complete.
+what_this_is_not:
+  - >
+    NOT a claim about any implementation other than rustls-webpki as reached
+    through pyca/cryptography 50.0.1. No other core was executed.
+  - NOT a security finding. No practical consequence has been demonstrated. In
+    both claims the measured core is stricter than the RFC, which is an
+    interoperability concern, not a trust bypass.
+  - >
+    NOT a claim that the Frontier oracle is correct by construction. It was
+    derived from the RFC text by three independent agents and implemented with
+    three documented wrong versions, all caught by the corpus; it is an
+    interpretation with a verification trail, not an axiom.
+  - >
+    NOT a reproduction of the x509-limbo published results table. Its generator
+    was read as source; its harness was not built.
+promotion_blockers:
+  - >
+    No independent non-synthesizer review has adjudicated this finding. Under
+    AGENTS.md that alone blocks promotion to verified.
+  - >
+    The "independent second lineage" leg is unmet: pyca/certvalidator could not
+    be driven within budget, so the divergence rests on a single measured
+    validation core.
+  - >
+    Source-level confirmation inside rustls-webpki (the exact line and the
+    commit that introduced the behaviour) is missing. A behavioural
+    observation alone cannot distinguish a defect from a deliberate policy.
+negative_results_preserved:
+  - >
+    The inherited hypothesis that "several implementations failing proves a
+    bug" was NOT used as evidence. Four implementations failing is not proof;
+    three independent standards derivations plus executed discriminating cases
+    are what carry this finding.
+  - >
+    SA-6's adversarial attempt to refute the inherited expectation FAILED and is
+    recorded as a failure, not softened.
+  - >
+    Two corpus confounders were found and fixed, each of which would have made
+    the entire matrix uninterpretable.

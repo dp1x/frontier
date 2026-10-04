@@ -1,0 +1,109 @@
+id: msn-2026-0022
+type: mission
+status: active
+created_at: "2026-10-04T10:00:00Z"
+updated_at: "2026-10-04T18:00:00Z"
+summary: >
+  X.509 pathLenConstraint conformance investigation, using C2SP x509-limbo's
+  published divergence as a LEAD rather than an oracle. Scope was decided by
+  independent standards derivation before any implementation was consulted.
+  The decisive normative finding is that RFC 5280 section 6.1 restricts the
+  path-preparation step (step 3, i.e. 6.1.4) to "all certificates in the path
+  except the final certificate", which is the clause that settles the counting
+  question and which no inherited source had cited. Two independent
+  derivations (SA-1, OR-1) and a formal model (SA-5) converged on the same
+  acceptance predicate; the adversarial reviewer SA-6 attempted to refute the
+  inherited expectation and FAILED. Against a Frontier-built corpus of 20 cases,
+  the rustls-webpki core reachable through pyca/cryptography 50.0.1 rejects
+  chains the RFC accepts, and the divergence survives elimination of two
+  competing explanations (path construction, and certificate-generation error).
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.1
+    tool: >
+      synthesis of seven independent standards analyses (SA-1..SA-6, OR-1),
+      five implementation-archaeology reports, and direct execution of the
+      Frontier corpus and oracles
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - https://github.com/C2SP/x509-limbo (main @ 554528a9b0c0, 2026-09-24)
+    - crypto/x509-pathlen/oracle.py
+    - crypto/x509-pathlen/corpus.py
+    - crypto/x509-pathlen/gen_corpus.py
+    - crypto/x509-pathlen/harness_soundness.py
+    - crypto/x509-pathlen/adapter_webpki.py
+    - crypto/x509-pathlen/adapter_certvalidator.py
+    - .scratch/fx/reports/sa1.md
+    - .scratch/fx/reports/sa2.md
+    - .scratch/fx/reports/sa4.md
+    - .scratch/fx/reports/sa5.md
+    - .scratch/fx/reports/sa6.md
+    - .scratch/fx/reports/or1.md
+    - .scratch/fx/reports/impl5.md
+  parent: null
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0028]
+  experiments: [exp-2026-0037]
+  observations: [obs-2026-0050]
+  findings: [fnd-2026-0016]
+title: "MSN-2026-0022 - X.509 pathLenConstraint conformance across independently-lineaged validation cores"
+objective: >
+  Determine independently, from the authoritative RFC 5280 text and from
+  certificates generated under Frontier control, (a) what pathLenConstraint
+  requires, (b) whether the widely reported x509-limbo self-issued divergence
+  corresponds to a genuine conformance failure, and (c) how much of it is
+  attributable to shared implementation ancestry rather than to independent
+  disagreement.
+domain: interop
+scope: >
+  X.509 certification path validation, limited to the pathLenConstraint field
+  of the BasicConstraints extension and the self-issued exception in RFC 5280
+  section 6.1. Explicitly out of scope: signature algorithms, name
+  constraints, policy processing, key usage semantics beyond what is needed to
+  keep path-length observations unconfounded, and the x509-limbo testcase
+  corpus beyond its `pathlen` suite.
+constraints:
+- Every normative claim carries an exact clause locator and was verified by reading the fetched source, not by trusting an inherited quotation.
+- The x509-limbo `.succeeds()` / `.fails()` expectations are inputs under test, never oracles.
+- No finding may be promoted on the strength of agent agreement; decisive evidence is the normative text plus independently reproducible execution.
+- Implementation results must record the validation CORE, not the language binding.
+- No security-impact claim without a demonstrated practical consequence.
+desired_evidence_level: verified_conclusion
+candidate_targets: []
+dependencies: []
+compute:
+  expected_class: lightweight
+  notes: >
+    Certificate generation and path validation are sub-second on commodity
+    hardware; the whole 20-case matrix runs in well under a second. No build
+    trees, no toolchain downloads, no CI required. This is deliberately the
+    cheap-compute end of the frontier's economic test, per AGENTS.md.
+budget:
+  max_attempts: 6
+  max_independent_reviews: 2
+  max_compute_runs: 6
+  diminishing_returns_window: 2
+  max_auto_descendants: 2
+acceptance_criteria:
+- The pathLen rule is derived from the RFC text by at least two agents working independently, with disagreements reconciled only after independent derivations exist.
+- A corpus exists in which every case isolates one semantic variable, with chain integrity (RFC 5280 6.1(a)-(c)) enforced mechanically rather than assumed.
+- An executable oracle reproduces the rule, with its own wrong versions preserved in the source as negative evidence.
+- At least two cases are shown to DISCRIMINATE the self-issued reading, i.e. their outcome changes when self-issued status alone changes.
+- Every implementation verdict is attributed to a named validation core with its lineage established from repository history.
+- Competing explanations (path construction; generator defect) are eliminated by executed experiment, not by argument.
+- An independent non-synthesizer review with a mandate to disprove the conclusion.
+stopping_conditions:
+- The rule is settled by independent derivations and the divergences are isolated, reproduced, and explained; or
+- budget exhausted.
+artifacts:
+  - knowledge/hypotheses/hyp-2026-0028.yaml
+  - knowledge/experiments/exp-2026-0037.yaml
+  - knowledge/observations/obs-2026-0050.yaml
+  - knowledge/findings/fnd-2026-0016.yaml
+notes_path: knowledge/notes/msn-2026-0022.md
+blocked_reason: null
+terminal_reason: null

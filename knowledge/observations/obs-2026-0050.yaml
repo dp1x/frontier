@@ -1,0 +1,131 @@
+id: obs-2026-0050
+type: observation
+status: recorded
+created_at: "2026-10-04T17:30:00Z"
+updated_at: "2026-10-04T18:10:00Z"
+summary: >
+  Against a Frontier-built 20-case corpus whose every case satisfies RFC 5280
+  6.1(a)-(c), the rustls-webpki validation core reachable through
+  pyca/cryptography 50.0.1 REJECTS four chains that the Frontier oracle, derived
+  from the RFC text, says must be ACCEPTED. The divergence is confined to
+  chains containing a self-issued intermediate, plus one trust-anchor case. It
+  survives two executed controls that eliminate path construction and generator
+  defect as explanations.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.1
+    tool: direct execution; raw outputs preserved under .scratch/fx/corpus
+  sources:
+    - crypto/x509-pathlen/adapter_webpki.py
+    - crypto/x509-pathlen/oracle.py
+    - .scratch/fx/corpus/oracle.json
+    - .scratch/fx/corpus/results_webpki.tsv
+  parent: msn-2026-0022
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0028]
+  experiments: [exp-2026-0037]
+  findings: [fnd-2026-0016]
+what_was_measured:
+  cohort: >
+    ONE validation core: rustls-webpki, reached through
+    pyca/cryptography 50.0.1's cryptography.x509.verification. This is not
+    OpenSSL; the platform libcrypto reporting "OpenSSL 4.0.2" is irrelevant to
+    this code path, and the rejection wording is webpki's.
+  corpus: 20 cases, 42 certificates, deterministic P-256 / ECDSA-SHA256
+  agreement_with_oracle: 14 of 20
+per_case:
+  - case: c11_pair1_selfissued
+    shape: "root -> ICA(1) -> ICA(1 SELF-ISSUED) -> ICA(0) -> EE"
+    oracle: ACCEPT
+    observed: REJECT
+    reason_class: signature
+    interpretation: >
+      NOT yet established as a path-length observation. webpki reports
+      "candidates exhausted: signature does not match", and IMPL-5 warned that
+      this same string is also produced by a genuinely broken signature, so the
+      string must not be read literally. Direct signature verification proves
+      the certificate's signature is valid, so the string is misleading here.
+      The underlying cause is isolated by probe P1 instead.
+  - case: c13_pair2_selfissued
+    shape: "root -> ICA(1) -> ICA(0 SELF-ISSUED) -> ICA(0) -> EE"
+    oracle: ACCEPT
+    observed: REJECT
+    reason_class: signature
+    interpretation: as c11
+  - case: c17_anchor_constrained
+    shape: "root(pathlen:0) -> ICA -> EE"
+    oracle: ACCEPT
+    observed: REJECT
+    reason_class: path_len
+    interpretation: >
+      A SEPARATE and cleaner divergence. RFC 5280 6.1 says that when the trust
+      anchor is provided as a self-signed certificate it "is not included as
+      part of the prospective certification path", and SA-1 corroborated this
+      with the fact that max_path_length is initialised to n rather than n+1.
+      The observed rejection reason class is path length, so this cell is
+      directly interpretable and does not depend on any self-issued subtlety.
+  - case: c04_pl0_ca_target
+    oracle: ACCEPT
+    observed: REJECT
+    reason_class: key_usage
+    interpretation: >
+      NOT evidence about path length. The server-verifier policy requires an
+      end entity not to assert keyCertSign; the target here is a CA
+      certificate, which RFC 5280 4.2.1.9 explicitly permits. A harness
+      limitation, not a conformance result.
+  - case: c15_selfissued_pl1_ca_target
+    oracle: ACCEPT
+    observed: REJECT
+    reason_class: key_usage
+    interpretation: as c04
+discriminating_pairs_under_the_measured_core:
+  - pair: [c10_pair1_nonself, c11_pair1_selfissued]
+    oracle: REJECT / ACCEPT
+    observed: REJECT / REJECT
+    discriminates_under_observation: false
+  - pair: [c12_pair2_nonself, c13_pair2_selfissued]
+    oracle: REJECT / ACCEPT
+    observed: REJECT / REJECT
+    discriminates_under_observation: false
+pair_conclusion: >
+  The core under test rejects BOTH members of each pair, i.e. it does not behave
+  differently on the self-issued and non-self-issued variants. Read with probe
+  P1, the boundary is at first-intermediate pathLen 1 versus 2, which is the
+  boundary RFC 5280 predicts if and only if the self-issued certificate consumes
+  a slot.
+controls:
+  path_construction_eliminated: >
+    Supplying all 50 CA certificates as untrusted intermediates leaves every
+    decisive verdict unchanged, so no alternative path was available.
+  generator_defect_eliminated: >
+    All 42 signatures verify directly against their issuers' public keys.
+security_impact_assessment: >
+  NONE CLAIMED. A pathLenConstraint divergence is a conformance and
+  interoperability question. No practical consequence has been demonstrated:
+  no attacker-controlled chain has been shown to reach the divergent path, and
+  no trust decision has been shown to differ in a security-relevant direction.
+  In the observed cases the implementation is STRICTER than the RFC requires
+  (it rejects legal chains), which is an availability/interoperability concern
+  rather than a trust-bypass concern. Stated explicitly so the finding is not
+  read as a vulnerability.
+reproducibility: >
+  Fully deterministic. Regenerate with
+  `.venv\Scripts\python.exe crypto\x509-pathlen\gen_corpus.py --out <dir>`
+  then run `crypto\x509-pathlen\adapter_webpki.py <dir>`. Seed 20261004; all
+  certificate bytes and all signatures are byte-identical across runs and
+  machines.
+not_established:
+  - >
+    Whether OpenSSL, LibreSSL, BoringSSL, AWS-LC, Go or GnuTLS behave the same
+    way. NONE of them was executed in this session.
+  - >
+    Whether an independent second lineage (pyca/certvalidator) agrees or
+    disagrees; its adapter is unfinished.
+  - >
+    The precise code location inside rustls-webpki responsible. IMPL-5 read
+    webpki's path-budget code but the corpus-level mechanism was located
+    behaviourally, not by pinpointing a line.

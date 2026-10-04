@@ -143,6 +143,12 @@ def _specs() -> dict[str, CertSpec]:
         "ns1_under_ica1b": CertSpec("ns1_under_ica1b", "ICA-B2 pl1 alt", True, 1,
                                     "ica1b"),
 
+        "si2_under_ica2": CertSpec("si2_under_ica2", "ICA-C pl2", True, 2, "ica2"),
+        "icd0_under_si2": CertSpec("icd0_under_si2", "ICD-F pl0", True, 0,
+                                   "si2_under_ica2"),
+        "ee_under_icd0_under_si2": CertSpec("ee_under_icd0_under_si2", "EE-23", False,
+                                            None, "icd0_under_si2",
+                                            eku_server_auth=True),
         # ---- confounder controls --------------------------------------------
         "ica0_nokcs": CertSpec("ica0_nokcs", "ICA-E pl0 no keyCertSign", True, 0, ROOT,
                                key_cert_sign=False),
@@ -298,6 +304,14 @@ CASES: tuple[Case, ...] = (
           "follows it; nothing downstream can rescue that.", ROOT,
          ("ica0", "icb0_under_ica0", "ee_under_icb0_under_ica0"),
           "a downstream certificate does not rescue an earlier violation"),
+
+    Case("c20_slot_sensitivity_pl2", "root -> ICA(2) -> ICA(2 SELF-ISSUED) -> "
+          "ICA(0) -> EE. Same shape as c11 but the first intermediate has "
+          "pathlen:2, so one extra slot is available. Together with c11 this "
+          "locates the boundary at which the self-issued exemption stops "
+          "mattering.", ROOT,
+         ("ica2", "si2_under_ica2", "icd0_under_si2", "ee_under_icd0_under_si2"),
+          "slot sensitivity: does the self-issued exemption free a slot?"),
 
     # ---- constrained trust anchor ------------------------------------------
     Case("c17_anchor_constrained", "root(pl0) -> ICA -> EE. The anchor is the trust "

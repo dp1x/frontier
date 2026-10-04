@@ -1,0 +1,105 @@
+id: hyp-2026-0028
+type: hypothesis
+status: supported
+created_at: "2026-10-04T10:30:00Z"
+updated_at: "2026-10-04T18:00:00Z"
+summary: >
+  "RFC 5280 requires that a self-issued certificate be excluded from the
+  pathLenConstraint count, and the acceptance predicate is: a path is valid
+  with respect to path length iff, for every constrained non-self-issued
+  certificate c at position i (1-based, trust-anchor first), the number of
+  non-self-issued certificates at positions i+1 .. n-1 is at most c.pathLen --
+  the final certificate being excluded because it is not an intermediate."
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.1
+    tool: >
+      reconciliation of three independent derivations (SA-1, SA-5, OR-1) plus
+      direct re-reading of the RFC source by the orchestrator
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - .scratch/fx/reports/sa1.md
+    - .scratch/fx/reports/sa5.md
+    - .scratch/fx/reports/or1.md
+    - crypto/x509-pathlen/oracle.py
+  parent: msn-2026-0022
+  generation: 1
+links:
+  experiments: [exp-2026-0037]
+  observations: [obs-2026-0050]
+  findings: [fnd-2026-0016]
+normative_basis:
+  rfc_5280_section_4_2_1_9: >
+    "The pathLenConstraint field is meaningful only if the cA boolean is
+    asserted and the key usage extension, if present, asserts the keyCertSign
+    bit (Section 4.2.1.3).  In this case, it gives the maximum number of
+    non-self-issued intermediate certificates that may follow this certificate
+    in a valid certification path.  (Note: The last certificate in the
+    certification path is not an intermediate certificate, and is not included
+    in this limit.  Usually, the last certificate is an end entity certificate,
+    but it can be a CA certificate.)  A pathLenConstraint of zero indicates
+    that no non-self-issued intermediate CA certificates may follow in a valid
+    certification path."
+  rfc_5280_section_6_1: >
+    "This section presents the algorithm in four basic steps: (1)
+    initialization, (2) basic certificate processing, (3) preparation for the
+    next certificate, and (4) wrap-up.  Steps (1) and (4) are performed
+    exactly once.  Step (2) is performed for all certificates in the path.
+    Step (3) is performed for all certificates in the path except the final
+    certificate."
+  rfc_5280_section_6_1_1_self_issued: >
+    "A certificate is self-issued if the same DN appears in the subject and
+    issuer fields (the two DNs are the same if they match according to the
+    rules specified in Section 7.1).  In general, the issuer and subject of
+    the certificates that make up a path are different for each certificate.
+    However, a CA may issue a certificate to itself to support key rollover or
+    changes in certificate policies.  These self-issued certificates are not
+    counted when evaluating path length or name constraints."
+  rfc_5280_section_6_1_1_max_path_length: >
+    "max_path_length: this integer is initialized to n, is decremented for
+    each non-self-issued certificate in the path, and may be reduced to the
+    value in the path length constraint field within the basic constraints
+    extension of a CA certificate."
+  rfc_5280_section_6_1_4_l_and_m: >
+    "(l)  If the certificate was not self-issued, verify that max_path_length
+    is greater than zero and decrement max_path_length by 1.
+    (m)  If pathLenConstraint is present in the certificate and is less than
+    max_path_length, set max_path_length to the value of pathLenConstraint."
+source_identity:
+  url: https://www.rfc-editor.org/rfc/rfc5280.txt
+  bytes: 352580
+  sha256: A2F2628C0A83B873FC4786ABD921F9B2C02395954B655D190BF16B831633345D
+  status: Standards Track
+  date: May 2008
+  fetched_by: orchestrator, live, this session
+  note: >
+    SA-1 independently recomputed and matched this SHA-256. The same caveat
+    SA-4 recorded applies: the file contains form feeds, so line offsets vary
+    by counting method. Quoted strings are authoritative, not line numbers.
+independent_derivations:
+  sa1: >
+    Derived the predicate #{non-self-issued certs in {k+1..n-1}} <= plc(cert k),
+    quoting the 6.1 step-3 bound as the decisive clause. 73 quotations verified
+    byte-exact against the fetched source.
+  sa5: >
+    Formalised the same predicate and proved equivalence with the 6.1.1/6.1.4
+    walk by exhaustive enumeration (0 disagreements over 1,111,100 chains to
+    depth 6). Also proved max_path_length is monotone non-increasing, so a
+    later larger pathLenConstraint can never rescue a forbidden path.
+  or1: >
+    Derived the rule blind to the Frontier oracle, and independently located
+    the same 6.1 step-3 bound. Reported that its first transcription applied
+    6.1.4 to the final certificate and had to be corrected -- the same
+    off-by-one the Frontier oracle made, corrected the same way.
+convergence_assessment: >
+  Three independent derivations agree on the predicate. Per AGENTS.md, agreement
+  among agents is NOT proof; the decisive evidence is the normative text plus
+  independently reproducible execution, both of which are recorded in
+  exp-2026-0037 and obs-2026-0050. SA-4 contributed a structural fact that the
+  agreement alone does not supply: "intermediate certificate" is NOT DEFINED
+  anywhere in RFC 5280 (it occurs exactly once, in the 4.2.1.9 parenthetical),
+  so the counting rule is carried by a positional reading of section 6.1, not
+  by a defined term.
