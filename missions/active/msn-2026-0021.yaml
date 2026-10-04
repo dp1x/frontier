@@ -9,13 +9,16 @@ summary: >
   false claim. The committed model has no bounded byte-array type: every byte
   array is a total `Nat -> Nat` (infinite, lengthless), the parameter `p` of
   `isValidKey` is provably unused (the Lean build log says so), and the corpus
-  hypothesis `forall i, seg B i < 3329` is FALSE for legitimate ML-KEM keys -
-  a machine-checked counterexample shows a valid k=2 key (bytes 0x01 0x0D at
-  offset 768, inside the 32-byte rho seed region FIPS 203 leaves unchecked)
-  violates it. So Eq (7.1) was never an instance of FORMAL-203's roundtrip
-  theorem. Objective: introduce a bounded-index model that makes section 7.2
-  step 1 (type check) and step 2 (Eq 7.1 over the 384k prefix, EXCLUDING the
-  rho seed) stateable, and prove both directions.
+  hypothesis `forall i, seg B i < 3329` is FALSE for legitimate ML-KEM keys.
+  The index arithmetic is verified (segment 256k begins at byte 384k, the first
+  seed byte); the counterexample itself was demonstrated in a throwaway
+  core-only probe OUTSIDE the corpus, so it is not yet committed evidence. It
+  shows a valid k=2 key (bytes 0x01 0x0D at offset 768, inside the 32-byte rho
+  seed region FIPS 203 leaves unchecked) violates the hypothesis. So Eq (7.1)
+  was never an instance of FORMAL-203's roundtrip theorem. Objective: introduce
+  a bounded-index model that makes section 7.2 step 1 (type check) and step 2
+  (Eq 7.1 over the 384k prefix, EXCLUDING the rho seed) stateable, and prove
+  both directions.
 epistemic_status: hypothesis
 provenance:
   created_by:

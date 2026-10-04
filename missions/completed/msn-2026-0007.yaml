@@ -170,9 +170,16 @@ correction_2026_10_04:
     status: verified, disclosure: public) and obs-2026-0026 are corrected in
     the same pass.
   epistemic_note: >
-    Model consensus is not evidence. This correction rests on reading the Lean
-    source and on one machine-checked counterexample, NOT on the number of
-    agents that reached it. Five independent auditors were used to raise
-    epistemic coverage; two of them (the model audit and the divergence map)
-    had to be reconciled with a third (the overclaim hunter) before this
-    record was written.
+    This correction rests on reading the Lean source and on the INDEX ARITHMETIC
+    of the seed-region counterexample, verified directly by integer computation
+    against the FIPS 203 text (segment 256k begins at byte 384k). The
+    counterexample was additionally demonstrated in a throwaway core-only Lean
+    probe outside the repository, which establishes that it is PROVABLE, not
+    that the committed corpus contains it. That obligation is discharged by the
+    successor mission msn-2026-0021, whose acceptance criteria require the
+    counterexample as a committed, kernel-checked theorem.
+    This did NOT rest on the number of agents that reached it. Five independent
+    auditors were used to raise epistemic coverage; two of them (the model audit
+    and the divergence map) had to be reconciled with a third (the overclaim
+    hunter) before this record was written, and a fourth (the feasibility
+    estimator) independently produced the vacuity quantification.

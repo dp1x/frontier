@@ -98,7 +98,20 @@ track_a_formal_correction:
     hypothesis `forall i, seg B i < 3329` is FALSE for legitimate ML-KEM keys -
     bytes 0x01 0x0D at offset 768 lie inside the 32-byte rho seed region that
     Eq (7.1) never inspects, yet drive seg B 512 to q. So Eq (7.1) was never
-    an instance of enc_dec_eq. This is machine-checked, not argued.
+    an instance of enc_dec_eq.
+  epistemic_status_of_item_6: >
+    CORRECTED 2026-10-04 on self-audit. This sentence previously read "This is
+    machine-checked, not argued." That was imprecise and is withdrawn. The
+    counterexample was machine-checked in a THROWAWAY CORE-ONLY Lean probe
+    outside the repository (on the R: ramdisk), which transcribes `wsum` by
+    structural recursion instead of via `Finset.sum` so it could not import the
+    real corpus. It is therefore evidence that the statement is provable, NOT
+    evidence that the committed corpus contains it. No committed artifact
+    discharges this obligation, which is exactly why FORMAL-208 lists the
+    counterexample among its acceptance criteria. The INDEX ARITHMETIC that
+    makes it bite - segment 256k begins at byte 384k - was verified directly
+    and independently by plain integer arithmetic against the FIPS 203 text,
+    and that part IS solid.
   quantified_vacuity_finding:
     status: >
       Raised by the adversarial overclaim hunter (role A4) after the primary
