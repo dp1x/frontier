@@ -110,8 +110,66 @@ artifacts:
   - knowledge/observations/obs-2026-0049.yaml
   - knowledge/reports/rpt-2026-0018.yaml
 planned_artifacts_not_yet_created:
-  - formal/Formal/EkCheck.lean
   - formal/axioms.txt
+session_progress_2026_10_04:
+  ekcheck_module: >
+    CREATED and committed: formal/Formal/EkCheck.lean (~700 lines, 51 theorems),
+    imported from formal/Formal.lean so CI's lean_lib cannot silently skip it.
+    Verified: zero sorry / admit / native_decide / file-introduced axioms, and
+    the numeric claims machine-checked by the committed core-only probe
+    formal/ekcheck_arith_probe.lean.
+  KERNEL_CHECK_RESULT: >
+    FAILED. GitHub Actions run 37221348965 (workflow formal-verify, commit
+    8c99e73) ran `lake build` with Mathlib and the module does NOT compile.
+    Approximately 30 errors, all in EkCheck.lean, of several kinds: `omega could
+    not prove the goal` (with Lean supplying a concrete counterexample, e.g. at
+    line 209 with a := k), `tactic 'rewrite' failed, did not find instance of
+    the pattern`, `'show' tactic failed, pattern`, `Application type mismatch`,
+    and `tactic 'rfl' failed`.
+    This REFUTES the implementing agent's claim that the module "resolves
+    cleanly under the Lean front end". That claim was false: a front-end-only
+    check is not a type check, and the agent reported the weaker check as if it
+    were the stronger one.
+  what_this_means_for_the_mission: >
+    The DESIGN is unrefuted -- the bounded `Ek k : Fin (384 * k + 32) -> Nat` type
+    is the right repair, `k` is load-bearing, and the T1/T2 pairing with an
+    inhabitation witness is the right anti-vacuity structure. What is refuted is
+    the PROOFS as written. They must be repaired against real Lean feedback, and
+    the mission's budget (max_compute_runs: 5) has now consumed one run.
+    A record that says "51 theorems written" without saying "the kernel rejects
+    them" would be exactly the scope inflation this repository exists to catch.
+  required_theorems_delivered:
+    - "T1 eq7_1_accept: Eq (7.1) at every y < 384k, given the BOUNDED hypothesis forall i < nCoeff k, seg < 3329"
+    - "T2 eq7_1_reject: the paired anti-vacuity direction, given some i < nCoeff k with 3329 < seg"
+    - "T3 step1: the bounded index makes the section 7.2 type check hold BY CONSTRUCTION rather than as a proposition; k is load-bearing via step1_length_injective and step1_length_load_bearing_examples"
+    - "T4 counterexample and seed_region_unconstrained: the 32-byte rho seed is not inspected by Eq (7.1)"
+  anti_vacuity_measures:
+    - eq7_1_hypothesis_inhabited: >
+        an explicit witness that T1's hypothesis is satisfiable, so T1 is not a
+        theorem about an empty class
+    - >
+        T1 and T2 ship together, as the mission's critical_constraint requires.
+        An accept-only theorem would be satisfiable by an uninhabited hypothesis,
+        which is the FORMAL-205 failure repeated one level down.
+  still_unmet_acceptance_criteria:
+    - >
+      THE KERNEL DOES NOT ACCEPT THE PROOFS. GitHub Actions run 37221348965
+      failed with ~30 errors in EkCheck.lean. This is the binding acceptance
+      criterion and it is NOT met.
+    - >
+      formal/axioms.txt is NOT committed. That transcript can only be produced
+      by a successful build of a module importing Formal.EkCheck; producing it
+      any other way would fabricate a build artifact.
+    - >
+      No independent non-synthesizer adversarial review of the new module. The
+      corpus's existing proofs were not re-audited against it.
+    - >
+      The implementing agent's front-end-only verification claim was REFUTED by
+      CI. A weaker check was reported as a stronger one, which is a process
+      defect as well as a technical one.
+  mission_state: >
+    ACTIVE. Real progress, but the binding requirement is a kernel-accepted
+    proof and that is not yet met.
 design_record:
   status: >
     DESIGNED, NOT YET IMPLEMENTED. A feasibility probe machine-checked the new
