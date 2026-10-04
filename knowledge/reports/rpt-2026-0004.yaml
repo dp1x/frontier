@@ -19,7 +19,8 @@ provenance:
     - knowledge/observations/obs-2026-0021.yaml
     - knowledge/observations/obs-2026-0022.yaml
     - .scratch/spki_repro/REPORT.md (independent reproducer for fnd-2026-0002)
-    - .scratch/formal-203-r2/REPORT.md (R2 review for FORMAL-203)
+    - .scratch/formal-203-r2/REPORT.md (R2 review for FORMAL-203)  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/reviews/rev-2026-0003.yaml
     - .scratch/upstream-openssl/ISSUE.md (upstream OpenSSL bug draft)
     - .scratch/alias-diff-r2-design/REPORT.md (ALIAS-DIFF round 2 GHA design)
     - .scratch/msn-2026-0005-scout/REPORT.md (BoringSSL/rustls scout)
@@ -281,7 +282,8 @@ report: |
 
     - .scratch/spki_repro/REPORT.md (5 self-contained C
       reproducers for the BIT STRING mechanism, 16.9 KB report)
-    - .scratch/formal-203-r2/REPORT.md (R2 review of
+    - .scratch/formal-203-r2/REPORT.md (R2 review of  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/reviews/rev-2026-0003.yaml
       ByteEncode.lean, axiom_check.lean, seg_arith.lean)
     - .scratch/upstream-openssl/ISSUE.md (upstream OpenSSL
       bug draft, 246 lines)

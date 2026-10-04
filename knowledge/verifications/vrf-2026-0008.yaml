@@ -13,8 +13,10 @@ provenance:
     tool: frontier.execute.run_command (Python verify_reproducibility.py)
   sources:
     - .scratch/xwing/verify_reproducibility.py
-    - .scratch/xwing/reports/canonical.json
-    - .scratch/xwing/reports/mutations.json
+    - .scratch/xwing/reports/canonical.json  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0030.yaml
+    - .scratch/xwing/reports/mutations.json  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0030.yaml
     - .scratch/xwing/reports/kat_log.txt
     - knowledge/observations/obs-2026-0027.yaml
     - knowledge/observations/obs-2026-0028.yaml

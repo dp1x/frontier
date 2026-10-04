@@ -63,9 +63,12 @@ result:
   n_mutations_total: 48
   n_mutations_changed_ss: 48
   artifacts:
-    - .scratch/msn-2026-0009/full_audit.json
-    - .scratch/msn-2026-0009/full_audit_summary.json
-    - .scratch/msn-2026-0009/full_audit.py
+    - .scratch/msn-2026-0009/full_audit.json  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0031.yaml
+    - .scratch/msn-2026-0009/full_audit_summary.json  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0031.yaml
+    - .scratch/msn-2026-0009/full_audit.py  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0031.yaml
 notes: |
   Every tested cell of the cross-impl agreement matrix matches CIRCL byte-exactly.
   No divergence observed at any canonical or mutation cell.

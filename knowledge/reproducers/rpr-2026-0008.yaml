@@ -12,7 +12,8 @@ provenance:
     model: minimax-m3
     tool: orchestration of oracle.exe + full_audit.py
   sources:
-    - .scratch/msn-2026-0009/full_audit.py
+    - .scratch/msn-2026-0009/full_audit.py  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0031.yaml
     - .scratch/msn-2026-0009/oracle_src/oracle.go
     - .scratch/msn-2026-0009/xwing_ref.py
     - .scratch/msn-2026-0009/hpke_ref.py

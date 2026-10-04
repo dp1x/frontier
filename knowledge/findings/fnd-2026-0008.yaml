@@ -21,8 +21,10 @@ provenance:
     - knowledge/reproducers/rpr-2026-0008.yaml
     - knowledge/reviews/rev-2026-0008.yaml
     - knowledge/specifications/spc-2026-0002.yaml
-    - .scratch/msn-2026-0009/full_audit.json
-    - .scratch/msn-2026-0009/full_audit_summary.json
+    - .scratch/msn-2026-0009/full_audit.json  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0031.yaml
+    - .scratch/msn-2026-0009/full_audit_summary.json  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0031.yaml
   parent: msn-2026-0009
   generation: 0
 links:

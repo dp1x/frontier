@@ -66,7 +66,8 @@ result:
   n_exporter_secret_agree: 10
   n_ciphertext_agree: 10
   artifacts:
-    - .scratch/msn-2026-0009/full_audit.json
+    - .scratch/msn-2026-0009/full_audit.json  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0031.yaml
     - .scratch/msn-2026-0009/hpke_ref.py
 notes: |
   Every byte of every HPKE Base mode output agrees between CIRCL v1.6.5 and

@@ -13,8 +13,13 @@ provenance:
     tool: rpr-2026-0008 reproducer rerun
   sources:
     - knowledge/reproducers/rpr-2026-0008.yaml
-    - .scratch/msn-2026-0009/full_audit.json
-    - .scratch/msn-2026-0009/full_audit_summary.json
+    # The audit executed from gitignored scratch, which AGENTS.md treats as
+    # assumed transient. Its durable conclusions were committed as artifacts,
+    # and THOSE are cited here. Corrected 2026-10-04: this artifact linked two
+    # .scratch paths that no reader -- including CI -- could resolve, so it
+    # failed `frontier validate` on every checkout but the original author's.
+    - knowledge/observations/obs-2026-0031.yaml
+    - knowledge/reports/rpt-2026-0010.yaml
   parent: msn-2026-0009
   generation: 0
 links:
@@ -25,7 +30,7 @@ links:
   specifications: [spc-2026-0002]
 title: VRF-2026-0009 - Deterministic verification of cross-impl audit
 method: deterministic-script
-command: "C:\\Users\\Dhane\\frontier\\.venv\\Scripts\\python.exe .scratch\\msn-2026-0009\\full_audit.py"
+command: "python .scratch/msn-2026-0009/full_audit.py  # transient; durable results committed as artifacts"
 exit_code: 0
 result: pass
 assertions:
@@ -37,8 +42,7 @@ assertions:
   - "n_exporter_secret_agree == 10 (HPKE Base mode exporter_secret byte-exact agreement)"
   - "n_ciphertext_agree == 10 (HPKE Base mode ciphertext byte-exact agreement)"
 artifacts:
-  - ".scratch/msn-2026-0009/full_audit.json"
-  - ".scratch/msn-2026-0009/full_audit_summary.json"
+  # See provenance.sources: the scratch originals are transient by design.
 notes: |
   The reproducer rpr-2026-0008 was rerun after construction. All 7
   verification assertions pass. The audit's claims are:

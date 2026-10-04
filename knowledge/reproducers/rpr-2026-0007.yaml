@@ -13,8 +13,10 @@ provenance:
     tool: GitHub Actions yaml (gha-rust) + frontier.execute.run_command
   sources:
     - .scratch/xwing/harness/circl_harness.go
-    - .scratch/xwing/reports/canonical.json
-    - .scratch/xwing/reports/mutations.json
+    - .scratch/xwing/reports/canonical.json  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0030.yaml
+    - .scratch/xwing/reports/mutations.json  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0030.yaml
     - .scratch/xwing/go.mod
     - knowledge/observations/obs-2026-0027.yaml
     - knowledge/observations/obs-2026-0028.yaml

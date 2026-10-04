@@ -12,7 +12,8 @@ provenance:
     model: minimax-m3
     tool: frontier.execute.run_command (go run circl_harness.go --mode=mutations)
   sources:
-    - .scratch/xwing/reports/mutations.json
+    - .scratch/xwing/reports/mutations.json  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0030.yaml
     - .scratch/xwing/reports/mutation_samples.json
     - spc-2026-0002
     - knowledge/observations/obs-2026-0027.yaml

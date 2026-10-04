@@ -21,7 +21,8 @@ provenance:
     - knowledge/observations/obs-2026-0032.yaml
     - knowledge/reproducers/rpr-2026-0008.yaml
     - knowledge/verifications/vrf-2026-0009.yaml
-    - .scratch/xwing/reports/canonical.json (prior mission's reference)
+    - .scratch/xwing/reports/canonical.json (prior mission's reference)  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/observations/obs-2026-0030.yaml
     - spc-2026-0002
   parent: msn-2026-0009
   generation: 0

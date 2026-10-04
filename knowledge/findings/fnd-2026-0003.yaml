@@ -16,11 +16,14 @@ provenance:
     - formal/lakefile.lean
     - formal/Formal/ByteEncode.lean
     - formal/build_output.log
-    - .scratch/formal-203-r2/REPORT.md (R2 review)
+    - .scratch/formal-203-r2/REPORT.md (R2 review)  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - knowledge/reviews/rev-2026-0003.yaml
     - obs-2026-0017 (toolchain-absent prior status)
     - obs-2026-0021 (lake build PASSED on this host)
-    - .scratch/formal-203-r2/axiom_check.lean
-    - .scratch/formal-203-r2/seg_arith.lean
+    - .scratch/formal-203-r2/axiom_check.lean  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - formal/build_output_r3.log
+    - .scratch/formal-203-r2/seg_arith.lean  # transient: gitignored, unresolvable for any reader; durable conclusion in the artifact below
+    - formal/build_output_r3.log
   parent: msn-2026-0003
   generation: 1
 links:
