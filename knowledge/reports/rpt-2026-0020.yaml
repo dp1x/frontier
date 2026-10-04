@@ -385,10 +385,41 @@ primary_track_6_governance_and_ci:
       artifacts, so they sat undetected through every subsequent session.
       Deleted, and validate.check_index_consistency now refuses any nested
       index directory.
+    fixed_2: >
+      THE .OLEAN EVIDENCE EXCEPTION WAS REASONED FROM A FALSE PREMISE. Six
+      artifacts justified their conclusions with "the committed .olean proof
+      terms under formal/.lake/build", but .gitignore line 78 excludes
+      formal/.lake/ and `git ls-files formal/.lake` returns ZERO files. AGENTS.md
+      carves out an exception for build products that ARE evidence and names
+      the .olean files as its example -- so the HARD RULE was being honoured
+      against an absence, and any future check written to respect that
+      exception would be respecting nothing. All 19 claim sites across 14 files
+      are corrected to LOCAL-ONLY, and validate now refuses the claim.
+      The check was verified NON-VACUOUS against five controls. Building it
+      took four attempts and two of those were real bugs in my own check, not
+      in the corpus: an inverted condition in _corrects_the_claim that
+      returned "skip" exactly when a sentence DID make the claim, and a path
+      capture that missed "formal/.lake/build/.../LengthCheck.olean". Both are
+      now covered by tests.
     open_not_fixed: >
       CHECKPOINT.md and other prose summaries still carry stale statuses. An
-      audit enumerated them but this session did not correct them; that is an
-      open item.
+      audit enumerated roughly 40 sites but this session did not correct them;
+      that is an open item.
+    open_not_fixed_and_structural: >
+      There is no supersedes/superseded_by field anywhere in the schema, and
+      none in any artifact. Supersession exists only as PROSE, which is the
+      root cause of the entire "depends on a withdrawn authority" drift class
+      and of every stale status assertion that lives in prose rather than in a
+      status field. Recorded as the highest-value next governance item; not
+      implemented, because inventing a schema field and populating it across
+      the corpus deserves its own reviewed change.
+    compute_routing_violation_found: >
+      crypto/mlkem-input-checks/reproduce.ps1 is a committed runnable script
+      that clones PQClean and liboqs and runs a cargo, a Go and a Visual Studio
+      build matrix locally (lines 33, 34, 60, 61, 75, 95). It is the one clear
+      live violation. Recorded with exact lines, NOT rewritten: changing how a
+      recorded result is reproduced deserves review. No npm, node_modules or
+      heavy dotnet local path exists anywhere in the repository.
   compute_routing_compliance:
     confirmed: >
       NO local `lake build`, no local Mathlib source or olean build, no local
@@ -489,8 +520,15 @@ remaining_uncertainties_stated_precisely:
   - >
     NOT IMPLEMENTED: the compute-routing enforcement recommendations (enforce
     compute-location on execution artifacts in validate.py; a consequence-based
-    build-artifact-presence check; closing the frontier.compute.route gap). The
-    audit produced concrete, non-brittle recommendations; none is implemented.
+    build-artifact-presence check; closing the frontier.compute.route gap, which
+    has no production caller). The audit produced concrete, non-brittle
+    recommendations; none is implemented. frontier.compute.route is honour-
+    system only -- CI runs ruff, pytest and validate, and wires in neither the
+    citation gate nor lint_artifacts.
+  - >
+    A supersession field (supersedes/superseded_by) does not exist in the schema.
+    Until it does, the ~40 stale prose assertions the audit found cannot be
+    caught mechanically, because none of them is a status field.
   - >
     EIGHT INSTRUMENT DEFECTS remain open, including the FROST self-reported
     boolean and the COSE unbound `exc` crash.
