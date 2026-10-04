@@ -1,0 +1,161 @@
+id: obs-2026-0057
+type: observation
+status: current
+created_at: "2026-10-05T04:20:00Z"
+updated_at: "2026-10-05T04:30:00Z"
+summary: >
+  The X.509 pathLen corpus is NOT byte-reproducible, contradicting a claim made
+  in writing in exp-2026-0037 and in chainforge's docstring. Measured: 0 of 45
+  certificates are byte-identical across two generator runs with the same seed.
+  The cause is that chainforge signs with EC keys via cryptography's
+  builder.sign(), which draws a FRESH RANDOM ECDSA nonce; RFC 6979 determinism
+  is not implemented by that call and the docstring attributes reproducibility
+  to it. The VERDICTS are nevertheless stable: both adapters produced
+  byte-for-byte identical output across the two regenerations, including
+  c17_anchor_constrained REJECT [path_len] against oracle ACCEPT. The finding
+  survives; the reproducibility claim does not.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      two-run determinism probe plus a two-regeneration verdict-stability
+      probe, both executed; the auditor that raised the concern could not
+      execute anything and is credited only for raising it
+  sources:
+    - crypto/x509-pathlen/chainforge.py
+    - crypto/x509-pathlen/gen_corpus.py
+    - crypto/x509-pathlen/adapter_certvalidator.py
+    - crypto/x509-pathlen/adapter_webpki.py
+    - knowledge/experiments/exp-2026-0037.yaml
+    - .scratch/trackA/probe_reproducibility.py
+    - .scratch/trackA/probe_verdict_stability.py
+    - .scratch/trackA/repro/repro_1.md
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0016]
+  reviews: [rev-2026-0021]
+  observations: [obs-2026-0050]
+title: "OBS-2026-0057 - The X.509 corpus is not byte-reproducible; the verdicts are"
+
+the_false_claim:
+  where:
+    - "knowledge/experiments/exp-2026-0037.yaml, field nondeterminism_policy"
+    - "crypto/x509-pathlen/chainforge.py:152-156 (_next_key docstring)"
+    - "crypto/x509-pathlen/chainforge.py:15, module docstring: Randomness uses a fixed seed so the corpus is byte-reproducible"
+  as_written: >
+    "All keys are deterministic P-256 scalars derived by rejection sampling from
+    a fixed-seed SHAKE-256 stream, so the corpus is byte-reproducible. ECDSA
+    signatures use RFC 6979 deterministic nonces, so even the signatures are
+    byte-reproducible across implementations."
+  why_it_is_false:
+    the_keys_part_is_true: >
+      `ec.derive_private_key(value, CURVE)` from a SHAKE-256 stream really does
+      give the same keys every run. That half of the sentence is correct.
+    the_signature_part_is_false: >
+      chainforge:267 calls
+      `builder.sign(private_key=signing_key, algorithm=SIG_HASH)` on a P-256 key.
+      pyca/cryptography's ECDSA signer generates a fresh random k per signature
+      via its own CSPRNG. RFC 6979 deterministic nonces are NOT what this call
+      does; determinism would require the caller to supply r and s explicitly.
+      The docstring attributes byte-reproducibility to a property the signing
+      call does not have.
+
+the_measurement:
+  method: >
+    crypto/x509-pathlen/gen_corpus.py --out <dir>, run twice into two fresh
+    directories with the identical seed (20261004), then SHA-256 every emitted
+    .der and compare.
+  result:
+    certificates_per_run: 45
+    identical_der: 0
+    differing_der: 45
+  verbatim_probe_output: |
+    certificates: run1=45 run2=45
+    identical DER : 0
+    DIFFERING DER : 45
+    VERDICT: NOT byte-reproducible
+  example_divergence:
+    certs/ee_under_ica0.der run1 6f46fd572db83b58de55f6d4745a623b
+                             run2 7825191f4cf84d4c4781c3d0c8beeab5
+
+what_this_does_NOT_break:
+  the_verdicts_are_stable:
+    method: >
+      Both corpora were then run through BOTH adapters and the outputs compared
+      line for line.
+    result: >
+      certvalidator: IDENTICAL verdicts (31 lines each run).
+      webpki:        IDENTICAL verdicts (28 lines each run).
+    the_load_bearing_cell: >
+      c17_anchor_constrained  REJECT [path_len]   oracle ACCEPT   ok
+      -- identical in run1 and run2, from independently generated DER.
+  why_this_matters: >
+    The corpus's DER is a random sample from a space whose STRUCTURE is fixed by
+    construction (same seed, same chain shapes, same BasicConstraints, same
+    subject/issuer DN pattern). What the experiment measures is a verdict on that
+    structure, not on particular signature bytes. Regenerating the corpus
+    re-rolls the bytes without re-rolling the property under test, so every
+    recorded verdict holds for every regeneration. That is a weaker but
+    sufficient reproducibility claim -- and it is the one that should be
+    written down instead of the false stronger one.
+  no_scope_creep: >
+    fnd-2026-0016's surviving observation is unaffected. It asserts that a
+    root(pathlen:0) -> ICA -> EE chain is REJECTED with reason class path_len by
+    both cores. That is reproduced here from a freshly generated corpus.
+
+the_second_unrecorded_risk_confirmed:
+  finding: >
+    .scratch/fx/corpus/certs holds 83 .der files while the current generator
+    emits 45. The directory recorded by the previous session is a SUPERSEDED
+    generation, not the corpus the current code produces.
+  significance: >
+    Any re-verification that reads the recorded corpus directory rather than
+    regenerating it is reading a different corpus from the one the artifacts
+    describe. This is the same staleness class as fnd-2026-0013's stale-corpus
+    headline number, and it is a plausible route by which a future session could
+    confirm a number that no longer corresponds to the code.
+  not_cleaned: >
+    The stale directory is in gitignored .scratch and was NOT deleted. It is
+    recorded so a future session regenerates rather than reuses.
+
+what_was_corrected:
+  - >
+    exp-2026-0037's `nondeterminism_policy` and chainforge's two docstrings are
+    corrected. The replacement states what is actually true: keys are
+    deterministic, ECDSA nonces are not, the DER is therefore not
+    byte-reproducible, and verdict stability across regenerations is the claim
+    that was verified.
+  - >
+    This is recorded as a correction, not a silent fix. The original wording is
+    preserved above so the error is visible to a later reader.
+
+honest_account_of_how_it_was_found:
+  - >
+    A reproduction agent with no shell flagged it as an unrecorded risk it could
+    not test, reasoning that "cryptography's ECDSA signer draws a fresh nonce
+    from its own RNG" and that fixed derived keys would therefore not give
+    reproducible signature bytes. That reasoning was correct.
+  - >
+    The orchestrator executed the test rather than accepting the reasoning, and
+    the result was stronger than the flag: the corpus is not byte-reproducible
+    at all, which is a live false claim in a tracked experiment artifact.
+  - >
+    A second finding came from executing rather than assuming: the FIRST probe
+    compared two runs in which BOTH adapters exited 1, and reported "IDENTICAL
+    verdicts". That agreement was vacuous. Only after the CLI argument was
+    corrected did the comparison become meaningful. A test that passes because
+    both sides fail is the same failure class this repository keeps meeting.
+
+limits:
+  - >
+    Verdict stability was checked across TWO regenerations on ONE machine with
+    ONE version each of cryptography and certvalidator. It is not a
+    cross-platform or cross-version claim.
+  - >
+    The control sweep over anchor pathLenConstraint in {absent, 1, 0} -- the item
+    rpt-2026-0020 listed as the top open gap -- was still NOT executed. This
+    observation closes the reproducibility question, not that one.

@@ -37,9 +37,22 @@ execution:
   seed: 20261004
   nondeterminism_policy: >
     All keys are deterministic P-256 scalars derived by rejection sampling from
-    a fixed-seed SHAKE-256 stream, so the corpus is byte-reproducible. ECDSA
-    signatures use RFC 6979 deterministic nonces, so even the signatures are
-    byte-reproducible across implementations.
+    a fixed-seed SHAKE-256 stream (20261004), so the KEYS are identical on every
+    run.
+    CORRECTION 2026-10-05 (obs-2026-0057): the previous text here also claimed
+    the ECDSA signatures use RFC 6979 deterministic nonces and are therefore
+    "byte-reproducible across implementations". THAT WAS FALSE. chainforge.py:267
+    signs with `builder.sign(private_key, SIG_HASH)`, and pyca/cryptography's
+    ECDSA signer draws a fresh random k per signature; RFC 6979 is not what that
+    call implements. Measured: two runs of gen_corpus.py with the identical seed
+    produced 0 of 45 byte-identical .der files.
+    WHAT IS TRUE AND WAS VERIFIED: the corpus's STRUCTURE (chain shapes,
+    BasicConstraints, subject/issuer DN pattern) is fixed by construction, and
+    re-running both adapters against two independently generated corpora produced
+    byte-identical VERDICT output -- including c17_anchor_constrained REJECT
+    [path_len] against oracle ACCEPT. The experiment measures a verdict on the
+    structure, not on particular signature bytes, so verdict stability across
+    regenerations is the reproducibility claim this experiment actually has.
   corpus_invariants_enforced:
     chain_integrity: >
       Every case path satisfies RFC 5280 6.1(a)-(c): certificate 1 is issued by

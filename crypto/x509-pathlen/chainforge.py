@@ -16,7 +16,10 @@ Design constraints imposed by the mission:
   describes.  This is *not* self-signed: the signature is made by the issuer's
   key but the DN is the certificate's own subject, so the certificate is a
   re-issue of the CA to itself.
-* Randomness uses a fixed seed so the corpus is byte-reproducible.
+* Keys are deterministic: a fixed seed derives the same P-256 scalars on every
+  run.  Signatures are NOT deterministic -- see ``_sign`` -- so the emitted DER
+  differs between runs even though the chain structure does not.  What is
+  stable, and what the experiments rely on, is the verdict structure.
 
 Chain roles are explicit.  ``root`` is a trust anchor and is never part of a
 certification path; it is written to a separate ``trust`` directory.
@@ -151,10 +154,15 @@ class ChainForge:
     def _next_key(self) -> ec.EllipticCurvePrivateKey:
         """Deterministic P-256 key generation.
 
-        The RFC 6979 deterministic nonces mean the *same* private key yields the
-        same signature bytes on every implementation, so the corpus is
-        byte-reproducible across machines and across validators without any
-        dependence on a random source.
+        The scalar is rejection-sampled from the fixed-seed SHAKE-256 stream, so
+        the same seed yields the same keys on every run and on every machine.
+
+        Note that this makes the KEYS reproducible, not the certificates.  The
+        signature below is a plain ECDSA signature, whose nonce comes from the
+        provider's CSPRNG, so two runs over the same seed produce different DER.
+        An earlier docstring here credited RFC 6979 deterministic nonces for
+        byte-reproducibility; that was wrong, and the claim was measured at 0 of
+        45 byte-identical certificates.  See knowledge/observations/obs-2026-0057.yaml.
         """
         self._counter += 1
         # The digest must be exactly the curve-order width: a wider digest would
