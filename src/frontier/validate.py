@@ -2,8 +2,10 @@
 
 Research state is machine-checked: required fields, ID/type agreement, status
 vocabularies, promotion evidence rules, cross-reference resolution, duplicate
-detection, and mission-directory/status consistency. ``validate_repo`` must
-pass on a clean checkout; CI fails on any structural error.
+detection, mission-directory/status consistency, and agreement between the
+derived ``knowledge/indices`` files and the artifacts they summarise.
+``validate_repo`` must pass on a clean checkout; CI fails on any structural
+error.
 """
 
 from __future__ import annotations
@@ -104,6 +106,10 @@ _MISSION_QUEUE = ("pending", "active", "completed", "archive", "embargoed")
 # artifacts and carry no envelope; the validator must not police them.
 _SKIP_KNOWLEDGE_DIRS = {"indices", "notes"}
 _INDEX_SKIP_DIRS = {"indices", "notes"}
+
+# Index files are derived from artifacts, never authoritative: they are exempt
+# from envelope validation but must not contradict the artifacts they summarise.
+INDEX_FILENAMES = ("by-status.yaml", "by-type.yaml")
 
 
 @dataclass
@@ -270,7 +276,109 @@ def validate_repo(root: Path) -> RepoValidationResult:
         _check_location(rel, doc, label, errors)
         _check_references(rel, doc, label, defined_ids, errors, root)
 
+    errors.extend(check_index_consistency(root, docs))
+
     return RepoValidationResult(ok=not errors, errors=errors, warnings=warnings)
+
+
+def load_index(root: Path) -> dict[str, dict]:
+    """Read the derived index files into ``{filename: mapping}``."""
+    root = Path(root)
+    index_dir = root / "knowledge" / "indices"
+    loaded: dict[str, dict] = {}
+    for name in INDEX_FILENAMES:
+        path = index_dir / name
+        if not path.is_file():
+            continue
+        try:
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            loaded[name] = {"__error__": str(exc)}
+            continue
+        loaded[name] = data if isinstance(data, dict) else {"__error__": "not a mapping"}
+    return loaded
+
+
+def check_index_consistency(root: Path, docs: list[tuple[Path, dict]]) -> list[str]:
+    """Check that ``knowledge/indices/*`` agrees with the artifacts on disk.
+
+    Index files are derived views (``frontier.index.rebuild_index``), so the
+    artifacts are the truth: an index entry that asserts a different status or
+    type than its artifact is a defect, and an artifact the index omits is a
+    defect in the opposite direction. Files under ``knowledge/indices`` are not
+    themselves validated as artifacts (no envelope, no IDs allocated); this
+    check only compares them against the artifacts they summarise.
+    """
+    root = Path(root)
+    index_dir = root / "knowledge" / "indices"
+    if not index_dir.is_dir():
+        return []
+
+    errors: list[str] = []
+    truth = {
+        doc["id"]: doc
+        for _rel, doc in docs
+        if isinstance(doc.get("id"), str) and doc.get("id")
+    }
+    indexes = load_index(root)
+
+    status_index = indexes.get("by-status.yaml")
+    if status_index is not None:
+        errors.extend(
+            f"knowledge/indices/by-status.yaml: {msg}"
+            for msg in _compare_index(
+                status_index, truth, key=lambda doc: str(doc.get("status")), label="status"
+            )
+        )
+    type_index = indexes.get("by-type.yaml")
+    if type_index is not None:
+        errors.extend(
+            f"knowledge/indices/by-type.yaml: {msg}"
+            for msg in _compare_index(
+                type_index, truth, key=lambda doc: str(doc.get("type")), label="type"
+            )
+        )
+    return errors
+
+
+def _compare_index(
+    index: dict, truth: dict[str, dict], *, key, label: str
+) -> list[str]:
+    if "__error__" in index:
+        return [f"unparseable index file ({index['__error__']})"]
+
+    messages: list[str] = []
+    seen: dict[str, str] = {}
+    for bucket, ids in index.items():
+        if not isinstance(ids, list):
+            messages.append(f"{bucket!r} must hold a list of ids, found {type(ids).__name__}")
+            continue
+        for did in ids:
+            if not isinstance(did, str):
+                messages.append(f"non-string id {did!r} under {bucket!r}")
+                continue
+            doc = truth.get(did)
+            if doc is None:
+                messages.append(
+                    f"{did} is indexed under {label} {bucket!r} but no such artifact exists"
+                )
+                continue
+            actual = key(doc)
+            if actual != bucket:
+                messages.append(
+                    f"{did} is indexed under {label} {bucket!r} but its artifact says {actual!r}"
+                )
+            seen[did] = actual
+
+    missing = sorted(set(truth) - set(seen))
+    if missing:
+        preview = ", ".join(missing[:5])
+        suffix = "" if len(missing) <= 5 else f", ... (+{len(missing) - 5} more)"
+        messages.append(
+            f"{len(missing)} artifact(s) absent from the index: {preview}{suffix}; "
+            "regenerate with frontier.index.rebuild_index"
+        )
+    return messages
 
 
 def _parts_after_root(rel: Path) -> tuple[str, ...]:
