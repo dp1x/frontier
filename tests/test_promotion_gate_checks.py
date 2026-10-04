@@ -66,7 +66,7 @@ SUPPORT_REVIEW = {
 }
 
 
-def _store(documents: dict[int, tuple[str, dict[str, str]]]) -> "GATE.SourceStore":
+def _store(documents: dict[int, tuple[str, dict[str, str]]]) -> GATE.SourceStore:
     """A ``SourceStore`` holding the given RFCs, bypassing the network."""
     store = GATE.SourceStore(online=False, timeout=1.0)
     store._fixture = {
@@ -171,7 +171,7 @@ def _finding(root: Path, *, record: dict, claim: str = GENUINE_9052_SEC9,
     return doc["id"]
 
 
-def _evaluate(root: Path, store=None) -> "GATE.ArtifactGateResult":
+def _evaluate(root: Path, store=None) -> GATE.ArtifactGateResult:
     artifacts, _broken, by_id = GATE.load_corpus(root, include_missions=False)
     store = store or _store({9052: RFC_9052})
     return GATE.evaluate_artifact(
