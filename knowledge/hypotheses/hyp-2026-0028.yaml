@@ -33,7 +33,7 @@ links:
   findings: [fnd-2026-0016]
 normative_basis:
   rfc_5280_section_4_2_1_9: >
-    "The pathLenConstraint field is meaningful only if the cA boolean is
+    The pathLenConstraint field is meaningful only if the cA boolean is
     asserted and the key usage extension, if present, asserts the keyCertSign
     bit (Section 4.2.1.3).  In this case, it gives the maximum number of
     non-self-issued intermediate certificates that may follow this certificate
@@ -42,7 +42,7 @@ normative_basis:
     in this limit.  Usually, the last certificate is an end entity certificate,
     but it can be a CA certificate.)  A pathLenConstraint of zero indicates
     that no non-self-issued intermediate CA certificates may follow in a valid
-    certification path."
+    certification path.
   rfc_5280_section_6_1: >
     "This section presents the algorithm in four basic steps: (1)
     initialization, (2) basic certificate processing, (3) preparation for the
