@@ -79,6 +79,15 @@ formal/.lake/
 formal/lake-manifest.json
 formal/build/lib/
 
+# Deliberately excluded raw material (decision recorded in rpt-2026-0015 and
+# rpt-2026-0018). These are NOT research artifacts:
+#   .freebuff/                        - a single project-id UUID from a tool
+#   ai-io/pycose_deterministic_cbor/  - raw Qwen transcript material
+# Leaving them merely untracked meant a `git add -A` would silently ingest
+# them, so the decision is now enforced by .gitignore rather than by care.
+.freebuff/
+ai-io/pycose_deterministic_cbor/
+
 # Planning / checkpoint files (never commit)
 CHECKPOINT.md
 BLUEPRINT.md
