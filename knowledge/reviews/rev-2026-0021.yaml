@@ -192,6 +192,30 @@ disagreement_with_prior_review:
     correctly found the fourth wrong oracle and correctly forced the self-issued
     withdrawal; this review correctly finds that the claim that survived is not
     a violation. The finding's history keeps both.
+  a_second_disagreement_inside_this_review_is_unsettled:
+    recorded_2026_10_05: >
+      The G11 independent re-check role reached a DIFFERENT verdict from the
+      synthesis of these same three roles: CONFIRM-WITH-SCOPE-REDUCTION rather
+      than DO NOT PROMOTE. Both agree the measurement is real and the mechanism
+      is confirmed at source level. They differ on whether the RFC's treatment
+      of trust-anchor constraints defeats the finding.
+      SPEC-DERIV-1 argued it does, via section 6.2's explicit permission to
+      "apply a path length constraint to a specific trust anchor during the
+      initialization phase". The re-check role argued that section 6's
+      statement that the algorithm "requires ... any constraints upon the set of
+      paths that may be validated using this key" leaves genuine textual
+      ambiguity pointing the other way -- so the strictness may be REQUIRED
+      rather than merely permitted.
+    why_this_is_not_resolved_here: >
+      A third opinion would not settle it, and neither role could read the
+      source that would. RFC 5280 section 6 states these procedures are "based
+      upon the ISO/IEC/ITU-T definition"; the ITU-T X.509 text is not freely
+      available and was not consulted by any role in this session.
+    interim_position: >
+      The artifact stays at conformance-observation, which is the weakest
+      classification both verdicts support. It is NOT promoted on either
+      reading, and the stronger claim is not asserted on either.
+    see: knowledge/observations/obs-2026-0061.yaml
 
 limits_of_this_review:
   - >

@@ -106,14 +106,35 @@ cohort_independence_matrix:
     - members: [BoringSSL, AWS-LC]
       shared_ancestor: OpenSSL 1.0.2 beta
       verdict: ONE validation core lineage; correlated evidence
-    - members: [rustls-webpki]
-      verdict: independent of the OpenSSL lineage
-    - members: [pyca/certvalidator]
+    - members: [pyca/cryptography in-tree cryptography-x509-verification]
       verdict: >
-        pure-Python transcription of RFC 5280 6.1; no ctypes bindings and no
-        OpenSSL delegation (verified by source inspection). Genuinely
-        independent. NOTE: the installed 0.11.1 API could not be driven within
-        this session's budget -- see infrastructure_limitations.
+        pyca's own crate, reached through x509.verification. NOT rustls-webpki,
+        which is absent from cryptography 50.0.1's dependency closure -- see
+        obs-2026-0057's sibling correction in fnd-2026-0016 and rev-2026-0021.
+    - members: [wbond/certvalidator]
+      verdict: >
+        pure-Python transcription of RFC 5280 6.1. CORRECTION 2026-10-05
+        (obs-2026-0061): this field previously read "no ctypes bindings and no
+        OpenSSL delegation (verified by source inspection)". THE OPENSSL HALF
+        IS FALSE. certvalidator delegates cryptography to oscrypto, whose
+        installed package ships _openssl, _win (CNG), _mac and _linux_bsd
+        backends; on this machine the OpenSSL backend resolves.
+        What survives, and is what the independence argument actually needs:
+        the PATH-LENGTH logic under examination -- max_path_length and steps
+        1k / 3l / 3m -- is hand-written pure Python inside certvalidator and
+        shares no code with any backend. oscrypto is used for signature
+        verification and ASN.1 parsing, NOT for path construction. So the
+        two cores remain independent for this question; only the overstated
+        form of the justification was false.
+      note: >
+        The correction matters because "no OpenSSL delegation" invites a reader
+        to conclude something stronger than "no shared path-length code" --
+        the fnd-2026-0009 abstraction-depth failure in a new place.
+      also: >
+        certvalidator contradicts ITSELF internally at validate.py:261-263
+        versus :287-289: it comments that the trust anchor is not part of the
+        path and computes len(path) - 1 correctly, then overwrites that value
+        with the anchor's own pathLenConstraint.
     - members: [Go crypto/x509, LibreSSL, GnuTLS]
       verdict: NOT MEASURED in this session; no claim is made about them
 probes:

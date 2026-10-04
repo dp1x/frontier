@@ -1,0 +1,136 @@
+id: obs-2026-0061
+type: observation
+status: current
+created_at: "2026-10-05T07:50:00Z"
+updated_at: "2026-10-05T08:00:00Z"
+summary: >
+  The G11 independent re-check completed after rev-2026-0021 was written and
+  carried three claims that were NOT recorded at the time. All three were
+  verified here. (1) certvalidator contradicts itself INTERNALLY, not merely
+  against the RFC: it computes the correct path length, comments that the
+  anchor is not part of the path, and then overwrites that value with the
+  anchor's own pathLenConstraint. (2) exp-2026-0037's independence claim --
+  "no ctypes bindings and no OpenSSL delegation" -- is FALSE: certvalidator
+  delegates all cryptography to oscrypto, which ships OpenSSL and CNG
+  backends. (3) fnd-2026-0016 lacks reproducers and verifications links, so
+  it cannot reach status verified regardless of the gate.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      direct read of .venv/Lib/site-packages/certvalidator/validate.py and the
+      oscrypto package layout, plus grep of exp-2026-0037; the reviewer that
+      raised these had no execution capability and is credited for raising
+      them, not for the confirmation
+  sources:
+    - .venv/Lib/site-packages/certvalidator/validate.py
+    - .venv/Lib/site-packages/oscrypto/
+    - knowledge/experiments/exp-2026-0037.yaml
+    - knowledge/reviews/rev-2026-0021.yaml
+    - .scratch/trackA/indep_review_1.md
+  parent: null
+  generation: 0
+links:
+  findings: [fnd-2026-0016]
+  reviews: [rev-2026-0021]
+title: "OBS-2026-0061 - Three post-review claims verified: certvalidator's internal contradiction, a false independence claim, and a missing evidence link"
+
+new_1_certvalidator_contradicts_itself_internally:
+  where: ".venv/Lib/site-packages/certvalidator/validate.py"
+  the_contradiction_verified_line_by_line: >
+    Line 261-263:
+        # We skip the trust anchor when measuring the path since technically
+        # the trust anchor is not part of the path
+        path_length = len(path) - 1
+    Line 287-289, labelled "Step 1 k":
+        max_path_length = path_length
+        if trust_anchor.max_path_length is not None:
+            max_path_length = trust_anchor.max_path_length
+  why_this_is_stronger_than_the_recorded_claim: >
+    The finding argued the behaviour diverges from the RFC. This is a
+    self-contradiction WITHIN one implementation: it states the correct model
+    in a comment, computes the correct value, and then discards it 24 lines
+    later. An implementation cannot be correct and contradict itself, so this
+    is evidence of an unintended convention rather than of a deliberate policy
+    -- a different and better-grounded inference than "two cores agree".
+  what_it_does_not_establish: >
+    It does not make the behaviour a violation. RFC 5280 6.2 permits applying a
+    path length constraint to a specific trust anchor during initialization, and
+    the reviewer's own counterweight is that section 6 says the algorithm
+    "requires ... any constraints upon the set of paths that may be validated
+    using this key", which is genuine textual ambiguity in the RFC's favour.
+
+new_2_the_independence_claim_in_exp_2026_0037_is_false:
+  the_claim_as_written: >
+    "pure-Python transcription of RFC 5280 6.1; no ctypes bindings and no
+    OpenSSL delegation (verified by source inspection). Genuinely independent."
+  what_is_actually_true: >
+    certvalidator delegates cryptography to oscrypto. The installed oscrypto
+    package ships backend directories _openssl, _win (Windows CNG), _mac and
+    _linux_bsd. On this machine the OpenSSL backend is the one that resolves.
+  what_this_does_and_does_not_change: >
+    It does NOT affect the conclusion that the two cores are independent for
+    PATH-LENGTH purposes. The path-length logic under examination
+    (max_path_length, steps 1k/3l/3m) is hand-written pure Python inside
+    certvalidator and shares no code with either backend; oscrypto is used for
+    signature verification and ASN.1 parsing, not for path construction. So
+    rev-2026-0021's independence conclusion STANDS.
+    What is false is the OVERSTATED FORM of the justification. "No OpenSSL
+    delegation" is a stronger and different claim from "no shared path-length
+    code", and asserting the former invites a reader to conclude something
+    stronger than the evidence supports -- which is the fnd-2026-0009
+    abstraction-depth failure in a new place.
+
+new_3_fnd_2026_0016_cannot_reach_verified_regardless_of_the_gate:
+  the_defect: >
+    fnd-2026-0016's links carry findings/reports/missions/hypotheses/
+    experiments/observations/reviews but NOT reproducers or verifications. The
+    promotion path requires a complete evidence chain, so the artifact would be
+    refused at status verified even after G11 is discharged.
+  why_it_is_recorded_rather_than_fixed: >
+    It is a live structural gap, but adding a reproducer and a verification
+    artifact for a finding that is NOT being promoted would manufacture the
+    appearance of a complete chain for a claim the independent review just
+    refused to promote. The gate passing is not a promotion, and a complete
+    chain would not make it one.
+  what_would_close_it: >
+    Only if the finding is ever promoted, which on rev-2026-0021's verdict it
+    should not be without the section-6 ambiguity resolved first.
+
+the_reviewers_own_verdict_and_how_it_relates_to_what_was_committed:
+  reviewer_verdict: "CONFIRM-WITH-SCOPE-REDUCTION"
+  what_was_committed_as_rev_2026_0021: >
+    "DO NOT PROMOTE, reclassify" -- because rev-2026-0021 was synthesised from
+    the three-role review (SPEC-DERIV-1, IMPL-ARCH-1, VERIFY-C17), and it is
+    the RFC 6.2 analysis that drives DO NOT PROMOTE, not this reviewer's
+    narrower CONFIRM-WITH-SCOPE-REDUCTION.
+  the_disagreement_is_real_and_is_recorded: >
+    Both verdicts agree the measurement is real and the mechanism is
+    confirmed at source level. They differ on whether the RFC's silence on
+    trust-anchor constraints defeats the finding. SPEC-DERIV-1 argued yes via
+    section 6.2's explicit permission; this reviewer argued section 6's
+    "constraints upon the set of paths" language leaves genuine ambiguity
+    pointing the other way. NEITHER IS SETTLED.
+  what_settles_it: >
+    Not a third agent's opinion. It needs the ITU-T X.509 source text that
+    RFC 5280 section 6 derives from, which no one in this session has read and
+    which is not freely available. Until then the classification stays
+    conformance-observation, which is the weakest claim both verdicts support.
+
+negative_results_preserved_from_the_review:
+  - >
+    Corpus-defect refutation FAILED: c17 genuinely isolates the anchor's
+    pathLen. The reviewer attacked every confounder -- intermediate pathLen,
+    criticality, keyCertSign, signatures, DNs, chain integrity, name
+    constraints, alternative path construction, anchor presentation -- and all
+    are excluded.
+  - >
+    A naming collision in harness_soundness.py labels c17 a "confounder" for
+    a reason unrelated to contamination. Recorded so a future session does not
+    read that label as evidence against c17.
+  - >
+    Oracle-as-target refutation FAILED, though the oracle has had four wrong
+    versions across its history.
