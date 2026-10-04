@@ -90,4 +90,35 @@ artifacts:
 follow_ups: []
 notes_path: knowledge/notes/msn-2026-0006.md
 blocked_reason: null
-terminal_reason: "FORMAL-204 kernel-verified on this Windows host (lake build PASSED, 0 sorries, 0 file-introduced axioms); axiom inventory limited to {propext, Quot.sound} (subset of standard Lean 4 core).  All three top-level theorem families (T1 canonicalLength, T2 off-by-one rejection, T3 cross-param-set rejection) hold.  Together with FORMAL-203 (prf-2026-0001, MODULUS half), both halves of FIPS 203 §7.2 are now machine-checked."
+terminal_reason: "FORMAL-204 kernel-verified on this Windows host (lake build PASSED, 0 sorries, 0 file-introduced axioms); axiom inventory limited to {propext, Quot.sound} (subset of standard Lean 4 core).  All three top-level theorem families (T1 canonicalLength, T2 off-by-one rejection, T3 cross-param-set rejection) hold."
+correction_2026_10_04:
+  by: orchestrator-synthesizer (model-agent)
+  what_is_withdrawn: >
+    The trailing sentence of the ORIGINAL terminal_reason - "Together with
+    FORMAL-203 (prf-2026-0001, MODULUS half), both halves of FIPS 203 7.2 are
+    now machine-checked." - is WITHDRAWN as REFUTED. This is the PARENT mission
+    of msn-2026-0007 and repeated the same false claim one level up.
+    LengthCheck.lean formalizes only GROUND ARITHMETIC on a bare Nat:
+    canonicalLength p = 384*k+32, with no array argument anywhere in the file,
+    so no theorem in it constrains any byte array. "Both halves of FIPS 203
+    7.2" presupposes that a LENGTH half of a check on a key exists in this
+    corpus. It does not. The Type check is not formalized anywhere.
+  what_survives: >
+    The arithmetic itself is correct and machine-checked: 384*2+32 = 800,
+    384*3+32 = 1184, 384*4+32 = 1568, matching FIPS 203 Table 3 (printed p.39
+    / PDF p.48), with correct off-by-one and cross-parameter rejection. The
+    defect is scope, not proof soundness.
+  also_found: >
+    `length_modulus_independent` (LengthCheck.lean:194-198) asserts no
+    independence at all: it is a conjunction of three definitional unfoldings
+    proved by `exact <rfl,rfl,rfl>`, it never mentions seg or dec, and
+    LengthCheck.lean does not import ByteEncode.lean, so it cannot state
+    anything about the modulus half. The theorem's name and docstring promise
+    something its proof does not deliver.
+  successor: msn-2026-0021 (FORMAL-208)
+  epistemic_note: >
+    Found by the adversarial overclaim hunter (Track A role A4) AFTER the
+    primary correction had been committed, and independently confirmed by the
+    orchestrator against the source. Recorded so the correction propagates to
+    the parent mission rather than stopping at the child. Model consensus is
+    not evidence; this was settled against the Lean source.

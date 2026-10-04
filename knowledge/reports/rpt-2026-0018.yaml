@@ -99,10 +99,48 @@ track_a_formal_correction:
     bytes 0x01 0x0D at offset 768 lie inside the 32-byte rho seed region that
     Eq (7.1) never inspects, yet drive seg B 512 to q. So Eq (7.1) was never
     an instance of enc_dec_eq. This is machine-checked, not argued.
+  quantified_vacuity_finding:
+    status: >
+      Raised by the adversarial overclaim hunter (role A4) after the primary
+      correction was committed; INDEPENDENTLY RE-VERIFIED by the orchestrator
+      against the FIPS 203 text and by direct index arithmetic. Recorded
+      because it sharpens the primary finding from "occasionally false" to
+      "vacuous on the intended domain".
+    arithmetic: >
+      Segment i occupies bits [12i, 12i+12), so segment 256k begins at exactly
+      byte 384k - the FIRST seed byte. Verified: for k=2, segment 512 starts at
+      byte 768, which is ek[384k] = ek[768]. Eq (7.1) constrains segments
+      0..256k-1 (0..511 for k=2); the corpus hypothesis constrains segments
+      0,1,2,... forever, including the 22 seed-region segments 512..533.
+    consequence: >
+      The rho seed is pseudorandom, so each seed segment is uniform on
+      [0,4096). P(one segment >= q) = 767/4096 = 18.7%; over 22 segments
+      P(all canonical) = 0.0104. So for ~99% of genuine ML-KEM-512 keys the
+      hypothesis is FALSE while Eq (7.1) HOLDS - the biconditional is
+      satisfied with both sides false. FORMAL-203 stays SOUND, but Eq (7.1)
+      can neither be derived from it nor used to characterise valid keys.
+    why_it_matters: >
+      A theorem whose hypothesis is false for 99% of its intended domain is
+      formally correct and practically useless, and no build-green signal and
+      no theorem-count review would ever catch it. This is the strongest
+      available justification for requiring T1 and T2 to ship together.
+  what_survives_under_adversarial_attack:
+    - "canonicalRoundtrip (FORMAL-203 T1) was attacked hardest and SURVIVED - sound, non-vacuous, and its infinite-F generalisation is a legitimate strengthening because the direction is per-coefficient. It must not be re-litigated."
+    - "The B0 = [0x01,0x0D] -> 3329 arithmetic was confirmed by hand, bit by bit: 1 + 256 + 1024 + 2048 = 3329. Little-endian layout and 12-bit framing are faithfully modelled."
+    - "The axiom/trust audit came back CLEAN: zero sorry, zero admitted, zero native_decide, zero file-introduced axioms; the decide calls are genuine kernel-checked closed computations on concrete Nats."
+    - "Every FIPS 203 PAGE locator in the three .lean headers was independently CONFIRMED correct. The fabrications were in quoted SENTENCES, never in page numbers - a sharper diagnostic than 'the citation is wrong', and worth preserving for the next citation audit."
+  additional_defects_found_by_A4_beyond_the_primary_correction:
+    - "length_modulus_independent (LengthCheck.lean:194-198) asserts no independence: a conjunction of three definitional unfoldings proved by exact <rfl,rfl,rfl>, never mentioning seg or dec, in a file that does not import ByteEncode.lean and therefore cannot state anything about the modulus half."
+    - "minimalCounterexample's header overstates: it never asserts seg B0 0 = 3329 (derivable but unstated), and 'minimal' is UNPROVEN - B0 := fun y => 1 also fails, with a single nonzero byte and a strictly smaller support."
+    - "isValidKey_zero_k2's witness fun _ => 0 is an INFINITE function, not the 'canonical 800-byte zero array' its header claims; the theorem's own witness refutes its own gloss."
+    - "reject_on_overflow (ByteEncode.lean:381) has a compiler-certified unused hypothesis hB - harmless, but any composition through it must supply a hypothesis it never consumes."
+    - "PARENT MISSION ALSO DEFECTIVE: msn-2026-0006's terminal_reason repeats the same false claim ('both halves of FIPS 203 7.2 are now machine-checked'). Corrected in the same pass, so the correction propagates upward rather than stopping at the child."
+    - "The #print axioms inventory is NOT committed anywhere; every occurrence is a synthesizer restatement, and the cited .scratch/formal-203-r2/axiom_check.lean is gitignored and gone. Recorded as an evidence-chain gap."
   epistemic_status: verified_conclusion
   new_artifacts: [missions/active/msn-2026-0021.yaml]
   corrected_artifacts:
     - "missions/completed/msn-2026-0007.yaml - original claim PRESERVED verbatim, annotated refuted (append-and-reconcile, not rewrite)"
+    - "missions/completed/msn-2026-0006.yaml - PARENT mission, same false claim, corrected so the correction propagates upward"
     - "knowledge/proofs/prf-2026-0003.yaml - status verified -> disputed; warning count 1 -> 5 with the two load-bearing warnings named"
   methodology_note: >
     Effort estimate revised from "roughly one day" to 1.5-3 days. The

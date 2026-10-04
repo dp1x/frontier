@@ -134,6 +134,43 @@ design_record:
     T1 and T2 MUST ship together. An accept-only theorem is satisfiable by a
     hypothesis nobody can inhabit - that is the FORMAL-205 vacuity failure
     repeated one level down, and it is exactly how the current corpus reads.
+  quantified_vacuity_argument:
+    established_by: "Track A role A4 (adversarial overclaim hunter), independently re-verified by the orchestrator against the FIPS 203 text and by direct index arithmetic"
+    claim: >
+      The corpus hypothesis `forall i, seg B i < 3329` is not merely
+      occasionally false for legitimate keys - it is false for about 99% of
+      them, which makes FORMAL-203's biconditional VACUOUS on exactly the class
+      of objects the specification is about.
+    arithmetic: >
+      Segment i occupies bits [12i, 12i+12), so segment 256k begins at exactly
+      byte 384k - the FIRST byte of the 32-byte rho seed. Verified directly:
+      for k=2, segment 512 starts at byte 768, which is precisely
+      ek[384k] = ek[768]. Eq (7.1) constrains segments 0..256k-1 only
+      (0..511 for k=2); the corpus hypothesis constrains segments
+      0,1,2,... forever, including the 22 seed-region segments 512..533.
+    consequence: >
+      The rho seed is pseudorandom, so each seed segment is uniform on
+      [0, 4096). P(one segment >= q) = 767/4096 = 18.7%; over 22 segments,
+      P(all canonical) = 0.0104. So for ~99% of genuine ML-KEM-512 keys the
+      hypothesis is FALSE while Eq (7.1) HOLDS - the biconditional is then
+      satisfied with both sides false. The theorem stays true (FORMAL-203 is
+      sound) but yields nothing: Eq (7.1) can neither be derived from it nor be
+      used to characterise valid keys.
+    implication_for_this_mission: >
+      This is the strongest argument for the T1+T2 pairing. A theorem whose
+      hypothesis is false for 99% of its intended domain is formally correct
+      and practically useless - a failure mode that no `lake build` green
+      signal and no theorem-count review would ever catch. The bounded
+      hypothesis `forall i, i < 256k` is the fix, and T2 is what proves the
+      bound is load-bearing rather than decorative.
+  additional_findings_from_role_A4:
+    - "`canonicalRoundtrip` (T1 of FORMAL-203) was attacked hardest and SURVIVED: it is sound, non-vacuous, and its generalisation to an infinite F is a legitimate strengthening, because the direction is per-coefficient. Its header gloss is accurate. This must not be re-litigated."
+    - "The B0 counterexample arithmetic was confirmed by hand, bit by bit: 1 + 256 + 1024 + 2048 = 3329. The little-endian bit layout and 12-bit segment framing are faithfully modelled."
+    - "`minimalCounterexample` is OVERSTATED in its own header: it never asserts `seg B0 0 = 3329` (3329 is derivable but not stated), and 'minimal' is unproven - `B0 := fun y => 1` also fails with a single nonzero byte and a strictly smaller support."
+    - "`reject_on_overflow` (ByteEncode.lean:381) has an unused hypothesis `hB`, confirmed by the compiler. Not a soundness problem, but any composition routed through it must supply a hypothesis it does not consume."
+    - "Every FIPS 203 page locator in the three .lean headers was independently CONFIRMED correct (s7.2 + Eq 7.1 = printed p.36/PDF p.45; Alg 5/6 = p.22/p.31; Alg 3/4 = p.20/p.29; d=12 = pp.21-22; sizes 800/1184/1568 = Table 3 p.39). The fabrications were in quoted SENTENCES, never in page numbers - a sharper diagnostic than 'the citation is wrong'."
+    - "The axiom/trust audit came back CLEAN: zero sorry, zero admitted, zero native_decide, zero file-introduced axioms. The `decide` calls in minimalCounterexample are genuine kernel-checked closed computations on concrete Nats, not vacuous."
+    - "The `#print axioms` inventory is NOT committed anywhere in the repository; every hit is a synthesizer restatement. The cited .scratch/formal-203-r2/axiom_check.lean is gitignored and gone. Recorded as an evidence-chain gap; the toolchain commit ba2cbbf09... IS independently confirmed from the compiler's own .trace records."
   effort_estimate: >
     1.5-3 days, replacing the prior "roughly one day". The mathematics is
     small (~90 lines of new proof text, demonstrated by probe); the cost is
