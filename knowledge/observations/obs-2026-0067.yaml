@@ -1,0 +1,160 @@
+id: obs-2026-0067
+type: observation
+status: current
+created_at: "2026-10-05T22:10:00Z"
+updated_at: "2026-10-05T22:10:00Z"
+summary: >
+  Adversarial review of the FORMAL-208 vacuity argument found the 99% figure
+  right to two significant figures but its ARITHMETIC wrong by an off-by-one:
+  21 seed-region segments can be non-canonical, not 22, because segment 533 has
+  only 4 live bits and can never reach 3329. The corrected figure is 98.71%, not
+  98.96%. The conclusion survives unchanged; the reasoning and the stated
+  cause did not. Recorded because this figure is the mission's justification.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-critic
+    model: grok-4.7
+    tool: >
+      An adversarial agent with an explicit mandate to disprove the FORMAL-208
+      quantified-vacuity argument, followed by an INDEPENDENT re-derivation by
+      the orchestrator from first principles (bit-level segment model,
+      exhaustive and Monte-Carlo). The orchestrator's re-derivation both
+      confirmed the off-by-one and CORRECTED one detail of the reviewer's own
+      explanation; both corrections are recorded below rather than either being
+      quietly adopted.
+  sources:
+    - missions/active/msn-2026-0021.yaml
+    - formal/Formal/EkCheck.lean
+    - formal/Formal/ValidKey.lean
+    - localdocs/refs/fips203.pdf
+  parent: null
+  generation: 0
+links:
+  missions: [msn-2026-0021]
+  proofs: [prf-2026-0003]
+
+THE_SETUP_being_checked:
+  model: >
+    An ML-KEM-512 (k=2) encapsulation key ek is 384*2 + 32 = 800 bytes =
+    6400 bits. The 12-bit segment i occupies global bits [12i, 12i+12), little
+    endian. Eq (7.1) constrains segments 0..256k-1 = 0..511, which is bits
+    [0, 6132) and therefore never touches the 32-byte rho seed at bytes
+    768..799.
+  the_claim_under_test: >
+    The old corpus hypothesis `forall i, seg B i < 3329` constrains 22
+    seed-region segments that Eq (7.1) never inspects. Because the seed is
+    pseudorandom each such segment is uniform on [0,4096), so P(all canonical)
+    = (3329/4096)^22 = 0.0104, making the biconditional VACUOUS on ~99% of
+    legitimate keys.
+
+FINDING_1_the_off_by_one_REAL:
+  the_error: >
+    There are 22 seed-region segments, 512..533, but only 21 can be
+    non-canonical. Segment 533 occupies global bits 6396..6407. The key ends at
+    bit 6400, so bits 6400..6407 lie OUTSIDE ek and read as 0. Only byte 799's
+    bits 4..7 are live, at segment positions j=0..3, so seg 533 <= 15 for every
+    possible seed. Its probability of exceeding 3329 is exactly 0, not 767/4096.
+  verified_by_orchestrator: true
+  the_numbers:
+    audit_figure: "P = (3329/4096)^22 = 0.0104468 -> vacuous on 98.9553%"
+    corrected: "P = (3329/4096)^21 = 0.0128538 -> vacuous on 98.7146%"
+    error: "0.2407 percentage points"
+  does_the_conclusion_change: >
+    NO. The argument stands at 98.71%: the hypothesis is false for the large
+    majority of legitimate keys while Eq (7.1) holds, so the biconditional is
+    satisfied with both sides false. The T1/T2 pairing requirement is unchanged.
+    What changed is the arithmetic and the stated mechanism.
+
+WHAT_WOULD_HAVE_FALSIFIED_IT_AND_WHY_IT_DID_NOT:
+  the_expected_weakness: >
+    The segment-independence assumption. Consecutive 12-bit segments share
+    bytes, so the reviewer expected the segments not to be independent and the
+    closed form to be wrong.
+  why_the_assumption_holds: >
+    Segments 512..532 read seed bits [0, 252) as 21 DISJOINT 12-bit fields of
+    one uniform 256-bit string, so they are exactly uniform and genuinely
+    independent. A 4,000,000-seed Monte Carlo confirms it: count variance
+    3.1978 against Binomial(21, .) 3.1960; 98.7029% observed, SE ~0.01pp.
+  consequence: "The corrected closed form is exact; the 0.24pp error was purely the segment count."
+
+FINDING_2_a_SECOND_ERROR_IN_THE_AUDIT:
+  what_the_audit_asserted: "that segment i sits 'at byte 2i', i.e. seg B i = B[2i] + 256*B[2i+1]"
+  the_correction: >
+    Segments straddle bytes whenever 12i is not a multiple of 8, which is every
+    odd-indexed segment. For such a segment seg = B[j] + 256*(B[j+1] mod 16),
+    where j = 12i div 8.
+  why_the_committed_counterexample_is_still_sound: >
+    B2 has bytes 768=0x01, 769=0x0D, and 0x0D < 16, so the naive and correct
+    formulas coincide and yield 3329. The committed witness is NOT invalidated.
+  the_magnitude_of_the_latent_error: >
+    With byte 769 = 0x10 the naive formula gives 4097 and the correct gives 1 --
+    a difference of 3328. Any future witness chosen in that region computed with
+    the naive rule would be wrong.
+
+FINDING_3_A_DETAIL_IN_THE_REVIEW_THAT_WAS_ALSO_WRONG:
+  recorded_because_the_orchestrator_caught_it: >
+    The reviewer stated that segment 512 straddles bytes, taking "byte 768 in
+    full plus byte 769's low 4 bits". That is FALSE: 12*512 = 6144 is bit 0 of
+    byte 768, so segment 512 lies wholly within byte 768. The straddling
+    segments are the ODD-indexed ones: 513, 515, 517, 519, 521, 523, 525, 527,
+    529, 531, 533. Segment 512 is the one that does not straddle, which is why
+    the committed B2 witness is exactly the case where the naive arithmetic
+    happens to be correct.
+  consequence: >
+    The reviewer's substantive conclusion is unaffected, but the explanation
+    given for it was itself imprecise. Both the original audit's arithmetic and
+    its correction are recorded rather than one replacing the other silently.
+
+FINDING_4_a_defect_that_survives_undamaged:
+  isvalidkey_was_never_fixed: >
+    `formal/Formal/ValidKey.lean:47` still carries BOTH defects this mission
+    was opened to repair: the vacuous parameter `p` (unused, per the Lean build
+    log) and the unbounded `forall i, seg B i < 3329`. The mission record
+    attributes the defect to that file, and the file still has it. A bounded
+    model added elsewhere does not repair the file the defect lives in.
+
+FINDING_5_a_premise_of_this_session_that_could_not_be_confirmed:
+  the_suspect_claim: >
+    That all three committed `formal/build_output*.log` files record a failed
+    EkCheck build containing ~33 errors.
+  what_the_files_actually_say: >
+    Each says "Build completed successfully", none mentions `Formal/EkCheck`,
+    and all predate commit 8c99e73, which introduced the file. The ~33-error
+    figure is real, but it comes from GitHub Actions run 37221348965, NOT from
+    any committed log. Those logs cannot corroborate it and should not be cited
+    as if they did.
+
+THE_BOUNDED_DESIGN_JUDGEMENT:
+  sound_but_concealing: >
+    The `Fin (384*k + 32) -> Nat` model is CORRECT and is the right repair. But
+    it makes the old unbounded hypothesis UNSTATEABLE rather than false, so a
+    later reader cannot see the defect that motivated it. Worse, the model's
+    accessor routes through `ekBytes`, which reads 0 past the end of the key --
+    manufacturing precisely the always-canonical trailing segment 533 that the
+    original audit fell into. The design should ship the UNBOUNDED contrast as
+    a regression test, or the correction will be silently lost again.
+
+honest_limits_on_this_observation:
+  - >
+    The probabilistic figure treats the 32-byte rho seed as uniform. That is a
+    MODELLING ASSUMPTION, not a FIPS 203 guarantee. FIPS 203 says the seed is
+    the output of a hash/PRF; it does not promise uniform bit distribution, and
+    no claim here depends on it being exactly uniform, only on it being
+    high-entropy.
+  - >
+    rho = 0xFF repeated 32 times is NOT a `G(d || k)` output, so it is a legal
+    section 7.2 CANDIDATE but not a genuine ML-KEM.KeyGen output. Neither is
+    the committed B2 witness (rho = 01 0D followed by zeros). What is
+    established is that Eq (7.1) HOLDS for these keys while the old hypothesis
+    FAILS -- which is exactly what the vacuity argument needs and does not
+    require the key to be a real KeyGen output.
+  - >
+    EkAttack.lean was NOT kernel-checked. The reviewer did not run Lean, which
+    is permitted for a core-only file under the lightweight row of the compute
+    table but was not exercised here. Treat the Lean source as unverified.
+
+supersedes: {}
+corrects:
+  quantified_vacuity_argument_in_msn_2026_0021: "22 seed segments counted; 21 can be non-canonical. The figure is 98.71%, not 98.96%."
