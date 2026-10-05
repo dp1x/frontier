@@ -352,8 +352,8 @@ the prefix contains exactly `nCoeff k` twelve-bit coefficients and the
 prefix never reads byte `384 * k` or beyond. -/
 theorem prefix_last_bit_byte (k : Nat) :
     ((8 * 384 * k - 1) / 8 : Nat) < 384 * k := by
-  have hpos : 0 < 8 * 384 * k := by positivity
-  have hr : (8 * 384 * k - 1) % 8 < 8 := Nat.mod_lt _ (by omega)
+  have hpos : (0 : Nat) < 8 * 384 * k := by positivity
+  have hr : (8 * 384 * k - 1) % 8 < 8 := Nat.mod_lt _ (by omega : (0 : Nat) < 8)
   have hdecomp := Nat.div_add_mod (8 * 384 * k - 1) 8
   have hlt : 8 * ((8 * 384 * k - 1) / 8) < 8 * 384 * k := by omega
   have hone : (8 * 384 * k - 1) / 8 = 384 * k - 1 := by
@@ -379,10 +379,13 @@ that the type check still appears as a named step of Section 7.2 inside the
 combined predicate `okKey`, not because it carries any content the type does
 not already carry.  A previous revision used `True` here while `Ek k` still
 had codomain `Nat`, which is the pair that made the byte bound an assumption
-rather than a fact -- see revision note (R11). -/
-def EkTypeCheck {k : Nat} (ek : Ek k) : Prop := ek
+rather than a fact -- see revision note (R11).  `EkTypeCheck` is therefore the
+BYTE-RANGE half of step 1, `∀ y, ek y < 256`, proved from `ek y`'s type by
+`Fin.isLt`.  An earlier attempt at "the identity" (`EkTypeCheck ek := ek`) was
+rejected by the kernel: `Ek k` is a `Type`, not a `Prop`. -/
+def EkTypeCheck {k : Nat} (ek : Ek k) : Prop := ∀ y : Fin (384 * k + 32), ek y < 256
 
-theorem step1_type_check (k : Nat) (ek : Ek k) : EkTypeCheck ek := rfl
+theorem step1_type_check (k : Nat) (ek : Ek k) : EkTypeCheck ek := fun y => y.isLt
 
 /-- T3a: the parameter `k` is load-bearing.  Distinct `k` give distinct
 required byte counts, so `k` cannot be projected away.  This is the repair of
@@ -464,6 +467,10 @@ theorem eq7_1_accept (k : Nat) (ek : Ek k) (hSeg : ∀ i, i < nCoeff k -> ekSeg 
   have hcoeff : (8 * y + s) / 12 < nCoeff k :=
     coeff_mem_prefix (by
       have heq := twelve_mul_nCoeff k
+      -- `nCoeff k` is not a monomial, so the occurrence is folded to
+      -- `256 * k` before `omega` sees it.  Bit `8 * y + s` of the prefix is
+      -- at most `8 * (384 * k - 1) + 7`, which is one bit short of
+      -- `12 * (256 * k)`, so the two bounds cannot be equated by accident.
       rw [nCoeff] at heq
       omega)
   have hsegAt : seg (ekBytes k ek) ((8 * y + s) / 12) < 3329 := by
@@ -537,13 +544,17 @@ theorem witness_byte_lt_prefix (k i j : Nat) (hi : i < nCoeff k) (hj : j < 12) :
   have heq := twelve_mul_nCoeff k
   rw [nCoeff] at hi heq
   -- `omega` treats `(12 * i + j) / 8` as an independent atom, so the
-  -- division is discharged first.  `Nat.div_lt_iff_lt_mul` is deprecated in
-  -- this toolchain and no longer available, so the division bound is taken
-  -- from `Nat.div_lt_of_lt_mul` with a side condition `8 ≤ 8 * i + j`, which
-  -- holds because `12 * i + j ≥ 12 * i ≥ 8`.
-  rw [Nat.div_lt_of_lt_mul (show (0 : Nat) < 8 by omega)]
-  · omega
-  · omega
+  -- division is discharged first, with the quotient/modulus equation
+  -- `Nat.div_add_mod`.  Neither `Nat.div_lt_iff_lt_mul` (deprecated: the
+  -- log reports "equality or iff proof expected ?m / ?m < ?m" for it) nor
+  -- `Nat.div_lt_of_lt_mul` (which `rw` cannot use, for the same reason) is
+  -- available here.  `hi < 256 * k` gives `12 * i + j ≤ 12 * 256 * k - 1`,
+  -- hence the equation with a remainder below 8 bounds the quotient.
+  have hdecomp := Nat.div_add_mod (12 * i + j) 8
+  have hr : (12 * i + j) % 8 < 8 := Nat.mod_lt _ (by omega : (0 : Nat) < 8)
+  have hnum : 12 * i + j < 8 * (384 * k) := by omega
+  have hlt : 8 * ((12 * i + j) / 8) < 8 * (384 * k) := by omega
+  omega
 
 /-- T2, REJECT -- the anti-vacuity half required by msn-2026-0021's
 `critical_constraint`.  If some coefficient carried by the prefix is OUT OF
@@ -725,7 +736,7 @@ theorem B2_bytes (y : Nat) : ekBytes 2 B2 y = B2raw y := by
   · rw [ekBytes_val 2 B2 y h]
     show B2raw y % 256 = B2raw y
     cases hb : B2raw y with
-    | mk => omega
+    | zero => omega
     | succ b => omega
   · rw [ekBytes_outside 2 B2 y h]
     have h0 : y ≠ 768 := by omega
@@ -791,6 +802,9 @@ theorem B2_seg512 : ekSeg 2 B2 (256 * 2) = 3329 := by
   have hbits : ∀ s, s < 12 -> gbit (ekBytes 2 B2) (12 * 512 + s) = bit 3329 s := by
     intro s hs
     have hrw : 12 * 512 + s = 6144 + s := by omega
+    -- `gbit B p` is opaque to `rw`, so it is unfolded before `B2_bytes` is
+    -- applied to the byte index inside it.
+    show bit (ekBytes 2 B2 ((6144 + s) / 8)) ((6144 + s) % 8) = bit 3329 s
     rw [hrw, B2_bytes, B2raw]
     have hne0 : 6144 + s ≠ 768 := by omega
     have hne1 : 6144 + s ≠ 769 := by omega
@@ -857,7 +871,7 @@ theorem B2alt_bytes (y : Nat) : ekBytes 2 B2alt y = B2altRaw y := by
   · rw [ekBytes_val 2 B2alt y h]
     show B2altRaw y % 256 = B2altRaw y
     cases hb : B2altRaw y with
-    | mk => omega
+    | zero => omega
     | succ b => omega
   · rw [ekBytes_outside 2 B2alt y h]
     have h0 : y ≠ 768 := by omega
