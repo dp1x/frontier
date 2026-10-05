@@ -1,0 +1,138 @@
+id: hyp-2026-0032
+type: hypothesis
+status: active
+created_at: "2026-10-05T19:10:00Z"
+updated_at: "2026-10-05T19:10:00Z"
+summary: >
+  Independent PNG decoders correctly reject a structurally valid file
+  containing an unknown CRITICAL chunk, and correctly accept the paired file
+  containing an unknown ANCILLARY chunk that differs from it only in the
+  criticality bit. A hypothesis, not a finding: nothing in this corpus has
+  measured it, and the previous framing of this question was judged vacuous.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-scout
+    model: grok-4.7
+    tool: >
+      derived from the source-verified propositions in spc-2026-0007, which
+      were themselves obtained by two independent retrievals of the W3C PNG
+      Recommendation and mechanically re-verified
+  sources:
+    - knowledge/specifications/spc-2026-0007.yaml
+    - https://www.w3.org/TR/PNG/
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0007]
+
+the_normative_basis_verbatim:
+  unknown_critical_chunk_5_4: >
+    A decoder trying to extract the image, upon encountering an unknown chunk
+    type in which the ancillary bit is 0, shall indicate to the user that the
+    image contains information it cannot safely interpret.
+  unknown_critical_chunk_13_1: >
+    Encountering an unknown critical chunk is a fatal condition for any decoder
+    trying to extract the image from the datastream.
+  unknown_ancillary_chunk_13_1: >
+    Encountering an unknown ancillary chunk is never an error. The chunk can
+    simply be ignored.
+  note: >
+    The last clause of 13.1 means the spec-anchored observable is "did it
+    signal or indicate an error", NOT "did it refuse to produce output". A
+    decoder may signal an error and still render and remain conformant. The
+    hypothesis is therefore stated over ERROR INDICATION, not over output
+    suppression.
+
+competing_hypotheses:
+  H1: >
+    Decoders reject the unknown-critical vector and accept the unknown-ancillary
+    vector -- both for the RIGHT reason (chunk criticality, not CRC or
+    malformed framing).
+  H2: >
+    Decoders reject the unknown-critical vector but for an INCORRECT reason
+    (e.g. CRC, ordering, or an over-strict generic error path), so the
+    experiment measures nothing about criticality. This is the vacuity mode the
+    previous framing fell into and it is the primary alternative.
+  H3: >
+    Some decoders ACCEPT a structurally valid unknown critical chunk. If such a
+    decoder also silently renders, that is a candidate discrepancy requiring
+    source-level investigation and independent reproduction. Note the scope
+    limit: signalling an error AND continuing is conformant under 13.1, so
+    only SILENT acceptance violates.
+  H4: >
+    Decoders accept the unknown-ancillary vector but fail on something
+    incidental, making the control uninformative.
+
+discriminating_design:
+  the_decisive_pair: >
+    Two files byte-identical except for the criticality bit of the unknown
+    chunk type. The paired types differ ONLY in bit 5 (value 32) of the first
+    type byte -- uppercase/critical vs lowercase/ancillary. All other bytes,
+    including the CRC over type+data, are computed per vector and are
+    individually valid.
+  required_controls:
+    - "A minimal valid PNG with NO unknown chunk -> the oracle must ACCEPT. If the harness cannot produce an ACCEPT, nothing else it produces is interpretable."
+    - "That PNG plus a KNOWN ancillary chunk (e.g. tEXt/gAMA/pHYs) -> ACCEPT. Proves the harness tolerates a well-formed extra chunk."
+    - "That PNG plus a KNOWN critical chunk -> ACCEPT. Proves the harness does not reject on criticality per se, but on unknownness."
+  negative_control: >
+    The unknown-ancillary vector with a deliberately corrupted CRC. The oracle
+    must report CRC_MISMATCH -- never UNKNOWN_CRITICAL_CHUNK, never ACCEPTED.
+    This vector exists ONLY to prove the harness can detect the confound and
+    MUST NOT support any claim about the critical-chunk rule.
+  placement_variants: >
+    The same pair before IHDR, between IHDR and IDAT, and after IDAT. Secondary;
+    they test whether the rule is applied consistently across positions.
+
+confounders_and_how_they_are_eliminated:
+  - confounder: "CRC mismatch causing rejection for the wrong reason"
+    eliminated_by: "every non-control vector carries a valid, independently computed CRC (spc-2026-0007 png-p7)"
+  - confounder: "generator normalizing or repairing the chunk"
+    eliminated_by: "raw byte construction with zlib.crc32 only; no PNG library in the construction path; exact bytes archived and re-hashed"
+  - confounder: "a third-letter lowercase setting the reserved bit, making the file non-conforming for an unrelated reason"
+    eliminated_by: "spc-2026-0007 constraint c1: third type-letter uppercase"
+  - confounder: "insertion between IDAT chunks violating the consecutive-IDAT rule"
+    eliminated_by: "spc-2026-0007 constraint c2"
+  - confounder: "a decoder that errors on everything, making the control pass vacuously"
+    eliminated_by: "the no-unknown-chunk control MUST accept"
+  - confounder: "counting two wrappers over one core as two independent implementations"
+    eliminated_by: "explicit lineage record per cohort member; core identity established from the installed distribution's own metadata, not from a prior pass"
+
+why_this_was_previously_vacuous:
+  recorded_so_it_is_not_repeated: >
+    A bad CRC on the probe chunk lets the decoder reject during CRC
+    verification, before criticality is ever evaluated. A harness reporting
+    "rejected -> conforms" for such a vector measures CRC checking, not the
+    critical-chunk rule, and will manufacture a false compliance or a false
+    violation. RFC-equivalent guidance here is PNG 13.1 itself, which lists "a
+    CRC mismatch" as a condition SEPARATE from an unknown critical chunk.
+
+falsifiers:
+  - "A cohort member that accepts the unknown-critical vector with no error indication whatsoever, established at source level."
+  - "A demonstration that the paired vectors fail to differ observably because some decoder discards unknown chunks before examining criticality at all."
+  - "Evidence that the specification's rule is scope-limited such that no reasonable decoder is 'trying to extract the image' -- which would void the normative anchor rather than the hypothesis."
+
+compute_class: lightweight
+routing_note: >
+  Corpus construction and oracle work are pure-Python stdlib and local.
+  Exercising native decoder cores (libpng, libspng, wuffs, stb_image) means
+  compiling them, which per AGENTS.md's HARD RULE belongs on GitHub Actions,
+  not locally.
+
+budget_and_stopping_condition:
+  attempts: 3
+  stopping: >
+    Stop once the decisive pair and its controls have been run against a cohort
+    of genuinely distinct decoder cores, with a reason class recorded for every
+    cell, and the strongest candidate discrepancy independently reproduced
+    outside the primary harness. A clean negative across the cohort is a
+    legitimate outcome and is preserved, not re-run with more cells.
+
+acceptance_criteria:
+  - "The chunk-type bit convention verified against a hashed copy of the specification (done: spc-2026-0007)."
+  - "Every non-control vector's CRC independently computed and recorded."
+  - "Every cohort member's version, core, and lineage recorded from its own distribution."
+  - "Every cell carries a reason class distinguishing criticality from CRC from malformed framing."
+  - "Any candidate discrepancy source-level located AND independently reproduced by a separately written constructor."
+  - "Negative results preserved with status rejected/inconclusive."

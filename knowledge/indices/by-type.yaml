@@ -109,6 +109,7 @@ hypothesis:
 - hyp-2026-0029
 - hyp-2026-0030
 - hyp-2026-0031
+- hyp-2026-0032
 implementation:
 - imp-2026-0001
 - imp-2026-0002
@@ -272,6 +273,7 @@ specification:
 - spc-2026-0004
 - spc-2026-0005
 - spc-2026-0006
+- spc-2026-0007
 target:
 - tgt-2026-0001
 - tgt-2026-0002

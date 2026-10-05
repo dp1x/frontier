@@ -31,8 +31,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Dependencies that are NOT in pyproject's `dependencies` and so are absent from

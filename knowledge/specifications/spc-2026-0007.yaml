@@ -1,0 +1,195 @@
+id: spc-2026-0007
+type: specification
+status: current
+created_at: "2026-10-05T19:00:00Z"
+updated_at: "2026-10-05T19:00:00Z"
+summary: >
+  Source-verified normative propositions for the PNG unknown-critical-chunk
+  experiment, derived independently from a fetched authoritative copy of the
+  PNG Specification (Third Edition), W3C Recommendation 24 June 2025. The
+  decisive finding is a CORRECTION OF A WIDELY-ASSUMED CONVENTION: the
+  critical/ancillary property is bit 5 (value 32) of the first type byte --
+  the LOW-ORDER CASE bit -- not the high-order bit. Uppercase = 0 = critical;
+  lowercase = 1 = ancillary. An experiment built on the high-order bit would
+  produce a corpus that is non-conforming for an unrelated reason and whose
+  results would be meaningless.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: source-analyst
+    model: grok-4.7
+    tool: >
+      Two independent retrieval paths: (a) a source-analysis agent fetched
+      https://www.w3.org/TR/PNG/ and mechanically verified 33 of 33 recorded
+      quotations by two methods; (b) the orchestrator independently re-fetched
+      the same bytes, stripped markup, and re-read the two load-bearing
+      passages directly. Both agree on the bit position, on the rule's wording,
+      and on its strength.
+  sources:
+    - https://www.w3.org/TR/PNG/
+    - https://www.rfc-editor.org/rfc/rfc2083.txt
+  parent: null
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0032]
+
+document_identity:
+  title: "Portable Network Graphics (PNG) Specification (Third Edition)"
+  status: "W3C Recommendation"
+  publication_date: "2025-06-24"
+  canonical_url: "https://www.w3.org/TR/2025/REC-png-3-20250624/"
+  fetched_url: "https://www.w3.org/TR/PNG/"
+  fetched_at: "2026-10-05T12:18:49Z"
+  raw_bytes: 656574
+  sha256: "A3AC82BB9EB8664B93961A2A9FF6DEF3D70E3A9F63D92721143C1F391D04EDEC"
+  hash_command: "Get-FileHash R:\\png-spec\\png.html -Algorithm SHA256"
+  not_an_iso_standard: >
+    The document itself states it is inappropriate to refer to it as an
+    International Standard. ISO/IEC 15948 is a separate publication and was
+    NOT used here.
+  corroborating_source:
+    url: "https://www.rfc-editor.org/rfc/rfc2083.txt"
+    raw_bytes: 242827
+    sha256: "A4F7E06D047DA3452432D52295374B4D95991B840FB144391F397094A50077DE"
+    note: >
+      RFC 2083 (PNG 1.0, 1997) is Informational and materially WEAKER: it has
+      no "fatal" language at all, only "must indicate to the user". Citing it
+      alone would understate the rule. Any compliance claim should cite the
+      Third Edition.
+
+THE_CORRECTION:
+  the_wrong_belief: >
+    The experiment brief, and the widespread convention many developers carry,
+    says criticality is the HIGH-ORDER bit (0x80) of the chunk type's first
+    byte. This is WRONG.
+  the_verified_fact_verbatim: >
+    Four bits of the chunk type, the property bits, namely bit 5 (value 32) of
+    each byte, are used to convey chunk properties. This choice means that a
+    human can read off the assigned properties according to whether the letter
+    corresponding to each byte of the chunk type is uppercase (bit 5 is 0) or
+    lowercase (bit 5 is 1).
+  locator: "5.4 Chunk naming conventions, char offset 76216 in the fetched document"
+  corroborating_verbatim: >
+    Ancillary bit: first byte | 0 (uppercase) = critical, 1 (lowercase) = ancillary.
+  corroborating_locator: "5.4 Table 6, 'Semantics of property bits', row 'Ancillary bit: first byte', char offset 153211"
+  independent_re_verification: >
+    The orchestrator re-fetched and re-read both passages directly from the same
+    SHA-256'd bytes and confirmed the bit position and the case convention
+    verbatim. This is a second retrieval path, not a restatement of the agent.
+  why_it_matters_operationally: >
+    Chunk type bytes are restricted to 0x41-0x5A and 0x61-0x7A. Bit 7 is
+    therefore ALWAYS 0 and carries no meaning whatsoever. A generator that
+    sets the 0x80 bit produces a type byte outside the legal range, making the
+    datastream non-conforming for a reason unrelated to criticality -- which
+    would confound the entire experiment.
+
+normative_propositions:
+  - id: png-p1
+    topic: "unknown critical chunk"
+    locator: "5.4 Table 6, row 'Ancillary bit: first byte', char offset 153211"
+    quote_verbatim: >
+      A decoder trying to extract the image, upon encountering an unknown chunk
+      type in which the ancillary bit is 0, shall indicate to the user that the
+      image contains information it cannot safely interpret.
+    normative_strength: "shall"
+    applies_to: "a decoder TRYING TO EXTRACT THE IMAGE"
+  - id: png-p2
+    topic: "unknown critical chunk -- fatal condition"
+    locator: "13.1 Error handling, char offset 405640"
+    quote_verbatim: >
+      Encountering an unknown critical chunk is a fatal condition for any
+      decoder trying to extract the image from the datastream. A decoder that
+      ignored a critical chunk could not know whether the image it extracted was
+      the one intended by the encoder.
+    normative_strength: "declarative (is a fatal condition)"
+  - id: png-p3
+    topic: "unknown ancillary chunk -- the control side"
+    locator: "13.1 Error handling"
+    quote_verbatim: "Encountering an unknown ancillary chunk is never an error. The chunk can simply be ignored."
+    normative_strength: "declarative (never an error)"
+  - id: png-p4
+    topic: "decoder conformance list"
+    locator: "15.3.3 Conformance of PNG decoders, char offset 496228"
+    quote_verbatim: >
+      Encountering an unknown chunk in which the ancillary bit is 0 generates an
+      error if the decoder is attempting to extract the image.
+    normative_strength: "generates an error"
+  - id: png-p5
+    topic: "what a decoder may do on a fatal condition -- THE IMPORTANT LIMIT"
+    locator: "13.1 Error handling"
+    quote_verbatim: >
+      When a fatal condition occurs, the decoder should fail immediately, signal
+      an error to the user if appropriate, and optionally continue displaying
+      any image data already visible to the user (i.e. "fail gracefully"). The
+      application as a whole need not terminate.
+    normative_strength: "should / optionally"
+    consequence: >
+      THE SPEC DOES NOT REQUIRE THE DECODER TO DISPLAY NOTHING. A decoder may
+      signal an error and still render pixels and remain conformant. Therefore
+      the only spec-anchored observable is "did it indicate/signal an error",
+      NOT "did it refuse to produce output". Any violation claim must be framed
+      as SILENTLY IGNORING the chunk or RESUMING AS IF IT WERE ABSENT.
+  - id: png-p6
+    topic: "criticality is scope-limited"
+    locator: "13.1 Error handling"
+    note: >
+      Every occurrence is scoped to a decoder "trying to extract the image".
+      The same clause concedes the criticality of a chunk is "not necessarily
+      relevant to every conceivable decoder". A metadata-only tool is therefore
+      not automatically in scope.
+  - id: png-p7
+    topic: "CRC coverage -- the confound control"
+    locator: "5.5 CRC algorithm"
+    fact: >
+      The CRC covers the chunk TYPE field and the DATA field. It does NOT cover
+      the LENGTH field. Algorithm: initial all-1s, reflected, final ones-
+      complement inversion, stored most-significant-byte first.
+    consequence: >
+      A test vector whose CRC is wrong will be rejected by CRC verification,
+      which per 13.1 is a DIFFERENT condition from an unknown critical chunk.
+      Using such a vector to support a critical-chunk conclusion would be a
+      category error, and 13.1 explicitly lists "a CRC mismatch" separately
+      from the unknown-critical-chunk case.
+
+constraints_that_must_be_honoured_by_any_corpus:
+  - id: c1
+    constraint: "The third type-letter must be UPPERCASE (reserved bit 0)."
+    why: >
+      A lowercase third letter sets the reserved bit, making the datastream
+      non-conforming for a second, unrelated reason that would confound the
+      result.
+  - id: c2
+    constraint: "Unknown test chunks cannot be inserted between IDAT chunks."
+    why: "'Multiple IDAT chunks shall be consecutive' (5.6 Chunk ordering)."
+  - id: c3
+    constraint: "Every non-control vector must carry a VALID CRC."
+    why: "see png-p7; a bad CRC is a confound, not evidence."
+  - id: c4
+    constraint: "Preservation is not a decoder duty."
+    why: >
+      Table 6 states the safe-to-copy bit "is not of interest to pure decoders".
+      A pure decoder has no obligation to copy or preserve an unknown chunk.
+      The MUST to terminate on an unrecognized critical chunk binds PNG
+      EDITORS (12.x), not decoders -- a different actor, and conflating the two
+      would misstate the requirement.
+
+what_this_does_not_establish:
+  - >
+    No implementation has been measured. This artifact establishes only what
+    the specification requires.
+  - >
+    Whether any decoder is conformant is NOT a question this artifact answers.
+  - >
+    The 33-proposition set is on the disposable ramdisk (R:\png-spec\), which
+    is not committed by policy. The load-bearing propositions are reproduced
+    here so the durable record does not depend on surviving scratch.
+
+corrections_to_prior_beliefs:
+  - "Section 5.6 is NOT 'Ancillary chunks' -- it is 'Chunk ordering'. Ancillary semantics are 5.4 and 11.3."
+  - "Section 4.3 is NOT 'Error handling' -- it is 'Color spaces'. Error handling is 4.10, 13.1 and 13.2."
+  - "The criticality bit is bit 5 (value 32), not the high-order bit."
+  - "'https://www.w3.org/TR/PNG-Fifth-Edition/' does not exist (HTTP 404)."
+
+supersedes: {}
+corrects: {}
