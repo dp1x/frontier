@@ -354,12 +354,14 @@ theorem prefix_last_bit_byte (k : Nat) :
     ((8 * 384 * k - 1) / 8 : Nat) < 384 * k := by
   have h1 : (0 : Nat) < 384 := by omega
   have h8 : (0 : Nat) < 8 := by omega
-  -- Lean 4.22 core has no `Nat.succ_pos`, and `positivity` reads the bare
-  -- numerals as Ints, so the strict form of the bound is produced by omega
-  -- from an inequality in the same shape omega normalises.
-  have hk : k + 1 > k := by omega
-  have hk' : (0 : Nat) < 8 * 384 * k := by omega
-  have hpos : (0 : Nat) < 8 * 384 * k := Nat.mul_pos (Nat.mul_pos h8 h1) (by omega)
+  -- `Nat.succ_pos` is absent from Lean 4.22 core and `positivity` reads the
+  -- bare numerals as Ints, so the strict bound on the third factor is
+  -- obtained from `Nat.succ_le` with `k + 1 <= k`, which is where `omega`'s
+  -- precondition `k < k + 1` comes from.  A goal of the form
+  -- `0 < 8 * 384 * k` is rejected by omega with "No usable constraints
+  -- found", so it is never put to omega.
+  have hk : k < k + 1 := by omega
+  have hpos : (0 : Nat) < 8 * 384 * k := Nat.mul_pos (Nat.mul_pos h8 h1) (Nat.succ_le.mpr hk)
   have hr : (8 * 384 * k - 1) % 8 < 8 := Nat.mod_lt _ h8
   have hdecomp := Nat.div_add_mod (8 * 384 * k - 1) 8
   have hlt : 8 * ((8 * 384 * k - 1) / 8) < 8 * 384 * k := by omega
@@ -746,18 +748,15 @@ def B2 : Ek 2 := ekOfTotal 2 B2raw
 theorem B2_bytes (y : Nat) : ekBytes 2 B2 y = B2raw y := by
   by_cases h : y < 384 * 2 + 32
   · rw [ekBytes_val 2 B2 y h]
-    -- `by_cases` on `y = 768` only produces a HYPOTHESIS; the `if` inside
-    -- `B2raw` stays closed until the definition is unfolded.  The rewrite is
-    -- then done in two steps, because after the first `if` is discharged the
-    -- second one is closed and no longer matches a chained rewrite.  `show`
-    -- rewrites modulo instances, so `ekOfTotal` becomes `B2raw y % 256`
-    -- under it without a separate `unfold`.
+    -- `show` rewrites modulo instances, so `ekOfTotal` becomes `B2raw y % 256`
+    -- under it without a separate `unfold`.  Each `B2raw` is then unfolded ONCE
+    -- per occurrence, and the `if` on that occurrence is discharged by the
+    -- trichotomy; a single `rw [B2raw, ...]` for all occurrences is not
+    -- enough, because the equation theorem only rewrites one.
     rcases Nat.lt_trichotomy y 768 with hlt | heq | hgt
-    · have hlt768 : ¬ y = 768 := by omega
-      have hlt769 : ¬ y = 769 := Nat.ne_of_lt (by omega)
-      show B2raw y % 256 = B2raw y
-      rw [B2raw, if_neg hlt768]
-      rw [B2raw, if_neg hlt769]
+    · show B2raw y % 256 = B2raw y
+      rw [B2raw, if_neg (by omega : ¬ y = 768)]
+      rw [B2raw, if_neg (by omega : ¬ y = 769)]
       norm_num
     · subst heq
       show B2raw 768 % 256 = B2raw 768
@@ -765,25 +764,20 @@ theorem B2_bytes (y : Nat) : ekBytes 2 B2 y = B2raw y := by
       rw [B2raw, if_neg (by omega : ¬ (768 : Nat) = 769)]
       norm_num
     · rcases Nat.lt_trichotomy y 769 with hlt' | heq' | hgt'
-      · have hlt768 : ¬ y = 768 := by omega
-        have hgt769 : ¬ y = 769 := by omega
-        show B2raw y % 256 = B2raw y
-        rw [B2raw, if_neg hlt768]
-        rw [B2raw, if_neg hgt769]
+      · show B2raw y % 256 = B2raw y
+        rw [B2raw, if_neg (by omega : ¬ y = 768)]
+        rw [B2raw, if_neg (by omega : ¬ y = 769)]
         norm_num
       · subst heq'
         show B2raw 769 % 256 = B2raw 769
         rw [B2raw, if_neg (by omega : ¬ (769 : Nat) = 768)]
         rw [B2raw, if_pos rfl]
         norm_num
-      · have hgt768 : ¬ y = 768 := by omega
-        have hgt769 : ¬ y = 769 := by omega
-        show B2raw y % 256 = B2raw y
-        rw [B2raw, if_neg hgt768]
-        rw [B2raw, if_neg hgt769]
+      · show B2raw y % 256 = B2raw y
+        rw [B2raw, if_neg (by omega : ¬ y = 768)]
+        rw [B2raw, if_neg (by omega : ¬ y = 769)]
         norm_num
   · rw [ekBytes_outside 2 B2 y h]
-    have hne : ¬ y < 384 * 2 + 32 := h
     rw [B2raw, if_neg (by omega : ¬ y = 768)]
     rw [B2raw, if_neg (by omega : ¬ y = 769)]
 
@@ -852,14 +846,20 @@ theorem B2_seg512 : ekSeg 2 B2 (256 * 2) = 3329 := by
     -- `gbit B p` reads bit `p % 8` of byte `p / 8`, and the two seed bytes
     -- sit at indices 768 and 769, so the byte index is neither.  The `if`s
     -- are therefore discharged on the INDEX, and both sides collapse to
-    -- `bit 0 (6144 + s) % 8 = bit 3329 s`, which is `0 = bit 3329 s`.
+    -- `bit 0 (6144 + s) % 8 = bit 3329 s`.  The comparison of the two
+    -- positions is arithmetic, not divisibility: omega does not infer
+    -- monotonicity of `%` from monotonicity of its left argument, so
+    -- `Nat.div_add_mod` is what carries the index down to the bit.
+    have hdecomp := Nat.div_add_mod (6144 + s) 8
+    have h8 : (0 : Nat) < 8 := by omega
+    have hr : (6144 + s) % 8 < 8 := Nat.mod_lt _ h8
     have hidx0 : (6144 + s) / 8 ≠ 768 := by omega
     have hidx1 : (6144 + s) / 8 ≠ 769 := by omega
     rw [B2_bytes, B2raw, if_neg hidx0, if_neg hidx1, bit_zero]
-    -- `bit 3329 s` is `((3329 / 2^s) % 2)`, and `omega` treats `2^s` as an
-    -- atom, so the twelve positions are split out; `decide` then evaluates
-    -- the remaining closed proposition, which is TRUE for every `s < 12`:
-    -- 3329 = 0b110100000001 has no set bit below position 12.
+    -- What remains is `bit 3329 s = 0`, i.e. `(3329 / 2^s) % 2 = 0`.  omega
+    -- treats `2^s` as an atom, so the twelve positions are split out and
+    -- `decide` evaluates the twelve closed propositions.  This is TRUE for
+    -- every `s < 12`: 3329 = 0b110100000001 has no set bit below position 12.
     interval_cases s <;> decide
   have hWc : wsum (fun j => gbit (ekBytes 2 B2) (12 * 512 + j)) 12
       = wsum (fun j => bit 3329 j) 12 := wsum_congr hbits
@@ -926,7 +926,7 @@ theorem B2alt_bytes (y : Nat) : ekBytes 2 B2alt y = B2altRaw y := by
     · show B2altRaw y % 256 = B2altRaw y
       rw [B2altRaw, if_neg (by omega : ¬ y = 768)]
       rw [B2altRaw, if_neg (by omega : ¬ y = 769)]
-      rw [B2altRaw, if_neg (Nat.ne_of_lt (Nat.lt_trans hlt (by omega : 769 ≤ y)))]
+      rw [B2altRaw, if_neg (by omega : ¬ y = 780)]
       norm_num
     · subst heq
       show B2altRaw 768 % 256 = B2altRaw 768
