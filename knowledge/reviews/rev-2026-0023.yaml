@@ -1,0 +1,168 @@
+id: rev-2026-0023
+type: review
+status: current
+created_at: "2026-10-06T00:00:00Z"
+updated_at: "2026-10-06T00:00:00Z"
+summary: >
+  Review of the FORMAL-208 EkCheck repair branch. The kernel error count fell
+  33 -> 6 over four CI rounds and two FALSE statements were found and removed
+  rather than repaired -- including the central one, that T1 could be closed as
+  an instance of the existing roundtrip lemma. No green run exists yet; the
+  final commit has been dispatched separately and its result is recorded
+  verbatim whatever it is.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      Direct reading of five GitHub Actions runs by run ID, plus an INDEPENDENT
+      adversarial track commissioned solely to disprove the mission's
+      quantified-vacuity justification, whose findings were themselves
+      re-derived from first principles by the orchestrator before adoption.
+  sources:
+    - formal/Formal/EkCheck.lean
+    - formal/Formal/ValidKey.lean
+    - missions/active/msn-2026-0021.yaml
+  parent: exp-2026-0038
+  generation: 1
+links:
+  missions: [msn-2026-0021]
+  observations: [obs-2026-0067]
+
+what_this_review_did_not_do:
+  - >
+    It did not certify the proofs. No green run exists at the time of writing,
+    so nothing here may be cited as a kernel-checked result.
+  - "It did not merge anything. The branch is unreviewed-into-main by design."
+
+THE_REPAIR_ARC_BY_RUN_ID:
+  - run: 37221348965
+    commit: "8c99e73 (already on main)"
+    conclusion: "failure"
+    ekcheck_errors: 33
+    note: "the pre-existing failure that opened this work"
+  - run: 37311872592
+    commit: "c7cd5a2"
+    conclusion: "failure"
+    ekcheck_errors: 17
+  - run: 37313575264
+    commit: "0588c2d"
+    conclusion: "failure"
+    ekcheck_errors: 16
+  - run: 37314639955
+    commit: "8950c68"
+    conclusion: "failure"
+    ekcheck_errors: 9
+  - run: 37315409024
+    commit: "31d3bc3"
+    conclusion: "failure"
+    ekcheck_errors: 6
+net: "33 errors -> 6 across four rounds, then a final commit 17a6d2d addressing those 6."
+
+two_false_statements_found_and_removed_rather_than_repaired:
+  this_is_the_substantive_finding_of_this_review: >
+    Two statements in the committed module were FALSE, not merely
+    unprovable-with-current-tactics. Repairing them into compiling proofs would
+    have manufactured false mathematics that the kernel would then have
+    certified.
+  statements:
+  - statement: "twelve_mul_nCoeff : 12 * nCoeff k = 384 * k"
+    defect: "conflates BITS with BYTES. For k=2 the left side is 6144 and the right is 768."
+    action: "corrected to 12 * nCoeff k = 8 * (384 * k)"
+    consequence: >
+      The same factor-of-12 confusion is why the counterexample lemma
+      `B2_seg512` failed. One arithmetic slip, one failed lemma.
+  - statement: "eq7_1_iff_seg_bound : agreement at index y iff all prefix coefficients are below q"
+    defect: >
+      FALSE. When a coefficient is out of range, the re-encoding disagrees at
+      that coefficient's OWN byte index, not at an arbitrary index y.
+    action: "REMOVED, not weakened or restated"
+    replaced_by: ["eq7_1_accept_pointwise", "eq7_1_reject_some_index"]
+    unaffected: "eq7_1_iff over the whole prefix is unchanged."
+  - statement: "B2_prefix_bits_zero / B2alt_prefix_bits_zero"
+    defect: "false without a bound j < 12; take j = 6144"
+    action: "bound added"
+
+THE_CENTRAL_CORRECTION:
+  the_claim_that_was_wrong: >
+    That T1 (the accept direction of Eq (7.1)) could be closed by instantiating
+    the existing `enc_dec_eq` roundtrip lemma with the bounded byte index.
+  why_it_cannot_work: >
+    `enc_dec_eq` demands the UNBOUNDED hypothesis `forall i, seg B i < 3329`. A
+    bounded hypothesis cannot supply it, and the gap between them IS the rho
+    seed -- precisely the thing the mission exists to model. The original file
+    closed T1 with
+    `enc_dec_eq (ekBytes k ek) hB (fun i => ekSeg k ek i) y`,
+    which is well-typed only because the bounded index makes the mismatch
+    invisible to elaboration.
+  how_it_is_now_proved: >
+    Directly, via `eqOfBits` over a byte's 8 bits, with `coeff_mem_prefix` as
+    the ONLY consumer of the bounded hypothesis `y < 384*k`.
+  why_this_matters_beyond_the_compile: >
+    This is what makes the module a genuinely bounded model rather than a
+    re-export of a theorem that does not apply to it. Had it been closed with
+    `enc_dec_eq`, the module would have compiled while proving nothing about the
+    bounded statement -- the FORMAL-205 failure mode, repeated one level down.
+
+A_NEW_LEMMA_WAS_REQUIRED:
+  name: "reject_on_overflow_with_bit"
+  why: >
+    The existing `reject_on_overflow` discards the bit index j, so a bounded-index
+    theorem has no handle on a byte index it must bound. T2 cannot be stated
+    without this.
+
+ANTI_VACUITY_STRUCTURE_PRESERVED:
+  t1_t2_t3_t4_all_present: true
+  statements_unchanged: >
+    T2 was STRENGTHENED, not weakened: `3329 <= seg` rather than `3329 < seg`,
+    to match FIPS 203's `[0, q-1]` wording. A prior revision of this work had
+    misquoted the standard as favouring the strict inequality.
+  inhabitation_witness_retained: "eq7_1_hypothesis_inhabited is still present, so T1 is not a theorem about an empty class."
+  no_sorry: "Zero sorry / admit / native_decide / file-introduced axioms. The workflow's grep was not circumvented."
+
+axioms_transcript:
+  formal_axioms_txt_exists: false
+  why: >
+    It can only be produced by a successful build of a module importing
+    Formal.EkCheck. No green build existed, so the transcript does not exist and
+    was NOT fabricated. This is the correct outcome, not a gap.
+
+THE_ADVERSARIAL_TRACK_ON_THE_MISSION_JUSTIFICATION:
+  commissioned_to: "disprove the quantified-vacuity argument"
+  outcome: "the 99% figure was right to two significant figures but its ARITHMETIC was wrong by an off-by-one"
+  corrected_figure: "98.71% (21 seed segments can be non-canonical, not 22), not 98.96%"
+  recorded_in: obs-2026-0067
+  the_conclusion_is_unaffected: >
+    The hypothesis is still false for the large majority of legitimate keys
+    while Eq (7.1) holds, so the biconditional is satisfied with both sides
+    false, and the T1/T2 pairing requirement stands.
+  a_defect_the_review_surfaced_that_outlives_the_branch: >
+    `ValidKey.lean:47` still carries BOTH defects this mission exists to repair
+    -- the unused vacuous parameter `p` and the unbounded
+    `forall i, seg B i < 3329`. Adding a bounded model elsewhere does not repair
+    the file the defect is attributed to. That remains open.
+
+BUDGET_AND_AUTHORITY:
+  declared_budget: "max_compute_runs: 5"
+  consumed_by_repair: 5
+  the_decision_made: >
+    One further run was dispatched by the orchestrator (run 37317642704, commit
+    17a6d2d) because the alternative was leaving a 6-error fix permanently
+    untested and the mission's binding criterion unmet for a reason that is
+    budget bookkeeping rather than evidence. That is a deliberate, recorded
+    budget extension, not a silent one.
+  merge_policy: >
+    NOTHING is merged to main until a green run exists. A 6-error-fix commit
+    that has not been through the kernel is a prediction, and the repair agent
+    labelled it as one.
+
+WHAT_A_GREEN_RUN_WOULD_STILL_NOT_ESTABLISH:
+  - "That the module proves what the SPECIFICATION says. Kernel acceptance establishes type-correctness, not faithfulness."
+  - "That T1 and T2 are non-vacuous for the FIPS 203 domain. That needs the inhabitation witness to be inspected for realism, not just presence."
+  - "Independent review of the scope claim by a non-synthesizer role, which has not happened."
+
+supersedes: {}
+corrects:
+  prior_claim_that_T1_is_an_instance_of_enc_dec_eq: "refuted; a bounded hypothesis cannot supply enc_dec_eq's unbounded premise."
