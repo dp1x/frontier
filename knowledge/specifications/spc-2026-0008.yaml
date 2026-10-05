@@ -1,0 +1,170 @@
+id: spc-2026-0008
+type: specification
+status: current
+created_at: "2026-10-05T20:45:00Z"
+updated_at: "2026-10-05T20:45:00Z"
+summary: >
+  Source-verified normative propositions for X.690 governing DER INTEGER
+  encoding, derived from the official ITU-T publication (edition 6.0,
+  2021-02-13) with SHA-256 recorded and every quotation mechanically
+  re-verified. Records the correction that the INTEGER minimality rule is
+  BER clause 8.3.2 -- DER inherits it -- and NOT a clause 11 DER restriction,
+  because clause 11 has no INTEGER subsection. Companion to obs-2026-0065,
+  which records that the standard imposes no DECODER obligation.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: source-analyst
+    model: grok-4.7
+    tool: >
+      Official itu.int retrieval of the 2021 edition, plus a 2002 edition read
+      as a cross-edition control. 10 propositions recorded, each with a
+      whitespace-normalised literal match against pdftotext output AND a direct
+      per-page PDF text extraction. All verified.
+  sources:
+    - https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-X.690-202102-I!!PDF-E&type=items
+    - https://www.itu.int/ITU-T/studygroups/com17/languages/X.690-0207.pdf
+  parent: null
+  generation: 0
+links:
+  observations: [obs-2026-0065]
+
+document_identity:
+  title: "Information technology - ASN.1 encoding rules: Specification of Basic Encoding Rules (BER), Canonical Encoding Rules (CER) and Distinguished Encoding Rules (DER)"
+  edition: "Rec. ITU-T X.690 | ISO/IEC 8825-1:2021(E), edition 6.0, approved 2021-02-13, printed (02/2021)"
+  is_official_source: true
+  is_a_mirror: false
+  fetched_at: "2026-10-05T12:22:10Z"
+  pdf:
+    sha256: "6AC799A2D1EBED36ABE39C9EAC3586185BFB7DB679F801E737189D6FDB1BBD6C"
+    raw_bytes: 840764
+  derived_text:
+    sha256: "6325D0BA7DE7B1073F4AA16BDEC71349537AC1D6B3E9D6BDA0589626CF00FEAE"
+    raw_bytes: 124369
+    produced_by: "pdftotext -layout -enc UTF-8"
+  cross_edition_control:
+    edition: "X.690 (07/2002) edition 3.0"
+    pdf_sha256: "0B4CF6C234F776D4B833AE4AF36EB0F3E0AAD935A27D43FCC99FEF2ECEC282D3"
+    purpose: "confirms the quoted INTEGER rule and the clause-11 structure are identical, so the conclusion does not depend on edition choice"
+  x690_is_not_paywalled_for_this_edition: true
+  a_url_that_did_not_work: >
+    https://www.itu.int/dms_pubrec/itu-t/rec/x/T-REC-X.690-202102-I!!PDF-E.pdf
+    returned HTTP 404; the dologin_pub.asp endpoint on the same itu.int host
+    served a valid PDF-1.7.
+
+propositions:
+  - id: x690-p1
+    topic: "INTEGER contents-octets minimality -- the ONLY INTEGER encoding restriction in the Recommendation"
+    locator: "8.3.2 'Encoding of an integer value', printed page 7, PDF page 15"
+    quote_verbatim: >
+      If the contents octets of an integer value encoding consist of more than
+      one octet, then the bits of the first octet and bit 8 of the second octet:
+      a) shall not all be ones; and b) shall not all be zero.
+      NOTE - These rules ensure that an integer value is always encoded in the
+      smallest possible number of octets.
+    quote_verified_in_source: true
+    verification_method: "whitespace-normalised literal match + per-page PDF extraction"
+    normative_strength: "shall (requirement). The NOTE is explanatory, not a separate rule."
+    conditions: >
+      Conditioned on "more than one octet". Single-octet contents are
+      unconstrained: `02 01 00` and `02 01 FF` are legal encodings of 0 and -1.
+    what_it_forbids: >
+      For >= 2 octets it forbids `00 xx` (redundant leading 0x00 before a second
+      octet with bit 8 clear) and `FF xx` (redundant leading 0xFF before a second
+      octet with bit 8 set).
+
+  - id: x690-p2
+    topic: "why the BER rule binds under DER"
+    locator: "clause 10"
+    fact: >
+      DER is the basic encoding described in clause 8 "together with the
+      following restrictions and those also listed in clause 11".
+  - id: x690-p3
+    topic: "clause 7.4 -- the rule that removes the alternatives"
+    locator: "clause 7.4, printed page 4"
+    quote_verbatim: "No alternative encodings are permitted by the Canonical Encoding Rules or Distinguished Encoding Rules."
+    quote_verified_in_source: true
+
+  - id: x690-p4
+    topic: "clause 11 has NO INTEGER subsection -- a correction"
+    fact: >
+      Clause 11 is titled "Restrictions on BER employed by BOTH CER and DER".
+      Its subsections are 11.1 Boolean, 11.2 Unused bits, 11.3 Real, 11.4
+      GeneralString, 11.5 DEFAULT, 11.6 Set-of, 11.7 GeneralizedTime,
+      11.8 UTCTime, 11.9 TIME. A scoped scan of the entire clause 10 body for
+      "integer" returns zero hits.
+    consequence: >
+      Any artifact claiming "X.690 clause 11's INTEGER restriction" is citing a
+      subsection that does not exist. The rule is 8.3.2, inherited by DER.
+
+  - id: x690-p5
+    topic: "the only receiver-directed obligation in the document"
+    locator: "clause 7.3, char offset 29120"
+    quote_verbatim: "Receivers who claim conformance to the basic encoding rules shall support all alternatives."
+    quote_verified_in_source: true
+    interpretation: >
+      Permissive, and semantically OPPOSITE to requiring rejection: a
+      conforming BER receiver must support all alternatives BER permits.
+
+  - id: x690-p6
+    topic: "the best candidate decoder anchor, and why it does not work"
+    locator: "Introduction, char offset 18721"
+    quote_verbatim: "It is implicit in the specification of these encoding rules that they are also to be used for decoding."
+    interpretation: >
+      Declares SCOPE, not required behaviour. No clause then specifies what a
+      decoder must do with bytes an encoder rule forbids. See obs-2026-0065.
+
+exhaustive_search_for_a_decoder_obligation:
+  method: "whitespace-NORMALISED full-text search, both pdftotext -layout and raw modes, identical results"
+  zero_match_terms: ["reject", "error", "must reject", "shall detect", "non-conforming", "conformity", "minimal"]
+  conclusion: "X.690 imposes no obligation on a decoder to reject a non-conforming encoding."
+
+the_encoder_decoder_distinction:
+  precise_statement: >
+    8.3.2 plus clause 10 make `02 02 00 01` not an encoding employed by the
+    distinguished encoding rules. That makes the BYTES non-conforming and
+    therefore the producing ENCODER non-conforming. A DECODER would be
+    non-conforming only if some clause stated required decoder behaviour for
+    bytes failing an encoder rule. None does, in X.690, RFC 5280 or X.509.
+
+boundary_cases_that_must_not_be_conflated:
+  - case: "positive value whose high bit is set, e.g. 128 = 0x80"
+    correct_der: "02 02 00 80 -- the leading 00 is REQUIRED, not superfluous, to keep the value positive"
+  - case: "0x7f = 127"
+    correct_der: "02 01 7F -- single octet, unconstrained by 8.3.2's 'more than one octet' condition"
+  - case: "0xff = -1"
+    correct_der: "02 01 FF -- single octet, legal"
+  - case: "negative multi-octet, e.g. -128 = 0x80"
+    correct_der: "02 01 80"
+  - case: "negative value needing sign preservation, e.g. -129"
+    correct_der: "02 02 FF 7F -- the leading FF is REQUIRED"
+note_about_these_cases: >
+    The intuition that a leading zero is always redundant is wrong, and it is
+    exactly the intuition that would make an experiment's vector set
+    miscategorised. An experiment whose vector set does not separate
+    "superfluous leading zero" from "REQUIRED sign-preserving leading zero"
+    cannot measure minimality at all. This is the same class of defect as the
+    COSE axis that was found to have zero discriminating power.
+    RFC 5280 Appendix B relies on the REQUIRED-leading-zero case for
+    serialNumber.
+
+corrections_to_prior_beliefs:
+  - "'The DER INTEGER restriction is in clause 11' is WRONG -- clause 11 has no INTEGER subsection."
+  - "'8.3.2 is the DER rule' is HALF RIGHT -- 8.3.2 is the BER rule; DER inherits it via clause 10 plus 7.4. The prior mission had the right number for the right text but the wrong layer."
+  - "X.690's only receiver obligation (7.3) requires SUPPORTING alternatives, the opposite of rejecting."
+
+verification_method_limits:
+  - >
+    Text matching ran against pdftotext output, a faithful but REFLOWED
+    rendering of the PDF text layer. Multi-line quotes were whitespace-
+    normalised before matching, and every quote was additionally confirmed by
+    direct per-page PDF text extraction.
+  - >
+    A tooling trap for anyone re-running this: pdftotext renders the NOTE dash as
+    U+2011, so an ASCII-hyphen search for the NOTE returns zero matches even
+    though the text is present. Search NORMALISED text.
+  - "No HTML mirror and no secondary source contributed any quoted text."
+
+supersedes: {}
+corrects: {}

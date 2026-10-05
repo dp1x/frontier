@@ -1,0 +1,198 @@
+id: obs-2026-0065
+type: observation
+status: current
+created_at: "2026-10-05T20:30:00Z"
+updated_at: "2026-10-05T20:30:00Z"
+summary: >
+  X.690 imposes NO obligation on a decoder to reject a non-minimal DER INTEGER.
+  Verified by exhaustive search of the authoritative text plus four further
+  primary documents. The minimality rule is real and mandatory, but it binds
+  the ENCODER: it makes the BYTES non-conforming, not the receiving decoder.
+  This REFUTES the premise of the DER INTEGER minimality mission as briefed and
+  changes what that experiment is allowed to claim.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      Two independent source-verification tracks. Track 1 retrieved X.690 from
+      itu.int and located the rule. Track 2 was an adversarial search whose
+      explicit mandate was to FIND a decoder-side anchor and which reported
+      none, having searched five hashed primary documents. All 17 recorded
+      anchors were re-verified mechanically against the fetched bytes.
+  sources:
+    - https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-X.690-202102-I!!PDF-E&type=items
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - https://www.rfc-editor.org/errata_search.php?rfc=5280
+    - https://www.rfc-editor.org/rfc/rfc7469.txt
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0006]
+
+THE_RESULT:
+  question: >
+    Is there any normative requirement that a decoder (or certificate
+    validator) must reject a non-minimal DER INTEGER such as `02 02 00 01`,
+    whose value 1 would encode minimally as `02 01 01`?
+  answer: "NO"
+  confidence: "high, but scoped to the five documents hashed"
+  not_claimed: "This is not a universal proof over every specification in existence."
+
+documents_retrieved_and_hashed:
+  - id: x690-2021
+    title: "ITU-T X.690 | ISO/IEC 8825-1:2021(E), edition 6.0, approved 2021-02-13"
+    source: itu.int (official, NOT a mirror)
+    sha256: "6AC799A2D1EBED36ABE39C9EAC3586185BFB7DB679F801E737189D6FDB1BBD6C"
+    note: >
+      Independently hashed by both tracks to the SAME digest from the official
+      source, which cross-confirms document identity across the two retrieval
+      paths. X.690 is NOT paywalled for the 2021 edition.
+    x690_was_not_paywalled: true
+  - id: rfc5280
+    title: "RFC 5280, Internet X.509 Public Key Infrastructure Certificate and CRL Profile"
+  - id: rfc5280-errata
+    title: "RFC Editor errata database for RFC 5280"
+    result: "adds nothing on encoding strictness"
+  - id: x509-2019
+    title: "ITU-T X.509 (10/2019)"
+  - id: rfc7469
+    title: "RFC 7469, Further SM2"
+
+the_rule_itself_is_real:
+  clause_8_3_2:
+    locator: "8.3.2, printed page 7 (PDF page 15)"
+    quote_verbatim: >
+      If the contents octets of an integer value encoding consist of more than
+      one octet, then the bits of the first octet and bit 8 of the second octet:
+      a) shall not all be ones; and b) shall not all be zero.
+    note: >
+      There is a NOTE immediately following about ensuring the smallest possible
+      number of octets. It is conditioned on "more than one octet", so
+      single-octet contents are unconstrained.
+  why_it_binds_under_der: >
+    Clause 10 states that DER is the basic encoding of clause 8 "together with
+    the following restrictions and those also listed in clause 11". Clause 7.4
+    states "No alternative encodings are permitted by the Canonical Encoding
+    Rules or Distinguished Encoding Rules", which is what removes the BER
+    sender's freedom.
+  a_correction_to_a_prior_belief: >
+    Clause 11 is titled "Restrictions on BER employed by BOTH CER and DER", and
+    its subsections are 11.1 Boolean, 11.2 Unused bits, 11.3 Real, 11.4
+    GeneralString, 11.5 DEFAULT, 11.6 Set-of, 11.7 GeneralizedTime, 11.8
+    UTCTime, 11.9 TIME. THERE IS NO INTEGER SUBSECTION. A belief that the DER
+    INTEGER restriction lives in clause 11 is wrong. The rule is the BER clause
+    8.3.2, which DER inherits.
+
+the_absence_of_a_decoder_obligation:
+  method: >
+    The full 2021 X.690 text was searched on WHITESPACE-NORMALISED text, so that
+    PDF line breaks cannot manufacture false zeroes. Both `-layout` and raw
+    extraction modes were searched and gave identical results.
+  searches_returning_zero_matches:
+    - "reject"     # 0
+    - "error"      # 0
+    - "must reject" # 0
+    - "shall detect" # 0
+    - "non-conforming" # 0
+    - "conformity"  # 0
+    - "minimal"     # 0
+  the_only_decoder_directed_clause:
+    locator: "clause 7.3, char offset 29120"
+    quote_verbatim: "Receivers who claim conformance to the basic encoding rules shall support all alternatives."
+    interpretation: >
+      This is PERMISSIVE and is the only receiver-directed obligation in the
+      document. It says a conforming receiver must support ALL the alternatives
+      BER permits -- the opposite of requiring rejection.
+  the_best_candidate_anchor_and_why_it_fails: >
+    The X.690 Introduction (char offset 18721) says "It is implicit in the
+    specification of these encoding rules that they are also to be used for
+    decoding." This is the strongest indirect candidate and it FAILS to support
+    decoder non-conformance: it declares SCOPE, not required behaviour. No
+    clause then specifies what a decoder must do when presented with bytes that
+    an encoder rule forbids.
+
+what_the_related_documents_actually_say:
+  rfc5280_appendix_B:
+    locator: "Appendix B, char offset 269824"
+    quote_verbatim: >
+      CAs MUST force the serialNumber to be a non-negative integer, that is, the
+      sign bit in the DER encoding of the INTEGER value MUST be zero. This can
+      be done by adding a leading (leftmost) 00'H octet if necessary.
+    reading: >
+      The MUST falls on the CERTIFICATE AUTHORITY, not on a decoder. And the
+      remedy it describes is ADDING a leading 00 -- the very octet that looks
+      "superfluous" in a different value's context. The naive intuition that a
+      leading zero is always redundant is therefore wrong: it is required
+      whenever the value's high bit would otherwise read as negative.
+  rfc5280_section_4_1_2_2:
+    locator: "char offset 42778"
+    direction: >
+      Tells implementers to GRACEFULLY HANDLE a spec-violating serial rather than
+      reject it. Where RFC 5280 does address a violating artifact, it chose
+      tolerance.
+  x509_2019_section_6_4:
+    quote_verbatim: >
+      When checking signatures in received data, it shall check the signature
+      against the actual data received rather than its conversion of the received
+      data to a distinguished encoding.
+  an_independent_pkix_constraint_often_confused_with_this_one:
+    locator: "RFC 5280 4.1.1.3"
+    fact: >
+      The signature must be computed over "the ASN.1 DER encoded
+      tbsCertificate", so a verifier must re-encode to DER in order to verify.
+    why_it_is_different: >
+      This is a reason a verifier CANNOT pass received bytes through; it is not
+      a reason to reject them. Confusing the two would produce a false claim.
+
+a_correction_to_this_session_own_working_assumption:
+  the_wrong_belief: >
+    A prior checkpoint and the session brief both referred to a well-known RFC
+    5280 section 4.1 statement about the outer SEQUENCE length covering the
+    whole certificate.
+  the_finding: >
+    THAT STATEMENT DOES NOT EXIST IN RFC 5280. The word "outer" occurs exactly
+    once in the document, in the word "outsider"; "whole certificate" and
+    "entire certificate" return zero matches. RFC 5280's use of DER is scoped
+    to signature computation. This is recorded because a prior session in this
+    repository already refuted an invented FIPS 203 subsection label; the same
+    failure mode was about to recur here with a remembered RFC locator.
+
+the_encoder_decoder_distinction_precisely_stated: >
+  The two obligations have different subjects. 8.3.2 plus clause 10 make
+  `02 02 00 01` not "an encoding employed by the distinguished encoding rules"
+  -- that makes the BYTES non-conforming, and therefore makes the producing
+  ENCODER non-conforming. It makes a DECODER non-conforming only if some clause
+  states required decoder behaviour for bytes failing an encoder rule. No such
+  clause exists in X.690, RFC 5280, or X.509.
+
+what_the_experiment_may_and_may_not_claim:
+  defensible: >
+    A CA or encoder that emits `02 02 00 01` produces bytes that are not a DER
+    encoding. The CONFORMING PARTY is the producer.
+  defensible_if_labelled: >
+    Strict-DER rejection by decoders is an ECOSYSTEM CONVENTION with no
+    normative anchor located in these five documents. That may be reported as a
+    PRACTICE SURVEY, explicitly marked non-normative.
+  not_defensible: >
+    Asserting that a decoder accepting `02 02 00 01` is "non-conforming" or a
+    "spec violation". This would repeat the fabrication failure mode this
+    repository exists to catch.
+
+a_limitation_stated_rather_than_glossed:
+  scope: >
+    CAB Forum Baseline Requirements and application-specific profiles were NOT
+    fetched and could impose strict decoding. The result is scoped to the five
+    documents hashed, not universal.
+  a_tooling_trap_others_must_avoid: >
+    pdftotext renders the em-dash in the 8.3.2 NOTE as U+2011, so an
+    ASCII-hyphen search for that NOTE returns zero matches even though the text
+    is present. Anyone re-running these searches must search NORMALISED text.
+    Two of the agent's own first-draft quotations failed verification for
+    whitespace reasons before passing, which is why it built a mechanical
+    verification harness instead of trusting transcription.
+
+supersedes: {}
+corrects: {}
