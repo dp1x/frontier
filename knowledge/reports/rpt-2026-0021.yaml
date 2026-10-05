@@ -343,6 +343,26 @@ governance_track_supersession:
     exact failure this repository exists to catch.
   tests: 17 regression tests including non-vacuity.
 
+  the_gap_the_governance_agent_surfaced_and_i_closed: >
+    CI ran ruff, pytest and frontier validate. It did NOT run
+    tools/lint_artifacts.py or tools/promotion_gate.py, so two of the
+    repository's own instruments were never executed on any push. The gate is
+    the instrument that decides whether a finding may be promoted at all, and
+    this session found and fixed a splice defect in it -- with no selftest step,
+    nothing would have noticed that fix regressing. Both are now wired, verified
+    locally exactly as CI invokes them. The agent also established the
+    non-vacuity honestly: on a synthetic repo with three constructed
+    contradictions the rule catches 3 with it and 0 without, where the
+    pre-change validator reports the repo as fully clean.
+
+  what_the_rule_deliberately_does_not_catch_stated_plainly: >
+    Because an over-claiming check is worse than none. It does not catch
+    spc-2026-0006's verified_conclusion on an unfetched source (no dead artifact
+    is involved -- that is an evidence-quality question for the promotion ladder,
+    not a supersession one), and it does not catch the ~40 stale status
+    assertions living in prose in CHECKPOINT.md and the markdown notes. Neither
+    is silently ignored; both are recorded as separate work.
+
 promotion_gate_track:
   defect_found: >
     The gate located quoted text at DOCUMENT level and recorded how much of the
@@ -474,6 +494,8 @@ commits_this_session:
     - "d4ade23 governance: refuse a current conclusion that rests on a dead claim"
     - "0ec21e3 governance: close a splice defect in the promotion gate's citation check"
     - "a76b806 research: re-measure the spc-2026-0004 citation defect; withdraw two inherited counts"
+    - "e909046 research: withdraw the two-core claim; rev-2026-0022 found three wrong cells"
+    - "23a971a ci: run the artifact linter and the promotion gate, not just validate"
   a_historical_mistake_i_made_and_corrected: >
     An intermediate commit swept the instrument fixes under a governance message
     because another agent's staged changes were already in the index. Rather
