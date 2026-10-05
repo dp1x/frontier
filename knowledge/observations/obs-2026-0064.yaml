@@ -1,0 +1,152 @@
+id: obs-2026-0064
+type: observation
+status: current
+created_at: "2026-10-05T18:00:00Z"
+updated_at: "2026-10-05T18:00:00Z"
+summary: >
+  The `ci` workflow on `main` was RED at the tip (bb11e75) and had been since
+  commit 1aaa17f. The failure is a collection-time ImportError for an
+  undeclared dependency, and the exact defect class had already been fixed once
+  in this repository (fb2279c) and regressed. This observation records the
+  root cause, the reproduction that would have caught it, and the durable guard
+  now wired into the suite.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.7
+    tool: >
+      direct execution. The failing run was identified by run ID from
+      `gh run view`, the exact CI error text was retrieved from the job log,
+      the condition was reproduced locally under a meta-path import blocker,
+      the fix was verified to eliminate it, and the fix was verified NOT to
+      weaken the suite where the dependency IS present.
+  sources:
+    - .github/workflows/ci.yml
+    - tests/test_x509_minimal_corpus.py
+    - tests/test_x509_corpus_reproducibility.py
+    - tests/test_ci_dependency_isolation.py
+  parent: null
+  generation: 0
+links: {}
+
+the_defect_as_measured:
+  where: ".github/workflows/ci.yml, step 'Tests', both matrix legs (Python 3.11 and 3.12)"
+  run_ids:
+    - 37304311430   # tip bb11e75 -- failure
+    - 37303791072   # e909046 -- failure (same defect, earlier commit)
+  introduced_by: 1aaa17f
+  ci_log_verbatim: |
+    ERROR collecting tests/test_x509_minimal_corpus.py
+    Traceback:
+    E   ModuleNotFoundError: No module named 'cryptography'
+    ERROR tests/test_x509_minimal_corpus.py
+    !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+  exit_code: 2
+  steps_skipped_as_a_consequence:
+    - Validate research state
+    - Artifact envelope lint
+    - Promotion gate selftest
+  why_locally_green_and_ci_red: >
+    `pyproject.toml` declares only `pyyaml` and `jsonschema`. The local venv has
+    `cryptography` installed as a transitive dependency of other research work,
+    so the suite passes on this machine. CI runs `pip install -e ".[dev]"` and
+    therefore does not have it. A defect that is invisible locally for the whole
+    time `cryptography` remains installed locally is a latent red build.
+
+the_compounding_factor:
+  the_difference_between_the_two_guards: >
+    `test_x509_corpus_reproducibility.py` was fixed for this exact class in
+    fb2279c by placing `pytest.importorskip("cryptography", ...)` BEFORE the
+    import of its generator. `test_x509_minimal_corpus.py`, added later the same
+    day, placed the dependency-touching import at module scope with no guard at
+    all, and additionally performs `from cryptography.hazmat...` inside a test
+    BODY -- which would have been harmless had the module-level import been
+    guarded. The fix has to sit ABOVE the import that triggers the failure,
+    because a collection error aborts the whole run before any test body runs.
+  why_nothing_caught_it: >
+    The suite passed locally, so the defect could not be observed from the
+    developer's side at all. The only observable was the CI run, and the CI run
+    is exactly what the defect disables. There was no committed test asserting
+    the property "no test module errors at collection when an undeclared
+    dependency is absent."
+
+the_reproduction:
+  description: >
+    A subprocess whose meta-path finder raises ModuleNotFoundError for
+    `cryptography`, then `pytest --collect-only` on each test module. Collection
+    errors are detected by the presence of "error during collection" or
+    "Interrupted" in the output.
+  verified_to_reproduce: true
+  reproduces_before_fix: true
+  does_not_reproduce_after_fix: true
+  command: ".venv/Scripts/python.exe .scratch/sim_no_crypto.py"
+  note: >
+    The scratch probe is deliberately NOT committed (`.scratch/` is gitignored
+    and is not evidence). The durable form is
+    `tests/test_ci_dependency_isolation.py`, which runs the same probe against
+    the real suite in CI.
+
+the_guard_now_committed:
+  path: tests/test_ci_dependency_isolation.py
+  what_it_asserts: >
+    No test module raises at COLLECTION when `cryptography` is absent.
+  meta_tests_that_prove_the_guard_is_not_blind:
+    - test_guard_actually_detects_an_unguarded_module
+    - test_guard_accepts_a_correctly_guarded_module
+  why_the_meta_tests_matter: >
+    A guard that only ever passes is exactly the "assertion that only proves the
+    repository passes" pattern AGENTS.md forbids. The two meta-tests write a
+    known-bad and a known-good module to a temp directory and assert the
+    collector flags the first and not the second. If the collector goes blind,
+    both fail.
+  generalises_beyond_the_historical_case: >
+    UNDECLARED_IMPORTS is a list. The failure mode is not specific to
+    `cryptography`; it is "a test module hard-imports something the runner does
+    not have". Adding a name there extends the guard.
+  cost: "4.24s for the suite-wide scan (measured with --durations)."
+
+two_defects_found_and_fixed_while_building_the_guard:
+  - id: guard-recursed-into-itself
+    defect: >
+      The collector probes every `tests/test_*.py`, including this module, which
+      re-entered the collector without bound and hit the 300s subprocess timeout.
+      The failure mode is identical to the one it was written to detect: the
+      instrument broke before it could measure anything.
+    fix: "exclude this module by stem, which is correct on the merits"
+    status: fixed_and_verified
+  - id: probe-ran-the-whole-suite-instead-of-collection
+    defect: >
+      The first version invoked the target module with `-q` and no selection
+      flag, which EXECUTED every test in it. That both wasted the CI budget and
+      measured something other than what the guard claims to measure.
+    fix: >
+      switched to `--collect-only`, which measures collection and only
+      collection. Measured cost fell from >300s (timeout) to 4.24s.
+    status: fixed_and_verified
+
+verification_performed:
+  - "pytest -q (full suite, dependency PRESENT): exit 0"
+  - "pytest tests/test_x509_minimal_corpus.py (dependency present): 9 passed"
+  - "meta-path blocker (dependency ABSENT, CI condition): both x509 modules SKIP, no collection error"
+  - "same blocker against the pre-fix file via git stash: reproduces 'Interrupted: 1 error during collection' exactly as in run 37304311430"
+  - "ruff check src tests: All checks passed"
+
+scope_and_limits:
+  - >
+    This records a CI and instrument defect. It makes no claim about any
+    implementation, standard, or research finding.
+  - >
+    It does NOT establish that `main` is green overall. The formal workflow is
+    independently red (see the FORMAL-208 track); this observation covers the
+    `ci` workflow only.
+  - >
+    The local venv still has `cryptography` installed, so the suite remains
+    locally green for reasons unrelated to correctness. Declaring `cryptography`
+    an optional-dependency extra was considered and NOT done: that would change
+    the dependency contract for research code that genuinely needs it, and the
+    isolation guard is the correct fix for the actual defect.
+
+supersedes: {}
+corrects: {}

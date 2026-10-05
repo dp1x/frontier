@@ -22,6 +22,15 @@ from pathlib import Path
 
 import pytest
 
+# ``cryptography`` is NOT a declared dependency of this package (pyproject.toml
+# lists only pyyaml and jsonschema), so CI does not have it installed. The
+# generator module imported below pulls it in transitively at module scope, so
+# the guard must sit ABOVE the import, not inside a test body -- otherwise
+# pytest fails during collection and takes the entire suite down with it.
+# This is the same defect the x509 corpus reproducibility suite already guards,
+# and the same one that turned CI red on this branch until 2026-10-05.
+pytest.importorskip("cryptography", reason="x509 minimal corpus generator needs cryptography")
+
 HERE = Path(__file__).resolve().parents[1] / "crypto" / "x509-pathlen"
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
