@@ -27,6 +27,10 @@ Desktop.ini
 # Scratch / ramdisk leftovers (never commit)
 scratch/
 .scratch/
+# Subagents capture CI logs by redirecting into the repo root. The dot-prefix
+# does not make them ignored, so a blanket `git add -A` swept them into history
+# twice on 2026-10-06. The durable record of a run lives in its artifact.
+.scratch_log_*.txt
 R:/
 r:/
 
