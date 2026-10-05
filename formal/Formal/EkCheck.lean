@@ -117,7 +117,9 @@ MAIN RESULTS (mission `required_theorems`)
   plus    `eq7_1_hypothesis_inhabited`   (explicit anti-vacuity witness
                                           for T1),
          `seed_region_unconstrained`, `seed_region_unconstrained_k2`,
-         `ok_iff_eq7_1_holds`, `eq7_1_iff`,
+         `okKey_iff_eq7_1`, `eq7_1_iff`,
+         `eq7_1_accept_pointwise` / `eq7_1_reject_some_index` (the
+             per-index pair; see (R9) for why there is no per-index biconditional),
          `eq7_1_holds_forever` / `eq7_1_fails_forever` (the unbounded
          contrast),
          `prefix_bits_stop_before_seed`.
@@ -131,14 +133,31 @@ check.  Only the PROOFS were repaired -- the design is unchanged.  The
 substantive changes, each recorded because each one changes what is
 asserted:
 
-  (R1) `ekSeg` is an `abbrev`, not a `def`.  As a `def` it was opaque to
-       elaboration, so `enc_dec_eq` (which wants `seg B i < 3329`) could not
-       see `ekSeg k ek i < 3329`.  `abbrev` is reducible, which makes the
-       three occurrences defeq rather than merely theorem-equal.
+  (R1) `ekSeg` stays a `def`, and the conversion to `seg (ekBytes k ek) i`
+       is made EXPLICIT by `ekSeg_eq` (`rfl`) plus a `rw` at each use site.
+       An intermediate revision made it an `abbrev` on the theory that
+       reducibility would be enough; GitHub Actions run 37311872592 showed
+       it is not -- the elaborator still refused to unfold `ekSeg` in the
+       higher-order argument position of `enc_dec_eq`.  The explicit rewrites
+       are load-bearing and must not be removed.
   (R2) `twelve_mul_nCoeff` is closed with `ring`, not `omega`: the goal
        `12 * (256 * k) = 384 * k` is linear in `k` with a literal
        coefficient, but `omega` does not normalise the nested literal
        product.
+  (R9) The per-index biconditional `eq7_1_iff_seg_bound` of the first
+       revision was FALSE and has been removed, not repaired.  It asserted
+       that agreement at ONE chosen byte index `y` is equivalent to every
+       prefix coefficient being below `q`.  Only the forward implication
+       holds: an out-of-range coefficient elsewhere in the prefix makes the
+       re-encoding disagree at THAT coefficient's byte index, not at `y`.
+       It is replaced by `eq7_1_accept_pointwise` (the valid direction) and
+       `eq7_1_reject_some_index`.  `eq7_1_iff`, which is the whole-prefix
+       statement, is unaffected and unchanged.
+  (R10) `B2_prefix_segments_canonical` and its `B2alt` counterpart now go
+       through `wsum_congr` over `Finset.range 12` (the pattern
+       `ByteEncode.canonicalRoundtrip` already uses) rather than through
+       `seg_eq_zero_of_bits_zero`, whose hypothesis quantifies over ALL `j`
+       while `seg`'s sum only runs over `j < 12`.
   (R3) `coeff_mem_prefix` and `prefix_bits_stop_before_seed` were rewriting
        with `← twelve_mul_nCoeff k`, which searches for `384 * k` in a goal
        that never contains it.  The direction is now forward, and
@@ -232,12 +251,16 @@ theorem ekBytes_outside (k : Nat) (ek : Ek k) (y : Nat) (hy : ¬ y < 384 * k + 3
 /-- Segment `i` of the byte view of `ek`: the 12-bit little-endian word at
 global bit positions `[12i, 12i + 12)`.  Algorithm 6 line 3 with d = 12.
 
-This is an `abbrev`, not a `def`: `ByteEncode.enc_dec_eq` and
-`ByteEncode.reject_on_overflow` are stated for `seg B i`, and the whole
-point of this file is to feed them the bounded view of `k`'s own segments.
-A `def` here is opaque to elaboration, so those applications would not
-type-check at all. -/
-abbrev ekSeg (k : Nat) (ek : Ek k) (i : Nat) : Nat := seg (ekBytes k ek) i
+`ByteEncode.enc_dec_eq` and `ByteEncode.reject_on_overflow` are stated for
+`seg B i`, so the bounded view has to be passed to them as `seg (ekBytes k ek) i`.
+That conversion is only well-typed if it is established by `rfl` at each use
+site (`show ... = ...`); `ekSeg_eq` below records that fact once.  An earlier
+revision made this an `abbrev`, which the elaborator still refused to unfold
+in higher-order position, so the `show`s are load-bearing. -/
+def ekSeg (k : Nat) (ek : Ek k) (i : Nat) : Nat := seg (ekBytes k ek) i
+
+theorem ekSeg_eq (k : Nat) (ek : Ek k) (i : Nat) : ekSeg k ek i = seg (ekBytes k ek) i :=
+  rfl
 
 /-! ## How many coefficients the Eq (7.1) prefix carries -/
 
@@ -251,7 +274,8 @@ theorem nCoeff_two_coeff : nCoeff 2 = 512 := by norm_num [nCoeff]
 
 /-- The prefix is exactly `384 * k` bytes long. -/
 theorem twelve_mul_nCoeff (k : Nat) : 12 * nCoeff k = 384 * k := by
-  simp [nCoeff]; ring
+  simp only [nCoeff]
+  ring
 
 /-- The coefficients that the `384k`-byte prefix contains are precisely those
 with `i < nCoeff k`. -/
@@ -267,7 +291,6 @@ the prefix contains exactly `nCoeff k` twelve-bit coefficients and the
 prefix never reads byte `384 * k` or beyond. -/
 theorem prefix_last_bit_byte (k : Nat) :
     ((8 * 384 * k - 1) / 8 : Nat) < 384 * k := by
-  rw [Nat.div_lt_iff_lt_mul (by omega : (0 : Nat) < 8)]
   omega
 
 /-! ## STEP 1: the type check, with `k` load-bearing -/
@@ -341,22 +364,12 @@ keys, so the restriction makes this theorem's hypothesis INHABITABLE
 theorem eq7_1_accept (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
     (hSeg : ∀ i, i < nCoeff k -> ekSeg k ek i < 3329) (y : Nat)
     (hy : y < 384 * k) :
-    encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y :=
-  enc_dec_eq (ekBytes k ek) hB (fun i => ekSeg k ek i) y
+    encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y := by
+  refine enc_dec_eq (ekBytes k ek) hB (fun i => ?_) y
+  intro i _
+  rw [← ekSeg_eq k ek i]
+  exact hSeg i (coeff_mem_prefix (by omega))
 
-/-- T2, REJECT -- the anti-vacuity half required by msn-2026-0021's
-`critical_constraint`.  If some coefficient carried by the prefix is OUT OF
-RANGE, i.e. greater than `q - 1 = 3328`, then Eq (7.1) fails at some byte
-index `y < 384 * k`.  Without this theorem `eq7_1_accept` alone could be
-satisfied by an `hSeg` that nobody can inhabit -- which is precisely the
-failure mode of msn-2026-0007.
-
-The hypothesis is `3329 ≤ ekSeg k ek i`, i.e. "not in `[0, q - 1]`" with
-`q = 3329`.  That is FIPS 203's own wording -- the check "ensures that the
-integers encoded in the public key are in the valid range `[0, q - 1]`"
-(printed p.36 / PDF p.45) -- so the negation of `v ≤ q - 1` is `q ≤ v`,
-which on naturals includes `v = q`.  `3329 ≤ ...` is exactly the hypothesis
-`ByteEncode.reject_on_overflow` consumes. -/
 /-- A disagreement byte for an out-of-range segment `i` is witnessed at the
 index `(12 * i + j) / 8` for some differing bit `j < 12`.  This re-states
 `ByteEncode.reject_on_overflow` while keeping the bit index `j` visible, so
@@ -366,6 +379,8 @@ and cannot recover. -/
 theorem reject_on_overflow_with_bit (B : Nat → Nat) (hB : ∀ y, B y < 256)
     (i : Nat) (h : seg B i ≥ 3329) :
     ∃ j, j < 12 ∧ encByte (fun i => dec B i) ((12 * i + j) / 8) ≠ B ((12 * i + j) / 8) := by
+  have hslt : seg B i < 2 ^ 12 :=
+    wsum_bound (G := fun t => gbit B (12 * i + t)) (fun t => gbit_le_one B _) 12
   have hdlt : dec B i < 3329 := by
     unfold dec
     exact Nat.mod_lt _ (by omega)
@@ -374,10 +389,8 @@ theorem reject_on_overflow_with_bit (B : Nat → Nat) (hB : ∀ y, B y < 256)
     unfold dec
     omega
   have hne : dec B i ≠ seg B i := by omega
-  obtain ⟨j, hj, hbj⟩ :=
-    exists_diff_bit (dec B i) (seg B i) 12 hdlt
-      (wsum_bound (G := fun t => gbit B (12 * i + t)) (fun t => gbit_le_one B _) 12)
-      hne
+  have hd12 : dec B i < 2 ^ 12 := by omega
+  obtain ⟨j, hj, hbj⟩ := exists_diff_bit (dec B i) (seg B i) 12 hd12 hslt hne
   refine ⟨j, hj, ?_⟩
   intro hcon
   apply hbj
@@ -404,14 +417,27 @@ be recovered. -/
 theorem witness_byte_lt_prefix (k i j : Nat) (hi : i < nCoeff k) (hj : j < 12) :
     (12 * i + j) / 8 < 384 * k := by
   have heq := twelve_mul_nCoeff k
-  rw [Nat.div_lt_iff_lt_mul (by omega : (0 : Nat) < 8)]
-  have hlt : 12 * i + j < 12 * nCoeff k := by omega
+  rw [nCoeff] at heq
   omega
 
+/-- T2, REJECT -- the anti-vacuity half required by msn-2026-0021's
+`critical_constraint`.  If some coefficient carried by the prefix is OUT OF
+RANGE, i.e. greater than `q - 1 = 3328`, then Eq (7.1) fails at some byte
+index `y < 384 * k`.  Without this theorem `eq7_1_accept` alone could be
+satisfied by an `hSeg` that nobody can inhabit -- which is precisely the
+failure mode of msn-2026-0007.
+
+The hypothesis is `3329 ≤ ekSeg k ek i`, i.e. "not in `[0, q - 1]`" with
+`q = 3329`.  That is FIPS 203's own wording -- the check "ensures that the
+integers encoded in the public key are in the valid range `[0, q - 1]`"
+(printed p.36 / PDF p.45) -- so the negation of `v ≤ q - 1` is `q ≤ v`,
+which on naturals includes `v = q`.  `3329 ≤ ...` is exactly the hypothesis
+`ByteEncode.reject_on_overflow` consumes. -/
 theorem eq7_1_reject (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
     (hSeg : ∃ i, i < nCoeff k ∧ 3329 ≤ ekSeg k ek i) :
     ∃ y, y < 384 * k ∧ encByte (fun i => dec (ekBytes k ek) i) y ≠ ekBytes k ek y := by
   obtain ⟨i, hi, hge⟩ := hSeg
+  rw [← ekSeg_eq k ek i] at hge
   obtain ⟨j, hj, hne⟩ :=
     reject_on_overflow_with_bit (ekBytes k ek) hB i hge
   refine ⟨(12 * i + j) / 8, witness_byte_lt_prefix k i j hi hj, hne⟩
@@ -432,14 +458,33 @@ theorem eq7_1_iff (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256) :
     eq7_1 k ek ↔ ∀ i, i < nCoeff k -> ekSeg k ek i < 3329 :=
   ⟨eq7_1_to_seg_bound k ek hB, eq7_1_of_seg_bound k ek hB⟩
 
-/-- Eq (7.1) at one index holds iff every prefix coefficient is below q.
-Together with `eq7_1_accept` and `eq7_1_reject` this pins Eq (7.1) down. -/
-theorem eq7_1_iff_seg_bound (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
-    (y : Nat) (hy : y < 384 * k) :
-    encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y ↔
-      ∀ i, i < nCoeff k -> ekSeg k ek i < 3329 :=
-  ⟨eq7_1_to_seg_bound k ek hB (fun _ hEq => hEq y hy),
-   fun hSeg => eq7_1_accept k ek hB hSeg y hy⟩
+/-- Agreement at ONE covered byte index does not by itself force the segment
+bound; the segment bound forces agreement at every covered index.  The
+converse is what `eq7_1_reject` states, at the index where the re-encoding
+actually disagrees.
+
+An earlier revision of this file asserted the biconditional
+
+    (encByte (fun i => dec B) y = B y) ↔ (∀ i, i < nCoeff k → seg B i < 3329)
+
+for a SINGLE index `y`.  That statement is FALSE and was never proved: an
+out-of-range segment elsewhere in the prefix makes `eq7_1_reject` fail at
+that segment's own byte index, not at an arbitrary `y`, so agreement at one
+chosen `y` says nothing about the rest of the prefix.  Only the forward
+direction below is valid, and it is a one-sided corollary of `eq7_1_accept`. -/
+theorem eq7_1_accept_pointwise (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
+    (hSeg : ∀ i, i < nCoeff k -> ekSeg k ek i < 3329) (y : Nat)
+    (hy : y < 384 * k) :
+    encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y :=
+  eq7_1_accept k ek hB hSeg y hy
+
+/-- An out-of-range prefix coefficient forces at least one covered byte index
+to disagree.  This is the per-index reading of `eq7_1_reject`, and it is the
+honest contrapositive of `eq7_1_accept`. -/
+theorem eq7_1_reject_some_index (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
+    (hSeg : ∃ i, i < nCoeff k ∧ 3329 ≤ ekSeg k ek i) :
+    ∃ y, y < 384 * k ∧ encByte (fun i => dec (ekBytes k ek) i) y ≠ ekBytes k ek y :=
+  eq7_1_reject k ek hB hSeg
 
 /-- A key that passes step 1 and step 2: the combined Section 7.2 check. -/
 def okKey (k : Nat) (ek : Ek k) : Prop :=
@@ -450,9 +495,9 @@ theorem okKey_iff_eq7_1 (k : Nat) (ek : Ek k)
     okKey k ek ↔ ∀ i, i < nCoeff k -> ekSeg k ek i < 3329 := by
   constructor
   · intro h i hi
-    exact eq7_1_to_seg_bound k ek hB (h.2 hB) i hi
+    exact eq7_1_to_seg_bound k ek hB (h.2 0 hB) i hi
   · intro hSeg
-    exact ⟨step1_type_check k ek, fun _ hx => eq7_1_of_seg_bound k ek hx hSeg⟩
+    exact ⟨step1_type_check k ek, fun _ hx => eq7_1_of_seg_bound k ek (fun _ => hx) hSeg⟩
 
 /-! ## The unbounded contrast: what the OLD corpus statements say -/
 
@@ -460,8 +505,11 @@ theorem okKey_iff_eq7_1 (k : Nat) (ek : Ek k)
 `ByteEncode.enc_dec_eq`.  Nothing restricts the index `y`. -/
 theorem eq7_1_holds_forever (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
     (hSeg : ∀ i, ekSeg k ek i < 3329) (y : Nat) :
-    encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y :=
-  enc_dec_eq (ekBytes k ek) hB (fun i => ekSeg k ek i) y
+    encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y := by
+  refine enc_dec_eq (ekBytes k ek) hB (fun i => ?_) y
+  intro i
+  rw [← ekSeg_eq k ek i]
+  exact hSeg i
 
 /-- ... and correspondingly, a segment at or above q at ANY index makes the
 re-encoding differ at some index.  This is `ByteEncode.roundtrip_iff_canonical`
@@ -471,6 +519,7 @@ theorem eq7_1_fails_forever (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 
     (h : ∃ i, ekSeg k ek i ≥ 3329) :
     ∃ y, encByte (fun i => dec (ekBytes k ek) i) y ≠ ekBytes k ek y := by
   obtain ⟨i, hi⟩ := h
+  rw [← ekSeg_eq k ek i] at hi
   obtain ⟨y, hy⟩ := reject_on_overflow (ekBytes k ek) hB ⟨i, hi⟩
   exact ⟨y, hy⟩
 
@@ -595,8 +644,14 @@ theorem B2_prefix_segments_canonical :
     ∀ i, i < nCoeff 2 -> ekSeg 2 B2 i < 3329 := by
   intro i hi
   rw [nCoeff_two_coeff] at hi
-  have hz : ekSeg 2 B2 i = 0 :=
-    seg_eq_zero_of_bits_zero (fun j => B2_prefix_bits_zero i hi j (by omega))
+  have hz : ekSeg 2 B2 i = 0 := by
+    unfold ekSeg seg
+    show wsum (fun j => gbit (ekBytes 2 B2) (12 * i + j)) 12 = 0
+    have hstep : wsum (fun j => gbit (ekBytes 2 B2) (12 * i + j)) 12
+        = wsum (fun _ => 0) 12 :=
+      wsum_congr (fun j hj => B2_prefix_bits_zero i hi j (Finset.mem_range.mp hj))
+    rw [hstep]
+    exact wsum_zero' 12
   omega
 
 /-- `B2` satisfies Eq (7.1): every byte index `y < 384 * 2 = 768` is
@@ -613,6 +668,7 @@ The 12-bit little-endian word at bytes 768, 769 is
 The twelve bit positions are discharged by `decide` on closed ground terms,
 which is a genuine kernel-evaluated computation, not an assumption. -/
 theorem B2_seg512 : ekSeg 2 B2 (256 * 2) = 3329 := by
+  rw [ekSeg_eq]
   have hbits : ∀ s, s < 12 -> gbit (ekBytes 2 B2) (12 * 512 + s) = bit 3329 s := by
     intro s hs
     have hrw : 12 * 512 + s = 6144 + s := by omega
@@ -623,6 +679,8 @@ theorem B2_seg512 : ekSeg 2 B2 (256 * 2) = 3329 := by
   have hW' : wsum (fun j => bit 3329 j) 12 = 3329 := by
     show (∑ j ∈ Finset.range 12, bit 3329 j * 2 ^ j) = 3329
     exact bitsum_id 3329 12 (by rw [two_pow_12]; omega)
+  have hmul : (256 * 2 : Nat) = 12 * 512 := by norm_num
+  rw [hmul]
   show wsum (fun j => gbit (ekBytes 2 B2) (12 * 512 + j)) 12 = 3329
   rw [hWc, hW']
 
@@ -711,8 +769,14 @@ theorem B2alt_prefix_segments_canonical :
     ∀ i, i < nCoeff 2 -> ekSeg 2 B2alt i < 3329 := by
   intro i hi
   rw [nCoeff_two_coeff] at hi
-  have hz : ekSeg 2 B2alt i = 0 :=
-    seg_eq_zero_of_bits_zero (fun j => B2alt_prefix_bits_zero i hi j (by omega))
+  have hz : ekSeg 2 B2alt i = 0 := by
+    unfold ekSeg seg
+    show wsum (fun j => gbit (ekBytes 2 B2alt) (12 * i + j)) 12 = 0
+    have hstep : wsum (fun j => gbit (ekBytes 2 B2alt) (12 * i + j)) 12
+        = wsum (fun _ => 0) 12 :=
+      wsum_congr (fun j hj => B2alt_prefix_bits_zero i hi j (Finset.mem_range.mp hj))
+    rw [hstep]
+    exact wsum_zero' 12
   omega
 
 theorem B2alt_eq7_1 : eq7_1 2 B2alt := by
@@ -727,8 +791,23 @@ theorem seed_region_unconstrained_k2 :
     ∃ ek2 : Ek 2, ek2 ≠ B2 ∧ eq7_1 2 ek2 ∧ (∀ i, i < nCoeff 2 -> ekSeg 2 ek2 i = ekSeg 2 B2 i) := by
   have hseg : ∀ i, i < nCoeff 2 -> ekSeg 2 B2alt i = ekSeg 2 B2 i := by
     intro i hi
-    have h1 : ekSeg 2 B2alt i = 0 := B2alt_prefix_segments_canonical i hi
-    have h2 : ekSeg 2 B2 i = 0 := B2_prefix_segments_canonical i hi
+    have hi' : i < 512 := by rw [nCoeff_two_coeff] at hi; exact hi
+    have h1 : ekSeg 2 B2alt i = 0 := by
+      unfold ekSeg seg
+      show wsum (fun j => gbit (ekBytes 2 B2alt) (12 * i + j)) 12 = 0
+      have hstep : wsum (fun j => gbit (ekBytes 2 B2alt) (12 * i + j)) 12
+          = wsum (fun _ => 0) 12 :=
+        wsum_congr (fun j hj => B2alt_prefix_bits_zero i hi' j (Finset.mem_range.mp hj))
+      rw [hstep]
+      exact wsum_zero' 12
+    have h2 : ekSeg 2 B2 i = 0 := by
+      unfold ekSeg seg
+      show wsum (fun j => gbit (ekBytes 2 B2) (12 * i + j)) 12 = 0
+      have hstep : wsum (fun j => gbit (ekBytes 2 B2) (12 * i + j)) 12
+          = wsum (fun _ => 0) 12 :=
+        wsum_congr (fun j hj => B2_prefix_bits_zero i hi' j (Finset.mem_range.mp hj))
+      rw [hstep]
+      exact wsum_zero' 12
     rw [h1, h2]
   exact ⟨B2alt, B2alt_ne_B2, B2alt_eq7_1, hseg⟩
 
@@ -745,9 +824,12 @@ vacuity witness: on `B2` both sides of the old biconditional are false, so the
 biconditional is true and yields nothing. -/
 theorem unbounded_reencode_disagrees_at_768 :
     encByte (fun i => dec (ekBytes 2 B2) i) 768 ≠ ekBytes 2 B2 768 := by
+  have hseg512 : seg (ekBytes 2 B2) 512 = 3329 := by
+    have := B2_seg512
+    rwa [ekSeg_eq, show (256 * 2 : Nat) = 512 by norm_num] at this
   have hdec : dec (ekBytes 2 B2) 512 = 0 := by
     unfold dec
-    rw [B2_seg512]
+    rw [hseg512]
     exact Nat.mod_self 3329
   have hbit : bit (encByte (fun i => dec (ekBytes 2 B2) i) 768) 0 = 0 := by
     rw [enc_bit (fun i => dec (ekBytes 2 B2) i) 768 0 (by omega : (0 : Nat) < 8)]
@@ -757,7 +839,9 @@ theorem unbounded_reencode_disagrees_at_768 :
     rw [hdiv, hmod, hdec]
     decide
   intro hEq
-  have hbits := congrArg (fun v : Nat => bit v 0) hEq
+  have hbits : bit (encByte (fun i => dec (ekBytes 2 B2) i) 768) 0
+      = bit (ekBytes 2 B2 768) 0 :=
+    congrArg (fun v : Nat => bit v 0) hEq
   rw [hbit, B2_bytes_768] at hbits
   omega
 
