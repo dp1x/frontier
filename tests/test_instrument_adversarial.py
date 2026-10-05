@@ -1,45 +1,75 @@
 """Adversarial tests against Frontier's research INSTRUMENTS (role INSTRUMENT-TEST-1).
 
-STATUS AT HEAD: 13 of these tests FAIL, and that is the finding, not a bug in
-the tests. They were written by an agent that could not execute anything, so
-each expected value was derived by reading instrument source and each
-``xfail`` marker is a prediction. When they were finally run (2026-10-05), the
-predictions that came true identified REAL instrument defects, now recorded in
-``knowledge/observations/obs-2026-0055.yaml``.
+ORIGIN. These tests were written by an agent that could not execute anything, so
+each expected value was derived by reading instrument source and each ``xfail``
+marker is a prediction. When they were finally run (2026-10-05), the predictions
+that came true identified REAL instrument defects, recorded in
+``knowledge/observations/obs-2026-0055.yaml``; four predictions were simply
+wrong. Baseline at that point: 13 failed, 121 passed, 7 xfailed.
 
-The file is therefore SKIPPED at collection so it cannot break CI, and it is
-kept in the tree -- deleted, it would throw away the reproductions. Skipping is
-explicit and reversible: the defects below are listed, and each becomes a
-normal test again the moment its instrument is fixed.
+The file is skipped at collection so it cannot break CI, and it is kept in the
+tree -- deleted, it would throw away the reproductions. Skipping is explicit and
+reversible: the defects below are listed, and each becomes a normal test again
+the moment its instrument is fixed.
 
-Repaired earlier in this session, and now covered by assertions that pass:
-  - cbor-cross-impl and cose-cross-impl runners raised AttributeError for any
-    adapter instance lacking ADAPTER_NAME, because
-    ``getattr(adapter, "ADAPTER_NAME", adapter.__name__)`` evaluates the
-    default eagerly. Fixed in both runners.
+CLOSED since the baseline (the instruments were repaired and these tests are now
+ordinary passing assertions, with no marker):
 
-Still failing, i.e. real open defects:
-  1. crypto/frost-cross-impl classify_cell: a self-reported
-     ``verify_aggregate: true`` outranks the RFC 9591 KAT comparison, so a
-     wrong signature is graded PASS.
-  2. cbor-cross-impl runner: grades ``PASS_REPR_DIFF`` (a non-failure label)
-     when ``expected is None``, and can grade PASS with both hex columns empty.
-  3. cose-cross-impl runner: grades two ``None`` values as equal rather than
-     as an instrument question, and files a genuine adapter exception as
-     ``NOT_SUPPORTED ("no structure extraction")`` -- a cause it never observed.
-     Line 155 also references ``exc`` outside the ``except`` block it is bound in,
-     which is an UnboundLocalError waiting to fire.
-  4. cose-cross-impl runner (line ~155): ``type(exc).__name__`` outside its
-     binding ``except``.
-  5. All three CBOR adapters' ``_materialize`` re-type text that parses as a
-     Python literal, so "42" becomes int 42 and distinct inputs collapse.
-  6. pycose and gocose header normalisation collapse two distinct tstr labels
-     into one.
-  7. The ``duplicate_key_rejection`` axis cannot express a duplicate key: the
-     vector holds 2 entries while a Python dict holds 1. A rejection axis that
-     cannot test rejection.
-  8. Two ``_naive_*`` baselines are demonstrably NOT wrong, so the attacks they
-     back are not attacks.
+  * ``cbor-cross-impl`` and ``cose-cross-impl`` runners raised AttributeError for
+    any adapter instance lacking ``ADAPTER_NAME``, because
+    ``getattr(adapter, "ADAPTER_NAME", adapter.__name__)`` evaluates the default
+    eagerly.
+  * Missing / absent expectations graded as non-failures. The CBOR runner emitted
+    ``PASS_REPR_DIFF`` when ``expected is None``, and could record
+    ``match=MATCH verdict=PASS`` with both hex columns empty when the oracle hex
+    was ``""`` and the adapter returned ``b""``; it now grades any cell with no
+    oracle bytes ``INSTRUMENT_QUESTION`` before the comparison is reached. The
+    COSE runner reached its equality branch with ``None == None``; both
+    classifiers now check the expected side first.
+  * A genuine adapter exception filed as ``NOT_SUPPORTED ("no structure
+    extraction")`` -- a cause the runner never observed. The classifiers now
+    grade an absent measurement ``UNMEASURED`` (expected present, nothing
+    produced) and ``INSTRUMENT_QUESTION`` (no expectation at all), and reserve
+    ``NOT_SUPPORTED`` for the one cause the runner can point at: the adapter has
+    no ``encode_structure``.
+  * The ``exc``-outside-its-``except`` UnboundLocalError on the COSE error path,
+    and the parallel hole where a message-level exception left ``msg_verdict``
+    reading ``adapter.get('verdict', 'ERROR')``. Both levels now bind their own
+    exception and record it as ``ERROR:<Type>`` with the exception in the note.
+  * ``crypto/frost-cross-impl`` ``classify_cell`` graded a cell PASS from the
+    adapter's self-reported ``verify_aggregate`` before comparing against the
+    RFC 9591 KAT. The KAT comparison is now authoritative; ``verify_aggregate``
+    is corroboration only, and a mismatch reported alongside
+    ``verify_aggregate: true`` is SPEC_VIOLATION rather than PASS.
+
+STILL OPEN -- these remain failures or xfails, deliberately:
+
+  1. cose-cross-impl runner: ``classify_structure_match`` and the
+     ``actual_struct_bytes.hex()`` call sit OUTSIDE the ``try`` that guards
+     ``encode_structure``, so one non-bytes adapter return raises
+     AttributeError out of ``run_matrix`` and takes the whole matrix with it.
+  2. pycose and gocose header normalisation collapse two distinct tstr labels
+     into one (``"1"`` and ``"01"`` both become ``1``).
+  3. pycose ``_normalize_header_dict`` re-types any header value that happens to
+     be valid hex, so the COSE tstr ``"6161"`` is encoded as a bstr.
+  4. All three CBOR adapters' ``_materialize`` re-type text that parses as a
+     Python literal, so ``"42"`` becomes int 42 and distinct inputs collapse.
+  5. The ``duplicate_key_rejection`` axis cannot express a duplicate key: the
+     vector holds 2 entries while a Python dict holds 1, and the oracle's
+     rejection branch is unreachable through a dict-based data item. A rejection
+     axis that cannot test rejection.
+  6. The CBOR matrix records no library version at all, unlike the COSE runner.
+  7. Two ``_naive_*`` baselines are demonstrably NOT wrong
+     (``_naive_missing_expected_is_a_match`` returns DIVERGE on the attack case;
+     ``_naive_coerce_to_bytes`` returns SPEC_VIOLATION), so the attacks they back
+     are not attacks, and ``_naive_swallow_exceptions_as_unsupported`` is now
+     referenced only by the attack test rather than by a demonstration.
+  8. ``test_materialize_cannot_execute_its_input`` asserts the wrong exception
+     type (``ast.literal_eval`` raises ``ValueError``/``SyntaxError`` for that
+     input, not the ``MemoryError``/``RecursionError`` the test demands). The
+     guard itself is sound; the expectation is wrong. Nobody has rewritten the
+     expectation, because deleting or inverting an assertion to make a suite
+     green is the laundering this file exists to detect.
 
 The failure class is named, not hypothetical.  Frontier's own process findings
 record the concrete instances:
@@ -69,7 +99,9 @@ Conventions
   already gets right.  Controls are what make the defect tests meaningful --
   without them, an instrument that refused everything would "pass".
 * Every ``_naive_*`` helper is a plausible wrong implementation, and every one is
-  demonstrated wrong by a matching ``test_naive_*`` test.
+  demonstrated wrong by a matching ``test_naive_*`` test -- including the two
+  helpers at open defect 7 above, which are demonstrated wrong by running the
+  instrument instead of by asserting against it.
 """
 
 from __future__ import annotations
@@ -85,7 +117,7 @@ from pathlib import Path
 
 import pytest
 
-# 13 of these tests fail at HEAD because they expose real, unrepaired instrument
+# These tests fail at HEAD because they expose real, unrepaired instrument
 # defects (enumerated in the module docstring and in
 # knowledge/observations/obs-2026-0055.yaml). They are skipped rather than
 # deleted: a deleted reproduction is a lost reproduction. Set
@@ -93,7 +125,7 @@ import pytest
 pytestmark = pytest.mark.skipif(
     os.environ.get("FRONTIER_RUN_KNOWN_DEFECT_TESTS") != "1",
     reason=(
-        "documents 13 known, unrepaired instrument defects; see "
+        "documents known, unrepaired instrument defects; see "
         "knowledge/observations/obs-2026-0055.yaml"
     ),
 )
@@ -325,12 +357,6 @@ class _ReturnsBytesNoOracle:
 
 
 @needs_cbor_run
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT cbor-cross-impl/runner/run_matrix.py: when the vector has no "
-           "oracle bytes, `expected is None` yields verdict PASS_REPR_DIFF, a "
-           "pass-shaped non-failure label on a cell that measured nothing",
-)
 def test_cbor_runner_does_not_label_an_unmeasured_cell_with_a_pass_verdict():
     """Attack 1.  No oracle bytes means there is nothing to be right about.
 
@@ -367,13 +393,6 @@ class _ReturnsEmptyBytes:
 
 
 @needs_cbor_run
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT cbor-cross-impl/runner/run_matrix.py: `actual_hex == expected` "
-           "is True when both are the empty string, so a vector carrying no oracle "
-           "bytes plus an adapter returning b'' yields verdict PASS with both hex "
-           "columns empty -- match=MATCH on a cell that measured nothing",
-)
 def test_cbor_runner_never_reports_pass_with_empty_bytes_on_both_sides():
     """Attack 1 again, sharper: a PASS with nothing in either column.
 
@@ -658,18 +677,28 @@ def test_cbor_runner_separates_unsupported_from_error_and_from_pass():
 
 @needs_cose_run
 def test_cose_runner_never_grades_a_none_structure_as_pass():
-    """Attack 2 against the COSE classifier, at unit level."""
+    """Attack 2 against the COSE classifier, at unit level.
+
+    A ``None`` return used to be filed as ``NOT_SUPPORTED ("no structure
+    extraction")`` -- a cause the runner had not observed, because both real
+    adapters swallow their own exceptions into ``None``.  A cell with an
+    expectation present but no measurement is UNMEASURED; it is never a pass and
+    never a claim about what the library lacks.
+    """
     verdict, detail = COSE_RUN.classify_structure_match(None, b"\x84")
-    assert verdict == "NOT_SUPPORTED", (
+    assert verdict == "UNMEASURED", (
         f"None actual graded {verdict!r} ({detail}): a library that returned "
         "nothing has not demonstrated conformance"
+    )
+    assert "no structure extraction" not in detail, (
+        f"the runner asserted a cause it never observed: {detail!r}"
     )
 
 
 @needs_cose_run
 def test_cose_runner_never_grades_a_none_message_as_pass():
     verdict, detail = COSE_RUN.classify_full_message(None, b"\x84")
-    assert verdict == "NOT_SUPPORTED", f"None message graded {verdict!r} ({detail})"
+    assert verdict == "UNMEASURED", f"None message graded {verdict!r} ({detail})"
 
 
 @needs_cose_run
@@ -702,22 +731,15 @@ class _CoseSwallowsItsOwnException:
 
 
 @needs_cose_run
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT cose-cross-impl/runner/run_matrix.py: classify_structure_match "
-           "writes the note 'adapter returned None (no structure extraction)' for "
-           "ANY None return, asserting a cause the runner never observed. The real "
-           "adapters swallow their internal exceptions and return None, so a driver "
-           "crash is recorded as an unsupported feature -- which is precisely the "
-           "distinction the vector-repair report had to reconstruct by hand",
-)
 def test_cose_runner_does_not_assert_a_reason_it_cannot_have_observed():
     """Attack 2.  A crash must not be filed as an unimplemented feature.
 
-    The note text is what a future reader relies on to decide whether a
-    ``NOT_SUPPORTED`` cell is a fact about the library or a broken instrument.
-    Here the adapter deliberately failed, and the note claims the adapter simply
-    had nothing to extract.
+    The note text is what a future reader relies on to decide whether a gap cell
+    is a fact about the library or a broken instrument.  Here the adapter
+    deliberately failed and swallowed the failure into ``None``; the runner can
+    see only the ``None``, so it must record the absence as UNMEASURED and must
+    not assert a cause.  Before the fix this cell read
+    ``NOT_SUPPORTED ("adapter returned None (no structure extraction)")``.
     """
     rows = _run_cose(
         _CoseSwallowsItsOwnException(),
@@ -728,14 +750,19 @@ def test_cose_runner_does_not_assert_a_reason_it_cannot_have_observed():
         assert "no structure extraction" not in note, (
             f"the runner attributed an unobserved cause to the adapter: {note!r}"
         )
+        assert row[COSE_VERDICT] not in ("PASS", "NOT_SUPPORTED"), (
+            "a swallowed crash was graded as conformance or as an unimplemented "
+            f"feature: {row}"
+        )
 
 
 @needs_cose_run
 def test_cose_runner_records_a_genuine_exception_as_an_error_not_a_feature_gap():
-    """Control: when the adapter *lets* the exception escape, the runner is right.
+    """Attack 2.  An exception that reaches the runner is an ERROR, with its type.
 
-    This is what the note should look like, and it shows the swallowed case is
-    not the only path available.
+    Before the fix this path raised ``UnboundLocalError`` inside the handler,
+    because the verdict assignment read ``exc`` outside the ``except`` block that
+    binds it -- the crash fired on exactly the path whose diagnostics mattered.
     """
 
     class LetsItEscape:
@@ -751,13 +778,66 @@ def test_cose_runner_records_a_genuine_exception_as_an_error_not_a_feature_gap()
     rows = _run_cose(
         LetsItEscape(), {"vector_id": "v", "data_item": {}, "oracle_structure_hex": "84"}
     )
+    assert rows, "the runner produced no cell at all"
     for row in rows:
         assert row[COSE_VERDICT].startswith("ERROR"), (
             f"an exception that escaped must be ERROR, got {row[COSE_VERDICT]!r}"
         )
-        assert "exception" in str(row[COSE_NOTES]), (
+        assert "RuntimeError" in str(row[COSE_VERDICT]), (
+            f"the exception type must be in the verdict, got {row[COSE_VERDICT]!r}"
+        )
+        assert "exception" in str(row[COSE_NOTES]).lower() or (
+            "RuntimeError" in str(row[COSE_NOTES])
+        ), (
             f"the exception must be surfaced in the note, got {row[COSE_NOTES]!r}"
         )
+
+
+@needs_cose_run
+def test_cose_runner_survives_an_adapter_that_raises_at_both_levels():
+    """Attack 2, the whole-run shape: one broken adapter must not end the matrix.
+
+    ``encode`` and ``encode_structure`` are guarded by separate handlers, and the
+    message-level handler used to leave ``msg_verdict`` reading
+    ``adapter.get('verdict', 'ERROR')`` over an adapter result dict that never
+    carried a ``verdict``.  A cell's verdict must be the verdict of the level it
+    describes.
+    """
+
+    class RaisesEverywhere:
+        ADAPTER_NAME = "probe_cose_raises_both"
+        LIB_VERSION = "0"
+
+        def encode_structure(self, data_item):
+            raise ValueError("structure driver crashed")
+
+        def encode(self, data_item, mode="default"):
+            raise KeyError("message driver crashed")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        vectors_dir = _write_vectors(
+            Path(tmp),
+            [
+                {"vector_id": "broken", "data_item": {},
+                 "oracle_structure_hex": "84", "oracle_message_hex": "d2"},
+                {"vector_id": "after", "data_item": {},
+                 "oracle_structure_hex": "8461a1616101", "oracle_message_hex": "d284"},
+            ],
+        )
+        rows = COSE_RUN.run_matrix(
+            [RaisesEverywhere()], vectors_dir, Path(tmp) / "results"
+        )
+    assert len(rows) == 2, f"the run lost cells: {rows}"
+    broken, after = rows
+    assert broken[COSE_VERDICT] == "ERROR:ValueError", (
+        f"structure verdict attributed to the wrong level or lost its type: "
+        f"{broken!r}"
+    )
+    assert broken[10] == "ERROR:KeyError", (
+        f"a message-level exception was not recorded as a message-level error: "
+        f"{broken!r}"
+    )
+    assert after[CBOR_EXPECTED] == "8461a1616101", f"row order lost: {after!r}"
 
 
 # ==========================================================================
@@ -883,20 +963,57 @@ def test_frost_classify_cell_never_lets_a_self_reported_field_outrank_the_kat():
 
 
 @needs_frost_run
-@pytest.mark.xfail(
-    strict=True,
-    reason="DEFECT crypto/frost-cross-impl/runner/run_matrix.py classify_cell: "
-           "`if adapter_result.get('verify_aggregate') is True: return PASS` runs "
-           "BEFORE the computed_final_sig vs KAT comparison, so an external "
-           "subprocess driver's self-reported boolean overrides the authoritative "
-           "RFC 9591 expected signature",
-)
 def test_frost_self_reported_verification_over_wrong_bytes_is_a_defect():
     """Attack 3, isolated so the failure names the defect rather than the symptom."""
     assert FROST_RUN.classify_cell(
         {"ok": True, "verify_aggregate": True, "computed_final_sig": "bb" * 32},
         "aa" * 32,
     ) != "PASS"
+
+
+@needs_frost_run
+def test_frost_graded_pass_is_always_derivable_from_the_kat_comparison():
+    """Attack 3, the property the fix installs: PASS is recomputable from bytes.
+
+    An earlier attempt at a fix could pass the tests above by grading every
+    ``verify_aggregate is True`` cell as a failure -- refusals are not fixes.
+    This asserts the property a reader of the matrix needs: if the verdict is
+    PASS, the KAT comparison alone accounts for it, whatever the adapter claims.
+    """
+    kat = "aa" * 32
+    wrong = "bb" * 32
+    assert FROST_RUN.classify_cell(
+        {"ok": True, "verify_aggregate": True, "computed_final_sig": kat}, kat
+    ) == "PASS", "the honest path stopped working: the KAT match is no longer enough"
+    assert FROST_RUN.classify_cell(
+        {"ok": True, "verify_aggregate": False, "computed_final_sig": kat}, kat
+    ) == "PASS", (
+        "PASS was made conditional on the self-report: a KAT match with a "
+        "disagreeing verify_aggregate must still be a pass on the KAT"
+    )
+    for flag in (True, False, "true", 1, None):
+        verdict = FROST_RUN.classify_cell(
+            {"ok": True, "verify_aggregate": flag, "computed_final_sig": wrong}, kat
+        )
+        assert verdict != "PASS", (
+            f"verify_aggregate={flag!r} over a KAT mismatch produced {verdict!r}"
+        )
+
+
+@needs_frost_run
+def test_frost_classify_cell_still_grades_unmeasured_cells_without_a_signature():
+    """Control: the KAT-first ordering must not invent verdicts for absent data.
+
+    A driver that returns no signature at all has measured nothing, so the KAT
+    comparison cannot run and the cell must fall through to the same labels it
+    used before -- whatever the self-report says.
+    """
+    for flag in (True, False):
+        verdict = FROST_RUN.classify_cell({"ok": True, "verify_aggregate": flag}, "aa" * 32)
+        assert verdict != "PASS", (
+            f"a cell with no computed signature was graded PASS with "
+            f"verify_aggregate={flag!r}"
+        )
 
 
 @needs_frost_run

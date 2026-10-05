@@ -2,7 +2,7 @@ id: obs-2026-0055
 type: observation
 status: current
 created_at: "2026-10-05T02:05:00Z"
-updated_at: "2026-10-05T02:15:00Z"
+updated_at: "2026-10-05T10:40:00Z"
 summary: >
   Running the adversarial instrument suite for the first time converted eight
   SOURCE-PREDICTED defects into EXECUTED ones, and repaired two outright. The
@@ -115,8 +115,15 @@ still_open_defects:
     effect: >
       The vector holds 2 entries where a Python dict holds 1. A rejection axis
       that cannot express the thing it tests is inert, and it is being carried
-      as though it discriminated. This corroborates the discriminating-power
-      audit's finding that only 2 of 8 spc-2026-0004 axes discriminate.
+      as though it discriminated. CITATION NOTE 2026-10-05: the axis also has no
+      RFC 8949 basis at all. It is defined as "RFC 8949 §4.2 rule 5" in
+      exp-2026-0030, and RFC 8949 contains no duplicate-key prohibition --
+      re-measured, the clause is in RFC 9052 section 9 and RFC 9053 section 9,
+      verbatim and identical. So this axis is inert AND tests a requirement that
+      belongs to a different specification than the one it cites. This
+      corroborates the discriminating-power audit's finding about the count of
+      discriminating axes; see obs-2026-0062.yaml for the citation measurement
+      and obs-2026-0059.yaml for why the count itself is criterion-dependent.
   open_9_two_naive_baselines_are_not_wrong:
     severity: LOW
     effect: >

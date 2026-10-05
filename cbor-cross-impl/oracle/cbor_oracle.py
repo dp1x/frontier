@@ -1,5 +1,13 @@
-"""Cleanroom CBOR oracle implementing RFC 8949 §4.2 (Deterministic Encoding)
-and §4.2.1 (Canonical CBOR) plus a basic CBOR decoder for verification.
+"""Cleanroom CBOR oracle implementing RFC 8949 core deterministic encoding
+(Section 4.2.1) plus a basic CBOR decoder for verification.
+
+CITATION CORRECTION 2026-10-05: the module docstring previously read
+"Section 4.2 (Deterministic Encoding) and Section 4.2.1 (Canonical CBOR)". Neither
+locator was right. RFC 8949 Section 4.2 is an introductory paragraph that states
+NO requirements. Section 4.2.1 is titled "Core Deterministic Encoding Requirements"
+and is what this oracle implements. The term "canonical CBOR" is the RFC's
+predecessor RFC 7049's term; RFC 8949 section 4.2.3 explicitly says it avoids it.
+See knowledge/observations/obs-2026-0062.yaml. No encoding behaviour changed.
 
 DERIVATION CONSTRAINT:
 This oracle is derived exclusively from:
@@ -13,16 +21,22 @@ The implementing agent MUST NOT have read:
   - cbor-diag, cbor.me source, or any CBOR test corpus beyond RFC 8949 itself
 
 The decoder is included only for round-trip testing against the
-RFC 8949 Appendix C vectors. Per AGENTS.md, this is a "cleanroom
+RFC 8949 Appendix A example table. Per AGENTS.md, this is a "cleanroom
 oracle" — its authority comes from the RFC text alone.
 
 Two output modes:
-  - encode_deterministic: RFC 8949 §4.2 (deterministic, with extra
-    leeway allowed by §4.2's "preferred" wording)
-  - encode_canonical: RFC 8949 §4.2.1 (canonical, strictly enforced)
+  - encode_deterministic: RFC 8949 Section 4.2.1 (core deterministic
+    encoding requirements), with the 4.2.3 length-first key ordering
+  - encode_canonical: RFC 8949 Section 4.2.1 (core deterministic encoding
+    requirements), with the bytewise-lexicographic key ordering 4.2.1 itself
+    mandates
 
-For the §4.2 audit in spc-2026-0004, BOTH modes are produced so that
-per-library default mode can be compared against either.
+CITATION CORRECTION 2026-10-05: this block previously described
+encode_deterministic as "Section 4.2 ... with extra leeway allowed by 4.2's
+'preferred' wording" and encode_canonical as "Section 4.2.1 (canonical)". There
+is no such leeway: 4.2 states no requirements at all. The two modes differ ONLY
+in map-key ordering, because 4.2.1 and 4.2.3 are alternative orderings of the
+same requirement set. The audit these modes served is spc-2026-0004.
 """
 
 from __future__ import annotations
@@ -125,7 +139,13 @@ def _encode_simple_value(value: Any) -> bytes:
 
 
 def _float_shortest_form(f: float) -> bytes:
-    """Encode a float in the shortest deterministic form (RFC 8949 §4.2 rule 3).
+    """Encode a float in the shortest form that preserves the value.
+
+    CITATION CORRECTION 2026-10-05: this docstring previously read
+    "(RFC 8949 §4.2 rule 3)". RFC 8949 Section 4.2 has no numbered rules. The
+    requirement is Section 4.2.1 bullet 1, second paragraph: "Floating-point
+    values also MUST use the shortest form that preserves the value, e.g., 1.5
+    is encoded as 0xf93e00 (binary16) and 1000000.5 as 0xfa49742408 (binary32)."
 
     Per §3.3, three encodings are available:
       - half-precision (additional_info 25): 16 bits
@@ -145,7 +165,7 @@ def _float_shortest_form(f: float) -> bytes:
     it uses the half-precision form when representable exactly, then
     single, then double. Per the RFC: "If multiple representations of
     the same numerical value exist, the one with the shortest form
-    SHOULD be chosen." For our §4.2 audit, we need to verify libraries
+    SHOULD be chosen." For our Section 4.2.1 audit, we need to verify libraries
     use ANY of the three forms that represents the value exactly; the
     shortest-form preference is then a separate test.
     """
@@ -225,7 +245,12 @@ class Undefined:
 def _encode_deterministic_value(value: Any, canonical: bool) -> bytes:
     """Encode a single CBOR data item in deterministic (or canonical) mode.
 
-    Per RFC 8949 §4.2 (deterministic) or §4.2.1 (canonical).
+    CITATION CORRECTION 2026-10-05: this docstring previously read
+    "Per RFC 8949 §4.2 (deterministic) or §4.2.1 (canonical)." RFC 8949 Section
+    4.2 states no requirements. Both modes implement the Section 4.2.1 core
+    deterministic encoding requirements; the sole difference is the map-key
+    ordering, which 4.2.1 mandates as bytewise lexicographic and 4.2.3 offers as
+    a length-first alternative.
 
     canonical=True is stricter:
       - indefinite-length items MUST be made into definite-length items
@@ -306,25 +331,33 @@ def _encode_deterministic_value(value: Any, canonical: bool) -> bytes:
 
 
 def encode_deterministic(value: Any) -> bytes:
-    """Encode a CBOR data item using RFC 8949 §4.2 deterministic-encoding rules.
+    """Encode a CBOR data item using RFC 8949 Section 4.2.1 deterministic-encoding rules.
 
-    The output is well-formed CBOR and satisfies the §4.2 rules:
+    CITATION CORRECTION 2026-10-05: this docstring previously read
+    "using RFC 8949 §4.2 deterministic-encoding rules" and then listed "map keys
+    sorted by length then lex", which is the Section 4.2.3 length-first
+    ordering, not Section 4.2.1's bytewise-lexicographic requirement. The listed
+    behaviour is unchanged; the label now says which rule it implements.
+
+    The output is well-formed CBOR and satisfies the §4.2.1 requirements,
+    with the §4.2.3 length-first key ordering substituted for §4.2.1's:
       - integer shortest form
-      - map keys sorted by length then lex
+      - map keys sorted by length then lex  (§4.2.3 alternative)
       - float shortest form (when exact)
-      - definite-length preferred
-      - duplicate-key warning (not rejection in deterministic mode)
+      - definite-length only
+      - duplicate-key rejection
     """
     return _encode_deterministic_value(value, canonical=False)
 
 
 def encode_canonical(value: Any) -> bytes:
-    """Encode a CBOR data item using RFC 8949 §4.2.1 canonical rules.
+    """Encode a CBOR data item using RFC 8949 Section 4.2.1 core deterministic
+    encoding requirements (bytewise-lexicographic map-key ordering).
 
-    Stricter than §4.2:
-      - duplicate map keys are REJECTED (raises DuplicateKeyError)
-      - indefinite-length items MUST be made definite-length (this oracle
-        never produces indefinite-length output anyway)
+    Stricter than the 4.2.3 length-first ordering in encode_deterministic:
+      - map keys in bytewise lexicographic order of their encodings (4.2.1)
+      - duplicate map keys rejected (raises DuplicateKeyError)
+      - indefinite-length items are never produced
     """
     return _encode_deterministic_value(value, canonical=True)
 
@@ -332,8 +365,11 @@ def encode_canonical(value: Any) -> bytes:
 # ---------- Decoder (for round-trip verification only) ----------
 
 def decode(data: bytes) -> Any:
-    """Decode CBOR bytes. Supports the subset needed for RFC 8949 Appendix C
-    verification. Raises CborValueError on malformed input.
+    """Decode CBOR bytes. Supports the subset needed for round-trip verification.
+
+    CITATION CORRECTION 2026-10-05: this docstring previously read "the subset
+    needed for RFC 8949 Appendix C verification". Appendix C is "Pseudocode" and
+    holds no vectors; the vectors are in Appendix A, Table 6.
     """
     state = {"pos": 0}
 
@@ -502,11 +538,22 @@ def decode(data: bytes) -> Any:
     return result
 
 
-# ---------- RFC 8949 Appendix C reference vectors ----------
+# ---------- RFC 8949 Appendix A (Table 6) reference vectors ----------
+# CITATION CORRECTION 2026-10-05: this block was named
+# RFC_8949_APPENDIX_C_VECTORS and cited "#appendix-C". Appendix C is
+# "Pseudocode" (the well-formedness checker in Figure 1) and contains no
+# vectors. RFC 8949 Appendix A, Table 6 holds 81 diagnostic/encoded pairs, of
+# which 18 have a bare integer as their diagnostic. The 14 below are the first
+# 14 rows -- a subset chosen by this oracle's author, not a count the RFC
+# states. The constant is renamed for accuracy; nothing imports it by name
+# outside this module.
 
-RFC_8949_APPENDIX_C_VECTORS: list[tuple[Any, str, str]] = [
+RFC_8949_APPENDIX_A_VECTORS: list[tuple[Any, str, str]] = [
     # (data_item, expected_hex, description)
-    # Source: RFC 8949 Appendix C (https://www.rfc-editor.org/rfc/rfc8949#appendix-C)
+    # Source: RFC 8949 Appendix A, Table 6 (https://www.rfc-editor.org/rfc/rfc8949#appendix-A)
+    # Rows 1-11 and 15-18 of that table. Rows 12-14 (the bignum-tagged values
+    # 18446744073709551616 / -18446744073709551616 / -18446744073709551617) are
+    # not covered here; see knowledge/observations/obs-2026-0062.yaml.
     (0, "00", "Integer 0"),
     (1, "01", "Integer 1"),
     (10, "0a", "Integer 10"),
@@ -526,10 +573,10 @@ RFC_8949_APPENDIX_C_VECTORS: list[tuple[Any, str, str]] = [
 
 
 if __name__ == "__main__":
-    # Self-test: encode + decode round-trip on Appendix C vectors
+    # Self-test: encode + decode round-trip on Appendix A vectors
     print(f"{'description':<35} {'expected':<25} {'deterministic':<25} {'canonical':<25} {'status':<10}")
     all_passed = True
-    for data_item, expected_hex, description in RFC_8949_APPENDIX_C_VECTORS:
+    for data_item, expected_hex, description in RFC_8949_APPENDIX_A_VECTORS:
         try:
             det = encode_deterministic(data_item).hex()
             can = encode_canonical(data_item).hex()
@@ -544,4 +591,4 @@ if __name__ == "__main__":
             all_passed = False
             print(f"{description:<35} {expected_hex:<25} {'EXCEPTION':<25} {str(exc):<25}")
     print()
-    print(f"Overall: {'PASS' if all_passed else 'FAIL'} ({len(RFC_8949_APPENDIX_C_VECTORS)} vectors tested)")
+    print(f"Overall: {'PASS' if all_passed else 'FAIL'} ({len(RFC_8949_APPENDIX_A_VECTORS)} vectors tested)")

@@ -10,12 +10,16 @@ Cohort (current):
   - go-frost:  subprocess adapter to a locally-built Go frost driver (when available)
 
 Verdict classification:
-  - PASS:             byte-exact match (or verified-under-pk for aggregate)
+  - PASS:             the computed signature matches the RFC 9591 known-answer test
+  - SPEC_VIOLATION:   concrete normative requirement + observed deviation (including a
+                      KAT mismatch reported alongside verify_aggregate: true)
   - SPEC_AMBIGUITY:   real normative ambiguity or permitted encoding range
-  - SPEC_VIOLATION:   concrete normative requirement + observed deviation
   - INTEROP_BREAK:    two independently valid impls produce non-interop output
   - ERROR:            experimental path failed; cannot conclude
   - NOT_SUPPORTED:    library genuinely lacks the feature
+
+The KAT comparison is authoritative. verify_aggregate is the adapter's self-report
+and is never allowed to stand in for it (see classify_cell).
 """
 
 from __future__ import annotations
@@ -177,7 +181,16 @@ def run_go_frost_adapter(kat_path: Path, group: str) -> dict:
 
 
 def classify_cell(adapter_result: dict, expected_final_sig: str) -> str:
-    """Apply the verdict classification to a single cell."""
+    """Apply the verdict classification to a single cell.
+
+    ``expected_final_sig`` is the RFC 9591 Appendix E known-answer value and is
+    the authoritative measurement. ``verify_aggregate`` is the adapter's own
+    opinion of itself and is corroboration at most: a driver that reports
+    ``verify_aggregate: true`` beside a signature that does not match the KAT is
+    reporting a failure to verify as a success, so a cell carrying both a
+    mismatch and a self-report is SPEC_VIOLATION (a concrete expected value plus
+    an observed deviation), never PASS.
+    """
     if not adapter_result.get("ok"):
         verdict = adapter_result.get("verdict", "ERROR")
         if verdict == "NOT_SUPPORTED":
@@ -185,10 +198,16 @@ def classify_cell(adapter_result: dict, expected_final_sig: str) -> str:
         if verdict == "NOT_BUILT":
             return "NOT_BUILT"
         return "ERROR"
-    if adapter_result.get("verify_aggregate") is True:
+    computed = adapter_result.get("computed_final_sig")
+    if computed is not None and expected_final_sig and computed == expected_final_sig:
+        # The KAT matched. verify_aggregate is recorded alongside, but it does
+        # not need to agree to make the cell a pass -- and a disagreeing flag is
+        # a signal the cleanroom adapter will now fail closed on.
         return "PASS"
-    if adapter_result.get("computed_final_sig") == expected_final_sig:
-        return "PASS"
+    if computed is not None and expected_final_sig:
+        if adapter_result.get("verify_aggregate") is True:
+            return "SPEC_VIOLATION"
+        return "SPEC_AMBIGUITY"
     if adapter_result.get("error"):
         return "ERROR"
     return "SPEC_AMBIGUITY"

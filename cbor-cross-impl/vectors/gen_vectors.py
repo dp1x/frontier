@@ -1,6 +1,22 @@
 """Adversarial CBOR vector generator for msn-2026-0015.
 
-Synthesizes inputs targeting each audit axis in spc-2026-0004.
+CITATION CORRECTION 2026-10-05: this header previously read "Synthesizes
+inputs targeting each audit axis in spc-2026-0004". That specification's
+normative extract was entirely fabricated and is withdrawn (20 quoted units, 0
+matching RFC 8949; see knowledge/observations/obs-2026-0062.yaml). The axes are
+generated from RFC 8949 directly:
+
+  - Section 4.2.1 bullet 1  -- preferred serialization MUST be used
+    (integer/length/tag shortest form; float shortest value-preserving form)
+  - Section 4.2.1 bullet 2  -- indefinite-length items MUST NOT appear
+  - Section 4.2.1 bullet 3  -- map keys MUST be sorted bytewise lexicographically
+  - Section 4.2.3          -- length-first map key ordering, the ALTERNATIVE to
+    4.2.1 bullet 3. The oracle implements this ordering, NOT 4.2.1's, so any
+    axis compared against it is a 4.2.3 axis.
+  - Section 3.3            -- preferred serialization of floating point
+
+The axis ids below are unchanged so the committed corpus and matrix column names
+stay resolvable, but they no longer imply an RFC locator.
 Deterministic given the seed. Each vector is a tuple:
     (axis_id, vector_id, data_item, description, oracle_a_expected_hex, axis_metadata)
 

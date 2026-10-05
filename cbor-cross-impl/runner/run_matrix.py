@@ -9,6 +9,10 @@ a per-cell verdict. Verdict classifications:
                               (e.g. uses 2-byte length when 1-byte would do, but both are deterministic)
     INTEROP_BREAK           - encoder output is valid CBOR but non-canonical (would not be parsed
                               equivalently by other RFC-8949 conformant decoders)
+    INSTRUMENT_QUESTION     - the vector carries no oracle bytes for this mode, so there is
+                              nothing for the cell to be right or wrong about. Also emitted
+                              when the oracle hex is empty but the adapter returned bytes:
+                              `"" == ""` is not a conformance result
     ERROR                   - encoder raised exception or returned None
 
 Inputs:
@@ -162,15 +166,21 @@ def run_matrix(adapters, vectors_dir=VECTORS_DIR, results_dir=RESULTS_DIR):
                             verdict = "ERROR"
                         else:
                             actual_hex = actual_bytes.hex()
-                            if actual_hex == expected:
+                            # No oracle bytes means there is nothing for this
+                            # cell to be right or wrong about. `actual_hex ==
+                            # expected` reaches the equality branch when the
+                            # oracle hex is "" as well, and `"" == ""` is True --
+                            # a PASS carrying no measurement at all. The check
+                            # must come before the comparison, not after it.
+                            if not expected:
+                                verdict = "INSTRUMENT_QUESTION"
+                            elif actual_hex == expected:
                                 verdict = "PASS"
                             else:
                                 # Compare lengths: if the library produced a longer encoding,
                                 # classify as SPEC_AMBIGUITY (longer-but-still-deterministic);
                                 # if different bytes at same length, classify as SPEC_VIOLATION
-                                if expected is None:
-                                    verdict = "PASS_REPR_DIFF"
-                                elif len(actual_hex) > len(expected):
+                                if len(actual_hex) > len(expected):
                                     verdict = "SPEC_AMBIGUITY"
                                 elif len(actual_hex) == len(expected):
                                     verdict = "SPEC_VIOLATION"
