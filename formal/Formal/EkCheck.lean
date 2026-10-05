@@ -304,7 +304,8 @@ the prefix contains exactly `nCoeff k` twelve-bit coefficients and the
 prefix never reads byte `384 * k` or beyond. -/
 theorem prefix_last_bit_byte (k : Nat) :
     ((8 * 384 * k - 1) / 8 : Nat) < 384 * k := by
-  omega
+  have hne : 8 * 384 * k - 1 < 8 * (384 * k) := by omega
+  exact (Nat.div_lt_iff_lt_mul (show (0 : Nat) < 8 by omega)).2 hne
 
 /-! ## STEP 1: the type check, with `k` load-bearing -/
 
@@ -379,7 +380,6 @@ theorem eq7_1_accept (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
     (hy : y < 384 * k) :
     encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y := by
   refine enc_dec_eq (ekBytes k ek) hB (fun i => ?_) y
-  intro i
   rw [← ekSeg_eq k ek i]
   exact hSeg i (coeff_mem_prefix (by omega))
 
@@ -430,7 +430,7 @@ be recovered. -/
 theorem witness_byte_lt_prefix (k i j : Nat) (hi : i < nCoeff k) (hj : j < 12) :
     (12 * i + j) / 8 < 384 * k := by
   have heq := twelve_mul_nCoeff k
-  rw [nCoeff] at heq
+  rw [nCoeff] at hi heq
   -- `omega` treats `(12 * i + j) / 8` as an independent atom, so the
   -- division is discharged first, then the pure inequality is arithmetic.
   rw [Nat.div_lt_iff_lt_mul (show (0 : Nat) < 8 by omega)]
@@ -513,7 +513,7 @@ theorem okKey_iff_eq7_1 (k : Nat) (ek : Ek k)
   · intro h i hi
     exact eq7_1_to_seg_bound k ek hB (h.2 0 (hB 0)) i hi
   · intro hSeg
-    refine ⟨step1_type_check k ek, fun _ => eq7_1_of_seg_bound k ek hB hSeg⟩
+    refine ⟨step1_type_check k ek, fun _ _ => eq7_1_of_seg_bound k ek hB hSeg⟩
 
 /-! ## The unbounded contrast: what the OLD corpus statements say -/
 
@@ -523,7 +523,6 @@ theorem eq7_1_holds_forever (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 
     (hSeg : ∀ i, ekSeg k ek i < 3329) (y : Nat) :
     encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y := by
   refine enc_dec_eq (ekBytes k ek) hB (fun i => ?_) y
-  intro i
   rw [ekSeg_eq k ek i]
   exact hSeg i
 
@@ -685,6 +684,10 @@ The twelve bit positions are discharged by `decide` on closed ground terms,
 which is a genuine kernel-evaluated computation, not an assumption. -/
 theorem B2_seg512 : ekSeg 2 B2 (256 * 2) = 3329 := by
   rw [ekSeg_eq 2 B2 (256 * 2)]
+  -- `seg B i = wsum (fun j => gbit B (12 * i + j)) 12`, so the coefficient
+  -- index is `256 * 2 = 512` itself; it is NOT `12 * 512`.
+  have hmul : (256 * 2 : Nat) = 512 := by norm_num
+  rw [hmul]
   have hbits : ∀ s, s < 12 -> gbit (ekBytes 2 B2) (12 * 512 + s) = bit 3329 s := by
     intro s hs
     have hrw : 12 * 512 + s = 6144 + s := by omega
@@ -695,8 +698,6 @@ theorem B2_seg512 : ekSeg 2 B2 (256 * 2) = 3329 := by
   have hW' : wsum (fun j => bit 3329 j) 12 = 3329 := by
     show (∑ j ∈ Finset.range 12, bit 3329 j * 2 ^ j) = 3329
     exact bitsum_id 3329 12 (by rw [two_pow_12]; omega)
-  have hmul : (256 * 2 : Nat) = 12 * 512 := by norm_num
-  rw [hmul]
   unfold seg
   show wsum (fun j => gbit (ekBytes 2 B2) (12 * 512 + j)) 12 = 3329
   rw [hWc, hW']
@@ -848,17 +849,18 @@ theorem unbounded_reencode_disagrees_at_768 :
   have hdec : dec (ekBytes 2 B2) 512 = 0 := by
     unfold dec
     rw [hseg512]
-    omega
   have hbit : bit (encByte (fun i => dec (ekBytes 2 B2) i) 768) 0 = 0 := by
     rw [enc_bit (fun i => dec (ekBytes 2 B2) i) 768 0 (by omega : (0 : Nat) < 8)]
-    show bit (dec (ekBytes 2 B2) ((8 * 768 + 0) / 12)) ((8 * 768 + 0) % 12) = 0
-    norm_num [hdec]
+    have hdiv : (8 * 768 + 0) / 12 = 512 := by decide
+    have hmod : (8 * 768 + 0) % 12 = 0 := by decide
+    rw [hdiv, hmod, hdec]
+    decide
   intro hEq
   have hbits : bit (encByte (fun i => dec (ekBytes 2 B2) i) 768) 0
       = bit (ekBytes 2 B2 768) 0 :=
     congrArg (fun v : Nat => bit v 0) hEq
-  rw [hbit, B2_bytes_768] at hbits
-  norm_num [bit] at hbits
+  rw [hbit, B2_bytes_768, bit, Nat.div_one, Nat.mod_two] at hbits
+  omega
 
 /-! ## `k` is load-bearing in the Eq (7.1) prefix as well -/
 
