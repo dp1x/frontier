@@ -304,8 +304,8 @@ the prefix contains exactly `nCoeff k` twelve-bit coefficients and the
 prefix never reads byte `384 * k` or beyond. -/
 theorem prefix_last_bit_byte (k : Nat) :
     ((8 * 384 * k - 1) / 8 : Nat) < 384 * k := by
-  have hne : 8 * 384 * k - 1 < 8 * (384 * k) := by omega
-  exact (Nat.div_lt_iff_lt_mul (show (0 : Nat) < 8 by omega)).2 hne
+  rw [Nat.div_lt_iff_lt_mul (show (0 : Nat) < 8 by omega)]
+  omega
 
 /-! ## STEP 1: the type check, with `k` load-bearing -/
 
@@ -374,14 +374,49 @@ This is `ByteEncode.enc_dec_eq` with its hypothesis `forall i, seg B i < 3329`
 restricted to `i < nCoeff k`.  That restriction is the whole point: the
 unrestricted hypothesis reaches the rho seed and is false for most genuine
 keys, so the restriction makes this theorem's hypothesis INHABITABLE
-(witness: `eq7_1_hypothesis_inhabited` below). -/
+(witness: `eq7_1_hypothesis_inhabited` below).
+
+It CANNOT be obtained by instantiating `ByteEncode.enc_dec_eq`, because that
+lemma's hypothesis is the UNBOUNDED `∀ i, seg B i < 3329`; a bounded
+hypothesis cannot supply it.  The proof below therefore repeats
+`enc_dec_eq`'s argument -- `eqOfBits` over the eight bit positions of one
+byte -- with the per-bit hypothesis that the coefficient owning that bit,
+namely `p / 12`, lies inside the prefix.  That is the index step
+`coeff_mem_prefix`, and it is where the bound `384 * k` on `y` is used. -/
 theorem eq7_1_accept (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
     (hSeg : ∀ i, i < nCoeff k -> ekSeg k ek i < 3329) (y : Nat)
     (hy : y < 384 * k) :
     encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y := by
-  refine enc_dec_eq (ekBytes k ek) hB (fun i => ?_) y
-  rw [← ekSeg_eq k ek i]
-  exact hSeg i (coeff_mem_prefix (by omega))
+  have hlt : encByte (fun i => dec (ekBytes k ek) i) y < 256 := by
+    have hw := wsum_bound (G := fun t => ebit (fun i => dec (ekBytes k ek) i) (8 * y + t))
+      (fun t => ebit_le_one (fun i => dec (ekBytes k ek) i) _) 8
+    rw [← two_pow_8]
+    exact hw
+  refine eqOfBits hlt (hB y) (fun s hs => ?_)
+  rw [enc_bit (fun i => dec (ekBytes k ek) i) y s hs]
+  show bit (dec (ekBytes k ek) ((8 * y + s) / 12)) ((8 * y + s) % 12)
+      = bit (ekBytes k ek y) s
+  -- The coefficient owning bit `8 * y + s` is inside the prefix, because the
+  -- prefix spans `12 * nCoeff k` bits and `y < 384 * k` bytes.
+  have hcoeff : (8 * y + s) / 12 < nCoeff k :=
+    coeff_mem_prefix (by
+      have heq := twelve_mul_nCoeff k
+      rw [nCoeff] at heq
+      omega)
+  have hsegAt : seg (ekBytes k ek) ((8 * y + s) / 12) < 3329 := by
+    rw [← ekSeg_eq k ek ((8 * y + s) / 12)]
+    exact hSeg _ hcoeff
+  -- `dec B i = seg B i % 3329`, and `seg B i < 3329`, so the reduction is
+  -- the identity; hence bit `(8*y+s) % 12` of `dec` is bit `(8*y+s)%12`
+  -- of `seg`, which by `seg_bit` is global bit `8*y+s`.
+  have hmod : (8 * y + s) % 12 < 12 := Nat.mod_lt _ (by omega)
+  have hbit : bit (dec (ekBytes k ek) ((8 * y + s) / 12)) ((8 * y + s) % 12)
+      = bit (seg (ekBytes k ek) ((8 * y + s) / 12)) ((8 * y + s) % 12) := by
+    unfold dec
+    rw [Nat.mod_eq_of_lt hsegAt]
+  rw [hbit]
+  rw [seg_bit (ekBytes k ek) ((8 * y + s) / 12) ((8 * y + s) % 12) hmod]
+  exact gbit_byte (ekBytes k ek) y s hs
 
 /-- A disagreement byte for an out-of-range segment `i` is witnessed at the
 index `(12 * i + j) / 8` for some differing bit `j < 12`.  This re-states
@@ -523,7 +558,7 @@ theorem eq7_1_holds_forever (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 
     (hSeg : ∀ i, ekSeg k ek i < 3329) (y : Nat) :
     encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y := by
   refine enc_dec_eq (ekBytes k ek) hB (fun i => ?_) y
-  rw [ekSeg_eq k ek i]
+  rw [← ekSeg_eq k ek i]
   exact hSeg i
 
 /-- ... and correspondingly, a segment at or above q at ANY index makes the
@@ -851,6 +886,7 @@ theorem unbounded_reencode_disagrees_at_768 :
     rw [hseg512]
   have hbit : bit (encByte (fun i => dec (ekBytes 2 B2) i) 768) 0 = 0 := by
     rw [enc_bit (fun i => dec (ekBytes 2 B2) i) 768 0 (by omega : (0 : Nat) < 8)]
+    unfold ebit
     have hdiv : (8 * 768 + 0) / 12 = 512 := by decide
     have hmod : (8 * 768 + 0) % 12 = 0 := by decide
     rw [hdiv, hmod, hdec]
@@ -859,8 +895,8 @@ theorem unbounded_reencode_disagrees_at_768 :
   have hbits : bit (encByte (fun i => dec (ekBytes 2 B2) i) 768) 0
       = bit (ekBytes 2 B2 768) 0 :=
     congrArg (fun v : Nat => bit v 0) hEq
-  rw [hbit, B2_bytes_768, bit, Nat.div_one, Nat.mod_two] at hbits
-  omega
+  rw [hbit, B2_bytes_768] at hbits
+  norm_num [bit] at hbits
 
 /-! ## `k` is load-bearing in the Eq (7.1) prefix as well -/
 
