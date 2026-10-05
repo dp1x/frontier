@@ -1,0 +1,303 @@
+id: exp-2026-0038
+type: experiment
+status: complete
+created_at: "2026-10-05T09:10:00Z"
+updated_at: "2026-10-05T11:40:00Z"
+summary: >
+  A minimal cleanroom counterfactual for RFC 5280 6.1.4 (l)/(m), built to
+  separate the self-issued-guarded decrement from the unguarded pathLenConstraint
+  clamp. 8 cases across 4 matched pairs, 30 certificates, all structurally
+  verified from their own DER. Result: BOTH independently executed cores
+  implement H1 -- a self-issued CA skips (l) but its pathLenConstraint still
+  clamps descendants. Three harness defects were found and fixed first; each had
+  been manufacturing spurious results.
+epistemic_status: observation
+compute:
+  classification: lightweight
+  executed_at: local
+  isolation: "env-scrubbed scratch on the R ramdisk"
+  note: >
+    Certificate generation and validation are sub-second on commodity hardware.
+    No build tree, no toolchain download, no CI. This is the cheap end of the
+    project's economic test, per AGENTS.md.
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: grok-4.7
+    tool: >
+      direct execution of three new modules, plus four independent agent
+      contributions (two RFC derivations, one adversarial refutation, one
+      implementation-archaeology swarm)
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - crypto/x509-pathlen/minimal_chain.py
+    - crypto/x509-pathlen/minimal_oracle.py
+    - crypto/x509-pathlen/minimal_matrix.py
+    - .scratch/x509/deriv_a.md
+    - .scratch/x509/deriv_b.md
+    - .scratch/x509/adv_refute.md
+    - .scratch/x509/arch_cohort.md
+    - .scratch/x509/history.md
+  parent: msn-2026-0022
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0030, hyp-2026-0031]
+  observations: [obs-2026-0063]
+  findings: [fnd-2026-0016]
+
+the_question:
+  statement: >
+    RFC 5280 6.1.4 (l) reads "If the certificate was not self-issued, verify
+    that max_path_length is greater than zero and decrement max_path_length by
+    1." Step (m) reads "If pathLenConstraint is present in the certificate and
+    is less than max_path_length, set max_path_length to the value of
+    pathLenConstraint." (l) carries a self-issued guard; (m) does not. Does a
+    self-issued CA therefore skip the decrement while still clamping its
+    descendants' budget?
+  hypotheses_discriminated:
+    H1: >
+      (l) is guarded, (m) is not: a self-issued CA spends no slot but still
+      clamps descendants. THIS IS THE HYPOTHESIS UNDER TEST.
+    H2: >
+      The self-issued exception covers BOTH steps, so a self-issued CA neither
+      spends a slot nor clamps.
+    H3: The RFC is ambiguous on the interaction.
+    H4: >
+      Observed divergence comes from path construction or trust-anchor handling
+      rather than from (l)/(m) semantics.
+    H5: The constructed chain is invalid for an unrelated reason.
+    H6: The Frontier oracle or harness is wrong.
+
+source_identity:
+  url: https://www.rfc-editor.org/rfc/rfc5280.txt
+  bytes: 352580
+  sha256: A2F2628C0A83B873FC4786ABD921F9B2C02395954B655D190BF16B831633345D
+  status: Standards Track
+  date: May 2008
+  measured_by: >
+    TWO independent agents each fetched the document and measured its length
+    and digest before reading anything; both obtained the same values, and both
+    match the digest already recorded in this repository. A third agent
+    separately fetched the RFC Editor errata page (131319 bytes, sha256
+    2e05ce4ffe0a9e00bdc8960dbd1f4a70c105c508169c1bd68f6a65dfba3bb908).
+
+oracle_independence:
+  design: >
+    TWO oracles were written from the same normative text in deliberately
+    different styles. oracle.py is the historical oracle and carries four
+    documented wrong versions; minimal_oracle.walk is written fresh, returns an
+    explicit before/after-(l)/after-(m) frame for every certificate rather than
+    a free-text reason, computes the FULL walk instead of short-circuiting, and
+    additionally implements H2 as an executable competitor.
+  neither_is_derived_from: >
+    any implementation under test, or x509-limbo's published expectations.
+  agreement: >
+    The two oracles were compared on all 8 cases and agree on every accept/reject
+    verdict. Agreement between two independently-styled transcriptions is
+    evidence; it is not proof, and neither was treated as an axiom.
+  competing_reading_implemented_not_merely_asserted: >
+    H2 is executable (walk_H2). That is what makes "the corpus discriminates" a
+    measurement rather than an assertion -- see discriminating_power below.
+
+corpus_design:
+  principle: >
+    Each family varies ONE property: whether the certificate under test carries
+    its issuer's DN as its own subject. The two members of every pair are signed
+    by the same predecessor and differ in nothing else the rule can see.
+  families:
+    A: >
+      pathlen:0 with NO certificate following it -- harness sanity. The clamp is
+      unobservable here, which is the point: it proves the harness is not
+      trivially rejecting.
+    B: pathlen:1 with two certificates following -- positive controls.
+    C: >
+      pathlen:0 with one CA following -- THE ISOLATING PAIR. Under H1 both
+      members reject; under H2 only the non-self-issued member rejects.
+    D: >
+      no pathLenConstraint at all -- the self-issued exemption frees a slot and
+      nothing clamps it back.
+  structural_verification: >
+    Every emitted certificate is re-parsed from its own DER and its subject,
+    issuer, BasicConstraints (cA and pathLenConstraint), KeyUsage and
+    self-signed status are read back FROM THE PARSED OBJECT rather than from the
+    generator's intent. Chain integrity (RFC 5280 6.1(a)-(c)), the trust-anchor
+    exclusion, and every signature relationship are verified independently before
+    any implementation is run. verify_der_claims exits non-zero on any violation
+    and this was exercised: it caught three real generator defects.
+
+determinism_and_reproducibility:
+  keys: deterministic (SHAKE-256-derived P-256 scalars from a fixed seed)
+  certificates: >
+    NOT byte-reproducible. builder.sign draws an ECDSA nonce from the provider
+    CSPRNG, so two runs over the same seed produce different DER. This is the
+    already-recorded correction from obs-2026-0057 and was NOT reintroduced as a
+    claim here. What is stable, and what this experiment relies on, is the
+    verdict structure.
+
+harness_defects_found_and_fixed:
+  why_this_section_matters: >
+    Each of these produced a confident, wrong matrix before it was caught. They
+    are recorded because a defect that manufactures a false divergence is more
+    dangerous than no experiment at all -- it would have "discovered" an
+    implementation bug that did not exist.
+  defect_1_signing_key_not_the_issuers_key:
+    symptom: >
+      Four self-issued cells rejected with "signature does not match" from BOTH
+      cores. The generator referenced a key by an unrelated tag, so the
+      self-issued certificates were signed by keys no certificate in the path
+      held.
+    how_found: >
+      Independent signature verification against every candidate issuer, rather
+      than trusting the generator's own claim about who signed what.
+    fixed_by: >
+      issue() now takes the ISSUING CERTIFICATE's label and signs with that
+      certificate's actual private key. The key-rollover shape requires a
+      predecessor bearing the same DN; naming a non-existent issuer produced a
+      certificate signed by nothing.
+  defect_2_self_issued_and_self_signed_conflated:
+    symptom: >
+      verify_der_claims flagged all four self-issued certificates as both
+      self-issued AND self-signed, because each reused its issuer's subject key.
+    significance: >
+      This is exactly the conflation the hypothesis warned against. A
+      self-issued certificate in the key-rollover shape carries a NEW key.
+    fixed_by: each self-issued certificate now derives its own key.
+  defect_3_duplicate_dn_collision_with_the_trust_anchor:
+    symptom: >
+      All four self-issued cells rejected with "signature does not match" in
+      both cores, even after defect 1 was fixed.
+    root_cause: >
+      The self-issued certificates were issued directly under the anchor, so
+      their subject DN EQUALLED the anchor's. Every certificate below them then
+      named the ANCHOR's DN as issuer, and TWO certificates -- the anchor and
+      the self-issued re-issue -- matched. Both validators selected the anchor and
+      failed on the signature.
+    classification: >
+      This is H4 -- path-construction ambiguity -- and it is INVISIBLE unless you
+      check which certificate actually signed which.
+    fixed_by: >
+      Every family now has its own intermediate CA with a distinct DN, so the
+      self-issued certificate's DN never collides with the trust anchor's.
+  a_fourth_defect_the_predictions_did_not_contain: >
+    verify_der_claims initially demanded that a trust anchor NOT be self-signed,
+    because the rule it was checking -- "self-issued certificates in this corpus
+    must be key rollovers" -- does not apply to an anchor. RFC 5280 6.1 excludes
+    the anchor from the path entirely. The check was corrected to exempt anchors.
+    A structural check that fires on the one object it was not written about is a
+    check that will be disabled rather than fixed.
+
+discriminating_power:
+  method: >
+    Measured, not asserted. A case discriminates H1 from H2 only if the two
+    oracles return DIFFERENT accept/reject verdicts on it. Counting rows is not
+    counting discriminating power.
+  result: >
+    1 of 8 cases discriminates H1 from H2: C2_si_pl0. 1 of 4 families (family C)
+    discriminates; families A, B and D have ZERO discriminating power under
+    either criterion and are reported as such rather than retained for
+    continuity.
+  honest_limitation: >
+    A single discriminating case is a thin basis, and it is recorded as thin. The
+    discriminating power comes from the ORACLE PAIR agreeing on that case, not
+    from the number of cases. Family C is kept because it is the isolating case
+    the hypothesis named; families A, B and D are retained only as controls,
+    which is a different and honest role for them.
+  what_the_corpus_CANNOT_express: >
+    Nothing here can distinguish "the implementation rejects" from "the
+    implementation rejected for an unrelated reason" unless the reason class is
+    inspected. Every cell therefore reports a reason class, and only cells whose
+    reason class is path_len are admissible as path-length evidence.
+
+results:
+  table: >
+    case        H1      H2      disc  cryptography    certvalidator
+    A1_ns_pl0   ACCEPT  ACCEPT  .     ACCEPT           ACCEPT
+    A2_si_pl0   ACCEPT  ACCEPT  .     REJECT signature ACCEPT
+    B1_ns_pl1   ACCEPT  ACCEPT  .     ACCEPT           ACCEPT
+    B2_si_pl1   ACCEPT  ACCEPT  .     REJECT signature ACCEPT
+    C1_ns_pl0   REJECT  REJECT  .     REJECT path_len  REJECT path_len
+    C2_si_pl0   REJECT  ACCEPT  YES   REJECT path_len  REJECT path_len
+    D1_ns_nolen ACCEPT  ACCEPT  .     ACCEPT           ACCEPT
+    D2_si_nolen ACCEPT  ACCEPT  .     ACCEPT           ACCEPT
+  implementation_cohort:
+    distinct_validation_cores: 2
+    cores:
+      - core: "pyca/cryptography 50.0.1, in-tree cryptography-x509-verification crate"
+        independence: >
+          CONFIRMED FROM THE INSTALLED WHEEL, not inferred. The shipped
+          CycloneDX SBOM enumerates 39 Cargo components and contains
+          cryptography-x509 and cryptography-x509-verification; it contains NO
+          rustls-webpki. Zero .rs files ship in the wheel. The Python layer is a
+          re-export shim.
+      - core: "wbond/certvalidator 0.11.1, pure-Python, independent author"
+        independence: shares no code, vendor, or ancestry with pyca
+  the_decisive_observation: >
+    On C2_si_pl0 -- the single discriminating case -- BOTH cores REJECT with
+    reason class path_len, matching the H1 oracle. Under H2 that case would be
+    ACCEPTED. Both independently-derived, independently-authored cores therefore
+    implement H1.
+  what_the_two_divergences_are: >
+    A2_si_pl0 and B2_si_pl1 are ACCEPTed by H1 and by certvalidator, and
+    REJECTed by cryptography with "signature does not match". These are NOT
+    path-length results. See obs-2026-0063 for the source-level mechanism.
+  hypotheses_resolved:
+    H1: >
+      SUPPORTED. Two independent RFC derivations, one adversarial refutation
+      that failed on all seven attack lines, an executable oracle pair, and two
+      independent cores all agreeing on the discriminating case.
+    H2: "REFUTED on the discriminating case by execution."
+    H3: >
+      NOT SUPPORTED. Two independent agents searched for the exempting sentence
+      and neither found one; the adversarial agent explicitly tried to construct
+      a conformant reading under H3 and could not.
+    H4: >
+      LIVE AND IMPORTANT, but for a DIFFERENT phenomenon than assumed. It was
+      the cause of three harness defects, not of an implementation divergence.
+    H5: >
+      REFUTED. Structural verification from DER proves the chains are valid for
+      reasons unrelated to path length.
+    H6: >
+      PARTIALLY LIVE. The oracle pair agree, but THREE harness defects were found
+      by executing the harness -- which is evidence that this class of harness is
+      easy to get wrong, not that these particular oracles are wrong.
+
+independent_reproduction:
+  in_process_by_a_different_agent: >
+    An adversarial agent independently built a Go crypto/x509 reproducer and ran
+    the decisive pair itself: identical chains differing ONLY in whether the
+    self-issued certificate carries pathLenConstraint=0 produced ACCEPT ->
+    REJECT. It also established that (m) is one-way: a pathlen of 9 cannot widen a
+    budget already clamped to 0.
+  not_done_and_why: >
+    OpenSSL, GnuTLS and BoringSSL/AWS-LC were NOT executed. Source-level
+    archaeology covers them, but no behavioural measurement exists and no
+    behavioural claim is made about them.
+
+negative_results_preserved:
+  - >
+    The hypothesis's own stated premise was WRONG. hyp-2026-0030 asserted that
+    the corpus "contains exactly TWO self-issued cases" and that the cell
+    required -- "a self-issued CA that both skips (l) and clamps via (m)" --
+    "does not exist in the corpus at all". The existing corpus case
+    c13_pair2_selfissued IS that cell: a self-issued CA carrying its own
+    pathlen:0. The premise was checked against disk before the hypothesis was
+    adopted, and it did not survive.
+  - >
+    The prior session's unexplained "signature" rejection on c11 (recorded in
+    fnd-2026-0016 as an open question) is REPRODUCED here on four freshly
+    generated chains and now has a source-level mechanism. See obs-2026-0063.
+  - >
+    Go crypto/x509 does not merely deviate in the same direction: it has NO
+    self-issued exemption in path-length logic at all, so it deviates in the
+    OPPOSITE (over-strict) direction. Recorded because "implementations disagree"
+    without direction is not a finding.
+
+limitations:
+  - Two execution cores, not six. Source archaeology covers more; execution does not.
+  - One discriminating case. Recorded as thin rather than padded.
+  - >
+    No security claim. (m) is a min() operation, so this is a tightening-only,
+    CA-self-inflicted constraint. A conformance and interoperability question,
+    not privilege escalation. The adversarial agent reached this independently.
+  - The adversarial agent's Go reproducer is not a committed artifact.

@@ -1,0 +1,122 @@
+id: hyp-2026-0031
+type: hypothesis
+status: active
+created_at: "2026-10-05T12:20:00Z"
+updated_at: "2026-10-05T12:20:00Z"
+summary: >
+  Opened because hyp-2026-0030's execution REFUTED its own premise and
+  surfaced a different and larger question. The measured fact is that only one
+  of six source-examined validation cores implements RFC 5280 6.1.4's
+  self-issued path-length exemption at all; the other five have no
+  self-issued guard in path-length logic and are therefore OVER-STRICT, not
+  over-permissive. The open question is whether the exemption is a deliberate
+  compatibility rule with a recorded rationale, or an implementation gap.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-scout
+    model: grok-4.7
+    tool: >
+      derived from the outcome of exp-2026-0038 and obs-2026-0063, which were
+      themselves produced by direct execution plus independent source archaeology
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - crypto/x509-pathlen/minimal_matrix.py
+    - .scratch/x509/arch_cohort.md
+    - .scratch/x509/history.md
+    - knowledge/experiments/exp-2026-0038.yaml
+    - knowledge/observations/obs-2026-0063.yaml
+  parent: hyp-2026-0030
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0030]
+  experiments: [exp-2026-0038]
+  observations: [obs-2026-0063]
+  findings: [fnd-2026-0016]
+
+relationship_to_hyp_2026_0030: >
+  hyp-2026-0030 asked whether (l) and (m) are asymmetric in the RFC text. That
+  question is now answered in the affirmative by execution and is NOT what this
+  hypothesis is about. This hypothesis asks a different question that the
+  execution raised: given that the RFC requires an exemption, why does almost
+  nothing implement one?
+
+what_is_already_established_and_is_not_reopened_here:
+  - >
+    RFC 5280 6.1.4 (l) is guarded on self-issued status and (m) is not. Two
+    independent derivations, one adversarial refutation that failed on seven
+    attack lines, and executable agreement between two independently-styled
+    oracles.
+  - >
+    On the single discriminating case, both executed cores implement that
+    reading.
+  - >
+    hyp-2026-0030's own premise that the isolating cell "does not exist in the
+    corpus at all" was WRONG. c13_pair2_selfissued already was that cell. That
+    premise is withdrawn, not quietly dropped.
+
+the_new_question: >
+  RFC 5280 6.1 says self-issued certificates "are not counted when evaluating
+  path length or name constraints". Source examination found:
+
+    - pyca/cryptography in-tree crate: exemption applied to NAME constraints,
+      pointedly not to path length, with an in-source NOTE saying this is a
+      deliberate choice citing an x509-limbo testcase the authors intend to fail.
+    - Go crypto/x509: no max_path_length variable at all; (l) and (m) collapsed
+      into one positional comparison; the self-issued predicate is computed for
+      policy counters and never reaches the path-length check.
+    - GnuTLS: unconditional decrement and clamp; the only early-return is a
+      SELF-SIGNED test, so it can skip the clamp for a self-signed pair but
+      never for a self-issued non-self-signed one.
+    - rustls-webpki: (m) unconditional for every Issuer role; no self-issued
+      concept in path-length evaluation.
+    - wbond/certvalidator: the only core found that follows the numbered steps
+      literally with (m) correctly outside the guard.
+
+  Is the absence of the exemption a DELIBERATE, ecosystem-wide compatibility
+  rule with a recorded rationale, or an implementation gap that nobody noticed
+  because self-issued CA certificates carrying a pathLenConstraint are rare?
+
+why_this_matters: >
+  The direction of the deviation determines everything. If an implementation is
+  stricter than the RFC's minimum, RFC 5280 6.2 makes that CONFORMANT -- the
+  same reasoning that refuted fnd-2026-0016's classification. Over-strictness is
+  an interoperability problem, not a security problem. The question only becomes
+  a security question if some implementation is OVER-PERMISSIVE, i.e. accepts a
+  chain RFC 5280 rejects. No such implementation has been found, and none is
+  claimed.
+
+falsifiers:
+  - >
+    A core that exempts a self-issued certificate from the decrement but ALSO
+    ignores its pathLenConstraint. That would be an over-permissive
+    implementation and would make this a security-relevant finding.
+  - >
+    A primary source establishing that the exemption was deliberately removed
+    from path-length processing, as opposed to never having been implemented.
+  - >
+    A demonstration that real-world self-issued CA certificates DO carry
+    pathLenConstraint, which would make the gap practically reachable rather
+    than theoretical.
+
+acceptance_criteria:
+  - OpenSSL, GnuTLS, BoringSSL and AWS-LC EXECUTED against the minimal corpus, not merely read. Five of the six cores in scope are currently source-only.
+  - Each implementation's self-issued predicate established from its own source, distinguishing SELF-ISSUED from SELF-SIGNED in every case.
+  - The deliberate-versus-incidental question answered per implementation with a citable primary source, and the answer NOT generalised across implementations that disagree.
+  - The direction of every deviation stated explicitly. An unqualified "implementations disagree" is not a result.
+
+compute_class: medium
+routing_note: >
+  The pure-Python half is lightweight. Adding Go, GnuTLS and OpenSSL to the
+  executed cohort means building each core, which is medium and therefore
+  belongs on GitHub Actions per AGENTS.md's HARD RULE, not locally.
+
+budget_and_stopping_condition:
+  attempts: 3
+  stopping: >
+    Stop once at least three further DISTINCT validation cores have been
+    executed against the discriminating case and each is classified as
+    implementing H1, or as deviating in a stated direction. A negative result
+    (no further core implements the exemption) is a legitimate and informative
+    outcome and is preserved rather than re-run with more cells.

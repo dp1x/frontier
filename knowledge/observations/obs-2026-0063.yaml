@@ -1,0 +1,154 @@
+id: obs-2026-0063
+type: observation
+status: current
+created_at: "2026-10-05T11:45:00Z"
+updated_at: "2026-10-05T12:10:00Z"
+summary: >
+  The unexplained "signature does not match" rejection that fnd-2026-0016
+  recorded as an OPEN QUESTION on its self-issued cells is REPRODUCED on
+  freshly generated cleanroom chains and now has a source-level mechanism. It
+  is NOT a pathLenConstraint result and was never one. Separately, source-level
+  archaeology establishes that pyca's crate applies no self-issued exemption to
+  path length at all -- the very rule H1 is about -- and says so in its own
+  source comment.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      direct execution of the minimal corpus against two cores, plus
+      source-level archaeology of six validation cores by an independent agent,
+      plus wheel-level verification of the installed dependency closure
+  sources:
+    - crypto/x509-pathlen/minimal_matrix.py
+    - crypto/x509-pathlen/minimal_chain.py
+    - .scratch/x509/arch_cohort.md
+    - .scratch/x509/history.md
+  parent: exp-2026-0038
+  generation: 1
+links:
+  experiments: [exp-2026-0038]
+  findings: [fnd-2026-0016]
+  hypotheses: [hyp-2026-0030, hyp-2026-0031]
+
+why_this_exists: >
+  fnd-2026-0016 records, under blockers_remaining, that the "signature" reason
+  class on the c11 rejection "is still unexplained". That open question is closed
+  here, in the only sense in which it can be: not by arguing, but by constructing
+  four fresh chains that reproduce it and by locating the code.
+
+the_unexplained_rejection_reproduced:
+  what_was_recorded: >
+    On the existing corpus, c11_pair1_selfissued and c13_pair2_selfissued are
+    REJECTed by pyca/cryptography with reason class "signature" while the Frontier
+    oracle expects ACCEPT and REJECT respectively.
+  what_is_now_measured: >
+    The same signature-class rejection reproduces on INDEPENDENT, freshly
+    generated chains (A2_si_pl0, B2_si_pl1 and, before the harness repairs,
+    C2_si_pl0 and D2_si_nolen). It is therefore not a property of the legacy
+    corpus and not a one-off.
+  chain_validity_is_excluded: >
+    Every certificate in every chain was verified independently: subject, issuer,
+    BasicConstraints, KeyUsage and -- decisively -- every signature
+    relationship. The chains are valid for reasons unrelated to path length, so a
+    signature rejection cannot be re-read as a path-length verdict.
+
+mechanism_established_by_source:
+  claim: >
+    pyca/cryptography's in-tree crate applies the self-issued exemption to NAME
+    constraints and pointedly NOT to path length, and its own source comment says
+    so.
+  evidence_verbatim: >
+    src/rust/cryptography-x509-verification/src/lib.rs, at the chain-depth
+    increment:
+
+      // NOTE(ww): According to RFC 5280, we should only
+      // increase the chain depth when the certificate is **not**
+      // self-issued. In practice however, implementations widely
+      // ignore this requirement, and unconditionally increment
+      // the depth with every chain member. We choose to do the same;
+      // see `pathlen::self-issued-certs-pathlen` from x509-limbo
+      // for the testcase we intentionally fail.
+
+    The increment is current_depth.checked_add(1), with no self-issued test.
+  the_predicate_exists_but_goes_elsewhere: >
+    cert_is_self_issued is defined in
+    src/rust/cryptography-x509-verification/src/certificate.rs:9-11 as
+    cert.issuer() == cert.subject() -- which IS RFC 5280's definition. Its only
+    production call site feeds NameChain construction in lib.rs:527. It is never
+    consulted by the path-length check.
+  the_docs_describe_a_behaviour_the_code_does_not_have: >
+    valid_issuer (policy/mod.rs:528) is documented as returning "the new
+    path-building depth ... [that] may or may not be a higher number than the
+    original depth, depending on ... whether the issuer was self-issued". The
+    increment is unconditional, so that hedge is not realised.
+  correction_to_a_persistent_label: >
+    The in-repo adapter crypto/x509-pathlen/adapter_webpki.py:18 states that the
+    core underneath cryptography is rustls-webpki. That is FALSE for the
+    installed wheel. Measured directly: zero .rs files ship in the wheel, and the
+    shipped CycloneDX SBOM enumerates 39 Cargo components containing
+    cryptography-x509 and cryptography-x509-verification and NO rustls-webpki.
+    This CONFIRMS and extends rev-2026-0021's correction, which had reached the
+    same conclusion by reading the SBOM.
+  the_signature_rejection_itself: >
+    The reported string is pyca's own, and the rejection arises from its path
+    BUILDER exhausting candidates rather than from a path-length check. The
+    remaining pyca-only divergences (A2_si_pl0, B2_si_pl1) occur on cells where a
+    self-issued certificate sits directly beneath a CA carrying a shared DN.
+    Their exact path-builder mechanism is NOT fully isolated here and is recorded
+    as unresolved rather than guessed at.
+
+cohort_wide_source_findings:
+  note: >
+    Source-level only. No behavioural measurement exists for any of these, and no
+    behavioural claim is made.
+  pyca_cryptography: >
+    NO self-issued exemption in path-length logic. Unconditional depth increment,
+    so it counts self-issued intermediates. Deviates in the OVER-STRICT
+    direction relative to H1.
+  wbond_certvalidator: >
+    The only cohort core found that implements the numbered RFC 5280 6.1.4 steps
+    literally, with (m) correctly OUTSIDE the self-issued guard. Consistent with
+    its measured behaviour.
+  golang_crypto_x509: >
+    Maintains no max_path_length state variable at all; steps (l) and (m) are
+    collapsed into a single positional comparison. The self-issued predicate is
+    computed for POLICY counters and never reaches the path-length check.
+  gnutls: >
+    Unconditionally decrements and then clamps; no self-issued guard in
+    path-length logic. Its early-return is a SELF-SIGNED test (byte-identical TBS
+    and signature), so it can only ever skip the clamp for a self-signed pair,
+    never for a self-issued non-self-signed one.
+  rustls_webpki: >
+    (m) is unconditional for every Issuer role; there is no self-issued concept
+    in path-length evaluation.
+  why_this_matters_for_the_hypothesis: >
+    H1 predicts that a CONFORMANT implementation exempts a self-issued
+    certificate from the decrement but not from the clamp. Across the cohort that
+    source was read for, only certvalidator does exactly that. The divergence is
+    therefore not a subtle bug in one core -- it is that the majority of
+    implementations do not implement the self-issued path-length exemption at
+    all, in either direction.
+
+historical_context:
+  from_a_separate_agent_which_read_only_primary_sources: >
+    Whether this is an established compatibility rule, an implementation defect,
+    or a deliberate policy choice is implementation-specific and was NOT
+    uniformly established. For pyca it is DELIBERATE and documented in-source
+    (the NOTE above, citing an x509-limbo testcase the authors intentionally
+    fail). For Go and GnuTLS no equivalent statement of intent was located, so no
+    ecosystem-wide claim is possible.
+
+what_remains_unresolved:
+  - >
+    The exact path-builder mechanism behind the two remaining pyca-only
+    divergences (A2_si_pl0, B2_si_pl1). Known to be signature-class and NOT
+    path-length; the precise condition is not isolated.
+  - >
+    Whether any implementation has deliberately chosen the OVER-PERMISSIVE
+    reading (folding (m) into (l)'s guard). No core in the source cohort was found
+    to do so, and none was executed that might.
+  - No erratum touching RFC 5280 6.1.4 was found by any of the three agents that
+    searched, but only one retrieved the RFC Editor errata database.
