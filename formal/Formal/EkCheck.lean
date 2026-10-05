@@ -352,8 +352,10 @@ the prefix contains exactly `nCoeff k` twelve-bit coefficients and the
 prefix never reads byte `384 * k` or beyond. -/
 theorem prefix_last_bit_byte (k : Nat) :
     ((8 * 384 * k - 1) / 8 : Nat) < 384 * k := by
-  have hpos : (0 : Nat) < 8 * 384 * k := by positivity
-  have hr : (8 * 384 * k - 1) % 8 < 8 := Nat.mod_lt _ (by omega : (0 : Nat) < 8)
+  have h1 : (0 : Nat) < 384 := by omega
+  have h8 : (0 : Nat) < 8 := by omega
+  have hpos : (0 : Nat) < 8 * 384 * k := Nat.mul_pos (Nat.mul_pos h8 h1) (Nat.succ_pos k)
+  have hr : (8 * 384 * k - 1) % 8 < 8 := Nat.mod_lt _ h8
   have hdecomp := Nat.div_add_mod (8 * 384 * k - 1) 8
   have hlt : 8 * ((8 * 384 * k - 1) / 8) < 8 * 384 * k := by omega
   have hone : (8 * 384 * k - 1) / 8 = 384 * k - 1 := by
@@ -385,7 +387,7 @@ BYTE-RANGE half of step 1, `∀ y, ek y < 256`, proved from `ek y`'s type by
 rejected by the kernel: `Ek k` is a `Type`, not a `Prop`. -/
 def EkTypeCheck {k : Nat} (ek : Ek k) : Prop := ∀ y : Fin (384 * k + 32), ek y < 256
 
-theorem step1_type_check (k : Nat) (ek : Ek k) : EkTypeCheck ek := fun y => y.isLt
+theorem step1_type_check (k : Nat) (ek : Ek k) : EkTypeCheck ek := fun y => (ek y).isLt
 
 /-- T3a: the parameter `k` is load-bearing.  Distinct `k` give distinct
 required byte counts, so `k` cannot be projected away.  This is the repair of
@@ -519,7 +521,8 @@ theorem reject_on_overflow_with_bit (B : Nat → Nat) (i : Nat) (h : seg B i ≥
   refine ⟨j, hj, ?_⟩
   intro hcon
   apply hbj
-  have hs8 : (12 * i + j) % 8 < 8 := Nat.mod_lt _ (by omega : (0 : Nat) < 8)
+  have h8 : (0 : Nat) < 8 := by omega
+  have hs8 : (12 * i + j) % 8 < 8 := Nat.mod_lt _ h8
   have hpm : 8 * ((12 * i + j) / 8) + (12 * i + j) % 8 = 12 * i + j :=
     Nat.div_add_mod (12 * i + j) 8
   have henc : bit (encByte (fun i => dec B i) ((12 * i + j) / 8)) ((12 * i + j) % 8)
@@ -551,7 +554,7 @@ theorem witness_byte_lt_prefix (k i j : Nat) (hi : i < nCoeff k) (hj : j < 12) :
   -- available here.  `hi < 256 * k` gives `12 * i + j ≤ 12 * 256 * k - 1`,
   -- hence the equation with a remainder below 8 bounds the quotient.
   have hdecomp := Nat.div_add_mod (12 * i + j) 8
-  have hr : (12 * i + j) % 8 < 8 := Nat.mod_lt _ (by omega : (0 : Nat) < 8)
+  have hr : (12 * i + j) % 8 < 8 := Nat.mod_lt _ h8
   have hnum : 12 * i + j < 8 * (384 * k) := by omega
   have hlt : 8 * ((12 * i + j) / 8) < 8 * (384 * k) := by omega
   omega
@@ -735,9 +738,11 @@ theorem B2_bytes (y : Nat) : ekBytes 2 B2 y = B2raw y := by
   by_cases h : y < 384 * 2 + 32
   · rw [ekBytes_val 2 B2 y h]
     show B2raw y % 256 = B2raw y
-    cases hb : B2raw y with
-    | zero => omega
-    | succ b => omega
+    by_cases h0 : y = 768
+    · rw [if_pos h0]; norm_num
+    · by_cases h1 : y = 769
+      · rw [if_neg h0, if_pos h1]; norm_num
+      · rw [if_neg h0, if_neg h1]; norm_num
   · rw [ekBytes_outside 2 B2 y h]
     have h0 : y ≠ 768 := by omega
     have h1 : y ≠ 769 := by omega
@@ -805,10 +810,12 @@ theorem B2_seg512 : ekSeg 2 B2 (256 * 2) = 3329 := by
     -- `gbit B p` is opaque to `rw`, so it is unfolded before `B2_bytes` is
     -- applied to the byte index inside it.
     show bit (ekBytes 2 B2 ((6144 + s) / 8)) ((6144 + s) % 8) = bit 3329 s
-    rw [hrw, B2_bytes, B2raw]
-    have hne0 : 6144 + s ≠ 768 := by omega
-    have hne1 : 6144 + s ≠ 769 := by omega
-    rw [if_neg hne0, if_neg hne1, bit_zero]
+    -- The two seed bytes sit at indices 768 and 769, so the byte index
+    -- `(6144 + s) / 8` is neither; the `if` is discharged on the INDEX, not
+    -- on the value it selects.
+    have hidx0 : (6144 + s) / 8 ≠ 768 := by omega
+    have hidx1 : (6144 + s) / 8 ≠ 769 := by omega
+    rw [B2_bytes, B2raw, if_neg hidx0, if_neg hidx1, bit_zero]
     simp [bit]
   have hWc : wsum (fun j => gbit (ekBytes 2 B2) (12 * 512 + j)) 12
       = wsum (fun j => bit 3329 j) 12 := wsum_congr hbits
@@ -870,9 +877,13 @@ theorem B2alt_bytes (y : Nat) : ekBytes 2 B2alt y = B2altRaw y := by
   by_cases h : y < 384 * 2 + 32
   · rw [ekBytes_val 2 B2alt y h]
     show B2altRaw y % 256 = B2altRaw y
-    cases hb : B2altRaw y with
-    | zero => omega
-    | succ b => omega
+    by_cases h0 : y = 768
+    · rw [if_pos h0]; norm_num
+    · by_cases h1 : y = 769
+      · rw [if_neg h0, if_pos h1]; norm_num
+      · by_cases h2 : y = 780
+        · rw [if_neg h0, if_neg h1, if_pos h2]; norm_num
+        · rw [if_neg h0, if_neg h1, if_neg h2]; norm_num
   · rw [ekBytes_outside 2 B2alt y h]
     have h0 : y ≠ 768 := by omega
     have h1 : y ≠ 769 := by omega
