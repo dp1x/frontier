@@ -1,0 +1,170 @@
+id: rev-2026-0024
+type: review
+status: current
+created_at: "2026-10-06T01:00:00Z"
+updated_at: "2026-10-06T01:00:00Z"
+summary: >
+  Adversarial review of obs-2026-0068 (PNG unknown-critical-chunk silent
+  acceptance in Pillow and Go), commissioned with an explicit mandate to
+  DISPROVE it and given the same raw evidence the primary researcher had
+  WITHOUT being told the expected answer. Verdict: CONFIRMED, with one
+  correction that the finding's own wording did not survive and that the
+  orchestrator then verified against the installed source.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-critic
+    model: grok-4.7
+    tool: >
+      Ten attack lines. The reviewer wrote its OWN PNG parser with no shared
+      code with the harness, its own reproduction scripts, and its own Go
+      program. It re-fetched the specification. Every claim in the reviewed
+      artifacts was attacked from the raw bytes.
+  sources:
+    - knowledge/observations/obs-2026-0068.yaml
+    - knowledge/experiments/exp-2026-0039.yaml
+    - knowledge/specifications/spc-2026-0007.yaml
+  parent: exp-2026-0039
+  generation: 2
+links:
+  observations: [obs-2026-0068]
+  experiments: [exp-2026-0039]
+  missions: [msn-2026-0023]
+
+VERDICT: "CONFIRMED, with one wording correction required."
+independence_of_the_reviewer: >
+  The reviewer was given the same raw evidence and the same corpus, but not the
+  expected answer, and was told its goal was to disprove. It independently
+  concluded CONFIRMED after ten attack lines. Per AGENTS.md this is a
+  non-synthesizer role performing an adversarial pass, which is the evidence
+  the promotion ladder requires for a verified claim.
+
+ATTACK_LINES_THAT_LANDED:
+  - line: "2 -- registry collision"
+    partial: >
+      `VQAx`, `vQAx` and `vQax` occur zero times in the Third Edition and are
+      absent from the Second Edition's 18 chunk types and from Pillow's 26
+      chunk literals. But the PNG-EXTENSIONS registry could NOT be retrieved
+      (libpng.org 404 twice, w3.org/TR/PNG-EXTENSIONS/ 404, web_search dead at
+      HTTP 426), so the corpus's `known_to_spec: false` remains UNVERIFIED at
+      registry level.
+    why_it_does_not_matter: >
+      15.3.3(6) keys on chunks the decoder does not RECOGNISE, and the reviewer
+      proved that constructively -- Pillow has no `chunk_VQAx` method and Go has
+      no case for it -- without any registry lookup. The negative result was
+      established by the implementation's own dispatch table, not by an
+      external list.
+  - line: "10 -- what would make this NOT a defect"
+    landed_with_a_correction: >
+      Section 4.2's "does not specify the interface ... the precise form in
+      which an image is ... delivered ... is not specified" defeats any
+      requirement about the MECHANISM of signalling, but not the OBLIGATION
+      itself. 13.1's "if appropriate" is a genuine weakness in that clause
+      alone, but 15.3.3(6) independently requires an error. 5.7.3's
+      discouragement of private critical chunks is encoder-side and lowers
+      severity without affecting conformance.
+    the_correction: >
+      AGAINST THE FINDING'S OWN WORDING: Pillow DOES call
+      `logger.debug("%r %s %s (unknown)", cid, pos, length)` at
+      PngImagePlugin.py:790. So obs-2026-0068's original "no warning was
+      emitted, no callback fired" is FALSE AS WRITTEN.
+    orchestrator_verification: >
+      Confirmed directly against the installed Pillow 12.3.0: line 790 is
+      exactly that logger.debug call, and line 792 is
+      `if cid[1:2].islower():` -- the SECOND byte's PRIVATE bit, not the first
+      byte's ancillary bit.
+    why_the_finding_still_survives_the_correction: >
+      The debug call is off by default, is emitted IDENTICALLY for the
+      ancillary twin `vQAx` so it carries zero criticality information, is not
+      an error, and is unreachable through the public API. The defensible
+      phrasing is "no CRITICALITY-DISCRIMINATING indication reaches the
+      caller". Go emits nothing at any level.
+  - line: "an additional correction the reviewer surfaced unprompted"
+    the_fact: >
+      Pillow's LOAD_TRUNCATED_IMAGES path at PngImagePlugin.py:213 DOES read
+      the ancillary bit: `if ImageFile.LOAD_TRUNCATED_IMAGES and
+      (cid[0] >> 5 & 1)`. It uses it to decide whether to SKIP the CRC check
+      for truncated loads. It is not a criticality check and must not be
+      conflated with the gap. The orchestrator verified this line directly.
+
+ATTACK_LINES_THAT_FAILED:
+  - line: "1 -- is the vector actually conforming"
+    result: >
+      The reviewer's own parser, sharing no code with png_gen.py, confirmed
+      everything: signature; framing; IHDR 1x1 with colour type 0, bit depth 8,
+      compression 0, filter 0, interlace 0; IDAT's zlib stream valid and
+      inflating to `0000`; unfilters to grey sample `00` with a scanline size
+      matching the IHDR-derived expectation; IEND last; no trailing bytes; all
+      type bytes within 0x41-0x5A and 0x61-0x7A; property bits 0/0/0; and the
+      VQAx CRC recomputed as 0A65E580, matching the stored value.
+    the_verdict: "Nothing to attack."
+  - line: "3 and 4 -- normative reading and scope"
+    result: >
+      Re-fetched the spec and confirmed 5.4 Table 6 "shall indicate to the
+      user", 13.1 "fatal condition for any decoder trying to extract the
+      image", and 15.3.3(6) "generates an error". 13.1's grace clause covers
+      signalling PLUS continuing; it licenses no signal at all. 13.1's
+      carve-out names a text-annotation extractor and reaches neither core.
+  - line: "5 -- reproduction"
+    result: >
+      CONFIRMED for BOTH cores with the reviewer's own code: Pillow 12.3.0
+      accepts pair-primary-cri (L 1x1, sample 00) and rejects negc-cri-badcrc
+      (UnidentifiedImageError); Go go1.26.4 accepts the same file (returning
+      *image.Gray) and rejects bad-CRC with "png: invalid format: invalid
+      checksum".
+    significance: >
+      THIS CLOSES THE GO REPRODUCTION GAP. The primary experiment had recorded
+      the Go result as not independently re-executed. It now is.
+  - line: "7 -- probe artefact"
+    result: >
+      Nine vectors from the reviewer's own separately written PNG constructor --
+      types ZzQq, XyWv, KaTe, WqZa, across three positions, payloads 0-98
+      bytes, four image geometries -- were ALL silently accepted by both cores.
+    significance: >
+      The result is not an artefact of the particular probe type VQAx. This is
+      the strongest form of the reproduction, because it uses a different
+      generator entirely.
+  - line: "8 -- mechanism accuracy"
+    result: >
+      No line drift. The cited lines say what the artifact claims, and the
+      reviewer found the claim can be STRENGTHENED: Pillow has no ancillary-bit
+      test anywhere except the CRC-skip path, and Go's image/png has none at
+      all.
+
+A_METHOD_IMPROVEMENT_THE_REVIEWER_OFFERED:
+  crc_attribution_by_construction: >
+    Rather than the primary experiment's instrumented CRC spy, the reviewer
+    established attribution structurally: the accepted and rejected files are
+    both 105 bytes and differ at exactly offsets 67-70, which ARE the VQAx CRC
+    field, with nothing else differing. That retires the instrumentation caveat
+    entirely.
+
+WHAT_THE_REVIEWER_DID_NOT_DO:
+  - >
+    It did NOT re-verify the stb_image and Wuffs contrast results or their line
+    citations. Those remain at cohort-agent sourcing and are NOT independently
+    reviewed.
+  - libpng remains NOT_BUILT, so no scope claim broader than the cores actually
+    run is available.
+  - It filed nothing upstream and recommended nothing to the project.
+
+PROMOTION_READINESS:
+  requirements_met:
+    - "Experiment: exp-2026-0039, 44 cells, zero unattributable."
+    - "Observation: obs-2026-0068, corrected."
+    - "Reproducer: the corpus is committed, byte-stable, and hash-verified by three independent parties."
+    - "Independent review: THIS ARTIFACT. Non-synthesizer role, adversarial mandate, ten attack lines, CONFIRMED."
+  requirements_not_met:
+    - "Deterministic verification by a dedicated artifact is not recorded."
+    - "libpng/libspng absent, so any scope claim must be narrowed to the four cores run."
+    - "No finding artifact has been promoted, and none should be until the scope wording is narrowed and the registry question is resolved or explicitly bounded."
+  a_narrower_wording_that_is_defensible: >
+    "Of four independently-lineaged PNG decoder cores exercised at specific
+    versions, two silently accept a conforming PNG containing an unknown
+    critical chunk while rejecting the same file with only its CRC corrupted;
+    the ancillary bit is never consulted on either path."
+
+supersedes: {}
+corrects:
+  obs_2026_0068_claim_that_no_warning_was_emitted: "Pillow does emit a debug-level log at PngImagePlugin.py:790; it carries no criticality information and is off by default."

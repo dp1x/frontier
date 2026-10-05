@@ -31,6 +31,7 @@ links:
   experiments: [exp-2026-0039]
   observations: [obs-2026-0068]
   specifications: [spc-2026-0007]
+  reviews: [rev-2026-0024]
 title: "MSN-2026-0023 - PNG unknown-critical-chunk handling across independent decoder cores"
 objective: >
   Establish, against source-verified normative propositions and with every
@@ -76,8 +77,8 @@ acceptance_criteria:
 - Positive controls proving the harness can produce an ACCEPT (DONE: 4 controls).
 - Every cell carries a reason class, with zero unattributable rejections (DONE: GENERIC_DECODE_ERROR = 0 of 44).
 - Every cohort member's core and lineage established from its own distribution (DONE: none of the four links libpng).
-- The strongest candidate discrepancy independently reproduced outside the primary harness (DONE for Pillow by the orchestrator; NOT DONE for Go).
-- An independent adversarial review with a mandate to disprove the finding (IN FLIGHT).
+- The strongest candidate discrepancy independently reproduced outside the primary harness (DONE for Pillow by the orchestrator AND by the adversarial reviewer with separate scripts; DONE for Go by the adversarial reviewer's own Go program. Neither is a second IMPLEMENTATION -- two reproductions against the same libraries.)
+- An independent adversarial review with a mandate to disprove the finding (DONE: rev-2026-0024, CONFIRMED with one wording correction, which was applied to obs-2026-0068 and verified against the installed Pillow source).
 - libpng and libspng exercised so a broader scope claim becomes possible (NOT DONE).
 stopping_conditions:
 - Adversarial review lands and either confirms or refutes the discrepancy.

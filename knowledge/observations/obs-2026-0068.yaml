@@ -58,20 +58,43 @@ the_scope_limit_that_governs_this_claim:
     already-visible data ("fail gracefully"), and states the application as a
     whole need not terminate. So a decoder that reports the condition and then
     renders would be CONFORMANT.
-  what_IS_being_claimed_here: >
-    Neither core INDICATED anything to the caller. No exception was raised, no
-    warning was emitted, no callback fired. The claim is about SILENT acceptance
-    specifically, and it was checked per cell rather than inferred from
-    "it rendered".
+  what_is_being_claimed_here: >
+    Neither core INDICATED anything criticality-discriminating to the caller.
+    No exception was raised, no warning reached the caller through the API, and
+    the decoded image is produced with no error.
+  correction_2026_10_06_from_adversarial_review: >
+    An earlier revision of this artifact said "no warning was emitted, no
+    callback fired". THAT IS FALSE AS WRITTEN. Pillow does call
+    `logger.debug("%r %s %s (unknown)", cid, pos, length)` at
+    PngImagePlugin.py:790. The claim survives, but only because that call:
+    (a) is off by default, (b) is emitted IDENTICALLY for the ancillary twin
+    `vQAx`, so it carries ZERO criticality information, (c) is not an error, and
+    (d) is unreachable through the public API. The defensible phrasing is "no
+    CRITICALITY-DISCRIMINATING indication reaches the caller", not "nothing was
+    emitted". Go emits nothing at any level.
+  a_second_correction_from_the_same_review: >
+    Pillow's `LOAD_TRUNCATED_IMAGES` path at PngImagePlugin.py:213 DOES read the
+    ancillary bit -- `if ImageFile.LOAD_TRUNCATED_IMAGES and (cid[0] >> 5 & 1)`
+    -- but only to decide whether to SKIP the CRC check for truncated loads. It
+    is not a criticality check and must not be conflated with the gap. The
+    default path reads no ancillary bit at all; line 792 tests
+    `cid[1:2].islower()`, which is the PRIVATE bit of the second byte, not the
+    ancillary bit of the first.
 
 source_level_mechanisms:
   pillow_12_3_0:
-    files_and_lines: "PIL/PngImagePlugin.py:205, 787-793, 795"
+    files_and_lines: "PIL/PngImagePlugin.py:213, 790, 792, 795"
     sequence:
       - "line 205: getattr(self, f\"chunk_{cid}\") raises AttributeError because no chunk_VQAx method exists"
-      - "lines 787-793: the AttributeError is caught and the chunk is dropped"
+      - "line 790: logger.debug(\"%r %s %s (unknown)\", cid, pos, length) -- off by default, identical for the ancillary twin, carries no criticality information"
+      - "lines 791-793: the chunk payload is read and, because cid[1:2].islower() is False for 'VQAx' ('Q' is uppercase), NOT appended to private_chunks"
       - "line 795: self.png.crc(cid, s) runs and PASSES, because the vector's CRC is valid"
-    the_key_fact: "The ancillary bit is never read on this path at all."
+    the_key_fact: >
+      The ancillary bit is never read on the default path. Line 792 tests
+      cid[1:2].islower(), which is the SECOND byte's private bit, not the first
+      byte's ancillary bit. The only ancillary-bit read in the module is line
+      213, guarded by LOAD_TRUNCATED_IMAGES, and it decides whether to skip a
+      CRC check -- it is not a criticality check.
   go_image_png_1_26_4:
     files_and_lines: "src/image/png/reader.go:880 (switch), 929-946 (default tail)"
     sequence:
@@ -106,22 +129,34 @@ independence_of_the_cohort:
     Wuffs ships its own std/zlib.
   not_built: "libpng and libspng -- NOT_BUILT, no system install and a native build is CI work per AGENTS.md"
 
-INDEPENDENT_REPRODUCTION_OF_THE_PILLOW_CASE:
-  method: >
-    The orchestrator wrote a fresh script -- no import of the harness, the
-    oracle, or the cohort agent's instrumentation -- calling
-    `Image.open(p); im.load()` and reading pixels.
-  observed:
-    ctl-00-minimal: "ACCEPT (1,1) L [0]"
-    pair-primary-anc: "ACCEPT (1,1) L [0]"
-    pair-primary-cri: "ACCEPT (1,1) L [0]"
-    place-cri-after-idat: "ACCEPT (1,1) L [0]"
-    negc-cri-badcrc: "REJECT UnidentifiedImageError"
+INDEPENDENT_REPRODUCTION:
+  orchestrator_script: >
+    A fresh script importing none of the harness or instrumentation.
+    Reproduced the Pillow result.
+  adversarial_reviewers_script: >
+    A SECOND, independently written script AND a separately written Go program,
+    written by the adversarial reviewer without access to the cohort agent's
+    code. This CLOSES THE GO REPRODUCTION GAP that this record previously
+    carried as open: the reviewer confirmed Pillow accepts pair-primary-cri and
+    rejects negc-cri-badcrc, and confirmed Go accepts the same file (returning
+    *image.Gray) and rejects bad-CRC with "png: invalid format: invalid
+    checksum".
+  a_stronger_attribution_method_than_the_original: >
+    The reviewer established CRC attribution BY CONSTRUCTION rather than by
+    instrumentation: the accepted and rejected files are both 105 bytes and
+    differ at exactly offsets 67-70, which ARE the VQAx CRC field. Nothing else
+    differs. This retires the instrumentation caveat recorded below.
+  a_probe_artefact_attack_that_failed: >
+    Nine vectors from the reviewer's own separately written PNG constructor --
+    types ZzQq, XyWv, KaTe, WqZa across three positions, payloads 0-98 bytes,
+    four image geometries -- were ALL silently accepted by both cores. The
+    result is not an artefact of the particular probe type VQAx.
   what_it_proves: >
-    Pillow decodes the image FROM the unknown-critical file and refuses the
-    same file with only the CRC changed. The reproduction is independent of the
-    harness; it is NOT a second implementation, and the Go result has not been
-    re-executed by the orchestrator.
+    Both cores silently accept a conforming PNG containing an unknown critical
+    chunk, and refuse the same file when only its CRC is changed.
+  what_it_is_not: >
+    A second INDEPENDENT IMPLEMENTATION. Two scripts against the same two
+    libraries is two reproductions, not two implementations.
 
 HONEST_LIMITS:
   - "Scope is four cores. This is not a statement about PNG decoders in general, and libpng -- the most widely deployed core -- is NOT_BUILT."
@@ -130,19 +165,23 @@ HONEST_LIMITS:
     No security claim is made or implied. Nothing here demonstrates an
     exploitable consequence; it is a conformance and interop observation.
   - >
-    Pillow discards its cause chain, so its CRC attribution rests on an
-    instrumented spy plus the negative control rather than on the library's own
-    reporting.
+    ADVERSARIAL REVIEW VERDICT: CONFIRMED, with the corrections recorded above.
+    The reviewer re-derived the conformance of the vector from scratch (own
+    parser, no shared code), confirmed both reproductions, and attacked the
+    normative reading and the corpus's registry claim without success. It could
+    NOT retrieve the PNG-EXTENSIONS registry, so `known_to_spec: false` remains
+    UNVERIFIED at registry level -- immaterial, because 15.3.3(6) keys on chunks
+    the decoder does not recognise, which was proved constructively rather than
+    by registry lookup.
   - >
-    No upstream report has been filed and none should be until the cohort is
-    widened and an independent adversarial review has run.
+    The reviewer did NOT re-verify the stb_image and Wuffs contrast results or
+    their line citations. Those remain at cohort-agent sourcing.
   - >
-    A previous session found that a "compliant" framing can be refuted by RFC
-    5280's augmentation clause, so the normative reading here was checked
-    against the actual text of 13.1 rather than assumed. That reading does have
-    an escape: 13.1 concedes criticality is "not necessarily relevant to every
-    conceivable decoder". Both Pillow and Go ARE trying to extract the image, so
-    that carve-out does not apply to them.
+    The "signal an error and continue" escape in 13.1 does NOT rescue these
+    cores: it licenses signalling PLUS continuing, and neither signals at all.
+    The reviewer independently identified 15.3.3(6) -- "encountering an unknown
+    chunk in which the ancillary bit is 0 generates an error" -- as a second,
+    independent requirement.
 
 next_evidence_that_would_change_the_strength_of_this:
   - "Build and run libpng and libspng on CI, so the scope names more than four cores."
