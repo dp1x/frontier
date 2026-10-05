@@ -1,0 +1,387 @@
+id: rpt-2026-0022
+type: report
+status: final
+created_at: "2026-10-06T02:00:00Z"
+updated_at: "2026-10-06T02:30:00Z"
+summary: >
+  Session report for the 2026-10-05/06 autonomous shift. Four research tracks
+  ran in parallel. The headline is not the experiment that succeeded but the
+  three that did NOT survive contact with the primary sources: the PNG bit
+  convention in the session brief was WRONG, X.690 imposes no decoder
+  obligation at all (killing the DER mission's framing), and YAML 1.2.2 has
+  silently deleted the MUST that YAML 1.2.1 carried. CI on main was RED at
+  session start and is green now. The PNG experiment produced a confirmed,
+  independently reproduced, adversarially reviewed discrepancy. FORMAL-208
+  improved 33 -> 4 errors and then REGRESSED to 16 and is not converged.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.7
+    tool: >
+      synthesis of ten subagent tracks plus direct execution by the
+      orchestrator: git and CI state, frontier validate, the full pytest suite,
+      ruff, the artifact linter, the promotion gate selftest, an independent
+      re-derivation of the FORMAL-208 vacuity arithmetic from first
+      principles, an independent reproduction of the Pillow result with a
+      freshly written script, and direct source reads of the installed Pillow
+      and of the PNG specification
+  sources:
+    - https://www.w3.org/TR/PNG/
+    - https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-X.690-202102-I!!PDF-E&type=items
+    - https://yaml.org/spec/1.2.2/
+    - crypto/png-critical-chunk/
+    - formal/Formal/EkCheck.lean
+  parent: null
+  generation: 0
+links:
+  reports: [rpt-2026-0021]
+  missions: [msn-2026-0021, msn-2026-0023]
+  hypotheses: [hyp-2026-0032, hyp-2026-0033]
+  experiments: [exp-2026-0039]
+  observations: [obs-2026-0064, obs-2026-0065, obs-2026-0066, obs-2026-0067, obs-2026-0068]
+  specifications: [spc-2026-0007, spc-2026-0008]
+  reviews: [rev-2026-0023, rev-2026-0024]
+
+STARTING_STATE_VERIFIED_NOT_ASSUMED:
+  the_brief_said_approximately: "bb11e75"
+  measured: "bb11e75eaa2d9dd80010d8f318f8041afdb20483"
+  head_equals_origin_main_at_start: true
+  unpushed_commits_at_start: 0
+  working_tree_at_start: "clean"
+  last_session_closed: "2026-10-05T15:39:01Z"
+  frontier_validate: "ok"
+  artifact_count_at_start: 287
+  pytest_at_start: "exit 0"
+  ruff_on_CI_scope: "All checks passed"
+  the_belief_that_was_wrong_at_start: >
+    The repository was assumed to be in a green state. IT WAS NOT. The `ci`
+    workflow had been RED on main since commit 1aaa17f -- two commits before
+    the session began. The previous session's report described adding the
+    artifact linter and the promotion gate to CI, but that CI never reached
+    those steps.
+
+THE_MOST_IMPORTANT_FINDING_OF_THE_SESSION:
+  statement: >
+    THREE of the session's own working assumptions were wrong, and all three
+    were caught by fetching primary sources rather than by reasoning.
+  they_were:
+    - assumption: "the PNG criticality bit is the HIGH-ORDER bit (0x80) of the chunk type's first byte"
+      reality: >
+        It is bit 5 (value 32), the low-order CASE bit. Section 5.3 restricts
+        type bytes to 0x41-0x5A and 0x61-0x7A, so bit 7 is ALWAYS 0 and carries
+        no meaning. A generator setting 0x80 emits an ILLEGAL type byte and
+        fails framing before criticality is ever evaluated. The entire
+        experiment would have measured nothing.
+      who_caught_it: "BOTH the source-verification track and the harness track, independently"
+    - assumption: "X.690 requires DER DECODERS to reject non-minimal INTEGER encodings"
+      reality: >
+        X.690 imposes NO decoder obligation whatsoever. The minimality rule is
+        real, mandatory, and binds the ENCODER. Searching the full normalised
+        text for reject / error / must reject / shall detect / non-conforming /
+        conformity / minimal returns ZERO hits. The only receiver-directed
+        clause, 7.3, says a conforming receiver must SUPPORT ALL ALTERNATIVES.
+      consequence: >
+        The DER mission as briefed was unanswerable. It cannot call decoder
+        acceptance a spec violation without fabricating the anchor.
+    - assumption: "YAML requires unique mapping keys"
+      reality: >
+        YAML 1.2.2 contains no MUST/SHALL/REQUIRED co-occurring with "unique".
+        1.2.1 section 1.3 DID carry one. The revision appears to have deleted
+        the MUST while retaining the uniqueness property, with no errata.
+
+PARALLEL_WORKSTREAMS_AND_WHY_EACH_EXISTED:
+  - stream: "CI repair"
+    reason: "main was red and the failure disabled the very CI steps a prior session had added"
+    outcome: "FIXED and green"
+  - stream: "PNG source verification"
+    reason: "no normative anchor existed for the lead experiment"
+    outcome: "spc-2026-0007, 33/33 quotes mechanically verified"
+  - stream: "PNG cleanroom oracle and corpus"
+    reason: "the experiment needed an instrument that could discriminate criticality from CRC"
+    outcome: "11 vectors, 9 discriminating, committed with 10 regression tests"
+  - stream: "PNG cohort execution"
+    reason: "the corpus had to meet independent implementations"
+    outcome: "4 cores, 44 cells, 0 unattributable, a confirmed split"
+  - stream: "PNG adversarial review"
+    reason: "AGENTS.md requires hostile review before any finding stands"
+    outcome: "CONFIRMED with one correction, which was applied"
+  - stream: "X.690 source verification + adversarial normativity search"
+    reason: "the brief required source verification before compute"
+    outcome: "decisive negative: no decoder obligation exists"
+  - stream: "YAML source verification and accessibility probe"
+    reason: "third-ranked mission, previously dismissed as vacuous"
+    outcome: "normative half is a dead end; parser half has a sharp result"
+  - stream: "FORMAL-208 proof repair + adversarial theorem review"
+    reason: "the mission had been open since 2026-10-04 with a CI-verified failure"
+    outcome: "improved 33 -> 4, then REGRESSED to 16. NOT converged."
+  - stream: "Fresh opportunity scan"
+    reason: "required by the brief; the first attempt died on a 1M-token context error"
+    outcome: "7 candidates ranked, 5 active, all with discrimination figures"
+
+THE_CI_DEFECT_IN_DETAIL:
+  runs_that_were_red: [37304311430, 37303791072, 37310294620]
+  cause: >
+    tests/test_x509_minimal_corpus.py imported its generator at module scope,
+    which imports `cryptography` at module scope. pyproject declares only
+    pyyaml and jsonschema; CI installs `".[dev]"` and therefore has no
+    cryptography. The failure is a COLLECTION error, which aborts the entire
+    run before any test executes.
+  why_it_was_invisible_locally: >
+    The local venv has cryptography as a transitive of other research work, so
+    the suite passed here by construction. The only observable was the CI run,
+    and the defect is what disabled the CI run.
+  the_precedent_it_repeated: >
+    fb2279c had already fixed this exact class in the sibling module
+    test_x509_corpus_reproducibility.py. The new module placed the guard
+    INSIDE a test body rather than ABOVE the import that triggers collection.
+  the_durable_guard: >
+    tests/test_ci_dependency_isolation.py runs a meta-path blocker in a
+    subprocess and collects every test module, asserting none errors when an
+    undeclared dependency is absent. Two meta-tests write a known-bad and a
+    known-good module and assert the collector flags exactly one, so the guard
+    cannot go blind.
+  two_defects_in_the_guard_itself: >
+    It recursed into its own module until the subprocess timeout, and its first
+    version EXECUTED each target module rather than collecting it. Both fixed;
+    --collect-only brought the scan to 4.24s.
+  recorded_in: obs-2026-0064
+
+THE_PNG_EXPERIMENT:
+  normative_basis: "spc-2026-0007 -- W3C PNG Third Edition, REC 2025-06-24, SHA-256 A3AC82BB9EB8664B93961A2A9FF6DEF3D70E3A9F63D92721143C1F391D04EDEC"
+  corpus: "11 vectors, 9 discriminating, committed at crypto/png-critical-chunk/"
+  the_vacuity_that_was_eliminated: >
+    A prior framing was vacuous because a bad CRC let the decoder reject before
+    criticality was evaluated. Every non-control vector here carries a valid,
+    independently recomputed CRC, and the negative controls exist precisely to
+    keep that confound visible.
+  cohort: "Pillow 12.3.0, Go image/png go1.26.4, stb_image v2.30, Wuffs 0.3.5 -- none links libpng, established from shipped binaries not names"
+  result_on_the_decisive_pair:
+    stb_image: "REJECTS for the right reason"
+    wuffs: "REJECTS for the right reason"
+    pillow: "SILENTLY ACCEPTS AND RENDERS"
+    go_image_png: "SILENTLY ACCEPTS AND RENDERS"
+  the_headline_instrument_fact: "GENERIC_DECODE_ERROR = 0 of 44 cells."
+  independent_reproduction: >
+    Reproduced THREE times by separate code: the cohort agent, the
+    orchestrator with a fresh script, and the adversarial reviewer with its own
+    script and its own Go program. The reviewer additionally built nine
+    vectors from a DIFFERENT constructor with four different probe types,
+    three positions and four geometries; both cores silently accepted all nine.
+  the_correction_the_review_forced: >
+    obs-2026-0068 originally said "no warning was emitted, no callback fired".
+    That is FALSE: Pillow calls logger.debug at PngImagePlugin.py:790. The
+    orchestrator verified the line directly. The finding survives because the
+    call is off by default, is emitted IDENTICALLY for the ancillary twin so it
+    carries zero criticality information, is not an error, and is unreachable
+    through the API. The defensible wording is "no CRITICALITY-DISCRIMINATING
+    indication reaches the caller".
+  a_second_correction: >
+    PngImagePlugin.py:213 DOES read the ancillary bit, but only under
+    LOAD_TRUNCATED_IMAGES and only to decide whether to skip a CRC check. It
+    must not be conflated with the criticality gap. Verified directly.
+  a_gap_in_a_core_that_otherwise_behaves_correctly: >
+    Wuffs rejects in the primary position but ACCEPTS the same chunk after the
+    image data, because its post-IDAT walk validates only IEND/fdAT/fcTL.
+    "Rejects unknown critical chunks" is NOT one boolean property.
+  not_established:
+    - "libpng and libspng are NOT_BUILT. libpng is the most widely deployed PNG core; omitting it makes any scope claim weak."
+    - "The stb_image and Wuffs contrast results were not independently re-verified by the reviewer."
+    - "PNG-EXTENSIONS could not be retrieved, so known_to_spec remains UNVERIFIED at registry level."
+    - "NO SECURITY CLAIM. Nothing demonstrates an exploitable consequence."
+    - "No upstream report was filed and none should be until the cohort is widened."
+
+THE_DER_MISSION_REFRAMED_BY_SOURCE_VERIFICATION:
+  result: "X.690 imposes no decoder obligation. Recorded in obs-2026-0065 and spc-2026-0008."
+  two_related_corrections:
+    - "'The DER INTEGER rule is in clause 11' is WRONG. Clause 11 is titled 'Restrictions on BER employed by BOTH CER and DER' and has NO INTEGER subsection. The rule is BER clause 8.3.2, which DER inherits via clause 10 plus 7.4."
+    - "A remembered RFC 5280 section 4.1 statement about the outer SEQUENCE length DOES NOT EXIST. 'outer' occurs once in the document, in the word 'outsider'."
+  what_the_experiment_may_now_claim: "An encoder/CA conformance question, or an explicitly NON-NORMATIVE ecosystem-practice survey. It may NOT call decoder acceptance a spec violation."
+  a_boundary_case_that_must_not_be_conflated: >
+    0x80 = 128 REQUIRES its leading 00 to remain positive. 'Leading zero is
+    always redundant' is wrong, and a vector set mixing the required case with
+    the redundant case has ZERO discriminating power.
+
+THE_YAML_RESULT:
+  normative: "Dead end. YAML 1.2.2 has no normative duplicate-key requirement at all. obs-2026-0066."
+  the_spec_regression: "1.2.1 section 1.3 carried a MUST; 1.2.2 appears to have deleted it while keeping the property, with no errata."
+  a_trap_avoided: "No YAML revision has a security considerations chapter, so the popular 'duplicate keys are a signature-wrapping attack' framing is EXTERNAL to the spec and is not asserted here."
+  what_survives: "hyp-2026-0033 -- a comparative LAYER census with no conformance framing."
+  lineage_correction: "PyYAML and ruamel are ONE family. Both libyaml-derived; forcing PyYAML's pure-Python parser gave a byte-identical event stream to its C path. Three lineages, not four."
+  the_sharp_result: >
+    On `1:` vs `0o1:` -- the duplicate the spec itself names -- gopkg.in/yaml.v3
+    silently yields two keys DESPITE a mandatory, unconfigurable uniqueKeys
+    check, because it compares raw strings (ni.Value == nj.Value,
+    decode.go:776) and cannot do the canonical-form comparison. The
+    implementation that looks strictest misses the spec's named case. No
+    high-level API test could have found this.
+
+FORMAL_208:
+  the_mission: "msn-2026-0021, open since 2026-10-04"
+  the_arc_by_run_id:
+    - "37221348965 (on main, pre-existing): 33 errors"
+    - "37311872592: 17"
+    - "37313575264: 16"
+    - "37314639955: 9"
+    - "37315409024: 6"
+    - "37317642704: 4 -- BEST RESULT, commit 17a6d2d"
+    - "37320771563: 13 -- regression"
+    - "37322641649: 13"
+    - "37323426651: 16 -- worse"
+    - "37324248883: 31 -- far worse"
+    - "37324892594: 21 -- partial recovery, still worse than 4"
+  THE_BOTTOM_LINE: >
+    NOT CONVERGED, AND THE REPAIR WAS STOPPED. After reaching 4 errors at commit
+    17a6d2d, the second repair agent drove the count to 13, 16, 31 and then 21
+    across seven further CI runs. It was killed with the branch at
+    419795b and 21 errors. The declared budget of 5 runs was exhausted early;
+    the orchestrator authorised one further round on the grounds that leaving a
+    6-error fix permanently untested was worse than a recorded budget
+    extension, and that extension did NOT pay off. Fourteen commits sit on
+    formal-208-repair; none is merged; the BEST known state is 4 errors at
+    17a6d2d.
+  what_the_oscillation_suggests: >
+    Iterating tactics against a file whose PROOF STRUCTURE has already been
+    shown wrong twice is not converging. Two false statements were removed
+    rather than repaired, which was correct, but the remaining proofs appear to
+    need rewriting from the definitions rather than more tactic passes. That is
+    a different approach, not more of this one.
+  what_it_found_that_matters: >
+    Two committed statements were FALSE, not merely unprovable, and were REMOVED
+    rather than repaired: twelve_mul_nCoeff conflated bits with bytes, and
+    eq7_1_iff_seg_bound claimed an agreement-at-y biconditional that is false
+    because an out-of-range coefficient makes re-encoding disagree at its OWN
+    byte index.
+  the_central_correction: >
+    T1 CANNOT be closed with enc_dec_eq. That lemma needs the unbounded
+    forall i, seg B i < 3329, and a bounded hypothesis cannot supply it -- the
+    gap IS the rho seed. The original file closed T1 by instantiating
+    enc_dec_eq anyway, which was well-typed only because the bounded index
+    hides the mismatch. It is now proved directly via eqOfBits.
+  axioms_transcript: "formal/axioms.txt was NOT created. No green build existed, and fabricating a transcript is the defect this repository exists to catch."
+  merge_status: "NOTHING merged to main. The branch remains formal-208-repair."
+  a_defect_that_outlives_the_branch: >
+    ValidKey.lean:47 still carries BOTH defects the mission exists to repair --
+    the unused vacuous parameter p and the unbounded forall i, seg B i < 3329.
+
+THE_ADVERSARIAL_TRACK_ON_THE_MISSION_JUSTIFICATION:
+  commissioned_to: "disprove the quantified-vacuity argument"
+  verdict: "the 99% figure was right to two significant figures but its arithmetic was wrong by an off-by-one"
+  the_error: >
+    22 seed-region segments were counted, but only 21 can be non-canonical.
+    Segment 533 has only 4 live bits (the key ends at bit 6400; the segment
+    spans 6396..6407) and can never reach 3329.
+  the_numbers: "audit (3329/4096)^22 = 98.9553%; actual (3329/4096)^21 = 98.7146%"
+  the_orchestrator_re_derived_it: >
+    Independently, from a bit-level segment model. It confirmed the off-by-one
+    AND caught an error in the REVIEW itself: the reviewer said segment 512
+    straddles bytes, but 12*512 = 6144 is bit 0 of byte 768, so it does not
+    straddle. The straddling segments are the odd ones (513, 515, ...). Both
+    the original error and its correction are recorded rather than one silently
+    replacing the other.
+  the_conclusion_is_unaffected: "98.71% still establishes the vacuity. The T1/T2 pairing requirement stands."
+  recorded_in: obs-2026-0067
+
+A_SESSION_ERROR_WORTH_RECORDING:
+  the_opportunity_scan_first_attempt: >
+    Failed after consuming ~1.0M tokens, with a serialization error, having read
+    far more of the repository than the task required. It wrote NOTHING -- no
+    output directory survived. Relaunched with an explicit budget discipline
+    instruction and it completed in 226 seconds and 33 tool calls.
+  the_lesson: >
+    A subagent prompt that says 'read the repository for context' can burn an
+    entire agent on reading. The relaunched prompt named exactly two files to
+    read and told it to write output EARLY so a crash could not lose
+    everything.
+
+PROCESS_FINDINGS_THAT_OUTRAN_THE_RESEARCH:
+  - finding: "A green local test suite can coexist with a red CI run for an arbitrarily long time, when the divergence is an undeclared optional dependency. The local venv is not the CI environment."
+    instrument_added: "tests/test_ci_dependency_isolation.py, with meta-tests proving it can fail"
+  - finding: "Subagents redirect CI logs into the repo root. A dot-prefix does not make a file gitignored, and blanket `git add -A` swept them into history twice."
+    instrument_added: "a .gitignore rule with the reason recorded"
+  - finding: "A guard test can be worse than no guard if it only ever passes. The CI-isolation guard was written, skipped on Windows, and would have proven nothing on the only platform available to verify it. Removing the skip then exposed a recursion that consumed the full timeout."
+    instrument_added: "two meta-tests that write a known-bad and known-good module and assert the collector flags exactly one"
+  - finding: "Three separate YAML authoring errors in this session (a list item where a mapping key belonged, twice; a quoted scalar beginning with a double quote, once) were each caught by `frontier validate`. The validator is load-bearing."
+    instrument_added: "none needed -- the existing validator caught all three"
+
+WHAT_WAS_CORRECTED_RELATIVE_TO_THE_PRIOR_SESSION:
+  - "hyp-2026-0030's premise was already refuted by execution at 1aaa17f, but the artifact still reads status: active. hyp-2026-0031 is its live successor and correctly carries the open question. The stale status on 0030 is metadata debt, NOT an open mission."
+  - "The prior report's claim that ~33 EkCheck errors appear in the committed formal/build_output*.log files is NOT confirmable. All three logs say 'Build completed successfully', none mentions Formal/EkCheck, and all predate the commit that added it. The figure is real but comes from CI run 37221348965."
+  - "spc-2026-0004 is thoroughly remediated: status disputed, 20 quotation units reconstructed, all 20 returning NO-MATCH against a freshly hashed RFC 8949, and 42 referencing files triaged into 17 repeating false content / 5 resting on withdrawn premises / 20 carrying the link without inheriting the claim. NOT re-opened this session; there is nothing to gain."
+
+STRONGEST_NEXT_CANDIDATES_ranked_by_information_gain:
+  - candidate: "Build libpng and libspng on GitHub Actions and run the same eleven PNG vectors through them."
+    why: >
+      libpng is the most widely deployed PNG core in the world. Every scope
+      claim about 'PNG decoders' is weak without it, and the two cores that
+      disagree are exactly the two that do not link libpng. Medium compute, so
+      it belongs on CI per AGENTS.md's HARD RULE.
+    expected_gain: "high -- it decides whether the observed split is 'two ecosystems' or 'two bugs'"
+  - candidate: "FORMAL-208 convergence -- but by a DIFFERENT approach."
+    why: >
+      The repair reached 4 errors at commit 17a6d2d and then oscillated to 31
+      before being stopped at 21. Iterating tactics against this file is not
+      converging. The next attempt should rewrite the four failing proofs from
+      the definitions rather than continue patching, and should consider
+      reducing scope: T1+T2 over a concrete k may be provable where the
+      fully-general form is not.
+    starting_point: "git checkout origin/formal-208-repair -- formal/Formal/EkCheck.lean at 17a6d2d, which is the best known state (4 errors), NOT the branch tip."
+    expected_gain: "high -- it is the only path to a kernel-checked FIPS 203 7.2 model"
+  - candidate: "QUIC frame-type over-long varint (RFC 9000 12.4), from the opportunity scan."
+    why: >
+      A genuine MUST/MAY asymmetry in ONE clause: the sender 'MUST use the
+      shortest possible encoding' while an endpoint 'MAY treat' a longer one as
+      a connection error. 24 of 40 proposed vectors discriminate. It asks
+      whether an obligation written for the sender constrains the decoder --
+      precisely the failure mode this repository has been refuted on twice.
+    blocker: "QUIC frames are invisible until header decryption, so the oracle cost must be measured first. If each vector needs fresh key derivation the compute class rises and the UTF-8 candidate overtakes it."
+  - candidate: "RFC 3629 decoder obligation (from the opportunity scan)"
+    why: "51 of 64 vectors discriminate, and it is the cheapest oracle on the list -- no network, no crypto."
+    caveat: "Section 4's ABNF self-declares it is NOT authoritative, so the oracle must be built from section 3's invalidity classes instead."
+  - candidate: "hyp-2026-0033, the YAML layer census"
+    why: "The integer-format duplicate divergence is real, reproduced, and cheap to extend to non-scalar keys, which no parser tested demonstrably handles per 3.2.1.3's recursive key-equality definition."
+    caveat: "No conformance framing is permitted -- there is no requirement to conform to."
+
+CURRENT_STATE_AT_CLOSE:
+  active_missions: [msn-2026-0021 (FORMAL-208), msn-2026-0022 (X.509 pathLen, pre-existing, untouched this session), msn-2026-0023 (PNG, new)]
+  findings: "3 verified_conclusion (fnd-2026-0003, 0008, 0011). No new finding was promoted this session; obs-2026-0068 is confirmed and reviewed but deliberately NOT promoted, because libpng is missing from the cohort and no security consequence has been established."
+  what_a_future_session_should_not_reopen:
+    - "Whether X.690 requires decoder rejection. Settled: it does not, verified across five hashed documents."
+    - "Whether YAML 1.2.2 requires unique keys. Settled: no."
+    - "The PNG bit convention. Settled: bit 5, with the high-order bit always 0."
+    - "hyp-2026-0030's self-issued pathLen question. Settled by execution."
+    - "The COSE/pycose ordering thread. Closed as a reporting thread."
+  what_a_future_session_must_read_first:
+    - "knowledge/observations/obs-2026-0068.yaml and knowledge/reviews/rev-2026-0024.yaml for the PNG state and its precise scope limits"
+    - "knowledge/reviews/rev-2026-0023.yaml for the FORMAL-208 run table and the two false statements"
+    - "AGENTS.md's compute-routing HARD RULE before planning any native build"
+
+NEGATIVE_RESULTS_PRESERVED:
+  - "X.690 imposes no decoder obligation for DER INTEGER minimality. The encoder-side obligation is real; the decoder-side one is not, and the experiment must be reframed accordingly."
+  - "YAML 1.2.2 has no normative duplicate-key requirement. The comparative parser question survives; the conformance question does not."
+  - "The 99% vacuity figure was 98.71%, not 98.96% -- a real correction to the mission's own justification, which nonetheless survives."
+  - "libpng/libspng were NOT_BUILT. Recorded rather than forced with a local native build."
+
+COMPUTE_ROUTING_ACTUALLY_USED:
+  local_lightweight:
+    - "All Python work in the project venv"
+    - "Go cohort member via the installed toolchain"
+    - "Pure-wheel installs (Pillow, ruamel.yaml, js-yaml) -- no native compilation"
+    - "specification fetching and hashing"
+    - "the independent bit-level re-derivation of the vacuity arithmetic"
+  github_actions:
+    - "formal.yml, nine runs across two commits, on branch formal-208-repair. main was never polluted with an intermediate broken state."
+    - "ci.yml on every push to main"
+  not_run_locally: >
+    No `lake build`, no Mathlib download, no native library build, no cargo or
+    dotnet tree. AGENTS.md's compute-routing HARD RULE was honoured throughout.
+  scratch_hygiene: >
+    The cohort agent reported R: shrinking from 119.6 MB to 0.7 MB, deleting Go
+    module and build caches, the stb clone and all object files in-session.
+
+HONEST_STATEMENT_OF_WHATS_UNVERIFIED:
+  - "The FORMAL-208 repair's latest commits have not been kernel-checked. A 6-error fix that has never been through the kernel is a prediction."
+  - "The stb_image and Wuffs contrast results rest on cohort-agent sourcing alone and were not re-verified by the reviewer."
+  - "PNG-EXTENSIONS could not be retrieved, so the corpus's unknown-ness at registry level is unconfirmed, though the dispatch-table argument makes it immaterial to the outcome."
+  - "Two YAML and one PNG conclusion depend on specific wording that was mechanically verified, but the quoted documents live on a disposable ramdisk; any promoted claim must be re-fetched by hash."

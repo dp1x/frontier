@@ -157,6 +157,15 @@ BUDGET_AND_AUTHORITY:
     NOTHING is merged to main until a green run exists. A 6-error-fix commit
     that has not been through the kernel is a prediction, and the repair agent
     labelled it as one.
+  OUTCOME_UPDATE_2026_10_06: >
+    The extension did not pay off. A second repair agent drove the count from 4
+    (37317642704, commit 17a6d2d -- the BEST known state) to 13, 16, 31 and
+    finally 21 across runs 37320771563, 37322641649, 37323426651, 37324248883
+    and 37324892594. It was killed with the branch at commit 419795b.
+    FOURTEEN commits sit on formal-208-repair; none is merged. The mission is
+    NOT converged and the remaining four errors at 17a6d2d are still the best
+    available starting point. Recorded here rather than left in the agent's
+    transcript, because "it got worse" is a result a future session needs.
 
 WHAT_A_GREEN_RUN_WOULD_STILL_NOT_ESTABLISH:
   - "That the module proves what the SPECIFICATION says. Kernel acceptance establishes type-correctness, not faithfulness."
