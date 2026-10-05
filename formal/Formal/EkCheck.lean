@@ -354,7 +354,7 @@ theorem prefix_last_bit_byte (k : Nat) :
     ((8 * 384 * k - 1) / 8 : Nat) < 384 * k := by
   have h1 : (0 : Nat) < 384 := by omega
   have h8 : (0 : Nat) < 8 := by omega
-  have hpos : (0 : Nat) < 8 * 384 * k := Nat.mul_pos (Nat.mul_pos h8 h1) (Nat.succ_pos (k - 1))
+  have hpos : (0 : Nat) < 8 * 384 * k := Nat.mul_pos (Nat.mul_pos h8 h1) (Nat.succ_pos k)
   have hr : (8 * 384 * k - 1) % 8 < 8 := Nat.mod_lt _ h8
   have hdecomp := Nat.div_add_mod (8 * 384 * k - 1) 8
   have hlt : 8 * ((8 * 384 * k - 1) / 8) < 8 * 384 * k := by omega
@@ -468,12 +468,15 @@ theorem eq7_1_accept (k : Nat) (ek : Ek k) (hSeg : ∀ i, i < nCoeff k -> ekSeg 
   -- prefix spans `12 * nCoeff k` bits and `y < 384 * k` bytes.
   have hcoeff : (8 * y + s) / 12 < nCoeff k :=
     coeff_mem_prefix (by
+      -- `omega` normalises the GOAL side, where `nCoeff k` unfolds to
+      -- `256 * k`, and does not fold the same form out of a HYPOTHESIS: the
+      -- bound is stated with the occurrence the goal itself has, namely
+      -- `8 * (384 * k)`.  `y <= 384 * k - 1` puts bit `8 * y + s` at most at
+      -- `8 * 384 * k - 1`, which is one below `12 * 256 * k = 8 * 384 * k`.
+      -- `twelve_mul_nCoeff` is stated and passed on, but omega needs both
+      -- sides normalised identically and cannot be made to do that here.
       have heq := twelve_mul_nCoeff k
-      -- `omega` folds `nCoeff k` to `256 * k` on the HYPOTHESIS side only, so
-      -- the bound has to be stated there.  It is not an overreach: bit
-      -- `8 * y + s` of the prefix is at most `8 * (384 * k - 1) + 7`, which is
-      -- 8 short of the prefix's `12 * 256 * k` bits.
-      rw [nCoeff] at heq
+      have hy' : y ≤ 384 * k - 1 := by omega
       omega)
   have hsegAt : seg (ekBytes k ek) ((8 * y + s) / 12) < 3329 := by
     rw [← ekSeg_eq k ek ((8 * y + s) / 12)]
@@ -738,19 +741,29 @@ def B2 : Ek 2 := ekOfTotal 2 B2raw
 theorem B2_bytes (y : Nat) : ekBytes 2 B2 y = B2raw y := by
   by_cases h : y < 384 * 2 + 32
   · rw [ekBytes_val 2 B2 y h]
-    have h0 : y = 768 ∨ y ≠ 768 := by omega
-    rcases h0 with h0 | h0
+    -- `by_cases` on `y = 768` only produces a HYPOTHESIS; the `if` inside
+    -- `B2raw` stays closed until the definition is unfolded.  The
+    -- occurrence `y` in the unfolded `if` is then substituted away, so each
+    -- branch reduces to a closed equation on numerals.
+    rcases Nat.lt_trichotomy y 768 with hlt | heq | hgt
     · have h1 : y ≠ 769 := by omega
       show B2raw y % 256 = B2raw y
-      rw [B2raw, if_pos h0, if_neg h1]
+      rw [B2raw, if_neg (by omega : ¬ y = 768), if_neg h1]
       norm_num
-    · have h1 : y = 769 ∨ y ≠ 769 := by omega
-      rcases h1 with h1 | h1
+    · subst h
+      show B2raw 768 % 256 = B2raw 768
+      rw [B2raw, if_pos rfl, if_neg (by omega : ¬ (768 : Nat) = 769)]
+      norm_num
+    · rcases Nat.lt_trichotomy y 769 with hlt' | heq' | hgt'
       · show B2raw y % 256 = B2raw y
-        rw [B2raw, if_neg h0, if_pos h1]
+        rw [B2raw, if_neg (by omega : ¬ y = 768), if_neg (by omega : ¬ y = 769)]
+        norm_num
+      · subst h'
+        show B2raw 769 % 256 = B2raw 769
+        rw [B2raw, if_neg (by omega : ¬ (769 : Nat) = 768), if_pos rfl]
         norm_num
       · show B2raw y % 256 = B2raw y
-        rw [B2raw, if_neg h0, if_neg h1]
+        rw [B2raw, if_neg (by omega : ¬ y = 768), if_neg (by omega : ¬ y = 769)]
         norm_num
   · rw [ekBytes_outside 2 B2 y h]
     have h0 : y ≠ 768 := by omega
@@ -819,21 +832,31 @@ theorem B2_seg512 : ekSeg 2 B2 (256 * 2) = 3329 := by
     -- `gbit B p` is opaque to `rw`, so it is unfolded before `B2_bytes` is
     -- applied to the byte index inside it.
     show bit (ekBytes 2 B2 ((6144 + s) / 8)) ((6144 + s) % 8) = bit 3329 s
+    -- `s < 12` is needed twice over: for the divisor bound of `Nat.mod_lt`,
+    -- and because the two's-complement subtraction below only works while
+    -- `2^s` divides `3329`, i.e. for `s <= 1`.
+    have hs0 : (0 : Nat) < 12 := by omega
+    have hs1 : s ≤ 1 := by
+      by_contra hc
+      push_neg at hc
+      have htwo : 2 ^ 1 < 2 ^ s := Nat.pow_lt_pow_left (by omega) hc
+      have hq : 3329 < 2 ^ s := by
+        refine lt_of_lt_of_le (by norm_num) ?_
+        rw [two_pow_12]
+        exact Nat.pow_le_pow_left (by omega) hs
+      omega
     -- The two seed bytes sit at indices 768 and 769, so the byte index
     -- `(6144 + s) / 8` is neither; the `if` is discharged on the INDEX, not
     -- on the value it selects.
+    have hn : 6144 + s < 6144 := by omega
     have hidx0 : (6144 + s) / 8 ≠ 768 := by omega
     have hidx1 : (6144 + s) / 8 ≠ 769 := by omega
     rw [B2_bytes, B2raw, if_neg hidx0, if_neg hidx1, bit_zero]
-    -- `bit 3329 s = 0` for every `s < 12`: 3329 is odd, so bit 0 is 1, but
-    -- the two's-complement subtraction below only certifies what the
-    -- division/modulus rewrites cannot, namely that the quotient of
-    -- `3329 / 2^s` by 2 is at most `2^s - 1 - 1`, i.e. `2^s - 1 < 2^s`.
-    have htwo : (2 : Nat) ^ s ≠ 0 := two_pow_pos s
-    have hq : (3329 : Nat) / 2 ^ s < 2 ^ s := by omega
-    have hrlt : (3329 / 2 ^ s) % 2 < 2 := Nat.mod_lt _ (by omega)
-    show (3329 / 2 ^ s) % 2 = 0
-    rw [Nat.mod_eq_of_lt (by omega)]
+    -- What remains is `bit 3329 s = 0`, which for `s = 0` and `s = 1` is the
+    -- statement that 3329 is a multiple of 4.  `omega` sees `2 ^ s` as an
+    -- atom, so the twelve positions are split out with `interval_cases` and
+    -- `decide` evaluates the two resulting ground terms.
+    interval_cases s <;> decide
   have hWc : wsum (fun j => gbit (ekBytes 2 B2) (12 * 512 + j)) 12
       = wsum (fun j => bit 3329 j) 12 := wsum_congr hbits
   have hW' : wsum (fun j => bit 3329 j) 12 = 3329 := by
@@ -893,20 +916,41 @@ def B2alt : Ek 2 := ekOfTotal 2 B2altRaw
 theorem B2alt_bytes (y : Nat) : ekBytes 2 B2alt y = B2altRaw y := by
   by_cases h : y < 384 * 2 + 32
   · rw [ekBytes_val 2 B2alt y h]
-    show B2altRaw y % 256 = B2altRaw y
-    by_cases h0 : y = 768
-    · have h1 : y ≠ 769 := by omega
-      have h2 : y ≠ 780 := by omega
-      rw [B2altRaw, if_pos h0, if_neg h1, if_neg h2]
+    -- As in `B2_bytes`: unfold the definition so the `if`s are open, then
+    -- substitute the index away so each branch is a closed equation.
+    rcases Nat.lt_trichotomy y 768 with hlt | heq | hgt
+    · show B2altRaw y % 256 = B2altRaw y
+      rw [B2altRaw, if_neg (by omega : ¬ y = 768), if_neg (by omega : ¬ y = 769),
+        if_neg (by omega : ¬ y = 780)]
       norm_num
-    · by_cases h1 : y = 769
-      · have h2 : y ≠ 780 := by omega
-        rw [B2altRaw, if_neg h0, if_pos h1, if_neg h2]
+    · subst heq
+      show B2altRaw 768 % 256 = B2altRaw 768
+      rw [B2altRaw, if_pos rfl, if_neg (by omega : ¬ (768 : Nat) = 769),
+        if_neg (by omega : ¬ (768 : Nat) = 780)]
+      norm_num
+    · rcases Nat.lt_trichotomy y 769 with hlt' | heq' | hgt'
+      · show B2altRaw y % 256 = B2altRaw y
+        rw [B2altRaw, if_neg (by omega : ¬ y = 768), if_neg (by omega : ¬ y = 769),
+          if_neg (by omega : ¬ y = 780)]
         norm_num
-      · by_cases h2 : y = 780
-        · rw [B2altRaw, if_neg h0, if_neg h1, if_pos h2]
+      · subst heq'
+        show B2altRaw 769 % 256 = B2altRaw 769
+        rw [B2altRaw, if_neg (by omega : ¬ (769 : Nat) = 768), if_pos rfl,
+          if_neg (by omega : ¬ (769 : Nat) = 780)]
+        norm_num
+      · rcases Nat.lt_trichotomy y 780 with hlt'' | heq'' | hgt''
+        · show B2altRaw y % 256 = B2altRaw y
+          rw [B2altRaw, if_neg (by omega : ¬ y = 768), if_neg (by omega : ¬ y = 769),
+            if_neg (by omega : ¬ y = 780)]
           norm_num
-        · rw [B2altRaw, if_neg h0, if_neg h1, if_neg h2]
+        · subst heq''
+          show B2altRaw 780 % 256 = B2altRaw 780
+          rw [B2altRaw, if_neg (by omega : ¬ (780 : Nat) = 768),
+            if_neg (by omega : ¬ (780 : Nat) = 769), if_pos rfl]
+          norm_num
+        · show B2altRaw y % 256 = B2altRaw y
+          rw [B2altRaw, if_neg (by omega : ¬ y = 768), if_neg (by omega : ¬ y = 769),
+            if_neg (by omega : ¬ y = 780)]
           norm_num
   · rw [ekBytes_outside 2 B2alt y h]
     have h0 : y ≠ 768 := by omega
