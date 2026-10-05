@@ -304,7 +304,18 @@ the prefix contains exactly `nCoeff k` twelve-bit coefficients and the
 prefix never reads byte `384 * k` or beyond. -/
 theorem prefix_last_bit_byte (k : Nat) :
     ((8 * 384 * k - 1) / 8 : Nat) < 384 * k := by
-  rw [Nat.div_lt_iff_lt_mul (show (0 : Nat) < 8 by omega)]
+  have hpos : 0 < 8 * 384 * k := by
+    rcases Nat.eq_zero_or_pos k with h | h
+    · rw [h]
+      norm_num
+    · positivity
+  have hdecomp := Nat.div_add_mod (8 * 384 * k - 1) 8
+  have hr := Nat.mod_lt (8 * 384 * k - 1) hpos
+  have hlt : 8 * ((8 * 384 * k - 1) / 8) < 8 * 384 * k := by omega
+  have hone : (8 * 384 * k - 1) / 8 = 384 * k - 1 := by
+    refine Nat.le_antisymm (by omega) ?_
+    rw [hdecomp] at hlt
+    omega
   omega
 
 /-! ## STEP 1: the type check, with `k` load-bearing -/
@@ -383,15 +394,23 @@ hypothesis cannot supply it.  The proof below therefore repeats
 byte -- with the per-bit hypothesis that the coefficient owning that bit,
 namely `p / 12`, lies inside the prefix.  That is the index step
 `coeff_mem_prefix`, and it is where the bound `384 * k` on `y` is used. -/
-theorem eq7_1_accept (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
-    (hSeg : ∀ i, i < nCoeff k -> ekSeg k ek i < 3329) (y : Nat)
-    (hy : y < 384 * k) :
+theorem eq7_1_accept (k : Nat) (ek : Ek k) (hSeg : ∀ i, i < nCoeff k -> ekSeg k ek i < 3329)
+    (y : Nat) (hy : y < 384 * k) :
     encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y := by
   have hlt : encByte (fun i => dec (ekBytes k ek) i) y < 256 := by
     have hw := wsum_bound (G := fun t => ebit (fun i => dec (ekBytes k ek) i) (8 * y + t))
       (fun t => ebit_le_one (fun i => dec (ekBytes k ek) i) _) 8
     rw [← two_pow_8]
     exact hw
+  -- `ekBytes` reads the key below `384 * k + 32`, and `y < 384 * k`, so the
+  -- byte bound follows from the LENGTH of the key rather than a hypothesis.
+  have hB : ∀ z, ekBytes k ek z < 256 := by
+    intro z
+    by_cases hz : z < 384 * k + 32
+    · rw [ekBytes_val k ek z hz]
+      exact ek ⟨z, hz⟩
+    · rw [ekBytes_outside k ek z hz]
+      omega
   refine eqOfBits hlt (hB y) (fun s hs => ?_)
   rw [enc_bit (fun i => dec (ekBytes k ek) i) y s hs]
   show bit (dec (ekBytes k ek) ((8 * y + s) / 12)) ((8 * y + s) % 12)
@@ -467,9 +486,13 @@ theorem witness_byte_lt_prefix (k i j : Nat) (hi : i < nCoeff k) (hj : j < 12) :
   have heq := twelve_mul_nCoeff k
   rw [nCoeff] at hi heq
   -- `omega` treats `(12 * i + j) / 8` as an independent atom, so the
-  -- division is discharged first, then the pure inequality is arithmetic.
-  rw [Nat.div_lt_iff_lt_mul (show (0 : Nat) < 8 by omega)]
-  omega
+  -- division is discharged first.  `Nat.div_lt_iff_lt_mul` is deprecated in
+  -- this toolchain and no longer available, so the division bound is taken
+  -- from `Nat.div_lt_of_lt_mul` with a side condition `8 ≤ 8 * i + j`, which
+  -- holds because `12 * i + j ≥ 12 * i ≥ 8`.
+  rw [Nat.div_lt_of_lt_mul (show (0 : Nat) < 8 by omega)]
+  · omega
+  · omega
 
 /-- T2, REJECT -- the anti-vacuity half required by msn-2026-0021's
 `critical_constraint`.  If some coefficient carried by the prefix is OUT OF
@@ -496,7 +519,7 @@ theorem eq7_1_reject (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
 theorem eq7_1_of_seg_bound (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
     (hSeg : ∀ i, i < nCoeff k -> ekSeg k ek i < 3329) : eq7_1 k ek := by
   intro y hy
-  exact eq7_1_accept k ek hB hSeg y hy
+  exact eq7_1_accept k ek hSeg y hy
 
 theorem eq7_1_to_seg_bound (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
     (h : eq7_1 k ek) (i : Nat) (hi : i < nCoeff k) : ekSeg k ek i < 3329 := by
@@ -527,7 +550,7 @@ theorem eq7_1_accept_pointwise (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y
     (hSeg : ∀ i, i < nCoeff k -> ekSeg k ek i < 3329) (y : Nat)
     (hy : y < 384 * k) :
     encByte (fun i => dec (ekBytes k ek) i) y = ekBytes k ek y :=
-  eq7_1_accept k ek hB hSeg y hy
+  eq7_1_accept k ek hSeg y hy
 
 /-- An out-of-range prefix coefficient forces at least one covered byte index
 to disagree.  This is the per-index reading of `eq7_1_reject`, and it is the
@@ -598,12 +621,12 @@ theorem seed_region_unconstrained (k : Nat) (ek1 ek2 : Ek k)
     eq7_1 k ek1 ↔ eq7_1 k ek2 := by
   constructor
   · intro h1 y hy
-    refine eq7_1_accept k ek2 hB2 ?_ y hy
+    refine eq7_1_accept k ek2 ?_ y hy
     intro i hi
     rw [← hseg i hi]
     exact eq7_1_to_seg_bound k ek1 hB1 h1 i hi
   · intro h2 y hy
-    refine eq7_1_accept k ek1 hB1 ?_ y hy
+    refine eq7_1_accept k ek1 ?_ y hy
     intro i hi
     rw [hseg i hi]
     exact eq7_1_to_seg_bound k ek2 hB2 h2 i hi
@@ -708,7 +731,7 @@ theorem B2_prefix_segments_canonical :
 reproduced by the re-encoding. -/
 theorem B2_eq7_1 : eq7_1 2 B2 := by
   intro y hy
-  exact eq7_1_accept 2 B2 B2_all_bytes B2_prefix_segments_canonical y hy
+  exact eq7_1_accept 2 B2 B2_prefix_segments_canonical y hy
 
 /-- THE COUNTEREXAMPLE, part 1: segment `256 * 2 = 512` of `B2` -- the first
 coefficient of the rho seed -- reads as exactly `q = 3329`, not below q.
@@ -757,12 +780,15 @@ theorem old_hypothesis_false_k2 :
     rw [B2_seg512] at hcontra
     omega
   · intro y hy
-    exact eq7_1_accept 2 B2 B2_all_bytes B2_prefix_segments_canonical y hy
+    exact eq7_1_accept 2 B2 B2_prefix_segments_canonical y hy
 
 /-- The bounded hypothesis of `eq7_1_accept` is INHABITED, by the very same
 key that refutes the unbounded one.  This is the explicit anti-vacuity witness
 for T1: `nCoeff 2` really does bound the quantification, and real, if
-admittedly uninteresting, byte arrays satisfy it. -/
+admittedly uninteresting, byte arrays satisfy it.  The byte bound is retained
+here as a conjunct of the witness rather than as a hypothesis of `eq7_1_accept`
+itself: `eq7_1_accept` derives it from the LENGTH of `Ek k`, so stating it
+separately would leave the witness unused. -/
 theorem eq7_1_hypothesis_inhabited :
     ∃ ek : Ek 2, (∀ y, ekBytes 2 ek y < 256) ∧
       (∀ i, i < nCoeff 2 -> ekSeg 2 ek i < 3329) :=
@@ -834,7 +860,7 @@ theorem B2alt_prefix_segments_canonical :
 
 theorem B2alt_eq7_1 : eq7_1 2 B2alt := by
   intro y hy
-  exact eq7_1_accept 2 B2alt B2alt_all_bytes B2alt_prefix_segments_canonical y hy
+  exact eq7_1_accept 2 B2alt B2alt_prefix_segments_canonical y hy
 
 /-- Concrete instance of `seed_region_unconstrained`: two DISTINCT keys of
 length 800, differing only in the rho seed region, both satisfy Eq (7.1) and
@@ -885,12 +911,21 @@ theorem unbounded_reencode_disagrees_at_768 :
     unfold dec
     rw [hseg512]
   have hbit : bit (encByte (fun i => dec (ekBytes 2 B2) i) 768) 0 = 0 := by
-    rw [enc_bit (fun i => dec (ekBytes 2 B2) i) 768 0 (by omega : (0 : Nat) < 8)]
-    unfold ebit
-    have hdiv : (8 * 768 + 0) / 12 = 512 := by decide
-    have hmod : (8 * 768 + 0) % 12 = 0 := by decide
-    rw [hdiv, hmod, hdec]
-    decide
+    -- `ebit F p` is opaque to `rw`, so the bit-level statement is first
+    -- restated with `ebit` unfolded on both sides and only then specialised.
+    have hbit' : bit ((fun y => encByte (fun i => dec (ekBytes 2 B2) i) y)
+        ((8 * 768 + 0) / 8)) ((8 * 768 + 0) % 8) = 0 := by
+      rw [enc_bit (fun i => dec (ekBytes 2 B2) i)
+        ((8 * 768 + 0) / 8) ((8 * 768 + 0) % 8)
+        (by omega : (8 * 768 + 0) % 8 < 8)]
+      have hdiv : (8 * 768 + 0) / 12 = 512 := by decide
+      have hmod : (8 * 768 + 0) % 12 = 0 := by decide
+      show bit (dec (ekBytes 2 B2) ((8 * 768 + 0) / 12)) ((8 * 768 + 0) % 12) = 0
+      rw [hdiv, hmod, hdec]
+      decide
+    rw [enc_bit (fun i => dec (ekBytes 2 B2) i) 768 0 (by omega : (0 : Nat) < 8)] at hbit'
+    unfold ebit at hbit'
+    simpa using hbit'
   intro hEq
   have hbits : bit (encByte (fun i => dec (ekBytes 2 B2) i) 768) 0
       = bit (ekBytes 2 B2 768) 0 :=
