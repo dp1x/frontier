@@ -18,7 +18,12 @@ DIFFERENT STYLE, so that a shared misreading is less likely to be reproduced:
 
 Agreement between the two is evidence.  Disagreement means one of them is wrong
 and the experiment must stop until it is resolved; that is checked by
-tests/test_x509_minimal_oracle_agreement.py.
+``tests/test_x509_minimal_corpus.py::test_the_two_oracles_agree_on_every_case``.
+
+An earlier version of this comment cited a ``test_x509_minimal_oracle_agreement``
+module that was never created.  A citation that resolves to nothing is the same
+defect this session's other finding was about, so the locator is corrected here
+rather than left looking plausible.
 
 Normative basis, quoted from the RFC 5280 text (Standards Track, May 2008):
 

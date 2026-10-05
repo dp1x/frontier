@@ -45,10 +45,20 @@ the_unexplained_rejection_reproduced:
     REJECTed by pyca/cryptography with reason class "signature" while the Frontier
     oracle expects ACCEPT and REJECT respectively.
   what_is_now_measured: >
-    The same signature-class rejection reproduces on INDEPENDENT, freshly
-    generated chains (A2_si_pl0, B2_si_pl1 and, before the harness repairs,
-    C2_si_pl0 and D2_si_nolen). It is therefore not a property of the legacy
-    corpus and not a one-off.
+    The signature-class rejection reproduces on TWO cells of the final corpus
+    (A2_si_pl0 and B2_si_pl1). It also appeared on C2_si_pl0 and D2_si_nolen
+    BEFORE the harness repairs, and those two no longer reproduce it.
+    CORRECTION 2026-10-05: an earlier version of this artifact said "four
+    freshly generated chains" without that qualification, and rpt-2026-0021
+    repeated the figure. Two is the number the final run supports, and the two
+    that dropped out are the more interesting ones. Recorded rather than
+    quietly restated.
+  a_correction_that_had_real_consequences: >
+    On the DISCRIMINATING case C2_si_pl0, pyca's rejection is also
+    signature-class. Under this experiment's own admissibility rule that makes
+    the cell INADMISSIBLE for pyca, so pyca is not evidence that it implements
+    H1. certvalidator is the one admissible core. See exp-2026-0038's corrected
+    decisive observation.
   chain_validity_is_excluded: >
     Every certificate in every chain was verified independently: subject, issuer,
     BasicConstraints, KeyUsage and -- decisively -- every signature

@@ -182,6 +182,50 @@ def main() -> int:
     out = Path(args.out) / "minimal_matrix.json"
     out.write_text(json.dumps(rows, indent=2), encoding="utf-8")
 
+    # Also write the committed evidence copy. The matrix is the ONLY record of
+    # which core returned which reason class on the discriminating case, and an
+    # independent reviewer of this session established that a claim resting on a
+    # file on a ramdisk -- which AGENTS.md says is not assumed to survive -- is
+    # not checkable by anyone, including a future adversarial reviewer. The
+    # reason-class columns are committed; full DER is not.
+    evidence = HERE / "minimal_matrix_committed.json"
+    slim = [
+        {
+            "id": r["id"],
+            "H1": r["H1"],
+            "H2": r["H2"],
+            "discriminates_H1_H2": r["discriminates_H1_H2"],
+            "path": r["path"],
+            "cryptography": r["cryptography"],
+            "cryptography_class": r["cryptography_class"],
+            "certvalidator": r["certvalidator"],
+            "certvalidator_class": r["certvalidator_class"],
+        }
+        for r in rows
+    ]
+    evidence.write_text(
+        json.dumps(
+            {
+                "note": (
+                    "Reason-class record for crypto/x509-pathlen's minimal "
+                    "counterfactual. Regenerate with minimal_matrix.py. The DER "
+                    "is not committed because it is not byte-reproducible (the "
+                    "ECDSA nonce is not deterministic); the verdict structure is "
+                    "stable and is what this records."
+                ),
+                "admissibility_rule": (
+                    "Only a cell whose reason class is path_len is admissible "
+                    "as path-length evidence. A signature-class rejection is a "
+                    "path-construction or harness artefact, not a path-length "
+                    "result."
+                ),
+                "cases": slim,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
     print(f"{'case':<14} {'H1':<7} {'H2':<7} {'disc':<5} {'crypto':<9} "
           f"{'class':<10} {'certval':<9} {'class'}")
     print("-" * 88)

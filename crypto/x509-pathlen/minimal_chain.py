@@ -65,9 +65,12 @@ the self-issued exemption FREES A SLOT that would otherwise be consumed, i.e.
 when the budget is large enough that clamping is not what decides the verdict.
 That needs the self-issued certificate's pathlen to be TIGHTER than the budget
 it would otherwise have had after decrementing, and one more certificate
-downstream than the non-self-issued twin can carry.  See CASES below for the
-exact cells; the generator asserts the discrimination algebraically rather than
-trusting the design to be right.
+downstream than the non-self-issued twin can carry.  See CASES below; the
+discrimination is asserted by
+``tests/test_x509_minimal_corpus.py::test_h2_is_not_vacuous``, which runs both
+readings over every case and requires at least one to differ.  An earlier
+version of this docstring claimed the GENERATOR asserted that algebraically; it
+does not, and the claim was not earned.
 
 Determinism and DER
 -------------------

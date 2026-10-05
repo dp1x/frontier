@@ -1,0 +1,157 @@
+id: rev-2026-0022
+type: review
+status: complete
+created_at: "2026-10-05T17:10:00Z"
+updated_at: "2026-10-05T17:40:00Z"
+summary: >
+  Independent adversarial review of exp-2026-0038, obs-2026-0063 and hyp-2026-0031.
+  Briefed to DISPROVE. It could not refute the central RFC claim and worked all
+  eight cases by hand to confirm the corpus discriminates. It DID refute three
+  cells of the orchestrator's own results table, the claim that both cores
+  implement the hypothesis, two false source locators, and an overstated
+  reproduction count. All corrected in this session.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-reviewer
+    model: grok-4.7
+    tool: >
+      read-only review with no repository write capability and NO process
+      execution capability; re-read RFC 5280 from source, hand-derived all eight
+      cases, and compared the artifacts against the experiment's own persisted
+      output. Its inability to execute is recorded because it bounds what the
+      review can claim.
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - crypto/x509-pathlen/minimal_chain.py
+    - crypto/x509-pathlen/minimal_oracle.py
+    - crypto/x509-pathlen/oracle.py
+    - crypto/x509-pathlen/minimal_matrix.py
+    - tests/test_x509_minimal_corpus.py
+    - knowledge/experiments/exp-2026-0038.yaml
+    - knowledge/observations/obs-2026-0063.yaml
+    - knowledge/reports/rpt-2026-0021.yaml
+  parent: exp-2026-0038
+  generation: 1
+links:
+  experiments: [exp-2026-0038]
+  observations: [obs-2026-0063]
+  hypotheses: [hyp-2026-0030, hyp-2026-0031]
+  reports: [rpt-2026-0021]
+  findings: [fnd-2026-0016]
+
+independence:
+  was_not_the_author: >
+    Briefed to disprove, and given the explicit instruction not to assume the
+    work was correct because it was recent or already committed.
+  capability_limits_that_bound_its_verdicts: >
+    The reviewer had NO process-execution capability. It could not re-run the
+    harness, and said so rather than working around it. It therefore read the
+    experiment's own persisted output instead. That is weaker than re-running,
+    and its "A. Re-run the experiment" line is recorded as INCONCLUSIVE, not
+    PASS. The consequence -- that the decisive claim was unfalsifiable from the
+    repository -- is the review's most valuable output and was acted on.
+
+verdicts:
+  A_rerun_the_experiment: INCONCLUSIVE
+  B_rfc_5280_reread_from_source: FAILED_TO_REFUTE
+  C_attack_the_oracles: FAILED_TO_REFUTE
+  D_attack_the_corpus: FAILED_TO_REFUTE_on_isolation_FAILED_on_the_controlled_property_claim
+  E_attack_the_inference: FAILED_TO_REFUTE
+  F_attack_the_signature_explanation: PARTIALLY_REFUTED
+  G_overstated_sentences: EIGHT_FOUND
+
+what_the_reviewer_confirmed:
+  - >
+    Every quotation from RFC 5280 in exp-2026-0038 and oracle.py is verbatim
+    correct at the line numbers claimed. All 17 occurrences of "self-issued" in
+    the document were read; none scopes step (m).
+  - >
+    STRONGER SUPPORT THE SESSION MISSED: 4.2.1.10 spells its self-issued
+    exemption out in prose for NAME constraints ("Name constraints are not
+    applied to self-issued certificates"). That is evidence the drafters state
+    the exemption where they intend it and omit it where they do not -- stronger
+    than the argument the session made from 6.1.1(k).
+  - >
+    THE COLLAPSE SCENARIO, tested directly: would H2 also reject C2_si_pl0 for
+    some other reason? No. Under H2 the budget entering the next certificate is
+    3, strictly greater than zero, so (l) does not fire, nothing else in the
+    6.1.4 walk can fail, and the reason class cannot be path_len under a reading
+    in which (m) is inapplicable. The corpus discriminates.
+  - >
+    It also established what C1_ns_pl0 does NOT show: a validator that rejects
+    C1 has demonstrated only that it enforces pathLenConstraint at all, since
+    C1 rejects at the identical point under BOTH readings. Only the C1/C2
+    contrast carries the self-issued evidence.
+  - >
+    The final-certificate exemption in both oracles was confirmed against
+    certvalidator's real validate.py (`if index != last_index:`), a check the
+    session had not performed. No fifth wrong oracle version exists.
+  - >
+    The wheel-level independence claim, re-derived independently: 44 SBOM
+    components, cryptography-x509 and cryptography-x509-verification present, no
+    rustls-webpki.
+
+what_the_reviewer_refuted_and_was_right_to:
+  refutation_1_the_results_table:
+    finding: >
+      Three cells of exp-2026-0038's table are contradicted by the experiment's
+      own persisted output. B1_ns_pl1 is REJECT, not ACCEPT -- b_anc has no
+      pathLenConstraint, B_pred's pathlen:1 leaves a budget of 1 entering B_c,
+      B_c's own pathlen:1 leaves 0, and B_d_ns then fails step (l).
+    why_it_matters: >
+      B1_ns_pl1 is a POSITIVE CONTROL. A control that is silently wrong is worse
+      than no control, because it is the thing a reader trusts to mean "the
+      harness works".
+    root_cause: >
+      The table had been transcribed from an EARLIER run whose corpus differed
+      from the committed one, and was never re-checked after the corpus was
+      repaired. The orchestrator re-ran the experiment and confirmed the
+      reviewer is right.
+  refutation_2_both_cores_implement_h1:
+    finding: >
+      On the discriminating case pyca's reason class is `signature`, not
+      `path_len`. Under exp-2026-0038's own admissibility rule -- only path_len
+      cells are admissible as path-length evidence -- that cell is INADMISSIBLE
+      for pyca.
+    consequence: >
+      The claim "both independent cores implement H1" is WITHDRAWN. certvalidator
+      is the one admissible core. This is the single most consequential finding
+      of the review and it was an error in the orchestrator's own headline.
+  refutation_3_reproduction_count:
+    finding: >
+      "Four freshly generated chains" is two. C2_si_pl0 and D2_si_nolen no longer
+      reproduce the signature rejection after the harness repairs, and those are
+      the more interesting two.
+  refutation_4_two_false_locators:
+    finding: >
+      minimal_oracle.py cited tests/test_x509_minimal_oracle_agreement.py, which
+      does not exist. minimal_chain.py claimed the GENERATOR asserts the
+      discrimination algebraically; there is no assert in it, and the assertion
+      lives in a test.
+    why_this_needed_saying: >
+      This session's other major finding was that a verifier accepted a spliced
+      fabrication. Shipping a locator that resolves to nothing in the same report
+      is the same failure wearing a different hat. Both are corrected.
+  refutation_5_expressiveness_gap:
+    finding: >
+      The corpus structurally CANNOT place a self-issued certificate at path
+      position 1, because the generator must issue it under a predecessor
+      carrying the same DN. So it cannot express a trust anchor's own key-rollover
+      re-issue -- the commonest real-world self-issued certificate.
+    effect_on_the_result: >
+      None on C2. Recorded as a real gap rather than glossed.
+
+promotion_position:
+  verdict: >
+    The RFC claim is sound and the experiment discriminates. The IMPLEMENTATION
+    claim is weaker than stated and is now stated correctly: ONE admissible
+    core, not two.
+  what_this_blocks: >
+    Nothing about H1's truth. What it blocks is the sentence "two independent
+    implementations agree", which is not supported and has been removed.
+  what_would_strengthen_it: >
+    Executing at least two further DISTINCT cores against the discriminating case
+    with reason class path_len on each. That is hyp-2026-0031's acceptance
+    criterion, and it is why the question was re-scoped rather than promoted.

@@ -1,0 +1,137 @@
+{
+  "note": "Reason-class record for crypto/x509-pathlen's minimal counterfactual. Regenerate with minimal_matrix.py. The DER is not committed because it is not byte-reproducible (the ECDSA nonce is not deterministic); the verdict structure is stable and is what this records.",
+  "admissibility_rule": "Only a cell whose reason class is path_len is admissible as path-length evidence. A signature-class rejection is a path-construction or harness artefact, not a path-length result.",
+  "cases": [
+    {
+      "id": "A1_ns_pl0",
+      "H1": "ACCEPT",
+      "H2": "ACCEPT",
+      "discriminates_H1_H2": false,
+      "path": [
+        "A_c",
+        "A_ee_ns"
+      ],
+      "cryptography": "ACCEPT",
+      "cryptography_class": "-",
+      "certvalidator": "ACCEPT",
+      "certvalidator_class": "-"
+    },
+    {
+      "id": "A2_si_pl0",
+      "H1": "ACCEPT",
+      "H2": "ACCEPT",
+      "discriminates_H1_H2": false,
+      "path": [
+        "A_c",
+        "A_si",
+        "A_ee_si"
+      ],
+      "cryptography": "REJECT",
+      "cryptography_class": "signature",
+      "certvalidator": "ACCEPT",
+      "certvalidator_class": "-"
+    },
+    {
+      "id": "B1_ns_pl1",
+      "H1": "REJECT",
+      "H2": "REJECT",
+      "discriminates_H1_H2": false,
+      "path": [
+        "b_anc",
+        "B_pred",
+        "B_c",
+        "B_d_ns",
+        "B_ee_ns"
+      ],
+      "cryptography": "REJECT",
+      "cryptography_class": "path_len",
+      "certvalidator": "REJECT",
+      "certvalidator_class": "path_len"
+    },
+    {
+      "id": "B2_si_pl1",
+      "H1": "ACCEPT",
+      "H2": "ACCEPT",
+      "discriminates_H1_H2": false,
+      "path": [
+        "b_anc",
+        "B_pred",
+        "B_si",
+        "B_d_si",
+        "B_ee_si"
+      ],
+      "cryptography": "REJECT",
+      "cryptography_class": "signature",
+      "certvalidator": "ACCEPT",
+      "certvalidator_class": "-"
+    },
+    {
+      "id": "C1_ns_pl0",
+      "H1": "REJECT",
+      "H2": "REJECT",
+      "discriminates_H1_H2": false,
+      "path": [
+        "c_anc",
+        "C_pred",
+        "C_c",
+        "C_d_ns",
+        "C_ee_ns"
+      ],
+      "cryptography": "REJECT",
+      "cryptography_class": "path_len",
+      "certvalidator": "REJECT",
+      "certvalidator_class": "path_len"
+    },
+    {
+      "id": "C2_si_pl0",
+      "H1": "REJECT",
+      "H2": "ACCEPT",
+      "discriminates_H1_H2": true,
+      "path": [
+        "c_anc",
+        "C_pred",
+        "C_si",
+        "C_d_si",
+        "C_ee_si"
+      ],
+      "cryptography": "REJECT",
+      "cryptography_class": "signature",
+      "certvalidator": "REJECT",
+      "certvalidator_class": "path_len"
+    },
+    {
+      "id": "D1_ns_nolen",
+      "H1": "ACCEPT",
+      "H2": "ACCEPT",
+      "discriminates_H1_H2": false,
+      "path": [
+        "d_anc",
+        "D_pred",
+        "D_c",
+        "D_d_ns",
+        "D_ee_ns"
+      ],
+      "cryptography": "ACCEPT",
+      "cryptography_class": "-",
+      "certvalidator": "ACCEPT",
+      "certvalidator_class": "-"
+    },
+    {
+      "id": "D2_si_nolen",
+      "H1": "ACCEPT",
+      "H2": "ACCEPT",
+      "discriminates_H1_H2": false,
+      "path": [
+        "d_anc",
+        "D_pred",
+        "D_si",
+        "D_d_si",
+        "D_ee_si"
+      ],
+      "cryptography": "ACCEPT",
+      "cryptography_class": "-",
+      "certvalidator": "ACCEPT",
+      "certvalidator_class": "-"
+    }
+  ]
+}

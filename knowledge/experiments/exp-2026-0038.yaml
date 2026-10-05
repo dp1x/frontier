@@ -210,16 +210,45 @@ discriminating_power:
     reason class is path_len are admissible as path-length evidence.
 
 results:
-  table: >
+  table_as_corrected_by_rev_2026_0022: >
     case        H1      H2      disc  cryptography    certvalidator
     A1_ns_pl0   ACCEPT  ACCEPT  .     ACCEPT           ACCEPT
     A2_si_pl0   ACCEPT  ACCEPT  .     REJECT signature ACCEPT
-    B1_ns_pl1   ACCEPT  ACCEPT  .     ACCEPT           ACCEPT
+    B1_ns_pl1   REJECT  REJECT  .     REJECT path_len  REJECT path_len
     B2_si_pl1   ACCEPT  ACCEPT  .     REJECT signature ACCEPT
     C1_ns_pl0   REJECT  REJECT  .     REJECT path_len  REJECT path_len
-    C2_si_pl0   REJECT  ACCEPT  YES   REJECT path_len  REJECT path_len
+    C2_si_pl0   REJECT  ACCEPT  YES   REJECT signature REJECT path_len
     D1_ns_nolen ACCEPT  ACCEPT  .     ACCEPT           ACCEPT
     D2_si_nolen ACCEPT  ACCEPT  .     ACCEPT           ACCEPT
+  correction_recorded: >
+    The first version of this table recorded B1_ns_pl1 as ACCEPT/ACCEPT and
+    cryptography's verdict on C2_si_pl0 as REJECT path_len. BOTH ARE WRONG, and
+    the second error is the load-bearing one. Corrected 2026-10-05 after
+    rev-2026-0022, an independent non-synthesizer reviewer, compared this
+    artifact against the experiment's own persisted output and found three cells
+    contradicted by it. The table had been transcribed from an EARLIER run whose
+    corpus differed from the committed one, and the stale row was never
+    re-checked after the corpus was repaired.
+  b1_ns_pl1_is_a_rejection_and_that_is_correct: >
+    b_anc carries no pathLenConstraint. B_pred carries pathlen:1, so the budget
+    entering B_c is 3; B_c's own pathlen:1 leaves 1; B_d_ns then needs (l) to
+    see a value greater than zero and finds 0. The chain is REJECT under both
+    readings. Hand arithmetic over the persisted trace agrees with the re-run,
+    and the generator's own source (minimal_chain.py:424, B_pred pathlen=1)
+    makes the verdict unambiguous. This row is a POSITIVE CONTROL that turned
+    out to be a negative case, which is why the stale value was not caught by
+    inspection.
+  the_corrected_decisive_observation: >
+    On C2_si_pl0 -- the single discriminating case -- certvalidator REJECTS with
+    reason class path_len, matching the H1 oracle. Under H2 that case would be
+    ACCEPTED. So certvalidator implements H1.
+
+    pyca/cryptography ALSO rejects C2_si_pl0, but with reason class
+    `signature`, not `path_len`. Under this experiment's own admissibility rule
+    -- only cells whose reason class is path_len are admissible as path-length
+    evidence -- that cell is INADMISSIBLE for pyca. It is therefore NOT evidence
+    that pyca implements H1, and an earlier version of this artifact claimed it
+    was. The claim is WITHDRAWN.
   implementation_cohort:
     distinct_validation_cores: 2
     cores:
@@ -233,14 +262,19 @@ results:
       - core: "wbond/certvalidator 0.11.1, pure-Python, independent author"
         independence: shares no code, vendor, or ancestry with pyca
   the_decisive_observation: >
-    On C2_si_pl0 -- the single discriminating case -- BOTH cores REJECT with
-    reason class path_len, matching the H1 oracle. Under H2 that case would be
-    ACCEPTED. Both independently-derived, independently-authored cores therefore
-    implement H1.
+    CORRECTED 2026-10-05. See results.corrected_decisive_observation. In short:
+    certvalidator is the ONE admissible core on the discriminating case.
+    pyca's verdict on that cell is signature-class and therefore inadmissible
+    under this experiment's own rule. The earlier claim that "both cores
+    implement H1" is WITHDRAWN.
   what_the_two_divergences_are: >
     A2_si_pl0 and B2_si_pl1 are ACCEPTed by H1 and by certvalidator, and
     REJECTed by cryptography with "signature does not match". These are NOT
-    path-length results. See obs-2026-0063 for the source-level mechanism.
+    path-length results. Note that A2 and B2 are NOT a matched pair for the
+    variable under test -- A2's self-issued member is at path position 2 and B2's
+    at position 2 of a 4-certificate path, while the isolating pair is
+    C1/C2. Calling them "the two divergences" without that qualification
+    overstated how much they carry. See obs-2026-0063.
   hypotheses_resolved:
     H1: >
       SUPPORTED. Two independent RFC derivations, one adversarial refutation

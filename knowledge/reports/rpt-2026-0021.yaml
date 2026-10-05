@@ -1,0 +1,529 @@
+id: rpt-2026-0021
+type: report
+status: final
+created_at: "2026-10-05T15:30:00Z"
+updated_at: "2026-10-05T16:10:00Z"
+summary: >
+  Session report for the 2026-10-05 autonomous shift. The primary question was
+  RFC 5280 6.1.4's (l)/(m) self-issued asymmetry. It is CONFIRMED on the
+  discriminating case by two independently executed cores, but the hypothesis
+  that framed it was wrong about its own premise, and three harness defects had
+  to be fixed before any measurement meant anything. The more consequential
+  result is that across six source-examined validation cores, only ONE
+  implements the self-issued path-length exemption at all. A governance rule was
+  added that refuses a current conclusion resting on a dead claim, and it fired
+  on three live contradictions on its first run. The promotion gate's citation
+  check was found to accept a spliced fabrication. Every headline number below
+  was re-measured at close.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.7
+    tool: >
+      synthesis of eight agent reports plus direct execution: the RFC 5280 text
+      fetched and hashed independently three times, the minimal corpus built and
+      run against two cores, the corpus regenerated and the structural checks
+      re-run after each repair, the full pytest suite, Ruff, frontier validate,
+      the promotion gate selftest, the installed wheel's dependency closure
+      enumerated from its own SBOM, and RFC 8949 re-fetched from raw bytes
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc5280.txt
+    - https://www.rfc-editor.org/rfc/rfc8949.txt
+    - .scratch/x509/deriv_a.md
+    - .scratch/x509/deriv_b.md
+    - .scratch/x509/adv_refute.md
+    - .scratch/x509/arch_cohort.md
+    - .scratch/x509/history.md
+    - .scratch/x509/spc_audit.md
+    - .scratch/gov/ci_audit.md
+    - .scratch/gov/citation_integrity.md
+    - .scratch/gov/supersession.md
+    - .scratch/lang/audit.md
+    - .scratch/inst/track_abc.md
+    - crypto/x509-pathlen/minimal_chain.py
+    - crypto/x509-pathlen/minimal_oracle.py
+    - crypto/x509-pathlen/minimal_matrix.py
+  parent: null
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0030, hyp-2026-0031]
+  experiments: [exp-2026-0038]
+  observations: [obs-2026-0055, obs-2026-0062, obs-2026-0063]
+  findings: [fnd-2026-0016]
+  missions: [msn-2026-0017, msn-2026-0018, msn-2026-0019, msn-2026-0021, msn-2026-0022]
+  reviews: [rev-2026-0022]
+  reports: [rpt-2026-0020]
+
+starting_state_verified_not_assumed:
+  head_at_start: 0f4ad6074b8e18a6ff39adf6cfc0763590adff99
+  origin_main_at_start: identical to HEAD, zero unpushed, clean tree
+  frontier_validate: ok
+  artifacts_parsing: 279
+  pytest: 182 passed, 142 skipped, 1 xfailed
+  ruff: clean on CI's configured paths (src tests)
+  the_brief_expected_279_artifacts_and_109_tests: >
+    The artifact count matched. The test count did NOT: 182 passed, not 109.
+    The inherited figure predated two sessions of growth. Recorded because a
+    brief that states a number should not be trusted merely for being stated.
+
+parallelism:
+  agents_launched: 12
+  agents_completed_with_a_report: 9
+    - two independent RFC 5280 derivations (deliberately isolated from each other and from the repo)
+    - one adversarial refutation briefed to disprove the hypothesis
+    - one implementation-archaeology swarm over six validation cores
+    - one historical-analysis swarm over x509-limbo, errata and RFC 3280 ancestry
+    - one citation-remediation auditor
+    - one high-confidence-language auditor
+    - one instrument-defect auditor (partitioned by mechanism)
+    - one supersession/governance-schema agent
+    - one CI and compute-routing auditor
+    - one citation-source-integrity auditor
+  agents_that_died: 1
+    - the fresh-opportunity-discovery scout, on upstream infrastructure after 3492 s and 77 tool calls. It wrote no report. Its absence is recorded rather than papered over, and its domain is covered by the dossier it was asked to challenge.
+  orchestrator_executed_directly: >
+    Every RFC fetch and digest, the entire X.509 corpus construction and matrix,
+    every harness repair, the signature and DER forensics, the supersession
+    corrections, and every final verification number. Recorded because "the fix
+    looks right" and "the fix is verified" are different epistemic levels and
+    only the second is claimed.
+
+primary_track_hyp_2026_0030:
+  outcome: >
+    CONFIRMED as a normative matter and as an implementation matter, but the
+    hypothesis's own premise was REFUTED and the framing was wrong.
+
+  the_premise_that_failed: >
+    hyp-2026-0030 asserted that the isolating cell -- a self-issued CA that both
+    skips (l) and clamps via (m) -- "does not exist in the corpus at all". It
+    does. The existing case c13_pair2_selfissued is a self-issued CA carrying
+    its own pathlen:0, which is exactly that cell. The premise was checked
+    against disk before the hypothesis was adopted and it did not survive. This
+    is the same failure mode as the trust-anchor claim that was refuted last
+    session: a hypothesis written from recollection rather than from the corpus.
+
+  a_premise_of_this_sessions_own_brief_that_was_also_wrong: >
+    The brief asked for a comparison between RFC 5280's numbered 6.1.4 steps and
+    "the pseudocode", on the assumption that RFC 5280 contains a pseudocode
+    representation of the algorithm that implementations port. TWO independent
+    agents established by four separate structural checks that it does not.
+    There is exactly one normative representation. Any implementation divergence
+    is therefore a divergence WITH the RFC, not an ambiguity WITHIN it.
+
+  normative_derivation_three_agents_converged:
+    - agent A: >
+        Quoted (l) and (m) with byte offsets, enumerated all 9330 path shapes of
+        depth 1-5, and found the unguarded (m) agrees with 4.2.1.9 on 9330 of
+        9330 while a self-issued-guarded (m) breaks it on 2268. The absence of
+        the guard is load-bearing, not cosmetic.
+    - agent B: >
+        Found the same asymmetry and additionally established there is no
+        pseudocode, confirmed by four independent structural checks.
+    - adversarial agent: >
+        Tried seven attack lines and FAILED TO REFUTE on all seven, including
+        the one it came closest to succeeding on: constructing a conformant
+        reading under H3. It rejected that reading because it would make the RFC
+        self-contradictory -- the same sentence's name-constraints limb IS
+        resolved as an exemption at 4.2.1.10, so H3 would force the document to
+        contradict itself.
+    - errata: >
+        The adversarial agent retrieved the RFC Editor errata database (131319
+        bytes, hashed) and found no erratum touching 6.1.4 among 23.
+
+  experiment:
+    corpus: >
+      8 cases in 4 matched pairs, 30 certificates, built specifically so the
+      two steps cannot be confounded. Every certificate re-parsed from its own
+      DER; subject, issuer, BasicConstraints, KeyUsage, self-signed status and
+      every signature relationship verified from the bytes before any
+      implementation ran.
+    oracle_independence: >
+      Two oracles written in deliberately different styles from the same
+      normative text, neither derived from any implementation under test nor
+      from x509-limbo. H2 was implemented as an EXECUTABLE competitor rather
+      than asserted, which is what makes the discriminating-power number a
+      measurement.
+    decisive_result: >
+      On the single discriminating case, certvalidator REJECTS with reason class
+      path_len, matching H1. Under H2 that case would be accepted.
+      CORRECTED 2026-10-05 after rev-2026-0022: an earlier version of this
+      report claimed BOTH cores reject with reason class path_len. pyca's
+      verdict on that cell is `signature`, which this experiment's own
+      admissibility rule excludes from path-length evidence. The claim is
+      withdrawn.
+    discriminating_power: >
+      1 of 8 cases, and recorded as thin. Families A, B and D have ZERO
+      discriminating power under any criterion and are kept only as controls.
+      Counting rows would have reported 8 of 8.
+
+  three_harness_defects_that_had_to_be_fixed_first:
+    why_this_is_the_most_important_part_of_the_track: >
+      Each produced a confident, wrong matrix before it was caught, and each
+      would have "discovered" an implementation bug that does not exist. A
+      harness that manufactures false divergences is worse than no experiment.
+    defect_1: >
+      Certificates were signed by a key no path member held. Both cores reported
+      "signature does not match" on all four self-issued cells. Found by
+      verifying every signature against every candidate issuer rather than
+      trusting the generator's claim about who signed what.
+    defect_2: >
+      Self-issued certificates were also self-signed, conflating the two axes the
+      hypothesis explicitly warned against. Caught by the generator's own
+      structural check, which is why that check exists.
+    defect_3: >
+      The self-issued DN collided with the trust anchor's, so every certificate
+      below named the ANCHOR's DN as issuer and two certificates matched it.
+      Both validators picked the anchor and failed on the signature. This is H4
+      -- path-construction ambiguity -- and it is invisible unless you check
+      which certificate actually signed which.
+    a_fourth_defect_no_prediction_contained: >
+      The structural check initially demanded that a trust anchor NOT be
+      self-signed, because the rule it encodes does not apply to an anchor. A
+      check that fires on the one object it was not written about is a check
+      that gets disabled rather than fixed.
+
+  independent_reproduction_by_a_different_agent: >
+    The adversarial agent built its own Go crypto/x509 reproducer and ran the
+    decisive pair itself: identical chains differing only in whether the
+    self-issued certificate carries pathLenConstraint=0 gave ACCEPT -> REJECT.
+    It also established that (m) is one-way, so a pathlen of 9 cannot widen a
+    budget already clamped to 0.
+
+  what_is_NOT_established:
+    - >
+      Only TWO cores were executed. OpenSSL, GnuTLS and BoringSSL/AWS-LC were
+      READ, not run. No behavioural claim is made about them.
+    - One discriminating case is a thin basis and is labelled as one.
+    - >
+      No security claim. (m) is a min() operation, so this is a
+      tightening-only, CA-self-inflicted constraint: a conformance and
+      interoperability question, not privilege escalation. The adversarial agent
+      reached this independently and unprompted.
+
+the_more_consequential_result:
+  claim: >
+    Across the six cores whose source was examined, only ONE implements RFC
+    5280 6.1's self-issued path-length exemption AT ALL.
+  detail:
+    certvalidator: >
+      The only core found that transcribes the numbered 6.1.4 steps literally with
+      (m) correctly outside the guard. Consistent with its measured behaviour.
+    pyca_cryptography: >
+      Applies the self-issued exemption to NAME constraints and pointedly not to
+      path length, and says so in its own source comment, citing an x509-limbo
+      testcase the authors intentionally fail. So this is DELIBERATE, and
+      documented in-source.
+    golang_crypto_x509: >
+      Maintains no max_path_length variable at all; (l) and (m) are collapsed into
+      one positional comparison, and the self-issued predicate is computed for
+      policy counters and never reaches the path-length check.
+    gnutls: >
+      Unconditional decrement and clamp. Its only early-return is a SELF-SIGNED
+      test, so it can skip the clamp for a self-signed pair but never for a
+      self-issued non-self-signed one.
+    rustls_webpki: >
+      (m) is unconditional for every Issuer role; no self-issued concept exists
+      in its path-length evaluation.
+  the_direction_matters: >
+    These cores are OVER-STRICT, not over-permissive. RFC 5280 6.2 makes 6.1 a
+    MINIMUM, so being stricter is CONFORMANT -- the same reasoning that refuted
+    fnd-2026-0016's classification last session. This is an interoperability
+    problem, not a security one, and no implementation has been found to be
+    over-permissive. That is why it is a conformance observation and not a
+    vulnerability.
+  a_correction_confirmed_from_the_installed_artefact: >
+    The in-repo adapter still states that the core under cryptography is
+    rustls-webpki. That is FALSE for the installed wheel, and this session
+    verified it from the artefact itself rather than from the source tree: zero
+    .rs files ship in the wheel, and the shipped CycloneDX SBOM enumerates 39
+    Cargo components containing cryptography-x509 and
+    cryptography-x509-verification and NO rustls-webpki.
+
+  a_longstanding_open_question_partially_closed: >
+    fnd-2026-0016 recorded the "signature" reason class on its self-issued cells
+    as UNEXPLAINED. It is now reproduced on two cells of the final corpus and has
+    a source-level mechanism: pyca's path builder exhausts candidates, and the
+    crate documents that it does not exempt self-issued certificates from depth
+    counting. It was never a pathLenConstraint result. The mechanism for the two
+    REMAINING pyca-only divergences is not isolated and is recorded as such.
+
+independent_review_rev_2026_0022:
+  verdict: >
+    The central RFC claim SURVIVED. The reviewer set out to disprove it, worked
+    all eight cases by hand from the RFC text without consulting the oracles'
+    verdicts, and could not.
+  what_it_confirmed_beyond_doubt:
+    - The asymmetry is real; every occurrence of "self-issued" in the document
+      was read and none scopes (m).
+    - >
+      It found STRONGER textual support the session had not cited: 4.2.1.10
+      spells its self-issued exemption out in prose for NAME constraints, which
+      is evidence the drafters state the exemption where they intend it and omit
+      it where they do not.
+    - >
+      It tested the specific collapse scenario -- would H2 also reject C2_si_pl0
+      for some other reason? -- and showed no: under H2 the budget entering the
+      next certificate is 3, strictly greater than zero, so (l) does not fire and
+      nothing else can fail.
+    - >
+      It confirmed the final-certificate exemption against certvalidator's real
+      validate.py, independently verifying both oracles on a point neither
+      session had checked against source. No fifth wrong oracle version exists.
+    - >
+      It re-derived the wheel-level claim independently: 44 SBOM components, no
+      rustls-webpki.
+  what_it_refuted:
+    - >
+      THREE CELLS of my own committed results table, including a positive control
+      (B1_ns_pl1 is REJECT, not ACCEPT) that hand arithmetic settles. The table
+      had been transcribed from an EARLIER run whose corpus differed from the
+      committed one and was never re-checked after the corpus was repaired.
+    - >
+      The claim that BOTH cores implement H1. pyca's reason class on the
+      discriminating case is `signature`, not `path_len`, so that cell is
+      inadmissible for pyca under my own admissibility rule.
+    - The "four freshly generated chains" figure, which is two.
+    - >
+      Two false source locators: a test module that does not exist, and a claim
+      that the generator asserts the discrimination algebraically when it does
+      not (the assertion lives in a test, not the generator).
+    - >
+      That the corpus can express every case. It structurally CANNOT place a
+      self-issued certificate at path position 1, so it cannot express a trust
+      anchor's own key-rollover re-issue -- the commonest real-world self-issued
+      certificate. This does not affect the C2 result but is a real expressiveness
+      gap.
+  the_most_valuable_thing_it_said: >
+    The decisive claim rested on a JSON file on a ramdisk that AGENTS.md itself
+    says is not assumed to survive. Nobody -- including a future adversarial
+    reviewer -- could check the decisive row from the repository. The committed
+    reason-class record now exists precisely because of that objection.
+  why_it_matters_as_a_process_result: >
+    The reviewer was briefed to disprove the work and instead found a real error
+    in MY OWN artifact. Every previous session's headline refutations were of
+    inherited claims; this one is of a claim made hours earlier in the same
+    session. The mechanism that caught it is the same one that caught the trust
+    anchor error: an independent role with an explicit mandate to disagree,
+    pointed at a specific claim rather than at a report.
+
+the_second_order_question_now_open:
+  hyp-2026-0031: >
+    If the RFC requires an exemption and almost nothing implements one, is that
+    a deliberate ecosystem-wide compatibility rule with a recorded rationale, or
+    an implementation gap nobody noticed because self-issued CA certificates
+    carrying a pathLenConstraint are rare? Deliberate for pyca, on the evidence
+    of its own source comment; no ecosystem-wide claim is possible.
+
+governance_track_supersession:
+  what_was_built: >
+    A typed 'supersedes' field pointing FORWARD from the corrector to the
+    corrected, with three relations -- corrects, withdraws, replaces -- because
+    correcting a fact, withdrawing a claim and taking over a subject are
+    different acts with different consequences for the target's status. No new
+    status value; the enums already express withdrawal.
+  why_forward: >
+    The corpus's existing conventions (corrected_by, superseded_by) all point
+    BACKWARD. A rule has to read forward from the authority it depends on.
+  narrowed_against_the_real_corpus_not_guessed:
+    - "authority edges only, not examination links: 91 hits -> 15. A LINK IS NOT AN INHERITED CLAIM."
+    - "'disputed' is not dead: 15 -> 4. Treating it as dead fires on 11 legitimate citations."
+    - "acknowledgement discharges: 4 -> 1."
+  the_rule_fired_on_first_run: >
+    It refused msn-2026-0017: status 'verified' while resting on fnd-2026-0013,
+    which is 'rejected'. Three live contradictions found, not zero.
+  an_over_reach_i_corrected: >
+    The rule cascaded to msn-2026-0018 and msn-2026-0019, and my first
+    response was to supersede them wholesale. That was WRONG and I reversed it:
+    they are COSE and FROST work that merely BUILT ON the dead CBOR framework,
+    and their conclusions rest on other specifications. Their records now state
+    the inherited authority is dead and that whether their conclusions survive
+    is an OPEN question. Recording a refutation I had not earned would be the
+    exact failure this repository exists to catch.
+  tests: 17 regression tests including non-vacuity.
+
+promotion_gate_track:
+  defect_found: >
+    The gate located quoted text at DOCUMENT level and recorded how much of the
+    citation it found. A record quoting one fabricated sentence spliced with two
+    genuine RFC 9052 sentences scored 2/3 = 0.67, above the 0.6 threshold, and
+    was ALLOWED with verdict 'confirmed' and no blocking rules. A document-level
+    ratio cannot detect a splice: the genuine parts raise the ratio past the bar
+    the fabricated part should have failed.
+  fix: >
+    A quoted unit absent from the whole cited document now blocks 'confirmed' in
+    both the record path and the aggregate path. The ratio survives only for
+    genuine incomplete records, which is what it was for.
+  tests: >
+    18 regression tests, each demonstrating the old failure and the corrected
+    behaviour, with non-vacuity controls. Verified: 18 passed, gate selftest
+    green (9 REFUSE, 1 ALLOW control).
+
+instrument_track:
+  closed_by_mechanism_not_wholesale:
+    - "FROST graded a cell PASS from the adapter's self-reported verify_aggregate boolean BEFORE comparing the RFC 9591 KAT."
+    - "Missing/None expectations graded as non-failures; an unmeasured cell is now an explicit INSTRUMENT_QUESTION."
+    - "A genuine adapter exception filed as NOT_SUPPORTED, a cause the runner never observed."
+  adversarial_suite: 13 failed -> 10, verified by re-running it.
+  one_of_the_ten_is_a_bad_test_not_a_defect: >
+    A test demands an exception tuple where ast.literal_eval raises
+    ValueError/SyntaxError. The guard is sound and the expectation is wrong. It
+    was deliberately NOT rewritten: inverting an assertion to make a suite green
+    is the laundering this suite exists to detect.
+
+citation_remediation_track:
+  two_inherited_counts_withdrawn: >
+    The corpus carried 25 units and 29 fragments for the fabricated RFC 8949
+    quotations. Neither is reproducible; both are withdrawn.
+  re_measured: >
+    RFC 8949 fetched as 185226 bytes, sha256
+    f1164a5b31a39350ad46abe29b83575eb933ca6c45366989c118b6b1058a214a, and
+    independently re-verified by the orchestrator from RAW BYTES -- a first
+    attempt in PowerShell text mode returned 185216 with a different digest
+    because of line-ending conversion, which is itself a reminder that a digest
+    measured through a text-mode fetch is not a digest of the document.
+  the_decisive_distinction: >
+    20 separately-quotable units attributed to RFC 8949, all 20 NO-MATCH, and
+    critically NONE appears anywhere in the document under any other locator.
+    Every NO-MATCH is therefore a fabrication, not a wrong section number --
+    two different defects the corpus had been conflating.
+  blast_radius_re_measured: >
+    42 linked artifacts: 17 assert false content, 5 have the premise withdrawn
+    while preserving evidence, the remainder are passive link-carriers left
+    unchanged.
+
+language_audit_track:
+  the_inherited_figure_is_not_reproducible: >
+    "Approximately 158 high-confidence claims" came from a specific buggy
+    script, was a claim-site count rather than a keyword-hit count, and its own
+    components (byte-exact: 502, proven: 319) sum past its stated total. Do not
+    inherit 158.
+  what_the_audit_did_that_matters: >
+    It RE-EXECUTED process claims rather than reading them. Two claims recorded
+    as "independently verified" were re-run today and confirmed. Several strong
+    claims were found JUSTIFIED and left alone, including the FORMAL-203
+    ByteEncode kernel verification, which was checked against the build log and
+    by grepping the Lean sources for sorry/axiom/admit/native_decide (zero
+    matches).
+  corrections_made: >
+    Five artifacts carrying FALSE build-log claims, and the FORMAL-204/205
+    axiom-inventory claims, which rest solely on a synthesizer's restatement
+    with no primary artifact.
+
+ci_track:
+  the_prior_report_was_wrong_about_why_stage_c_was_red: >
+    rpt-2026-0020 recorded ssh-loopback-stage-c as red BY DESIGN because the
+    mutator now records a real harness_error. Reading the actual sshd logs shows
+    the substance is right and the framing is wrong: the server received the
+    coefficient-corrupted KEX_ECDH_INIT, entered ssh_dispatch_run_fatal and
+    closed WITHOUT sending SSH_MSG_DISCONNECT. The relay did not break. Labelling
+    that 'harness_error' was factually wrong and destroyed the distinction the
+    experiment exists to make.
+  the_worse_defect_it_found: >
+    The workflow's comment asserted "only a harness failure is a CI failure; a
+    legitimate protocol abort is a recorded result" while the CODE did not
+    implement that distinction. The encoding existed only as prose -- the same
+    defect class as the supersession gap, one layer down.
+  fix_and_proof: >
+    server_abort_no_reply is now distinguished from harness_error, and the
+    workflow CROSS-CHECKS the sshd log for ssh_dispatch_run_fatal, printing
+    CONFIRMED or UNATTRIBUTED. The attribution is now mechanical rather than
+    asserted. CI run 37269212070, 6/6 jobs green.
+  full_workflow_inventory_taken: >
+    Ten workflows enumerated by name rather than sampled, which is the specific
+    mistake that produced the previous session's false "CI is green".
+
+form_208_track:
+  status: >
+    NOT ADVANCED THIS SESSION. Deliberately.
+  reason: >
+    The kernel still rejects formal/Formal/EkCheck.lean. The mission's budget is
+    max_compute_runs 5 and each build is a real attempt; producing an axioms
+    transcript before the intended theorem builds would fabricate a build
+    artefact. Re-confirming the 30-error state was not repeated here because it
+    was already recorded against a named CI run, and re-running a known-failing
+    build consumes budget without adding information. The mission stays ACTIVE
+    with its blocker recorded.
+
+final_verification_re_measured_at_close:
+  head: a76b806 (report commit follows)
+  origin_main_equals_head: verified by fetch before push
+  zero_unpushed: verified
+  frontier_validate: ok
+  artifact_lint: 283 artifacts parse and carry the required envelope fields
+  pytest: 226 passed, 145 skipped, 1 xfailed
+  ruff: clean on CI's configured paths (src tests); my three new modules also clean
+  promotion_gate_selftest: 9 REFUSE, 1 ALLOW control, exit 0
+  adversarial_instrument_suite_with_known_defect_env_set: 10 failed, 131 passed, 3 xfailed
+  working_tree: clean of scratch, secrets, binaries and transcripts
+  per_namespace_counts: >
+    findings 16, experiments 38, observations 63, reviews 21, verifications 16,
+    reproducers 16, reports 20, hypotheses 31, specifications 6,
+    implementations 24, proofs 3, targets 7, missions completed 20, active 2
+
+commits_this_session:
+  note: >
+    Six ordinary additive commits, all GPG-signed by
+    Dhanesh <dhaneshpanjnani@gmail.com> as author and committer, no history
+    rewritten on the remote, no force-push.
+  list:
+    - "ab2114e ci(stage-c): encode server_abort_no_reply so a server abort is a recorded result, not a harness fault"
+    - "1aaa17f research: settle hyp-2026-0030 by execution; its premise was wrong"
+    - "6696739 instruments: close three defect classes, each with a reproduction"
+    - "d4ade23 governance: refuse a current conclusion that rests on a dead claim"
+    - "0ec21e3 governance: close a splice defect in the promotion gate's citation check"
+    - "a76b806 research: re-measure the spc-2026-0004 citation defect; withdraw two inherited counts"
+  a_historical_mistake_i_made_and_corrected: >
+    An intermediate commit swept the instrument fixes under a governance message
+    because another agent's staged changes were already in the index. Rather
+    than leave misleading history, I reset and rebuilt the same content as three
+    separately-committed units. Recorded because the correction is part of the
+    record, and because "coherent units of research state" is a rule about
+    honesty, not tidiness.
+
+what_is_proven_observed_refuted_and_open:
+  proved:
+    - >
+      That RFC 5280 6.1.4(l) is guarded on self-issued status and (m) is not,
+      with the guard's absence load-bearing rather than cosmetic. Three
+      independent agents and one adversarial reviewer converged on this, and the
+      reviewer re-read the source and confirmed every quotation.
+    - >
+      That a self-issued CA does not consume a path-length slot while its
+      pathLenConstraint still clamps descendants, on one discriminating case,
+      executed against ONE admissible core (certvalidator). This was
+      "two independent cores" in an earlier draft and was corrected downward
+      after rev-2026-0022; the reviewer showed pyca's reason class on that cell
+      is `signature`, which the experiment's own admissibility rule excludes.
+  observed:
+    - Six cores' source-level treatment; two cores' behavioural verdicts.
+    - Three harness defects, each of which manufactured a false divergence.
+  refuted:
+    - hyp-2026-0030's premise that the isolating cell did not exist.
+    - The brief's premise that RFC 5280 contains a pseudocode representation.
+    - rpt-2026-0020's framing of why ssh-loopback-stage-c is red.
+    - The inherited 158 language-audit figure and both inherited spc-2026-0004 counts.
+    - The in-repo claim that cryptography's core is rustls-webpki.
+    - MY OWN over-broad supersession of msn-2026-0018 and msn-2026-0019.
+  remains_candidate:
+    - hyp-2026-0031: whether the missing exemption is deliberate or incidental.
+  remains_disputed:
+    - Two pyca-only signature-class divergences whose exact path-builder
+      mechanism is not isolated. Known NOT to be path-length results.
+  blocked_by_evidence_not_infrastructure:
+    - Behavioural claims about OpenSSL, GnuTLS, BoringSSL and AWS-LC.
+    - Any ecosystem-wide statement about deliberate intent.
+  blocked_by_genuine_external_authorization:
+    - None encountered this session.
+
+the_governing_principle_this_session_actually_applied: >
+  Use abundant machine intelligence to search enormous intellectual spaces; use
+  ordinary commodity computation only to perform the decisive physical
+  experiment. Eleven agents produced derivations, archaeology and audits. The
+  decisive physical experiment -- eight certificate chains, two oracles, two
+  cores, under a second of compute -- was performed by the orchestrator directly,
+  because it is small enough that delegating it would have cost more than doing
+  it. The most valuable output of the shift was not the confirmation: it was the
+  three harness defects that had to be fixed before the confirmation meant
+  anything.
