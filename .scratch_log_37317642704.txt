@@ -1,0 +1,348 @@
+lean-build	Set up job	∩╗┐2026-10-05T13:32:57.2327755Z Current runner version: '2.337.0'
+lean-build	Set up job	2026-10-05T13:32:57.2357541Z ##[group]Runner Image Provisioner
+lean-build	Set up job	2026-10-05T13:32:57.2358924Z Hosted Compute Agent
+lean-build	Set up job	2026-10-05T13:32:57.2359553Z Version: 20260901.588
+lean-build	Set up job	2026-10-05T13:32:57.2360290Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+lean-build	Set up job	2026-10-05T13:32:57.2361088Z Build Date: 2026-09-01T19:56:44Z
+lean-build	Set up job	2026-10-05T13:32:57.2361791Z Worker ID: {13817297-19fe-40d5-8f86-ec4386722122}
+lean-build	Set up job	2026-10-05T13:32:57.2362617Z Azure Region: westcentralus
+lean-build	Set up job	2026-10-05T13:32:57.2363254Z ##[endgroup]
+lean-build	Set up job	2026-10-05T13:32:57.2365227Z ##[group]Operating System
+lean-build	Set up job	2026-10-05T13:32:57.2365940Z Ubuntu
+lean-build	Set up job	2026-10-05T13:32:57.2366506Z 24.04.5
+lean-build	Set up job	2026-10-05T13:32:57.2367105Z LTS
+lean-build	Set up job	2026-10-05T13:32:57.2367653Z ##[endgroup]
+lean-build	Set up job	2026-10-05T13:32:57.2368485Z ##[group]Runner Image
+lean-build	Set up job	2026-10-05T13:32:57.2369253Z Image: ubuntu-24.04
+lean-build	Set up job	2026-10-05T13:32:57.2369903Z Version: 20260927.320.1
+lean-build	Set up job	2026-10-05T13:32:57.2371069Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+lean-build	Set up job	2026-10-05T13:32:57.2372871Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+lean-build	Set up job	2026-10-05T13:32:57.2373931Z ##[endgroup]
+lean-build	Set up job	2026-10-05T13:32:57.2375103Z ##[group]GITHUB_TOKEN Permissions
+lean-build	Set up job	2026-10-05T13:32:57.2377661Z Contents: read
+lean-build	Set up job	2026-10-05T13:32:57.2378540Z Metadata: read
+lean-build	Set up job	2026-10-05T13:32:57.2379282Z ##[endgroup]
+lean-build	Set up job	2026-10-05T13:32:57.2381693Z Secret source: Actions
+lean-build	Set up job	2026-10-05T13:32:57.2382723Z Cache mode: write
+lean-build	Set up job	2026-10-05T13:32:57.2383575Z Prepare workflow directory
+lean-build	Set up job	2026-10-05T13:32:57.2757445Z Prepare all required actions
+lean-build	Set up job	2026-10-05T13:32:57.2808795Z Getting action download info
+lean-build	Set up job	2026-10-05T13:32:57.6097507Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+lean-build	Set up job	2026-10-05T13:32:57.6900231Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+lean-build	Set up job	2026-10-05T13:32:57.9138772Z Complete job name: lean-build
+lean-build	Run actions/checkout@v4	∩╗┐2026-10-05T13:32:57.9904829Z ##[group]Run actions/checkout@v4
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9905746Z with:
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9906193Z   repository: dp1x/frontier
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9910619Z   token: ***
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9911078Z   ssh-strict: true
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9911531Z   ssh-user: git
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9911986Z   persist-credentials: true
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9912483Z   clean: true
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9912952Z   sparse-checkout-cone-mode: true
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9913480Z   fetch-depth: 1
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9913924Z   fetch-tags: false
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9914374Z   show-progress: true
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9914822Z   lfs: false
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9915247Z   submodules: false
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9915700Z   set-safe-directory: true
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9916210Z   allow-unsafe-pr-checkout: false
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:57.9916923Z ##[endgroup]
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.0959621Z Syncing repository: dp1x/frontier
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.0962108Z ##[group]Getting Git version info
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.0962877Z Working directory is '/home/runner/work/frontier/frontier'
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.0964456Z [command]/usr/bin/git version
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1019551Z git version 2.55.0
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1042660Z ##[endgroup]
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1059989Z Temporarily overriding HOME='/home/runner/work/_temp/45dbbe5f-e3b4-467d-8882-d4244e309c78' before making global git config changes
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1062226Z Adding repository directory to the temporary git global config as a safe directory
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1066527Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/frontier/frontier
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1126058Z Deleting the contents of '/home/runner/work/frontier/frontier'
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1131958Z ##[group]Initializing the repository
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1136913Z [command]/usr/bin/git init /home/runner/work/frontier/frontier
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1223566Z hint: Using 'master' as the name for the initial branch. This default branch name
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1225558Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1227356Z hint: to use in all of your new repositories, which will suppress this warning,
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1229396Z hint: call:
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1230143Z hint:
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1231417Z hint: 	git config --global init.defaultBranch <name>
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1232523Z hint:
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1233458Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1234900Z hint: 'development'. The just-created branch can be renamed via this command:
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1236033Z hint:
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1236661Z hint: 	git branch -m <name>
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1237172Z hint:
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1237827Z hint: Disable this message with "git config set advice.defaultBranchName false"
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1239344Z Initialized empty Git repository in /home/runner/work/frontier/frontier/.git/
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1241629Z [command]/usr/bin/git remote add origin https://github.com/dp1x/frontier
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1293324Z ##[endgroup]
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1294198Z ##[group]Disabling automatic garbage collection
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1294943Z [command]/usr/bin/git config --local gc.auto 0
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1327124Z ##[endgroup]
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1327927Z ##[group]Setting up auth
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1335295Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1370927Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1716295Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.1759387Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.2028918Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.2073993Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.2320838Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.2364447Z ##[endgroup]
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.2365696Z ##[group]Fetching the repository
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:58.2376038Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +17a6d2d38bd474f2d4ba02683a5c1bad5aba8e8c:refs/remotes/origin/formal-208-repair
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.3910214Z From https://github.com/dp1x/frontier
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.3912210Z  * [new ref]         17a6d2d38bd474f2d4ba02683a5c1bad5aba8e8c -> origin/formal-208-repair
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.3921734Z ##[endgroup]
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.3923090Z ##[group]Determining the checkout info
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.3924809Z ##[endgroup]
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.3926052Z [command]/usr/bin/git sparse-checkout disable
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.3985428Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.4030289Z ##[group]Checking out the ref
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.4038410Z [command]/usr/bin/git checkout --progress --force -B formal-208-repair refs/remotes/origin/formal-208-repair
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.4771468Z Switched to a new branch 'formal-208-repair'
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.4773741Z branch 'formal-208-repair' set up to track 'origin/formal-208-repair'.
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.4781683Z ##[endgroup]
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.4831438Z [command]/usr/bin/git log -1 --format=%H
+lean-build	Run actions/checkout@v4	2026-10-05T13:32:59.4863121Z 17a6d2d38bd474f2d4ba02683a5c1bad5aba8e8c
+lean-build	Install elan	∩╗┐2026-10-05T13:32:59.5143074Z ##[group]Run curl -sSfL https://elan.lean-lang.org/elan-init.sh -o elan-init.sh
+lean-build	Install elan	2026-10-05T13:32:59.5145685Z ^[[36;1mcurl -sSfL https://elan.lean-lang.org/elan-init.sh -o elan-init.sh^[[0m
+lean-build	Install elan	2026-10-05T13:32:59.5147734Z ^[[36;1msh elan-init.sh -y --default-toolchain none^[[0m
+lean-build	Install elan	2026-10-05T13:32:59.5149501Z ^[[36;1mecho "$HOME/.elan/bin" >> $GITHUB_PATH^[[0m
+lean-build	Install elan	2026-10-05T13:32:59.5383751Z shell: /usr/bin/bash -e {0}
+lean-build	Install elan	2026-10-05T13:32:59.5385133Z ##[endgroup]
+lean-build	Install elan	2026-10-05T13:32:59.9667719Z info: downloading installer
+lean-build	Build (kernel check)	∩╗┐2026-10-05T13:33:00.5395573Z ##[group]Run elan toolchain install $(cat lean-toolchain)
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5396139Z ^[[36;1melan toolchain install $(cat lean-toolchain)^[[0m
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5396664Z ^[[36;1m# no lake-manifest.json is committed: resolve deps, then fetch mathlib^[[0m
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5397226Z ^[[36;1m# olean cache (building mathlib from source would exceed runner limits)^[[0m
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5397659Z ^[[36;1mlake update^[[0m
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5397937Z ^[[36;1mlake exe cache get!^[[0m
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5398509Z ^[[36;1mlake build 2>&1 | tee build.log^[[0m
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5398873Z ^[[36;1mecho "BUILD_EXIT=${PIPESTATUS[0]}"^[[0m
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5399288Z ^[[36;1mtest ${PIPESTATUS[0]} -eq 0^[[0m
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5399700Z ^[[36;1m! grep -q "declaration uses 'sorry'" build.log^[[0m
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5400079Z ^[[36;1m! grep -qi "error" build.log^[[0m
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5477552Z shell: /usr/bin/bash -e {0}
+lean-build	Build (kernel check)	2026-10-05T13:33:00.5477989Z ##[endgroup]
+lean-build	Build (kernel check)	2026-10-05T13:33:01.3565053Z info: downloading https://releases.lean-lang.org/lean4/v4.22.0/lean-4.22.0-linux.tar.zst
+lean-build	Build (kernel check)	2026-10-05T13:33:05.3276685Z info: installing /home/runner/.elan/toolchains/leanprover--lean4---v4.22.0
+lean-build	Build (kernel check)	2026-10-05T13:33:10.2438872Z 
+lean-build	Build (kernel check)	2026-10-05T13:33:10.2828932Z leanprover/lean4:v4.22.0 installed - Lean (version 4.22.0, x86_64-unknown-linux-gnu, commit ba2cbbf09d4978f416e0ebd1fceeebc2c4138c05, Release)
+lean-build	Build (kernel check)	2026-10-05T13:33:10.2830441Z 
+lean-build	Build (kernel check)	2026-10-05T13:33:10.7989573Z info: frontier_formal: no previous manifest, creating one from scratch
+lean-build	Build (kernel check)	2026-10-05T13:33:47.2242309Z info: mathlib: cloning https://github.com/leanprover-community/mathlib4.git
+lean-build	Build (kernel check)	2026-10-05T13:33:47.2242988Z info: mathlib: checking out revision '79e94a093aff4a60fb1b1f92d9681e407124c2ca'
+lean-build	Build (kernel check)	2026-10-05T13:33:47.2243757Z info: toolchain not updated; already up-to-date
+lean-build	Build (kernel check)	2026-10-05T13:33:48.4204970Z info: plausible: cloning https://github.com/leanprover-community/plausible
+lean-build	Build (kernel check)	2026-10-05T13:33:48.4205682Z info: plausible: checking out revision 'b100ad4c5d74a464f497aaa8e7c74d86bf39a56f'
+lean-build	Build (kernel check)	2026-10-05T13:33:48.8930491Z info: LeanSearchClient: cloning https://github.com/leanprover-community/LeanSearchClient
+lean-build	Build (kernel check)	2026-10-05T13:33:48.8931780Z info: LeanSearchClient: checking out revision '99657ad92e23804e279f77ea6dbdeebaa1317b98'
+lean-build	Build (kernel check)	2026-10-05T13:33:49.6675410Z info: importGraph: cloning https://github.com/leanprover-community/import-graph
+lean-build	Build (kernel check)	2026-10-05T13:33:49.6676168Z info: importGraph: checking out revision 'eb164a46de87078f27640ee71e6c3841defc2484'
+lean-build	Build (kernel check)	2026-10-05T13:33:51.2226946Z info: proofwidgets: cloning https://github.com/leanprover-community/ProofWidgets4
+lean-build	Build (kernel check)	2026-10-05T13:33:51.2227995Z info: proofwidgets: checking out revision '1253a071e6939b0faf5c09d2b30b0bfc79dae407'
+lean-build	Build (kernel check)	2026-10-05T13:33:53.2523231Z info: aesop: cloning https://github.com/leanprover-community/aesop
+lean-build	Build (kernel check)	2026-10-05T13:33:53.2524097Z info: aesop: checking out revision '1256a18522728c2eeed6109b02dd2b8f207a2a3c'
+lean-build	Build (kernel check)	2026-10-05T13:33:53.8694611Z info: Qq: cloning https://github.com/leanprover-community/quote4
+lean-build	Build (kernel check)	2026-10-05T13:33:53.8695242Z info: Qq: checking out revision '917bfa5064b812b7fbd7112d018ea0b4def25ab3'
+lean-build	Build (kernel check)	2026-10-05T13:33:58.9974656Z info: batteries: cloning https://github.com/leanprover-community/batteries
+lean-build	Build (kernel check)	2026-10-05T13:33:58.9975537Z info: batteries: checking out revision '240676e9568c254a69be94801889d4b13f3b249f'
+lean-build	Build (kernel check)	2026-10-05T13:33:59.5602426Z info: Cli: cloning https://github.com/leanprover/lean4-cli
+lean-build	Build (kernel check)	2026-10-05T13:33:59.5603196Z info: Cli: checking out revision 'c682c91d2d4dd59a7187e2ab977ac25bd1f87329'
+lean-build	Build (kernel check)	2026-10-05T13:33:59.5618397Z info: mathlib: running post-update hooks
+lean-build	Build (kernel check)	2026-10-05T13:33:59.9641968Z Γ£ö [2/20] Built Cache.Lean
+lean-build	Build (kernel check)	2026-10-05T13:34:00.0622154Z Γ£ö [3/20] Built Cache.Lean:c.o
+lean-build	Build (kernel check)	2026-10-05T13:34:01.0670266Z Γ£ö [6/20] Built Batteries.Data.String.Basic
+lean-build	Build (kernel check)	2026-10-05T13:34:01.1649172Z Γ£ö [7/20] Built Batteries.Data.String.Basic:c.o
+lean-build	Build (kernel check)	2026-10-05T13:34:01.6660008Z Γ£ö [8/20] Built Batteries.Data.Array.Match
+lean-build	Build (kernel check)	2026-10-05T13:34:01.8657288Z Γ£ö [9/20] Built Cache.IO
+lean-build	Build (kernel check)	2026-10-05T13:34:01.8680646Z Γ£ö [10/20] Built Batteries.Data.Array.Match:c.o
+lean-build	Build (kernel check)	2026-10-05T13:34:02.0654168Z Γ£ö [11/20] Built Batteries.Data.String.Matcher
+lean-build	Build (kernel check)	2026-10-05T13:34:02.3671673Z Γ£ö [12/20] Built Batteries.Data.String.Matcher:c.o
+lean-build	Build (kernel check)	2026-10-05T13:34:02.7689688Z Γ£ö [13/20] Built Cache.Hashing
+lean-build	Build (kernel check)	2026-10-05T13:34:03.8734374Z Γ£ö [14/20] Built Cache.Hashing:c.o
+lean-build	Build (kernel check)	2026-10-05T13:34:04.6757223Z Γ£ö [15/20] Built Cache.Requests
+lean-build	Build (kernel check)	2026-10-05T13:34:04.6758534Z Γ£ö [16/20] Built Cache.IO:c.o
+lean-build	Build (kernel check)	2026-10-05T13:34:05.3765493Z Γ£ö [17/20] Built Cache.Main
+lean-build	Build (kernel check)	2026-10-05T13:34:06.0774907Z Γ£ö [18/20] Built Cache.Main:c.o
+lean-build	Build (kernel check)	2026-10-05T13:34:06.2777586Z Γ£ö [19/20] Built Cache.Requests:c.o
+lean-build	Build (kernel check)	2026-10-05T13:34:06.5781025Z Γ£ö [20/20] Built cache:exe
+lean-build	Build (kernel check)	2026-10-05T13:34:09.2432911Z   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+lean-build	Build (kernel check)	2026-10-05T13:34:09.2433471Z                                  Dload  Upload   Total   Spent    Left  Speed
+lean-build	Build (kernel check)	2026-10-05T13:34:09.2433746Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:09.2433933Z   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+lean-build	Build (kernel check)	2026-10-05T13:34:09.2434345Z   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+lean-build	Build (kernel check)	2026-10-05T13:34:09.2434625Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:09.2434925Z   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+lean-build	Build (kernel check)	2026-10-05T13:34:09.2435684Z 100 1075k  100 1075k    0     0  2611k      0 --:--:-- --:--:-- --:--:-- 6637k
+lean-build	Build (kernel check)	2026-10-05T13:34:09.2436161Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:09.2811759Z installing leantar 0.1.15
+lean-build	Build (kernel check)	2026-10-05T13:34:10.8591715Z Current branch: HEAD
+lean-build	Build (kernel check)	2026-10-05T13:34:10.8592304Z Using cache from origin: leanprover-community/mathlib4
+lean-build	Build (kernel check)	2026-10-05T13:34:10.8593452Z Attempting to download 7067 file(s) from leanprover-community/mathlib4 cache
+lean-build	Build (kernel check)	2026-10-05T13:34:12.0067418Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:12.1061107Z Downloaded: 1 file(s) [attempted 1/7067 = 0%]
+lean-build	Build (kernel check)	2026-10-05T13:34:12.2065263Z Downloaded: 160 file(s) [attempted 160/7067 = 2%]
+lean-build	Build (kernel check)	2026-10-05T13:34:12.3063648Z Downloaded: 378 file(s) [attempted 378/7067 = 5%]
+lean-build	Build (kernel check)	2026-10-05T13:34:12.4065622Z Downloaded: 607 file(s) [attempted 607/7067 = 8%]
+lean-build	Build (kernel check)	2026-10-05T13:34:12.5091198Z Downloaded: 837 file(s) [attempted 837/7067 = 11%]
+lean-build	Build (kernel check)	2026-10-05T13:34:12.6103334Z Downloaded: 1062 file(s) [attempted 1062/7067 = 15%]
+lean-build	Build (kernel check)	2026-10-05T13:34:12.7101738Z Downloaded: 1277 file(s) [attempted 1277/7067 = 18%]
+lean-build	Build (kernel check)	2026-10-05T13:34:12.8121731Z Downloaded: 1505 file(s) [attempted 1505/7067 = 21%]
+lean-build	Build (kernel check)	2026-10-05T13:34:12.9122394Z Downloaded: 1725 file(s) [attempted 1725/7067 = 24%]
+lean-build	Build (kernel check)	2026-10-05T13:34:13.0120265Z Downloaded: 1971 file(s) [attempted 1971/7067 = 27%]
+lean-build	Build (kernel check)	2026-10-05T13:34:13.1123408Z Downloaded: 2211 file(s) [attempted 2211/7067 = 31%]
+lean-build	Build (kernel check)	2026-10-05T13:34:13.2121147Z Downloaded: 2434 file(s) [attempted 2434/7067 = 34%]
+lean-build	Build (kernel check)	2026-10-05T13:34:13.3120346Z Downloaded: 2666 file(s) [attempted 2666/7067 = 37%]
+lean-build	Build (kernel check)	2026-10-05T13:34:13.4130680Z Downloaded: 2903 file(s) [attempted 2903/7067 = 41%]
+lean-build	Build (kernel check)	2026-10-05T13:34:13.5131119Z Downloaded: 3144 file(s) [attempted 3144/7067 = 44%]
+lean-build	Build (kernel check)	2026-10-05T13:34:13.6155390Z Downloaded: 3384 file(s) [attempted 3384/7067 = 47%]
+lean-build	Build (kernel check)	2026-10-05T13:34:13.7164019Z Downloaded: 3589 file(s) [attempted 3589/7067 = 50%]
+lean-build	Build (kernel check)	2026-10-05T13:34:13.8160693Z Downloaded: 3807 file(s) [attempted 3807/7067 = 53%]
+lean-build	Build (kernel check)	2026-10-05T13:34:13.9160743Z Downloaded: 4039 file(s) [attempted 4039/7067 = 57%]
+lean-build	Build (kernel check)	2026-10-05T13:34:14.0178417Z Downloaded: 4271 file(s) [attempted 4271/7067 = 60%]
+lean-build	Build (kernel check)	2026-10-05T13:34:14.1180617Z Downloaded: 4509 file(s) [attempted 4509/7067 = 63%]
+lean-build	Build (kernel check)	2026-10-05T13:34:14.2188437Z Downloaded: 4739 file(s) [attempted 4739/7067 = 67%]
+lean-build	Build (kernel check)	2026-10-05T13:34:14.3207473Z Downloaded: 4971 file(s) [attempted 4971/7067 = 70%]
+lean-build	Build (kernel check)	2026-10-05T13:34:14.4202969Z Downloaded: 5205 file(s) [attempted 5205/7067 = 73%]
+lean-build	Build (kernel check)	2026-10-05T13:34:14.5201489Z Downloaded: 5425 file(s) [attempted 5425/7067 = 76%]
+lean-build	Build (kernel check)	2026-10-05T13:34:14.6214628Z Downloaded: 5656 file(s) [attempted 5656/7067 = 80%]
+lean-build	Build (kernel check)	2026-10-05T13:34:14.7229508Z Downloaded: 5893 file(s) [attempted 5893/7067 = 83%]
+lean-build	Build (kernel check)	2026-10-05T13:34:14.8229098Z Downloaded: 6120 file(s) [attempted 6120/7067 = 86%]
+lean-build	Build (kernel check)	2026-10-05T13:34:14.9229152Z Downloaded: 6347 file(s) [attempted 6347/7067 = 89%]
+lean-build	Build (kernel check)	2026-10-05T13:34:15.0238616Z Downloaded: 6560 file(s) [attempted 6560/7067 = 92%]
+lean-build	Build (kernel check)	2026-10-05T13:34:15.1236094Z Downloaded: 6780 file(s) [attempted 6780/7067 = 95%]
+lean-build	Build (kernel check)	2026-10-05T13:34:15.2242118Z Downloaded: 6998 file(s) [attempted 6998/7067 = 99%]
+lean-build	Build (kernel check)	2026-10-05T13:34:15.2686989Z Downloaded: 7064 file(s) [attempted 7064/7067 = 99%]
+lean-build	Build (kernel check)	2026-10-05T13:34:15.2687706Z Downloaded: 7067 file(s) [attempted 7067/7067 = 100%] (100% success)
+lean-build	Build (kernel check)	2026-10-05T13:34:29.6647595Z Decompressing 7067 file(s)
+lean-build	Build (kernel check)	2026-10-05T13:34:29.6648288Z Unpacked in 14370 ms
+lean-build	Build (kernel check)	2026-10-05T13:34:29.6648672Z Completed successfully!
+lean-build	Build (kernel check)	2026-10-05T13:34:33.2020289Z Current branch: HEAD
+lean-build	Build (kernel check)	2026-10-05T13:34:33.2020865Z Using cache from origin: leanprover-community/mathlib4
+lean-build	Build (kernel check)	2026-10-05T13:34:33.2021584Z Attempting to download 7067 file(s) from leanprover-community/mathlib4 cache
+lean-build	Build (kernel check)	2026-10-05T13:34:34.3377236Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:34.4389226Z Downloaded: 1 file(s) [attempted 1/7067 = 0%]
+lean-build	Build (kernel check)	2026-10-05T13:34:34.5382358Z Downloaded: 153 file(s) [attempted 153/7067 = 2%]
+lean-build	Build (kernel check)	2026-10-05T13:34:34.6380535Z Downloaded: 378 file(s) [attempted 378/7067 = 5%]
+lean-build	Build (kernel check)	2026-10-05T13:34:34.7389048Z Downloaded: 604 file(s) [attempted 604/7067 = 8%]
+lean-build	Build (kernel check)	2026-10-05T13:34:34.8381901Z Downloaded: 837 file(s) [attempted 837/7067 = 11%]
+lean-build	Build (kernel check)	2026-10-05T13:34:34.9392131Z Downloaded: 1066 file(s) [attempted 1066/7067 = 15%]
+lean-build	Build (kernel check)	2026-10-05T13:34:35.0391243Z Downloaded: 1294 file(s) [attempted 1294/7067 = 18%]
+lean-build	Build (kernel check)	2026-10-05T13:34:35.1399501Z Downloaded: 1527 file(s) [attempted 1527/7067 = 21%]
+lean-build	Build (kernel check)	2026-10-05T13:34:35.2392394Z Downloaded: 1751 file(s) [attempted 1751/7067 = 24%]
+lean-build	Build (kernel check)	2026-10-05T13:34:35.3401943Z Downloaded: 1975 file(s) [attempted 1975/7067 = 27%]
+lean-build	Build (kernel check)	2026-10-05T13:34:35.4400645Z Downloaded: 2200 file(s) [attempted 2200/7067 = 31%]
+lean-build	Build (kernel check)	2026-10-05T13:34:35.5402500Z Downloaded: 2434 file(s) [attempted 2434/7067 = 34%]
+lean-build	Build (kernel check)	2026-10-05T13:34:35.6403532Z Downloaded: 2654 file(s) [attempted 2654/7067 = 37%]
+lean-build	Build (kernel check)	2026-10-05T13:34:35.7401591Z Downloaded: 2870 file(s) [attempted 2870/7067 = 40%]
+lean-build	Build (kernel check)	2026-10-05T13:34:35.8401582Z Downloaded: 3079 file(s) [attempted 3079/7067 = 43%]
+lean-build	Build (kernel check)	2026-10-05T13:34:35.9400847Z Downloaded: 3296 file(s) [attempted 3296/7067 = 46%]
+lean-build	Build (kernel check)	2026-10-05T13:34:36.0400953Z Downloaded: 3525 file(s) [attempted 3525/7067 = 49%]
+lean-build	Build (kernel check)	2026-10-05T13:34:36.1402480Z Downloaded: 3756 file(s) [attempted 3756/7067 = 53%]
+lean-build	Build (kernel check)	2026-10-05T13:34:36.2400659Z Downloaded: 3943 file(s) [attempted 3943/7067 = 55%]
+lean-build	Build (kernel check)	2026-10-05T13:34:36.3400814Z Downloaded: 4145 file(s) [attempted 4145/7067 = 58%]
+lean-build	Build (kernel check)	2026-10-05T13:34:36.4461327Z Downloaded: 4312 file(s) [attempted 4312/7067 = 61%]
+lean-build	Build (kernel check)	2026-10-05T13:34:36.5462185Z Downloaded: 4507 file(s) [attempted 4507/7067 = 63%]
+lean-build	Build (kernel check)	2026-10-05T13:34:36.6473990Z Downloaded: 4696 file(s) [attempted 4696/7067 = 66%]
+lean-build	Build (kernel check)	2026-10-05T13:34:36.7484422Z Downloaded: 4874 file(s) [attempted 4874/7067 = 68%]
+lean-build	Build (kernel check)	2026-10-05T13:34:36.8500001Z Downloaded: 5079 file(s) [attempted 5079/7067 = 71%]
+lean-build	Build (kernel check)	2026-10-05T13:34:36.9494911Z Downloaded: 5238 file(s) [attempted 5238/7067 = 74%]
+lean-build	Build (kernel check)	2026-10-05T13:34:37.0491232Z Downloaded: 5432 file(s) [attempted 5432/7067 = 76%]
+lean-build	Build (kernel check)	2026-10-05T13:34:37.1500352Z Downloaded: 5627 file(s) [attempted 5627/7067 = 79%]
+lean-build	Build (kernel check)	2026-10-05T13:34:37.2503487Z Downloaded: 5827 file(s) [attempted 5827/7067 = 82%]
+lean-build	Build (kernel check)	2026-10-05T13:34:37.3553220Z Downloaded: 6035 file(s) [attempted 6035/7067 = 85%]
+lean-build	Build (kernel check)	2026-10-05T13:34:37.4551839Z Downloaded: 6243 file(s) [attempted 6243/7067 = 88%]
+lean-build	Build (kernel check)	2026-10-05T13:34:37.5593029Z Downloaded: 6443 file(s) [attempted 6443/7067 = 91%]
+lean-build	Build (kernel check)	2026-10-05T13:34:37.6658465Z Downloaded: 6617 file(s) [attempted 6617/7067 = 93%]
+lean-build	Build (kernel check)	2026-10-05T13:34:37.7750483Z Downloaded: 6818 file(s) [attempted 6818/7067 = 96%]
+lean-build	Build (kernel check)	2026-10-05T13:34:37.8395542Z Downloaded: 7027 file(s) [attempted 7027/7067 = 99%]
+lean-build	Build (kernel check)	2026-10-05T13:34:37.8396641Z Downloaded: 7067 file(s) [attempted 7067/7067 = 100%] (100% success)
+lean-build	Build (kernel check)	2026-10-05T13:34:52.8165506Z Decompressing 7067 file(s)
+lean-build	Build (kernel check)	2026-10-05T13:34:52.8165892Z Unpacked in 14952 ms
+lean-build	Build (kernel check)	2026-10-05T13:34:52.8166151Z Completed successfully!
+lean-build	Build (kernel check)	2026-10-05T13:34:56.4139804Z Γ£ö [3050/3055] Built Formal.LengthCheck
+lean-build	Build (kernel check)	2026-10-05T13:34:57.8141879Z ΓÜá [3051/3055] Built Formal.ByteEncode
+lean-build	Build (kernel check)	2026-10-05T13:34:57.8142747Z warning: Formal/ByteEncode.lean:381:44: unused variable `hB`
+lean-build	Build (kernel check)	2026-10-05T13:34:57.8143892Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:57.8144451Z Note: This linter can be disabled with `set_option linter.unusedVariables false`
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9180757Z ΓÜá [3052/3055] Built Formal.ValidKey
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9181274Z warning: Formal/ValidKey.lean:47:16: unused variable `p`
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9181533Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9181758Z Note: This linter can be disabled with `set_option linter.unusedVariables false`
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9182254Z warning: Formal/ValidKey.lean:56:14: This simp argument is unused:
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9182597Z   Nat.zero_mul
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9182722Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9182834Z Hint: Omit it from the simp argument list.
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9183743Z   simp [ih, N╠╡a╠╡t╠╡.╠╡z╠╡e╠╡r╠╡o╠╡_╠╡m╠╡u╠╡l╠╡,╠╡ ╠╡Nat.add_zero]
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9183983Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9184218Z Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9184745Z warning: Formal/ValidKey.lean:56:28: This simp argument is unused:
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9185084Z   Nat.add_zero
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9185227Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9185332Z Hint: Omit it from the simp argument list.
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9185704Z   simp [ih, Nat.zero_mul,╠╡ ╠╡N╠╡a╠╡t╠╡.╠╡a╠╡d╠╡d╠╡_╠╡z╠╡e╠╡r╠╡o╠╡]
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9185934Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9186150Z Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9186604Z warning: Formal/ValidKey.lean:85:5: unused variable `hy`
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9186829Z 
+lean-build	Build (kernel check)	2026-10-05T13:34:59.9187038Z Note: This linter can be disabled with `set_option linter.unusedVariables false`
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1198696Z Γ£û [3053/3055] Building Formal.EkCheck
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1206386Z trace: .> LEAN_PATH=/home/runner/work/frontier/frontier/formal/.lake/packages/Cli/.lake/build/lib/lean:/home/runner/work/frontier/frontier/formal/.lake/packages/batteries/.lake/build/lib/lean:/home/runner/work/frontier/frontier/formal/.lake/packages/Qq/.lake/build/lib/lean:/home/runner/work/frontier/frontier/formal/.lake/packages/aesop/.lake/build/lib/lean:/home/runner/work/frontier/frontier/formal/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/runner/work/frontier/frontier/formal/.lake/packages/importGraph/.lake/build/lib/lean:/home/runner/work/frontier/frontier/formal/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/runner/work/frontier/frontier/formal/.lake/packages/plausible/.lake/build/lib/lean:/home/runner/work/frontier/frontier/formal/.lake/packages/mathlib/.lake/build/lib/lean:/home/runner/work/frontier/frontier/formal/.lake/build/lib/lean /home/runner/.elan/toolchains/leanprover--lean4---v4.22.0/bin/lean /home/runner/work/frontier/frontier/formal/Formal/EkCheck.lean -o /home/runner/work/frontier/frontier/formal/.lake/build/lib/lean/Formal/EkCheck.olean -i /home/runner/work/frontier/frontier/formal/.lake/build/lib/lean/Formal/EkCheck.ilean -c /home/runner/work/frontier/frontier/formal/.lake/build/ir/Formal/EkCheck.c --setup /home/runner/work/frontier/frontier/formal/.lake/build/ir/Formal/EkCheck.setup.json --json
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1213229Z error: Formal/EkCheck.lean:308:2: omega could not prove the goal:
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1214429Z No usable constraints found. You may need to unfold definitions so `omega` can see linear arithmetic facts about `Nat` and `Int`, which may also involve multiplication, division, and modular remainder by constants.
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1215541Z warning: Formal/EkCheck.lean:321:27: unused variable `ek`
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1215848Z 
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1216112Z Note: This linter can be disabled with `set_option linter.unusedVariables false`
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1216705Z error: Formal/EkCheck.lean:405:6: omega could not prove the goal:
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1217208Z a possible counterexample may satisfy the constraints
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1217637Z   e ΓëÑ 0
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1217880Z   0 Γëñ d Γëñ 7
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1218278Z   0 Γëñ c Γëñ 255
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1218525Z   b ΓëÑ 0
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1219052Z   8*b + d - 12*e ΓëÑ 0
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1219323Z   a ΓëÑ 0
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1219565Z   384*a - b ΓëÑ 1
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1219794Z where
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1220246Z  a := Γåæk
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1220486Z  b := Γåæy
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1220805Z  c := Γåæ(encByte (fun i => dec (ekBytes k ek) i) y)
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1221200Z  d := Γåæs
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1221447Z  e := Γåæ(nCoeff k)
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1221737Z error: Formal/EkCheck.lean:419:2: type mismatch
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1222109Z   gbit_byte (ekBytes k ek) y s hs
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1222403Z has type
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1222710Z   gbit (ekBytes k ek) (8 * y + s) = bit (ekBytes k ek y) s : Prop
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1223152Z but is expected to have type
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1223600Z   gbit (ekBytes k ek) (12 * ((8 * y + s) / 12) + (8 * y + s) % 12) = bit (ekBytes k ek y) s : Prop
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1224171Z warning: Formal/EkCheck.lean:427:53: unused variable `hB`
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1224474Z 
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1224756Z Note: This linter can be disabled with `set_option linter.unusedVariables false`
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1225599Z error: Formal/EkCheck.lean:892:20: tactic 'rewrite' failed, did not find instance of the pattern in the target expression
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1226268Z   dec (ekBytes 2 B2) 512
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1226556Z hseg512 : seg (ekBytes 2 B2) 512 = 3329
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1226895Z hdec : dec (ekBytes 2 B2) 512 = 0
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1227200Z hdiv : (8 * 768 + 0) / 12 = 512
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1227480Z hmod : (8 * 768 + 0) % 12 = 0
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1227874Z Γèó bit ((fun i => dec (ekBytes 2 B2) i) 512) 0 = 0
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1228424Z error: Lean exited with code 1
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1228761Z Some required builds logged failures:
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1229093Z - Formal.EkCheck
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1229343Z error: build failed
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1509007Z BUILD_EXIT=1
+lean-build	Build (kernel check)	2026-10-05T13:35:01.1560642Z ##[error]Process completed with exit code 1.
+lean-build	Post Run actions/checkout@v4	∩╗┐2026-10-05T13:35:01.1699391Z Post job cleanup.
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.2605141Z [command]/usr/bin/git version
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.2662409Z git version 2.55.0
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.2704414Z Temporarily overriding HOME='/home/runner/work/_temp/de6e73ce-238e-40e7-bc66-724448c514fa' before making global git config changes
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.2705980Z Adding repository directory to the temporary git global config as a safe directory
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.2710882Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/frontier/frontier
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.2760511Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.2801342Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.3076728Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.3110311Z http.https://github.com/.extraheader
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.3123676Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.3171358Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.3449016Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+lean-build	Post Run actions/checkout@v4	2026-10-05T13:35:01.3490963Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+lean-build	Complete job	∩╗┐2026-10-05T13:35:01.4003383Z Cleaning up orphan processes
+lean-build	Complete job	2026-10-05T13:35:01.4342463Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

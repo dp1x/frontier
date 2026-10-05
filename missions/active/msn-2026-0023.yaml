@@ -1,0 +1,133 @@
+id: msn-2026-0023
+type: mission
+status: active
+created_at: "2026-10-05T23:00:00Z"
+updated_at: "2026-10-06T00:30:00Z"
+summary: >
+  PNG unknown-critical-chunk handling. The corpus is built and verified, four
+  independent decoder cores have been executed against it, and a
+  discriminating split has been measured: two cores reject the unknown-critical
+  chunk for the right reason and two silently accept and render it. The Pillow
+  case is independently reproduced. An adversarial review is in flight and the
+  mission is NOT terminal until that review lands and the cohort is widened.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.7
+    tool: >
+      synthesis of a source-verification track, a cleanroom-oracle track, a
+      cohort-execution track, and an orchestrator-side independent reproduction
+  sources:
+    - knowledge/specifications/spc-2026-0007.yaml
+    - knowledge/experiments/exp-2026-0039.yaml
+    - knowledge/observations/obs-2026-0068.yaml
+    - knowledge/hypotheses/hyp-2026-0032.yaml
+  parent: null
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0032]
+  experiments: [exp-2026-0039]
+  observations: [obs-2026-0068]
+  specifications: [spc-2026-0007]
+title: "MSN-2026-0023 - PNG unknown-critical-chunk handling across independent decoder cores"
+objective: >
+  Establish, against source-verified normative propositions and with every
+  verdict attributable to a cause, whether independent PNG decoders reject a
+  structurally valid file containing an unknown CRITICAL chunk while accepting
+  the paired unknown ANCILLARY file -- and where they do not, locate the
+  mechanism in source and determine whether the deviation is a defect, a policy
+  choice, or a scope question.
+domain: interop
+scope: >
+  Chunk-type criticality handling in PNG decoders. The corpus is 11 vectors
+  (9 discriminating) committed at crypto/png-critical-chunk/. Cohort so far:
+  Pillow 12.3.0, Go image/png go1.26.4, stb_image v2.30, Wuffs 0.3.5.
+  OUT of scope: pixel-level correctness, encoder behaviour, image editing
+  tools, and any security-impact claim.
+constraints:
+- Every chunk-type bit convention is verified against a hashed copy of the specification (spc-2026-0007). The bit convention in the original brief was WRONG and was corrected.
+- Every non-control vector must carry a VALID CRC. A rejection attributable to a CRC error is a CONFOUND and may never support a claim about criticality.
+- Every cell must carry a reason class. An unattributable rejection is NOT evidence.
+- >
+  Rejects unknown critical chunks is not one boolean property: any claim must be
+  scoped to the position tested as well as the file.
+- "Scope statements must name the cores actually exercised. libpng and libspng are NOT_BUILT."
+- "No upstream report without a human decision."
+desired_evidence_level: verified_conclusion
+candidate_targets: []
+dependencies: []
+compute:
+  expected_class: lightweight
+  notes: >
+    The four cores exercised are pure-wheel or interpreted; no native library
+    was compiled. Building libpng/libspng is medium class and therefore belongs
+    on GitHub Actions per AGENTS.md's HARD RULE.
+budget:
+  max_attempts: 3
+  max_independent_reviews: 2
+  max_compute_runs: 6
+  diminishing_returns_window: 2
+  max_auto_descendants: 2
+acceptance_criteria:
+- The normative propositions verified against a hashed copy of the specification (DONE: spc-2026-0007, W3C PNG Third Edition, REC 2025-06-24, SHA-256 A3AC82BB...).
+- A corpus in which every non-control vector's CRC is independently correct, and the decisive pair differs only in the criticality bit (DONE: 5 differing byte offsets, first-byte XOR 0x20, verified independently of the generator).
+- Positive controls proving the harness can produce an ACCEPT (DONE: 4 controls).
+- Every cell carries a reason class, with zero unattributable rejections (DONE: GENERIC_DECODE_ERROR = 0 of 44).
+- Every cohort member's core and lineage established from its own distribution (DONE: none of the four links libpng).
+- The strongest candidate discrepancy independently reproduced outside the primary harness (DONE for Pillow by the orchestrator; NOT DONE for Go).
+- An independent adversarial review with a mandate to disprove the finding (IN FLIGHT).
+- libpng and libspng exercised so a broader scope claim becomes possible (NOT DONE).
+stopping_conditions:
+- Adversarial review lands and either confirms or refutes the discrepancy.
+- Cohort widened to include libpng or libspng, or that route is recorded as CI-blocked.
+- Budget exhausted.
+artifacts:
+  - crypto/png-critical-chunk/png_oracle.py
+  - crypto/png-critical-chunk/png_gen.py
+  - crypto/png-critical-chunk/build_corpus.py
+  - crypto/png-critical-chunk/vectors.jsonl
+  - crypto/png-critical-chunk/vectors
+  - tests/test_png_critical_chunk_corpus.py
+  - knowledge/specifications/spc-2026-0007.yaml
+  - knowledge/hypotheses/hyp-2026-0032.yaml
+  - knowledge/experiments/exp-2026-0039.yaml
+  - knowledge/observations/obs-2026-0068.yaml
+notes_path: knowledge/notes/msn-2026-0023.md
+blocked_reason: null
+terminal_reason: null
+
+what_is_established_so_far:
+  normative: >
+    PNG 5.4 Table 6: a decoder trying to extract the image, on encountering an
+    unknown chunk with ancillary bit 0, SHALL indicate to the user that the
+    image contains information it cannot safely interpret. 13.1 calls it a
+    fatal condition. Verified against a hashed copy of the Third Edition.
+  the_correction_that_made_the_experiment_valid: >
+    Criticality is bit 5 (value 32) of the first type byte -- the low-order
+    case bit -- not the high-order bit. Section 5.3 restricts type bytes to
+    0x41-0x5A and 0x61-0x7A, so bit 7 is always 0 and carries no meaning. A
+    generator setting 0x80 would emit an ILLEGAL type byte and fail framing
+    before criticality was ever evaluated.
+  measured: >
+    stb_image and Wuffs reject for the right reason; Pillow and Go silently
+    accept and render. Zero of 44 cells were unattributable.
+  the_correction_from_the_previous_session: >
+    A prior framing of this question was VACUOUS because a bad CRC on the probe
+    chunk let the decoder reject before criticality was evaluated. The negative
+    controls exist to keep that confound visible, and the controls show both
+    accepting cores DO check CRCs.
+
+what_is_not_established:
+  - "Anything about libpng or libspng. They are NOT_BUILT."
+  - "Whether this is a defect, a policy choice, or a scope question. That is what the adversarial review is for."
+  - "Any security consequence. Nothing here demonstrates an exploitable path."
+  - "Whether the Go result reproduces outside the cohort agent's own program."
+
+the_strongest_next_action:
+  >
+    Build libpng and libspng on GitHub Actions and run the same eleven vectors
+    through them. libpng is the most widely deployed PNG core in the world, and
+    a scope claim that omits it is weak regardless of what the other four do.
+    This is medium compute and belongs on CI per AGENTS.md.
