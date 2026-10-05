@@ -949,6 +949,7 @@ class SourceStore:
         self._fixture: dict[int, RfcDocument] | None = None
         self.fixture_meta: dict[int, dict[str, Any]] = {}
         self.provenance_notes: list[str] = []
+        self.fixture_provenance: list[str] = []
 
     # -- fixture -----------------------------------------------------------
 
@@ -980,11 +981,60 @@ class SourceStore:
                 "body_sha256": entry.get("body_sha256"),
                 "url": entry.get("url"),
             }
+            self.fixture_meta[number]["normalized_sha256"] = entry.get("normalized_sha256")
+            self.fixture_meta[number]["body_bytes"] = entry.get("body_bytes")
+            self._verify_fixture_entry(number, entry)
         self.provenance_notes.append(
             f"offline RFC text from recorded fixture {FIXTURE_PATH.name} "
             f"({len(self._fixture)} document(s)); recorded authoritative text, "
             "not a mock"
         )
+        self.provenance_notes.extend(self.fixture_provenance)
+
+    def _verify_fixture_entry(self, number: int, entry: dict[str, Any]) -> None:
+        """Recompute the fixture's own digests and record any drift.
+
+        The fixture's recorded ``body_sha256`` describes the RAW fetched body,
+        which cannot be recomputed offline -- only the raw bytes would do that,
+        and they are not stored.  ``normalized_sha256`` is recorded for exactly
+        that reason: it digests the normalized text the gate actually probes,
+        so a fixture whose text was edited by hand, a bad merge, or a
+        well-meaning "correction" is detectable without a network.  Verified
+        2026-10-05: before this check the recorded hash was never recomputed on
+        the offline path at all, so replacing RFC 9052's digest with a string of
+        zeros changed nothing about the gate's behaviour.
+        """
+        stored = entry.get("normalized_sha256")
+        text = str(entry.get("full_text_normalized") or "")
+        if not stored:
+            self.fixture_provenance.append(
+                f"RFC {number}: fixture records no normalized_sha256; its text "
+                f"cannot be verified offline (re-record with --record-fixtures)"
+            )
+            return
+        actual = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if actual != stored:
+            self.fixture_provenance.append(
+                f"RFC {number}: fixture text SHA-256 {actual[:12]} does not match the "
+                f"recorded normalized_sha256 {str(stored)[:12]}; the recorded RFC text "
+                f"was edited after recording, so section checks against it are "
+                f"UNSOUND"
+            )
+        # Sections are recorded RAW and normalized on load, so a section's raw
+        # text is a substring of the raw body, not of the normalized body.  The
+        # comparison below must therefore normalize the section first.
+        strays = [
+            k for k, v in (entry.get("sections") or {}).items()
+            if _normalize_text(str(v)) not in text
+        ]
+        if strays:
+            self.fixture_provenance.append(
+                f"RFC {number}: {len(strays)} of "
+                f"{len(entry.get('sections') or {})} recorded section(s) do not occur "
+                f"in the recorded full text (e.g. "
+                f"{', '.join(sorted(strays)[:5])}); the fixture is internally "
+                f"inconsistent"
+            )
 
     # -- access ------------------------------------------------------------
 
@@ -1109,8 +1159,10 @@ def _best_ratio(
 
     Taking the maximum is the conservative choice for a *gate*: it can only
     make a claim look better sourced, never worse, so it never manufactures a
-    refusal.  It cannot manufacture a pass either, because the ratio still
-    requires most units to be found verbatim in the cited section.
+    refusal.  :func:`_strict_enough` adds the opposite guard -- a decomposition
+    is only credited if it left no unit unaccounted for -- so "max over
+    decompositions" cannot become "best of a lenient and a strict reading",
+    which is how a fabricated sentence used to ride in on genuine neighbours.
     """
     best = (0.0, 0, 0)
     for units in (_split_ellipsis(claim_units_source[0]), list(claim_units_source[1])):
@@ -1130,6 +1182,71 @@ def _best_ratio(
     # as a fabricated quotation when the truth is that there was nothing to
     # check.  Signal that explicitly instead.
     return best if best[2] else (None, 0, 0)
+
+
+def _strict_enough(ratio: float | None, hits: int, total: int) -> bool:
+    """Whether a best-decomposition hit rate may be reported as ``confirmed``.
+
+    ``LOCATE_QUORUM`` alone is not enough.  A ratio only says "most units were
+    found"; it says nothing about the ones that were not.  At a 0.6 quorum one
+    fabricated sentence rides in on two genuine ones (2/3), and at a 0.75 ratio
+    two fabricated sentences ride in on six.  A unit that is absent from the
+    *whole cited document* is not a formatting difference and not an elision --
+    it is text the source does not contain, and that is the signal the whole
+    gate exists to catch.
+
+    Requiring every unit to be accounted for is also safe against false
+    positives: ``_best_ratio`` already picks the most forgiving of the two
+    decompositions, so a faithful quotation split by an ellipsis, wrapped
+    across pages, or hyphenated still scores 1.0.  All seven recorded checks in
+    the corpus score 1.0 against their cited document.
+    """
+    if ratio is None:
+        return False
+    return ratio >= LOCATE_QUORUM and hits >= total
+
+
+def _absent_units(
+    claim_units_source: tuple[str, Sequence[str]], haystack: str
+) -> tuple[int, int]:
+    """``(unlocated, total)`` over the *most forgiving* decomposition.
+
+    Used to name *which* units are absent, so a refusal can quote the
+    offending sentence rather than only counting it.
+    """
+    best: tuple[int, int] | None = None
+    for units in (_split_ellipsis(claim_units_source[0]), list(claim_units_source[1])):
+        if not units:
+            continue
+        missing = sum(1 for unit in units if unit not in haystack)
+        # Among the decompositions, report the most informative one: fewest
+        # missing units first, then the most units.  Without the tie-break a
+        # single whole-string unit would win every time and the detail would
+        # read "1 of 1 quoted units occur nowhere" for text where four of five
+        # sentences are in fact present.
+        if best is None or (missing, -len(units)) < (best[0], -best[1]):
+            best = (missing, len(units))
+    return best or (0, 0)
+
+
+def _first_absent_unit(
+    claim_units_source: tuple[str, Sequence[str]], haystack: str
+) -> str:
+    """The first probeable unit that does not occur in ``haystack``.
+
+    Prefers the decomposition ``_absent_units`` chose, so the quoted offender
+    is one of the sentences the counts refer to.
+    """
+    for decomposition in (
+        list(claim_units_source[1]),
+        _split_ellipsis(claim_units_source[0]),
+    ):
+        if not decomposition:
+            continue
+        for unit in decomposition:
+            if unit not in haystack:
+                return unit
+    return ""
 
 
 def _strip_ellipsis(text: str) -> str:
@@ -1174,7 +1291,7 @@ def locate_quoted_text(
         ratio, hits, total = _best_ratio(units, section_text)
         if ratio is None:
             return "unverifiable", "quoted text has no probeable unit"
-        if ratio >= LOCATE_QUORUM:
+        if _strict_enough(ratio, hits, total):
             return (
                 "confirmed",
                 f"{hits}/{total} quoted units found in RFC {document.number} "
@@ -1191,7 +1308,7 @@ def locate_quoted_text(
     doc_ratio, doc_hits, doc_total = _best_ratio(units, document.full_text)
     if doc_ratio is None:
         return "unverifiable", "quoted text has no probeable unit"
-    if doc_ratio >= LOCATE_QUORUM:
+    if doc_ratio >= LOCATE_QUORUM and doc_hits >= doc_total:
         where = _which_section(document, units)
         return (
             "in-section-elsewhere",
@@ -1201,8 +1318,21 @@ def locate_quoted_text(
     return (
         "absent-from-all-cited",
         f"only {doc_hits}/{doc_total} quoted units occur anywhere in "
-        f"RFC {document.number} ({document.origin})",
+        f"RFC {document.number} ({document.origin})"
+        + _absent_detail(units, document.full_text),
     )
+
+
+def _absent_detail(
+    units: tuple[str, Sequence[str]], haystack: str, limit: int = 160
+) -> str:
+    """Name the quoted units absent from ``haystack``, so a refusal is legible."""
+    missing, total = _absent_units(units, haystack)
+    if not missing:
+        return ""
+    offender = _first_absent_unit(units, haystack)
+    return f"; {missing} of {total} quoted unit(s) occur nowhere in that source, "\
+           f"e.g. {_truncate(offender, limit)!r}"
 
 
 def _locate(claim: NormativeClaim, store: SourceStore) -> tuple[str, str]:
@@ -1232,7 +1362,7 @@ def _locate(claim: NormativeClaim, store: SourceStore) -> tuple[str, str]:
                     "no quoted sentence long enough to probe against the cited "
                     "section; this is not a quotation check",
                 )
-            if ratio >= LOCATE_QUORUM:
+            if _strict_enough(ratio, hits, total):
                 return (
                     "confirmed",
                     f"{hits}/{total} quoted units found in RFC {claim.rfc_number} "
@@ -1240,7 +1370,7 @@ def _locate(claim: NormativeClaim, store: SourceStore) -> tuple[str, str]:
                 )
             # Present in the RFC but not in the cited section?
             doc_ratio, doc_hits, doc_total = _best_ratio(claim_units_source, cited.full_text)
-            if doc_ratio is not None and doc_ratio >= LOCATE_QUORUM:
+            if doc_ratio is not None and doc_ratio >= LOCATE_QUORUM and doc_hits >= doc_total:
                 where = _which_section(cited, claim_units_source)
                 return (
                     "in-section-elsewhere",
@@ -1253,7 +1383,8 @@ def _locate(claim: NormativeClaim, store: SourceStore) -> tuple[str, str]:
             return (
                 "absent-from-all-cited",
                 f"only {doc_hits}/{doc_total} quoted units occur anywhere in "
-                f"RFC {claim.rfc_number} ({cited.origin})",
+                f"RFC {claim.rfc_number} ({cited.origin})"
+                + _absent_detail(claim_units_source, cited.full_text),
             )
         if not claim.section:
             return "unverifiable", "claim names an RFC but no section, so no clause to check"
@@ -2336,16 +2467,22 @@ def record_fixtures(out_path: Path, timeout: float = 30.0) -> int:
             continue
         body = probe.body
         sections = parse_rfc_sections(body)
+        normalized = _normalize_text(body)
         sources.append(
             {
                 "rfc": number,
                 "url": probe.url,
                 "recorded_at": datetime.now(UTC).isoformat(timespec="seconds"),
                 "body_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+                # ``body_sha256`` digests the raw body, which is not stored, so it
+                # cannot be re-derived offline.  This digest covers the normalized
+                # text the gate actually probes, which IS stored, so the fixture's
+                # own text is checkable without a network.
+                "normalized_sha256": hashlib.sha256(normalized.encode("utf-8")).hexdigest(),
                 "body_bytes": len(body.encode("utf-8")),
                 "section_count": len(sections),
                 "sections": sections,
-                "full_text_normalized": _normalize_text(body),
+                "full_text_normalized": normalized,
             }
         )
     if not sources:
@@ -2493,6 +2630,14 @@ def main(argv: list[str] | None = None) -> int:
             f"{', '.join(sorted(r.artifact_id for r in blocking))}",
             file=sys.stderr,
         )
+        return EXIT_REFUSE
+    if store.fixture_provenance:
+        # A fixture whose recorded text no longer matches its own digest makes
+        # every section check against it unsound, so a corpus run that relies
+        # on it must not report "promotion allowed".  A drifted fixture is a
+        # defect in the verifier, which is worse than a defect in one claim.
+        for note in store.fixture_provenance:
+            print(f"{TOOL_NAME}: fixture integrity: {note}", file=sys.stderr)
         return EXIT_REFUSE
     print(f"{TOOL_NAME}: promotion allowed for all {len(results)} evaluated artifact(s)")
     return EXIT_ALLOW
