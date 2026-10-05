@@ -2,8 +2,8 @@ id: exp-2026-0030
 type: experiment
 status: designed
 created_at: "2026-08-31T11:30:00Z"
-updated_at: "2026-08-31T11:30:00Z"
-summary: "Cross-implementation CBOR (RFC 8949) §4.2 deterministic-encoding conformance matrix experiment design. 10 libraries × 8 audit axes × 125+ adversarial vectors per axis = ~10,000 cells. Per-cell verdict: pass / spec-violation / spec-ambiguity / interop-break. All cells reproducible from committed reproducer without network access. Cleanroom Python oracle (RFC 8949 text + standard Python primitives only) serves as normative reference. cbor.me (Carsten Bormann, RFC 8949 co-editor) used as second-opinion oracle for any diverging cell."
+updated_at: "2026-10-05T09:15:00Z"
+summary: "Cross-implementation CBOR (RFC 8949) deterministic-encoding conformance matrix experiment design. 10 libraries × 8 audit axes × 125+ adversarial vectors per axis = ~10,000 cells. Per-cell verdict: pass / spec-violation / spec-ambiguity / interop-break. All cells reproducible from committed reproducer without network access. Cleanroom Python oracle (RFC 8949 text + standard Python primitives only) serves as normative reference. cbor.me (Carsten Bormann, RFC 8949 co-editor) used as second-opinion oracle for any diverging cell. CITATION CORRECTION 2026-10-05: every rule_ref in the audit_axes below named a numbered rule that does not exist in RFC 8949, and the vector source named Appendix C, which is Pseudocode. The axes are retained as-is so the experiment history stays readable, but they are NOT usable as RFC locators and must be re-derived before any reuse. See audit_axes_correction_2026_10_05."
 epistemic_status: hypothesis
 provenance:
   created_by:
@@ -14,8 +14,10 @@ provenance:
   sources:
     - https://www.rfc-editor.org/rfc/rfc8949#section-4.2
     - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
-    - https://www.rfc-editor.org/rfc/rfc8949#appendix-C
+    - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.3
+    - https://www.rfc-editor.org/rfc/rfc8949#appendix-A
     - knowledge/specifications/spc-2026-0004.yaml
+    - knowledge/observations/obs-2026-0062.yaml
     - knowledge/targets/tgt-2026-0005.yaml
     - missions/active/msn-2026-0015.yaml
   parent: msn-2026-0015
@@ -166,6 +168,39 @@ total_expected_cells: ~10000
   - 10 libs × 8 axes × 125-avg vectors × 2 modes = ~20000 cell-mode pairs
   - after deduplication of identical cells, ~10000 distinct cells
 
+audit_axes_correction_2026_10_05:
+  what_is_wrong: >
+    Every rule_ref string in audit_axes above was re-measured against a freshly
+    fetched RFC 8949 (185226 bytes, sha256
+    f1164a5b31a39350ad46abe29b83575eb933ca6c45366989c118b6b1058a214a) and NONE of
+    them resolves. RFC 8949 section 4.2 is five sentences and introduces no
+    numbered rules. Section 4.2.1 carries exactly three unnumbered bullets; its
+    numbered 1..8 entries are the worked map-key ordering EXAMPLE, not rules.
+    "section 4.2.1 rule 3" and "rule 5" therefore name things that do not exist.
+  per_axis_locators:
+    integer_shortest_form: "claimed 'section 4.2 rule 1, section 4.2.1 rule 1' -> correct locator RFC 8949 section 4.2.1 bullet 1 (Preferred serialization MUST be used), with Section 3 for the encoding table"
+    map_key_sort: "claimed 'section 4.2 rule 2, section 4.2.1 rule 2' -> correct locator RFC 8949 section 4.2.3 for length-first; section 4.2.1 bullet 3 mandates the OPPOSITE (bytewise lexicographic). Which one this axis tests must be stated explicitly; the oracle implements length-first."
+    float_shortest_form: "claimed 'section 4.2 rule 3, section 4.2.1 rule 4' -> correct locator RFC 8949 section 4.2.1 bullet 1, second paragraph, and section 3.3. NOTE: the original axis description also gave 1.5 as 0xf93c00; RFC 8949 reads '1.5 is encoded as 0xf93e00 (binary16)'."
+    definite_length_preferred: "claimed 'section 4.2 rule 4, section 4.2.1 final rule' -> correct locator RFC 8949 section 4.2.1 bullet 2 ('Indefinite-length items MUST NOT appear.')"
+    duplicate_key_rejection: "claimed 'section 4.2 rule 5, section 4.2.1 implicit' -> NO SUCH CLAUSE IN RFC 8949. The duplicate-key prohibition is RFC 9052 section 9 and RFC 9053 section 9, verbatim and identical. RFC 8949 4.2.1 bullet 3's implementation note addresses key COMPARISON, not duplicate rejection. This axis tests a COSE requirement, not a CBOR one."
+    tag_shortest_form: "claimed 'section 4.2.1 rule 3' -> correct locator RFC 8949 section 4.2.1 bullet 1 ('lengths in major types 2 through 5, and tags MUST be as short as possible')"
+    simple_value_shortest_form: "claimed 'section 4.2.1 rule 5' -> correct locator RFC 8949 section 3.3 / section 4.1 preferred serialization. Note RFC 8949 section 3.3 forbids two-byte simple-value encodings of values 0..31 via major type 7 additional information 24."
+    chunked_string_consistency: "claimed 'section 2.2 + section 4.2' -> section 2.2 is 'Specific Data Models'. Chunk structure is Sections 3.2.3/3.2.4; the deterministic-encoding requirement is section 4.2.1 bullet 2."
+  additional_defect_measured:
+    vector_source: >
+      The vector source is cited as 'RFC 8949 Appendix C'. Appendix C is
+      'Pseudocode' (the well-formedness checker in Figure 1) and contains no
+      test vectors. The examples are in Appendix A, Table 6.
+  why_the_axes_are_retained_rather_than_deleted: >
+    They defined the experiment that produced the committed corpus, and
+    deleting them would orphan 111 vectors and a matrix whose column names come
+    from these axis ids. They are marked unusable as RFC locators instead, which
+    is the honest state: the corpus is real, its authority is not.
+  what_must_happen_before_reuse: >
+    Re-derive each axis against the locators above, then re-run. Until then any
+    statement of the form 'N of 8 axes conform' is a statement about this
+    experiment's own labels, not about RFC 8949.
+
 oracle_a_cleanroom_python:
   description: "RFC 8949 §4.2 deterministic-encoding reference implementation in Python 3.11+, derived exclusively from RFC 8949 text + standard Python primitives (struct for byte assembly). No consultation of audited library source code."
   location: "cbor-cross-impl/oracle/cbor_oracle.py"
@@ -174,7 +209,14 @@ oracle_a_cleanroom_python:
     - "encode_canonical(data_item) -> bytes"
     - "decode(bytes) -> data_item"
     - "validate_appendix_c() -> (passed: bool, failures: list)"
-  test_suite: "cbor-cross-impl/oracle/test_cbor_oracle.py (must pass RFC 8949 Appendix C all 14 vectors byte-exactly in both modes)"
+  test_suite: "cbor-cross-impl/oracle/test_cbor_oracle.py (must pass the 14 integer vectors byte-exactly in both modes). CITATION CORRECTION 2026-10-05: those 14 vectors are a subset of the first 14 rows of RFC 8949 Appendix A Table 6, not Appendix C, and the 14 is the oracle author's chosen subset -- Appendix A Table 6 holds 81 diagnostic/encoded pairs, 18 of them with a bare-integer diagnostic."
+
+correction_2026_10_05:
+  by: model-agent, role verifier
+  what_changed: "summary, provenance.sources, and a new audit_axes_correction_2026_10_05 block."
+  what_did_not_change: "audit_axes themselves, vector_strategy, cohort, oracle interfaces. The original axis rule_refs are still present verbatim above; the correction block states what they should have been."
+  epistemic_status_unchanged: "hypothesis - the experiment is status designed and no re-derivation has been done."
+  measurement: "obs-2026-0062.yaml"
 
 oracle_b_cborme:
   description: "Carsten Bormann's reference diagnostic at cbor.me. Used for second-opinion verification of any cell where Oracle A and a library disagree. Implementation-level oracle."

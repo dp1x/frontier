@@ -2,8 +2,8 @@ id: obs-2026-0040
 type: observation
 status: recorded
 created_at: "2026-08-31T13:00:00Z"
-updated_at: "2026-08-31T17:30:00Z"
-summary: "Final matrix run of msn-2026-0015 + msn-2026-0016 (CBOR §4.2 cross-impl conformance). 111 adversarial vectors across 8 audit axes from spc-2026-0004. 1 library (cbor2 6.1.4) tested in default and canonical modes. Total cells: 222 (111 vectors × 2 modes). Per-cell verdict distribution: 204 PASS (91.9%), 14 SPEC_AMBIGUITY (6.3%, all in default mode for floats), 4 SPEC_VIOLATION (1.8%, all in default mode for map_key_sort). CRITICAL FINDING: in canonical mode, cbor2 byte-exact matches the Frontier cleanroom oracle on 100% of cells (111/111). The 'divergences' observed in default mode are documented cbor2 behavior (default uses double-precision floats + Python dict insertion order). No spec-violating cross-impl divergence found."
+updated_at: "2026-10-05T09:40:00Z"
+summary: "Final matrix run of msn-2026-0015 + msn-2026-0016 (CBOR deterministic-encoding cross-impl matrix). 111 adversarial vectors across 8 audit axes derived from spc-2026-0004. 1 library (cbor2 6.1.4) tested in default and canonical modes. Total cells: 222 (111 vectors × 2 modes). Per-cell verdict distribution: 204 PASS (91.9%), 14 SPEC_AMBIGUITY (6.3%, all in default mode for floats), 4 SPEC_VIOLATION (1.8%, all in default mode for map_key_sort). RECORDED FINDING: in canonical mode, cbor2 byte-exact matched the Frontier cleanroom oracle on 100% of cells (111/111). NARROWED 2026-10-05: that 111/111 is real bytes but a vacuous conclusion -- the corpus stores identical expected hex for canonical and deterministic modes for all 111 vectors, so it cannot distinguish the two orderings, and only 3 of its vectors can. See conclusion_correction_2026_10_05."
 epistemic_status: observation
 provenance:
   created_by:
@@ -21,10 +21,16 @@ provenance:
     - R:\cbor-cross-impl\adapters\lib_cbor2_adapter.py
     - R:\cbor-cross-impl\runner\run_matrix.py
     - R:\cbor-cross-impl\results\matrix.tsv
+  # CORRECTION 2026-10-05: dependencies was [fnd-2026-0013]. That finding is
+  # status rejected; this observation did not rest on it, it predates it, and
+  # the edge is retained in links.findings below for examination. Recorded here
+  # because frontier.validate.check_superseded_authority treats a `dependencies`
+  # entry as a declaration of authority and a rejected parent as a dead one.
   parent: exp-2026-0030
   generation: 1
 links:
   specifications: [spc-2026-0004]
+  findings: [fnd-2026-0013]
   targets: [tgt-2026-0005]
   experiments: [exp-2026-0030]
 title: "OBS-2026-0040 - Final matrix run: cbor2 canonical byte-exact matches cleanroom oracle on 100% of cells"
@@ -32,7 +38,11 @@ methodology: |
   The cleanroom Python oracle (cbor-cross-impl/oracle/cbor_oracle.py) implements
   RFC 8949 §4.2 deterministic encoding + §4.2.1 canonical CBOR + §4.2.3 length-first
   map key ordering. The oracle was validated against:
-    - RFC 8949 Appendix C integer vectors (14/14 PASS, both modes)
+    - 14 integer rows of RFC 8949 Appendix A Table 6 (14/14 PASS, both modes).
+      CITATION CORRECTION 2026-10-05: this was originally recorded as "Appendix C";
+      Appendix C is 'Pseudocode' and holds no vectors. The 14 are the first 14 rows
+      of Appendix A, a chosen subset -- Appendix A holds 81 pairs in total, 18 of
+      them with a bare-integer diagnostic.
     - RFC 8949 §4.2.3 length-first ordering example (byte-exact match)
 
   111 adversarial vectors across 8 audit axes from spc-2026-0004 were generated
@@ -113,3 +123,39 @@ next_steps:
   - cbor_me_validation: "Manually verify 2-3 diverging cells against cbor.me reference diagnostic."
   - cbor_x_default_check: "JS cbor-x may have different default behavior; verify."
   - promotion: "If expanded cohort confirms 100% canonical-mode PASS, promote fnd-2026-0013 to verified_conclusion."
+
+conclusion_correction_2026_10_05:
+  by: model-agent, role verifier
+  class: NARROW
+  what_survives: >
+    The bytes. cbor2 6.1.4 canonical mode did produce byte-identical output to
+    the oracle on all 111 vectors, and the per-cell verdict distribution is what
+    was actually recorded. Nothing here is deleted.
+  what_does_not_survive:
+    - >
+      The word 'CRITICAL FINDING' attached to it, and any reading of 111/111 as
+      evidence that cbor2 conforms to a specific RFC 8949 ordering. Every
+      committed vector stores the SAME expected hex for canonical and
+      deterministic mode (111/111), so the corpus is structurally incapable of
+      distinguishing section 4.2.1 bytewise-lex from section 4.2.3 length-first.
+      The agreement is arithmetic, not conformance.
+    - >
+      The phrase 'No spec-violating cross-impl divergence found' as a
+      conformance conclusion. With one library in the cohort and a corpus whose
+      ordering-blindness is total, that sentence can only mean 'cbor2 agrees
+      with Frontier's oracle', which is the claim that survives.
+    - >
+      'RFC 8949 §4.2.3 conformant' as a description of what was established.
+      Section 4.2.3 does specify length-first ordering and that much is correct,
+      but it was not established by this matrix.
+  the_licence_that_remains: >
+    'cbor2 agrees with Frontier's oracle on this corpus.' Nothing stronger.
+    A cbor2-vs-oracle agreement on a corpus that cannot discriminate is
+    consistent with cbor2 being length-first, bytewise-lex, or neither, and the
+    matrix cannot tell those apart.
+  measured_against_the_real_RFC_2026_10_05: >
+    RFC 8949 section 4.2 contains NO requirements at all -- it is an
+    introductory paragraph. The requirements are 4.2.1 (bytewise lexicographic)
+    and 4.2.3 (length-first, the alternative). So 'RFC 8949 §4.2 conformance' is
+    not a well-formed target even before the corpus's blindness is considered.
+  links_to: [obs-2026-0047.yaml, obs-2026-0062.yaml, fnd-2026-0013.yaml]

@@ -2,8 +2,8 @@ id: obs-2026-0041
 type: observation
 status: recorded
 created_at: "2026-08-31T21:30:00Z"
-updated_at: "2026-08-31T21:30:00Z"
-summary: "Final matrix run of msn-2026-0017 (CBOR §4.2 cohort expansion). 4-library cohort: Frontier cleanroom Python oracle (oracle) + cbor2 6.1.4 (Python, agronholm) + ciborium 0.2.2 (Rust, enarx) + cbor-x 1.6.6 (JavaScript, kriszyp). 111 adversarial vectors across 8 audit axes. 5 adapter/mode combinations total (cbor2 + ciborium × 2 modes each, cbor-x × 1 default mode only — no canonical mode). Total cells: 555. CRITICAL FINDING: in canonical mode, BOTH cbor2 AND ciborium produce byte-exact identical output to the Frontier cleanroom oracle on 100% of cells (111/111 each, 222/222 combined). The two implementations use different languages, different authors, different organizations, and different codebases (independence verified via per-library implementation archaeology: imp-2026-0018 for ciborium, imp-2026-0003 for cbor2). cbor-x has no canonical mode and is excluded from the canonical-mode cross-impl agreement. cbor.me reference diagnostic (Carsten Bormann, RFC 8949 co-editor) confirmed spot-checks of canonical-mode output (a80a012001f401186401617a018120016261610181186401 and c11a514b67b0), establishing a third independent oracle. Default-mode divergences are documented per-library behavior, not spec violations."
+updated_at: "2026-10-05T09:45:00Z"
+summary: "Final matrix run of msn-2026-0017 (CBOR deterministic-encoding cohort expansion). 4-library cohort: Frontier cleanroom Python oracle + cbor2 6.1.4 (Python, agronholm) + ciborium 0.2.2 (Rust, enarx) + cbor-x 1.6.6 (JavaScript, kriszyp). 111 adversarial vectors across 8 audit axes. 5 adapter/mode combinations (cbor2 + ciborium × 2 modes each, cbor-x × 1 default mode only). Total cells: 555. RECORDED FINDING: in canonical mode, BOTH cbor2 AND ciborium produced byte-exact identical output to the Frontier cleanroom oracle on 100% of cells (111/111 each, 222/222 combined). cbor-x has no canonical mode and is excluded. cbor.me spot-checks were recorded. NARROWED 2026-10-05: the 222/222 is real bytes but a vacuous conformance conclusion, because the committed corpus stores identical expected hex for canonical and deterministic modes for all 111 vectors. See conclusion_correction_2026_10_05."
 epistemic_status: observation
 provenance:
   created_by:
@@ -59,6 +59,10 @@ methodology: |
   cbor.me cross-check: the §4.2.3 example vector (a80a012001f401186401617a018120016261610181186401)
   and a tagged value vector (c11a514b67b0 = tag-1 epoch around 1363896240)
   were independently verified against cbor.me (Carsten Bormann, RFC 8949 co-editor).
+  CITATION NOTE 2026-10-05: the hex offered to cbor.me is a section 4.2.3
+  length-first encoding, so this cross-check cannot speak to section 4.2.1
+  conformance. It also does not establish what the committee intended by
+  "RFC 8949 conformance", because 4.2.1 and 4.2.3 are alternative rules.
 cohort:
   - oracle (Frontier cleanroom Python)
   - cbor2 6.1.4 (Python, agronholm) — imp-2026-0003
@@ -157,3 +161,36 @@ next_steps:
   - "Reproducer (rpr-2026-0014) extended to cover the 3-library cohort"
   - "fnd-2026-0013 promoted to verified_conclusion (pending adversarial review)"
   - "New finding fnd-2026-0014 documents the 3-lineage canonical-mode agreement"
+
+conclusion_correction_2026_10_05:
+  by: model-agent, role verifier
+  class: NARROW
+  what_survives:
+    - "The bytes, and the per-adapter-mode cell counts (555 cells, 501/34/13/5/2). Nothing deleted."
+    - "The lineage-independence analysis of cbor2 / ciborium / cbor-x. That is real and independent of the citation defect."
+    - "cbor-x having no canonical mode, and its default-mode divergence patterns."
+  what_does_not_survive:
+    - >
+      'Three independent lineages' as evidence of conformance. The three parties
+      agreed with each other, but two of them (the Frontier oracle and the Rust
+      adapter's hand-written sort) were configured from the same reading of the
+      same RFC section, and the corpus cannot distinguish that reading from its
+      opposite. Independence of IMPLEMENTATION is not independence of
+      INTERPRETATION, and only the first was established here.
+    - >
+      'the strongest possible evidence short of formal verification'. Measured
+      against the RFC, the oracle's §4.2.1 branch was the one thing in the chain
+      that no independent party could check, and it was wrong.
+    - >
+      'Shared test vectors: only the RFC 8949 Appendix C/A vectors, which every
+      compliant implementation shares by spec'. Re-measured: Appendix C holds no
+      vectors at all; the vectors are in Appendix A, and the oracle used the
+      first 14 rows as a subset.
+  measured_against_the_real_RFC_2026_10_05: >
+    RFC 8949 4.2.1 requires bytewise lexicographic key order; 4.2.3 is the
+    alternative length-first order. Both are normative and a protocol must say
+    which it wants. cbor2 and ciborium implement the 4.2.3 reading. That is a
+    coherent, widely-implemented choice (cbor2's follows RFC 7049) and is NOT a
+    defect; but describing it as 'RFC 8949 §4.2.3 conformant' without saying
+    which alternative is being chosen understates the ambiguity.
+  links_to: [obs-2026-0047.yaml, obs-2026-0059.yaml, obs-2026-0062.yaml]

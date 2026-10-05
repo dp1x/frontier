@@ -26,6 +26,8 @@ links:
   specifications: [spc-2026-0006]
   implementations: []
   targets: [tgt-2026-0007]
+supersedes:
+  corrects: [obs-2026-0044]
 title: "EXP-2026-0033 - FROST cross-impl matrix execution"
 correction_2026_09_26:
   reason: >

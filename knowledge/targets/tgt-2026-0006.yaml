@@ -2,8 +2,8 @@ id: tgt-2026-0006
 type: target
 status: active
 created_at: "2026-08-31T23:30:00Z"
-updated_at: "2026-08-31T23:30:00Z"
-summary: "COSE (CBOR Object Signing and Encryption — RFC 8152 / RFC 9052 / RFC 9053) message-encoding conformance divergence across 4-5 lineage-independent implementations. COSE is the IETF-standardized cryptographic envelope for CBOR data items, used in WebAuthn/FIDO2, CWT (RFC 8392), IETF SUIT firmware manifests, OSCORE (RFC 8613), EAT (RFC 9334), and other security-critical protocols. COSE message-construction is layered on top of CBOR (RFC 8949), so the §4.2 framework verified in msn-2026-0017 applies to the underlying encoding. Candidate cohort: cose-c (COSE WG reference, C/C++, Jim Schaad), cose-java (COSE WG, Java), coset (Google, Rust), go-cose (Veraison/ex-Mozilla, Go), pycose (Timothy Claeys, Python)."
+updated_at: "2026-10-05T10:20:00Z"
+summary: "COSE (CBOR Object Signing and Encryption — RFC 8152 / RFC 9052 / RFC 9053) message-encoding conformance divergence across 4-5 lineage-independent implementations. COSE is the IETF-standardized cryptographic envelope for CBOR data items, used in WebAuthn/FIDO2, CWT (RFC 8392), IETF SUIT firmware manifests, OSCORE (RFC 8613), EAT (RFC 9334), and other security-critical protocols. COSE message-construction is layered on top of CBOR (RFC 8949), so the deterministic-encoding framework from msn-2026-0015/0016/0017 applies to the underlying encoding. CITATION CORRECTION 2026-10-05: this originally read 'the §4.2 framework verified in msn-2026-0017 applies'. Nothing was verified in msn-2026-0017, and RFC 8949 Section 4.2 states no requirements — the requirements are 4.2.1 and 4.2.3. Candidate cohort: cose-c (COSE WG reference, C/C++, Jim Schaad), cose-java (COSE WG, Java), coset (Google, Rust), go-cose (Veraison/ex-Mozilla, Go), pycose (Timothy Claeys, Python)."
 epistemic_status: hypothesis
 provenance:
   created_by:
@@ -128,7 +128,11 @@ candidate_test_vectors:
     url: pending
     independence: full (IETF SUIT WG)
 candidate_specifications:
-  - spc-2026-0004 (RFC 8949 §4.2 — verified)
+  # CITATION CORRECTION 2026-10-05: the original entry read
+  # "spc-2026-0004 (RFC 8949 §4.2 — verified)". spc-2026-0004 is status
+  # disputed, not verified, and its normative extract was entirely fabricated.
+  # See knowledge/observations/obs-2026-0062.yaml.
+  - spc-2026-0004 (RFC 8949 Section 4.2.1 / 4.2.3 — DISPUTED, extract withdrawn)
   - spc-2026-0005 (RFC 8152/9052/9053 — to be created)
 epistemic_status_long: |
   Target status is "active" because the scout synthesis is complete and

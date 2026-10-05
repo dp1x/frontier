@@ -26,6 +26,8 @@ links:
   specifications: [spc-2026-0005]
   findings: [fnd-2026-0014]
   observations: [obs-2026-0045]
+supersedes:
+  corrects: [obs-2026-0045]
 title: "OBS-2026-0042 - COSE matrix: 74 PASS / 4 SPEC_VIOLATION / 2 NOT_SUPPORTED"
 correction_2026_09_28:
   note: >

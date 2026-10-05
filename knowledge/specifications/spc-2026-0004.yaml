@@ -2,33 +2,44 @@ id: spc-2026-0004
 type: specification
 status: disputed
 created_at: "2026-09-01T00:00:00Z"
-updated_at: "2026-10-05T05:55:00Z"
+updated_at: "2026-10-05T09:00:00Z"
 summary: >
-  DISPUTED 2026-10-04 - NORMATIVE EXTRACT FABRICATED. A full citation audit
-  fetched RFC 8949 from rfc-editor.org and grepped it: 0 of the 10 quoted
-  phrases attributed to RFC 8949 sections 4.2, 4.2.1 and Appendix C appear
-  anywhere in the document. RFC 8949 section 4.2 is two sentences and contains
-  none of them. Worse, the artifact attributes LENGTH-FIRST map-key ordering to
-  section 4.2 when RFC 8949 section 4.2.3 states it and section 4.2.1 states
-  the OPPOSITE (bytewise lexicographic). Appendix C is "Pseudocode" and
-  contains no test vectors; vectors are Appendix A. 29 artifacts link this
-  specification, including the rejected fnd-2026-0013 and the verified
-  msn-2026-0017.
-  CORRECTION 2026-10-05 (obs-2026-0058): this summary previously carried a
-  certification claim that is chronologically impossible. It read "This was
-  certified accurate by an independent review", while provenance.sources cites
-  rev-2026-0018 -- created 2026-10-03, two months AFTER this specification's
-  created_at of 2026-09-01. A 2026-09-01 artifact cannot have been certified by
-  a 2026-10-03 review. The clause is REMOVED rather than merely contradicted.
-  The accurate statement: NO independent review ever checked a quotation in
-  this family against its source, and rev-2026-0018 -- far from certifying the
-  fabrication -- is the artifact that NAMED it. The governance defect is the
-  absence of a quotation-checking step in the review template.
-  ALSO CORRECTED: inheriting_artifacts_affected.count of 29 overstated the blast
-  radius. 29 artifacts LINK this specification; only about 10 assert its false
-  content. A link is not an inherited claim, and treating passive link-carriers
-  as contaminated would push remediation into churning evidence that asserts
-  nothing false. See obs-2026-0058 for the per-artifact disposition.
+  DISPUTED - NORMATIVE EXTRACT FABRICATED. Re-measured 2026-10-05 against a
+  freshly fetched RFC 8949 (185226 bytes, sha256
+  f1164a5b31a39350ad46abe29b83575eb933ca6c45366989c118b6b1058a214a).
+  RECONSTRUCTED COUNT: the withdrawn extract contained 20 separately-quotable
+  units attributed to RFC 8949 - 10 to section 4.2, 8 to section 4.2.1, 2 to
+  Appendix C. All 20 return NO-MATCH against the fetched text. The two prior
+  figures in the corpus (25 units, 29 fragments) are NOT reproducible and are
+  withdrawn; 20 is the count this measurement supports. The unit boundary used
+  is stated in remeasurement_2026_10_05 below so the number is auditable.
+  Section 4.2 is one paragraph of five sentences and contains no numbered rules;
+  section 4.2.1 is titled "Core Deterministic Encoding Requirements" and carries
+  three unnumbered bullets, so every "section 4.2 rule N" and "section 4.2.1
+  rule N" locator is unresolvable. The LENGTH-FIRST map-key rule was attributed
+  to section 4.2 when RFC 8949 section 4.2.3 states it and section 4.2.1
+  states the OPPOSITE (bytewise lexicographic). Appendix C is "Pseudocode";
+  examples are in Appendix A, Table 6, whose first 14 diagnostic rows are
+  integers and which holds 81 diagnostic/encoded pairs in total (18 rows whose
+  diagnostic is a bare integer). See obs-2026-0062.yaml for the measurement and
+  .scratch/x509/spc_audit.md for the full per-quotation table.
+  HISTORY, RETAINED: the 2026-10-05T05:55Z revision of this summary carried a
+  certification claim that is chronologically impossible - it read "This was
+  certified accurate by an independent review", while provenance.sources cited
+  rev-2026-0018, created 2026-10-03, two months AFTER this specification's
+  created_at of 2026-09-01. That clause was removed rather than merely
+  contradicted. The accurate statement, re-verified here: NO independent review
+  in this corpus ever checked a quotation against its source, and rev-2026-0018
+  is the artifact that NAMED the fabrication, not the one that certified it.
+  The governance defect is the absence of a quotation-checking step in the
+  review template.
+  ALSO CORRECTED, AND NOW RE-MEASURED: the earlier blast-radius claim of "29
+  linked, roughly 10 assert" was itself an estimate. Re-measured by enumerating
+  the repository: 42 files outside this artifact reference spc-2026-0004 by
+  id; of those, 17 repeat false content of this specification, 5 rest on a
+  premise this specification has withdrawn while preserving real evidence, and
+  20 carry the link while asserting nothing false. A link is not an inherited
+  claim. The per-artifact disposition is in inheriting_artifacts_remeasured.
 epistemic_status: interpretation
 provenance:
   created_by:
@@ -36,23 +47,173 @@ provenance:
     role: research-scout
     model: grok-4.1
     tool: RFC 8949 fetch + exhaustive phrase grep, 2026-10-04
+  remeasured_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.1
+    tool: >
+      2026-10-05 re-measurement. Fetched RFC 8949, RFC 9052, RFC 9053 and RFC
+      8152 fresh, recorded byte length and SHA-256 for each, ran a
+      whitespace-normalised literal substring test against all 20 recovered
+      quotation units plus 25 structural claims, and re-read every inheriting
+      artifact rather than inheriting its disposition. The prior revision's
+      `normative_extract` was recovered read-only from git blob 5270b10 (it is
+      no longer in the working tree); the recovered text is quoted below as
+      history.
   sources:
     - https://www.rfc-editor.org/rfc/rfc8949.txt
+    - https://www.rfc-editor.org/rfc/rfc9052.txt
+    - https://www.rfc-editor.org/rfc/rfc9053.txt
+    - https://www.rfc-editor.org/rfc/rfc8152.txt
     - knowledge/reviews/rev-2026-0018.yaml
+    - knowledge/observations/obs-2026-0058.yaml
+    - .scratch/x509/spc_audit.md
   parent: null
-  generation: 1
+  generation: 2
 links:
   targets: [tgt-2026-0006]
-title: "RFC 8949 deterministic encoding (DISPUTED 2026-10-04: normative_extract fabricated)"
+  observations: [obs-2026-0058, obs-2026-0062]
+title: "RFC 8949 deterministic encoding (DISPUTED: normative_extract fabricated, 2026-10-04; re-measured 2026-10-05)"
 classification: specification-extract
 normative_extract_status: >
-  WITHDRAWN 2026-10-04. The previous `normative_extract` field contained
-  FABRICATED quotations. It is retained here as HISTORY only, explicitly
-  labelled, per AGENTS.md ("Do not overwrite old evidence to make the new
-  conclusion look cleaner").
+  WITHDRAWN. The previous `normative_extract` field contained FABRICATED
+  quotations. It is retained here as HISTORY only, explicitly labelled, per
+  AGENTS.md ("Do not overwrite old evidence to make the new conclusion look
+  cleaner"). See recovered_normative_extract_2026_09_01 below.
+
+# ---------------------------------------------------------------------------
+# RE-MEASUREMENT 2026-10-05. Everything below is the output of this session's
+# own measurement, not an inherited count. See .scratch/x509/spc_audit.md.
+# ---------------------------------------------------------------------------
+remeasurement_2026_10_05:
+  method: >
+    Recovered the pre-remediation revision read-only from git blob 5270b10,
+    enumerated every quotation attributed to an external source, fetched the
+    primary RFCs, and ran a literal substring test on each quotation after
+    whitespace normalisation (line-wrap removal, de-hyphenation, case folding).
+    Claims that a substring test cannot settle - counts, titles, rule numbering -
+    were checked by parsing the fetched sections directly.
+  source_identity_as_fetched:
+    RFC_8949: {url: "https://www.rfc-editor.org/rfc/rfc8949.txt", bytes: 185226, sha256: "f1164a5b31a39350ad46abe29b83575eb933ca6c45366989c118b6b1058a214a"}
+    RFC_9052: {url: "https://www.rfc-editor.org/rfc/rfc9052.txt", bytes: 149835, sha256: "01eecd7f646537600e7aad665b1fa581ce6ec33dae4ef4add0997aaf38cd0a45"}
+    RFC_9053: {url: "https://www.rfc-editor.org/rfc/rfc9053.txt", bytes: 120315, sha256: "3d470615875620375f8453ba25b8dce7e4d0271e76b0b79a46df34ccb2d56ab0"}
+    RFC_8152: {url: "https://www.rfc-editor.org/rfc/rfc8152.txt", bytes: 256190, sha256: "bd44c8c3db43614c59c778d86bab9269c89bf6dbacfd32d5ac35882660f815e1"}
+  quotation_count: >
+    20 units. Unit definition: one quotation-marked or clearly-delimited
+    assertion of normative text attributed to an RFC section. Breakdown:
+    10 attributed to RFC 8949 section 4.2, 8 to section 4.2.1, 2 to Appendix C.
+    Q11 in this artifact's own numbering is a two-sentence quotation counted
+    once; its first sentence is also recorded as a sub-quotation.
+  match_results: 20 quotations tested, 20 NO-MATCH, 0 MATCH.
+  fabrication_vs_wrong_section: >
+    These are DIFFERENT defects and are counted separately. A NO-MATCH is only
+    a fabrication if the text is absent from the WHOLE document; if it appears
+    under a different locator the defect is a wrong locator. Measured: 0 of 20
+    quotation units appear anywhere in RFC 8949, including under any other
+    section, appendix or table. Every NO-MATCH here is therefore FABRICATED-TEXT,
+    not WRONG-SECTION. Wrong-locator defects are real in this artifact too, but
+    they attach to claims and axis references rather than to these quotation
+    units - see claim_verdicts below.
+  prior_counts_status: >
+    The corpus carried three mutually inconsistent counts: 29 fragments (per
+    rev-2026-0018), 25 units (per rpt-2026-0020), and 8 blocks. None is
+    reproducible from the recovered text under any unit definition this session
+    could construct. All three are recorded as withdrawn. 20 is the count
+    supported by measurement; the unit boundary is stated above so that a
+    future auditor can disagree with it precisely rather than approximately.
+  what_the_real_text_says:
+    section_4_2: >
+      "Some protocols may want encoders to only emit CBOR in a particular
+      deterministic format; those protocols might also have the decoders check
+      that their input is in that deterministic format.  Those protocols are
+      free to define what they mean by a "deterministic format" and what
+      encoders and decoders are expected to do.  This section defines a set of
+      restrictions that can serve as the base of such a deterministic format."
+    section_4_2_1: >
+      Title "Core Deterministic Encoding Requirements". Opens "A CBOR encoding
+      satisfies the "core deterministic encoding requirements" if it satisfies
+      the following restrictions:" and carries exactly three unnumbered
+      bullets: (1) "Preferred serialization MUST be used.  In particular, this
+      means that arguments (see Section 3) for integers, lengths in major types
+      2 through 5, and tags MUST be as short as possible"; (2) "Indefinite-length
+      items MUST NOT appear.  They can be encoded as definite-length items
+      instead."; (3) "The keys in every map MUST be sorted in the bytewise
+      lexicographic order of their deterministic encodings."
+    section_4_2_3: >
+      Title "Length-First Map Key Ordering". Defines the alternative ordering:
+      "If two keys have different lengths, the shorter one sorts earlier;" and
+      "If two keys have the same length, the one with the lower value in
+      (bytewise) lexical order sorts earlier." Section 4.2.3 also states that
+      RFC 8949 "avoids this term" - "Canonical CBOR" - and that the 4.2.1
+      requirements "could also be called 'Canonical CBOR', while the
+      length-first-ordered version of that could be called 'Old Canonical CBOR'".
+    appendix_a: >
+      Title "Examples of Encoded CBOR Data Items". One table, captioned "Table 6:
+      Examples of Encoded CBOR Data Items", holding 81 diagnostic/encoded pairs,
+      of which 18 have a bare integer as their diagnostic notation. The first 14
+      rows are integers; rows 12-14 of that block are the bignum-tagged values.
+      The 14/14 figure the oracle self-test reports is therefore a SUBSET of
+      Appendix A chosen by the oracle's author, not a count the RFC states.
+    appendix_c: "Title 'Pseudocode'. Contains the well-formedness checker in Figure 1 and no test vectors."
+  claim_verdicts:
+    - claim: "Section 4.2 contains five numbered concrete rules."
+      claimed_locator: "RFC 8949 section 4.2"
+      actual_locator: "none - no numbered rules exist in section 4.2"
+      verdict: UNSUPPORTED
+    - claim: "Section 4.2.1 is titled 'Canonical CBOR'."
+      claimed_locator: "RFC 8949 section 4.2.1"
+      actual_locator: "RFC 8949 section 4.2.1, titled 'Core Deterministic Encoding Requirements'"
+      verdict: INACCURATE-TEXT
+    - claim: "1.5 is encoded as 0xf9 0x3c 0x00."
+      claimed_locator: "RFC 8949 section 4.2.1"
+      actual_locator: "RFC 8949 section 4.2.1 - the RFC reads '1.5 is encoded as 0xf93e00 (binary16)'; 0xf93c00 is the encoding of 1.0 and appears in section 4.2.2"
+      verdict: INACCURATE-TEXT
+    - claim: "1.0 is encoded as 0xf9 0x3c 0x00."
+      claimed_locator: "RFC 8949 section 4.2.1"
+      actual_locator: "RFC 8949 section 4.2.2 (illustrative protocol choice, not a requirement)"
+      verdict: WRONG-SECTION
+    - claim: "Map keys are sorted length-first."
+      claimed_locator: "RFC 8949 section 4.2"
+      actual_locator: "RFC 8949 section 4.2.3; section 4.2.1 requires the OPPOSITE ordering (bytewise lexicographic)"
+      verdict: WRONG-SECTION
+    - claim: "Duplicate keys are not permitted."
+      claimed_locator: "RFC 8949 section 4.2 rule 5"
+      actual_locator: "RFC 9052 section 9 and RFC 9053 section 9; ABSENT from RFC 8949 entirely"
+      verdict: UNSUPPORTED
+    - claim: "RFC 9052 section 4 / RFC 8152 section 4 carry the COSE CBOR determinism rules."
+      claimed_locator: "RFC 9052 section 4; RFC 8152 section 4"
+      actual_locator: "RFC 9052 section 9, 'CBOR Encoding Restrictions'. Section 4 is 'Signing Objects' in both RFCs."
+      verdict: WRONG-SECTION
+    - claim: "RFC 9052 section 9 requires sorting map keys."
+      claimed_locator: "RFC 9052 section 9"
+      actual_locator: >
+        no such clause. Section 9 has exactly three bullets: scope, definite
+        lengths with minimum-length arguments, and no duplicate labels. It
+        aligns itself with "the Core Deterministic Encoding Requirements
+        specified in Section 4.2.1 of RFC 8949", so the sorting requirement is
+        inherited by reference, not stated there.
+      verdict: UNSUPPORTED
+    - claim: "Chunked-string consistency is at RFC 8949 section 2.2."
+      claimed_locator: "RFC 8949 section 2.2"
+      actual_locator: "RFC 8949 sections 3.2.3/3.2.4; section 2.2 is 'Specific Data Models'"
+      verdict: WRONG-SECTION
+    - claim: "RFC 8949 Appendix C provides 14 test vector pairs."
+      claimed_locator: "RFC 8949 Appendix C"
+      actual_locator: "RFC 8949 Appendix A, Table 6; Appendix C is 'Pseudocode'. The count 14 matches neither the 81 pairs nor the 18 integer rows in Appendix A."
+      verdict: UNSUPPORTED
+    - claim: "The audit-axis locators 'RFC 8949 section 4.2 rule 1..5' and 'section 4.2.1 rule 3/5' resolve."
+      claimed_locator: "RFC 8949 sections 4.2 and 4.2.1"
+      actual_locator: "unresolvable - section 4.2 has zero numbered items; section 4.2.1 has three unnumbered bullets, and its numbered 1..8 entries are the worked map-key ordering EXAMPLE, not rules"
+      verdict: UNSUPPORTED
+  note_on_the_0xf93e00_constant: >
+    The audit of 2026-10-04 recorded this constant as a defect its own
+    correction list had missed. Re-measured here and CONFIRMED: section 4.2.1
+    reads "1.5 is encoded as 0xf93e00 (binary16) and 1000000.5 as
+    0xfa49742408 (binary32)".
+
 fabricated_quotations_removed:
   - claim: "RFC 8949 section 4.2: 'The encoding of a CBOR data item is determined by the data item itself. It is possible to encode the same data item in different ways...'"
-    actual: "RFC 8949 section 4.2 in its entirety is two sentences, beginning 'Some protocols may want encoders to only emit CBOR in a particular deterministic format...' Zero overlap."
+    actual: "RFC 8949 section 4.2 in its entirety is five sentences beginning 'Some protocols may want encoders to only emit CBOR in a particular deterministic format...'. Zero overlap."
     correct_locator: "RFC 8949 section 4.2, 'Deterministically Encoded CBOR'"
   - claim: "RFC 8949 section 4.2 rule 2: 'Map keys must be sorted by the length of the encoded key followed by the encoded key itself.'"
     actual: >
@@ -62,46 +223,219 @@ fabricated_quotations_removed:
       encodings."
     correct_locator: "RFC 8949 section 4.2.3; contrast section 4.2.1"
   - claim: "RFC 8949 section 4.2.1 titled 'Canonical CBOR', quoting 'The canonical encoding is a particular deterministic encoding defined by the following rules.'"
-    actual: "RFC 8949 section 4.2.1 opens 'A CBOR encoding satisfies the \"core deterministic encoding requirements\" if it satisfies the following restrictions:'. RFC 8949 explicitly avoids the term 'canonical CBOR'."
+    actual: "RFC 8949 section 4.2.1 opens 'A CBOR encoding satisfies the \"core deterministic encoding requirements\" if it satisfies the following restrictions:'. RFC 8949 explicitly avoids the term 'Canonical CBOR'."
     correct_locator: "RFC 8949 section 4.2.1, 'Core Deterministic Encoding Requirements'"
   - claim: "RFC 8949 section 4.2 rule 5: 'Duplicate keys are not permitted in deterministic encoding.'"
     actual: "Not in RFC 8949 at all. It is RFC 9052 section 9 / RFC 9053 section 9."
   - claim: "RFC 8949 Appendix C provides 14 test vector pairs."
-    actual: "RFC 8949 Appendix C is 'Pseudocode'. Vectors are in Appendix A. Appendix A's integer table contains 18 entries, not 14."
+    actual: >
+      RFC 8949 Appendix C is 'Pseudocode'. Examples are in Appendix A, Table 6.
+      Re-measured: Appendix A holds 81 diagnostic/encoded pairs, of which 18
+      have a bare integer as their diagnostic. The earlier correction in this
+      artifact said '18 entries, not 14'; that is right about the integer rows
+      and silent about the 81 total. Both figures are recorded because the
+      oracle's '14/14' is a chosen subset of the first 14 Appendix A rows, not
+      an RFC-stated count, and the artifacts that inherited '14/14' need to be
+      able to say what it actually counts.
+
 audit_axes_status: >
   All 8 audit_axes in the previous revision carried `rule_ref` strings of the
   form "section 4.2 rule N" / "section 4.2.1 rule N". RFC 8949 section 4.2
-  has NO numbered rules; section 4.2.1 has three unnumbered restrictions. Every
+  has NO numbered rules; section 4.2.1 has three unnumbered bullets. Every
   `rule_ref` in the previous revision was a WRONG LOCATOR. This artifact is
   left with no audit_axes rather than with axes pointing at invented rules; the
   axes must be re-derived against the real text before reuse.
-  CORRECTION 2026-10-05 (obs-2026-0058): this field previously said "All 7
-  audit_axes" while the operative carrier, exp-2026-0030, has EIGHT. The count
-  is now 8, matching exp-2026-0030.audit_axes directly. The "7" was never
-  reconcilable with anything in the corpus.
+  RE-MEASURED 2026-10-05: the operative carriers of these locators are
+  exp-2026-0030 (8 axes), obs-2026-0058 and exp-2026-0030's rule_ref strings.
+  All eight are wrong, for two distinct reasons that should not be conflated:
+  the seven "section 4.2 rule N" / "section 4.2.1 rule N" locators name rules
+  that do not exist, and the eighth ("RFC 8949 section 2.2") names a section
+  whose subject is not chunked strings. A ninth locational error was measured
+  and is not an audit axis: the float axis description asserts 1.5 encodes as
+  0xf93c00, which is 1.0's encoding.
+  HISTORY: this field previously said "All 7 audit_axes" while the operative
+  carrier, exp-2026-0030, has EIGHT. The count is 8, matching
+  exp-2026-0030.audit_axes directly. The "7" was never reconcilable with
+  anything in the corpus.
+
 correction_required_before_reuse:
   - "Replace normative_extract with verbatim RFC 8949 section 4.2 / 4.2.1 / 4.2.3 text."
   - "Re-derive all audit_axes with correct rule_refs (section 4.2.1 for bytewise lexicographic; section 4.2.3 for length-first)."
-  - "Correct Appendix C -> Appendix A reference; correct 14 -> 18 integer vectors."
-  - "Re-open the 29 inheriting artifacts, in dependency order, starting with fnd-2026-0013 (already rejected) and msn-2026-0017 (status: verified)."
+  - "Correct Appendix C -> Appendix A reference; state explicitly which subset of Appendix A Table 6 the oracle's 14/14 covers."
+  - "Correct the 1.5 float constant to 0xf93e00."
+  - "Re-derive the duplicate_key_rejection axis against RFC 9052 section 9 / RFC 9053 section 9, not RFC 8949."
+  - "Re-open the inheriting artifacts, in dependency order, starting with fnd-2026-0013 (already rejected), msn-2026-0017 (status: verified) and exp-2026-0030 (status: designed)."
+
+inheriting_artifacts_remeasured:
+  method: >
+    Enumerated every file under knowledge/, missions/, cbor-cross-impl/,
+    cose-cross-impl/, tests/ and tools/ that references spc-2026-0004 or that
+    repeats its false content, then read each one and classified it by what it
+    actually ASSERTS. 42 files outside this artifact reference the id.
+  count_linked: 42
+  count_asserting_false_content: 17
+  count_premise_withdrawn_evidence_preserved: 5
+  count_passive_link_carrier: 20
+  method_note: >
+    This replaces the earlier "29 linked, roughly 10 assert" estimate, which
+    was itself an unmeasured estimate and is superseded. Per-artifact
+    dispositions are in obs-2026-0060.yaml.
+  classification_rule: >
+    A LINK IS NOT AN INHERITED CLAIM. An artifact was counted as asserting
+    false content only if a reader could take from it a statement about what RFC
+    8949 requires that this measurement has shown to be wrong.
+
 inheriting_artifacts_affected:
-  count: 29
+  count: 42
   count_refined_2026_10_05: >
-    29 artifacts LINK this specification; roughly 10 of them ASSERT its false
-    content and need correction. A link is not an inherited claim. The per-
-    artifact disposition -- which to correct, which to narrow, and which to
-    leave unchanged because they assert nothing false -- is in
-    knowledge/observations/obs-2026-0058.yaml.  method: "grep -l 'spc-2026-0004' across knowledge/ and missions/"
+    SUPERSEDED by inheriting_artifacts_remeasured above. The value 29 was a
+    grep hit count, not a disposition count, and the "roughly 10 assert" figure
+    that replaced it was an estimate. Both are withdrawn. The measured figures
+    are 42 linked, 17 asserting false content, 5 premise-withdrawn, 20 passive
+    link carriers. method: "recursive file enumeration over knowledge/,
+    missions/, cbor-cross-impl/, cose-cross-impl/, tests/, tools/ for the
+    token spc-2026-0004, followed by per-file reading and classification"
   note: >
-    An additional ~65 artifacts cite "section 4.2.1" textually. The CBOR
-    measurement results themselves (obs-2026-0047: canonical=True implements
-    section 4.2.3 length-first, 111/111) are NOT invalidated by this - that
-    measurement was made against the real RFC. What is invalid is the
-    specification text this artifact presents as authority.
+    An additional set of artifacts cite "section 4.2.1" textually without linking
+    this specification. The CBOR measurement results themselves (obs-2026-0047:
+    canonical=True implements section 4.2.3 length-first, 111/111) are NOT
+    invalidated by this - that measurement was made against the real RFC. What
+    is invalid is the specification text this artifact presented as authority,
+    and the labels the matrix carried underneath it.
 disclosure: embargoed
 limitations: >
-  This correction establishes that the quotations are fabricated. It does NOT
-  by itself re-verify every measurement that inherited this spec. The
-  measurement chain (obs-2026-0047, fnd-2026-0013) was independently audited in
-  2026-10-03 and found to rest on a different defect (a mislabelled oracle).
-  Both defects are real and independent; neither excuses the other.
+  This correction establishes that the quotations are fabricated and that the
+  locators are wrong. It does NOT by itself re-verify every measurement that
+  inherited this spec. The measurement chain (obs-2026-0047, fnd-2026-0013) was
+  independently audited in 2026-10-03 and found to rest on a different defect
+  (a mislabelled oracle). Both defects are real and independent; neither
+  excuses the other.
+  NOT VERIFIED BY THIS SESSION: no CBOR library was executed; no vector was
+  regenerated; no matrix cell was recomputed. Every library-behaviour statement
+  in the inheriting artifacts was read, not re-measured.
+
+# ---------------------------------------------------------------------------
+# HISTORY - verbatim recovery of the withdrawn field. Do not treat as authority.
+# Source: git blob 5270b10, commit 5270b10 (2026-08-31).
+# ---------------------------------------------------------------------------
+recovered_normative_extract_2026_09_01: |
+  WITHDRAWN 2026-10-04. The following is the verbatim previous text of
+  `normative_extract`, recovered read-only from git on 2026-10-05 for audit
+  purposes. Every quotation in it is fabricated; it is retained so the
+  fabrication remains inspectable rather than merely asserted.
+
+  RFC 8949 4.2 (Deterministic Encoding):
+
+  "The encoding of a CBOR data item is determined by the data item
+  itself. It is possible to encode the same data item in different
+  ways. For some applications, it is beneficial to have a
+  deterministic encoding. The following rules define a deterministic
+  encoding. These rules are required by the deterministic encoding
+  forms defined in Section 4.2.1."
+
+  Concrete rules (from 4.2):
+
+  1. "The preferred encoding is the shortest form of the data item."
+     - Unsigned integers: shortest form has the fewest bytes.
+       (e.g., value 0 uses major type 0 + additional info 0 = 1 byte,
+       value 23 uses 1 byte, value 24 uses 2 bytes, etc.)
+     - Negative integers: same as unsigned except major type 1.
+     - Byte strings and text strings: shortest form of length
+       (definite-length encoding, indefinite-length only when
+       chunked).
+     - Arrays, maps: definite-length form preferred.
+     - Tags: tag value uses shortest form.
+     - Simple values and floats: definite-length form preferred.
+
+  2. "Map keys must be sorted by the length of the encoded key
+     followed by the encoded key itself."
+     - "For the purpose of sorting, the length of the encoded key is
+       the length of the encoded key data item in bytes. Map keys that
+       have the same encoded length must be sorted in the order of
+       their encoded values."
+     - "Keys that differ only in length are sorted by length, with
+       shorter keys first."
+     - "If two keys have the same encoded length and the same encoded
+       value, they are considered duplicates."
+
+  3. "Floating-point values must use the shortest form that can
+     represent the value."
+     - e.g., 1.0 must be encoded as 0xf9 0x3c 0x00 (half-precision)
+       rather than 0xfb 3F F0 00 00 00 00 00 00 00 (double-precision).
+
+  4. "Definite-length encoding is preferred over indefinite-length
+     encoding."
+     - Indefinite-length encoding is for chunked data items only.
+
+  5. "Duplicate keys are not permitted in deterministic encoding."
+     - This is a duplicate-detection requirement; deterministic
+       encoders must reject duplicate map keys.
+
+  RFC 8949 4.2.1 (Canonical CBOR):
+
+  "The canonical encoding is a particular deterministic encoding
+  defined by the following rules. The encoding is well-formed and
+  valid CBOR, but not all well-formed CBOR data has a valid
+  canonical encoding."
+
+  Concrete rules (4.2.1):
+
+  1. "Numeric values must use the shortest form. (Same as 4.2.)"
+
+  2. "Map keys must be sorted by the length of the encoded key,
+     followed by the encoded key itself."
+
+  3. "Tags must use the shortest form."
+
+  4. "Floating-point values must use the shortest form. (Same as 4.2.)"
+
+  5. "Simple values must use the shortest form. (Same as 4.2.)"
+
+  Differences from 4.2 generic deterministic:
+  - 4.2.1 adds: "The encoding of a data item is independent of the
+    context in which the data item appears."
+  - 4.2.1 is more restrictive: it REQUIRES duplicate-key rejection
+    at the encoder level (not just at the validator).
+  - 4.2.1 1 explicitly says "indefinite-length items MUST be made
+    into definite-length items."
+
+  RFC 8949 Appendix C:
+
+  "This appendix contains a non-exhaustive set of examples for the
+  encoding of CBOR data items. ... The set of examples ... can be
+  used as test vectors."
+
+  Appendix C provides 14 specific test vector pairs (data-item
+  description -> hex-encoded bytes) covering: integers, byte strings,
+  text strings, arrays, maps, tags, simple values, floats.
+
+  Cross-reference: RFC 8152 4 (CBOR encoding for COSE) and
+  RFC 9052 4 (COSE v2) inherit RFC 8949 4.2 determinism for
+  COSE message construction (Sign1, Mac0, Encrypt, Sign, Mac,
+  Encrypt0).
+
+  --- the eight withdrawn audit_axes ---
+  - axis: integer_shortest_form
+    rule_ref: "RFC 8949 4.2 rule 1, 4.2.1 rule 1"
+    description: "Encode unsigned/negative integers using the minimum number of bytes. Examples: 0 -> 0x00 (1 byte), 23 -> 0x17 (1 byte), 24 -> 0x18 0x18 (2 bytes), 255 -> 0x18 0xff (2 bytes), 256 -> 0x19 0x01 0x00 (3 bytes)."
+  - axis: map_key_sort
+    rule_ref: "RFC 8949 4.2 rule 2, 4.2.1 rule 2"
+    description: "Sort map keys first by encoded byte length (shorter first), then lexicographically by encoded value. Map keys of equal encoded length and value are duplicates and must be rejected."
+  - axis: float_shortest_form
+    rule_ref: "RFC 8949 4.2 rule 3, 4.2.1 rule 4"
+    description: "Float values must use the shortest encoding form that exactly represents the value. Examples: 1.0 -> half (0xf9 0x3c 0x00); 1.5 -> half (0xf9 0x3c 0x00); infinity must use the shortest form; NaN must use the canonical NaN encoding if defined."
+  - axis: definite_length_preferred
+    rule_ref: "RFC 8949 4.2 rule 4, 4.2.1 final rule"
+    description: "Definite-length encoding is required (canonical) or preferred (deterministic). Indefinite-length is only for chunked data items."
+  - axis: duplicate_key_rejection
+    rule_ref: "RFC 8949 4.2 rule 5, 4.2.1 implicit"
+    description: "Duplicate map keys are not permitted in deterministic encoding; the encoder must reject them or, if the encoder permits them in non-deterministic mode, the deterministic mode must reject them."
+  - axis: tag_shortest_form
+    rule_ref: "RFC 8949 4.2.1 rule 3"
+    description: "Tag values must use the shortest form (analogous to integers). Tag with value 0 uses 1 byte; tag with value 24 uses 2 bytes."
+  - axis: simple_value_shortest_form
+    rule_ref: "RFC 8949 4.2.1 rule 5"
+    description: "Simple values must use the shortest form (analogous to integers). Simple value 0 (false) uses 1 byte (0xf4); simple value 23 uses 1 byte (0xf7)."
+  - axis: chunked_string_consistency
+    rule_ref: "RFC 8949 2.2 + 4.2"
+    description: "Byte strings and text strings should be encoded with definite-length headers. Indefinite-length encoding is permitted for chunked strings (each chunk is a definite-length byte/text string) but the overall string must be indefinite-length tagged."

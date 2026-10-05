@@ -2,8 +2,8 @@ id: imp-2026-0019
 type: implementation
 status: current
 created_at: "2026-08-31T21:00:00Z"
-updated_at: "2026-08-31T21:00:00Z"
-summary: "JavaScript cbor-x 1.6.6 — kriszyp/cbor-x (sole author Kris Zyp). Ultra-fast CBOR (RFC 8949) implementation with extensions for records and structured cloning. NOT a fork of any other audited CBOR library. Critically: cbor-x has NO canonical/deterministic encoding mode. Default mode wraps JS objects in tags (tag 2 for objects, tag 259 for Maps), uses double-precision for all non-integer floats, encodes small integer-valued floats as integers, and emits JS insertion order for map keys. The mission brief's URL 'dentsu-dev/cbor-x' is incorrect (returns 404); the real repo is kriszyp/cbor-x."
+updated_at: "2026-10-05T09:55:00Z"
+summary: "JavaScript cbor-x 1.6.6 - kriszyp/cbor-x (sole author Kris Zyp). Ultra-fast CBOR (RFC 8949) implementation with extensions for records and structured cloning. NOT a fork of any other audited CBOR library. Critically: cbor-x has NO canonical/deterministic encoding mode. Default mode wraps JS objects in tags (tag 2 for objects, tag 259 for Maps), uses double-precision for all non-integer floats, encodes small integer-valued floats as integers, and emits JS insertion order for map keys. The mission brief's URL 'dentsu-dev/cbor-x' is incorrect (returns 404); the real repo is kriszyp/cbor-x. CITATION CORRECTION 2026-10-05: this artifact inherited two wrong locators from spc-2026-0004 - 'RFC 8949 4.2.1' for canonical form and 'RFC 8949 Appendix C' for its (absent) RFC vector file. Section 4.2.1 is 'Core Deterministic Encoding Requirements' and does not use the term 'canonical'; Appendix C is 'Pseudocode'."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -37,17 +37,17 @@ lineage: original work, inspired by msgpack-javascript and avsc; no CBOR-fork an
 independence:
   shared_authors_with_audited: none identified
   shared_code_with_audited: "none (runtime deps: cbor-extract by same author, no other CBOR libs)"
-  shared_test_vectors_with_audited: "no RFC 8949 Appendix C file. Cross-testing via dev-only 'cbor' npm package (Hannes Landeholm), not as a shared vector source."
+  shared_test_vectors_with_audited: "no RFC 8949 Appendix A file (the corpus is inline hex transcribed from Appendix A's example table, not a shared file). Cross-testing via dev-only 'cbor' npm package (Hannes Landeholm), not as a shared vector source. CITATION NOTE 2026-10-05: this originally read 'no RFC 8949 Appendix C file'; Appendix C is 'Pseudocode' and holds no examples."
   shared_runtime_dependencies_with_audited: none
   independence_basis: "independent language, independent author, independent codebase. No RFC test vector inclusion. No canonical mode."
 canonical_mode:
   supported: false
-  rationale: "cbor-x has no 'canonical', 'deterministic', 'sort keys', or equivalent flag. The 'canonical' word appears in one test comment referring to empty-buffer shortest-form (0x40), not the §4.2 spec. The encoder iterates JS object keys in insertion order via `for (let key in object)`."
+  rationale: "cbor-x has no 'canonical', 'deterministic', 'sort keys', or equivalent flag. The 'canonical' word appears in one test comment referring to empty-buffer shortest-form (0x40), not the deterministic-encoding spec. The encoder iterates JS object keys in insertion order via `for (let key in object)`."
   what_default_does: "JS objects get tag 2 (bignum) wrapping unless useRecords:false; Maps get tag 259 (map-with-string-keys); insertion-order key iteration; double-precision floats by default; short-integer floats encoded as integers."
 specification:
   primary: RFC 8949
   references: "RFC 8746 (typed arrays), RFC 8742 (CWT), Packed CBOR draft, custom tag-105/26880-27135 record extensions"
-  no_canonical_mode: "Default mode is NOT conformant with RFC 8949 §4.2 deterministic encoding requirements. The library is conformant for decode but the encoder is optimized for speed, not canonical form."
+  no_canonical_mode: "Default mode is NOT conformant with RFC 8949's core deterministic encoding requirements (section 4.2.1), nor with the length-first alternative (section 4.2.3). The library is conformant for decode but the encoder is optimized for speed, not deterministic form. CITATION CORRECTION 2026-10-05: this originally read 'RFC 8949 §4.2 deterministic encoding requirements'. Section 4.2 states no requirements at all -- it is an introductory paragraph; the requirements are 4.2.1 and 4.2.3."
 adapter:
   path: cbor-cross-impl/adapters/lib_cbor_x_adapter.py
   driver_path: R:/cbor-cohort/cbor-x/driver.js
@@ -65,3 +65,10 @@ limitations:
 notes_path: knowledge/notes/imp-2026-0019.md
 corrections_to_brief:
   - "The mission brief URL 'https://github.com/dentsu-dev/cbor-x' returns HTTP 404. The actual repo is 'https://github.com/kriszyp/cbor-x'."
+
+correction_2026_10_05:
+  by: model-agent, role verifier
+  class: CORRECT
+  what_changed: "summary, independence.shared_test_vectors_with_audited, canonical_mode.rationale, specification.no_canonical_mode."
+  what_did_not_change: "The library archaeology, the 404 finding, the tag-wrapping behaviour, the absence of a canonical mode, the matrix cell counts. All of that is unaffected by the citation defect."
+  measurement: obs-2026-0062.yaml

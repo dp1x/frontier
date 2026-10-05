@@ -2,8 +2,8 @@ id: imp-2026-0018
 type: implementation
 status: current
 created_at: "2026-08-31T21:00:00Z"
-updated_at: "2026-08-31T21:00:00Z"
-summary: "Rust ciborium 0.2.2 — enarx/ciborium (Enarx/Profian TEE project, lead author Nathaniel McCallum). Cleanroom Rust implementation of CBOR (RFC 8949). Not a fork of any other audited CBOR library. Has a canonical mode (canonical_value + CanonicalValue wrapper) that implements RFC 8949 §4.2.3 length-first map key ordering (per CanonicalValue docstring: 'as defined in both RFC 7049 Section 3.9 and RFC 8949 4.2.3 as errata'). Shortest-form integer encoding mandatory; shortest-form float encoding is applied conservatively for losslessness."
+updated_at: "2026-10-05T09:50:00Z"
+summary: "Rust ciborium 0.2.2 - enarx/ciborium (Enarx/Profian TEE project, lead author Nathaniel McCallum). Cleanroom Rust implementation of CBOR (RFC 8949). Not a fork of any other audited CBOR library. Has a canonical mode (canonical_value + CanonicalValue wrapper) that implements RFC 8949 section 4.2.3 length-first map key ordering (per CanonicalValue docstring: 'as defined in both RFC 7049 Section 3.9 and RFC 8949 4.2.3 as errata'). Shortest-form integer encoding mandatory; shortest-form float encoding is applied conservatively for losslessness. CITATION CORRECTION 2026-10-05: this artifact inherited two wrong locators from spc-2026-0004 - it called its behaviour 'RFC 8949 4.2.3 length-first' correctly but then cited 'RFC 8949 §4.2 rule 3' for the float requirement and 'RFC 8949 Appendix A/C examples' as its shared test corpus. Section 4.2 has no numbered rules; the float requirement is RFC 8949 4.2.1 bullet 1 / section 3.3, and Appendix C is 'Pseudocode'."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -39,7 +39,7 @@ lineage: original cleanroom Rust implementation, no fork ancestry
 independence:
   shared_authors_with_audited: none identified
   shared_code_with_audited: "none (workspace internal: ciborium-ll, ciborium-io)"
-  shared_test_vectors_with_audited: "RFC 8949 Appendix A/C examples only (shared by spec, not by lineage)"
+  shared_test_vectors_with_audited: "RFC 8949 Appendix A examples only (shared by spec, not by lineage). CITATION NOTE 2026-10-05: this originally read 'Appendix A/C'. Appendix C is 'Pseudocode' and contains no examples."
   shared_runtime_dependencies_with_audited: "only serde (universal Rust ecosystem dep), half (IEEE 754), embedded-io"
   independence_basis: "independent language, independent organization, independent author, independent codebase. Test vectors are RFC-mandated (Appendix A/C), so byte-exact agreement on those is a self-consistency check against the RFC text, not evidence of shared lineage."
 canonical_mode:
@@ -64,6 +64,14 @@ matrix_results:
   default_mode: "107/111 PASS (96.4%); 4 SPEC_VIOLATION (map_key_sort: insertion-order, not sorted — documented non-canonical behavior)"
 limitations:
   - "ciborium 0.2.2 does not have a first-class canonical_into_writer; the adapter must sort map keys manually using CanonicalValue before calling into_writer."
-  - "The driver's float handling depends on ciborium's lossy float coercion logic. For values exactly representable in half/single precision, ciborium uses the shorter form. For values not exactly representable in those widths, ciborium uses double precision (matching RFC 8949 §4.2 rule 3 shortest-form requirement)."
-  - "Test corpus is inline hex of RFC 8949 Appendix C (the same vectors every compliant impl shares by spec), not a CBOR-WG shared test vector file."
+  - "The driver's float handling depends on ciborium's lossy float coercion logic. For values exactly representable in half/single precision, ciborium uses the shorter form. For values not exactly representable in those widths, ciborium uses double precision. CITATION CORRECTION 2026-10-05: this originally read '(matching RFC 8949 §4.2 rule 3 shortest-form requirement)'. RFC 8949 section 4.2 has no numbered rules; the shortest-form requirement is section 4.2.1 bullet 1, which requires the shortest form that PRESERVES THE VALUE - so double precision for a value not representable in binary32 is conformant, and the parenthetical as written implied a stricter rule than the RFC states."
+  - "Test corpus is inline hex transcribed from RFC 8949 Appendix A (the same examples every compliant implementation shares by spec), not a CBOR-WG shared test vector file. CITATION CORRECTION 2026-10-05: this originally read 'Appendix C'; Appendix C is 'Pseudocode'."
+  - "The matrix cells this artifact reports (111/111 canonical) were produced by an adapter whose sort was hand-written in Rust against the oracle's expectation, on a corpus that stores identical expected hex for both modes. The lineage claim is unaffected; the agreement is not evidence of conformance."
 notes_path: knowledge/notes/imp-2026-0018.md
+
+correction_2026_10_05:
+  by: model-agent, role verifier
+  class: CORRECT
+  what_changed: "summary, independence.shared_test_vectors_with_audited, and two limitation entries."
+  what_did_not_change: "The lineage analysis, the canonical-mode API description, the 4.2.3 sort attribution, the adapter path, the matrix cell counts. The finding that ciborium implements length-first is CORRECT and was verified against the RFC here: section 4.2.3 is titled 'Length-First Map Key Ordering' and its two rules are as quoted."
+  measurement: obs-2026-0062.yaml

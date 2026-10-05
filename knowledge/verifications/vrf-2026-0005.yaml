@@ -2,7 +2,7 @@ id: vrf-2026-0005
 type: verification
 status: pass
 created_at: "2026-08-29T18:00:00Z"
-updated_at: "2026-08-29T18:00:00Z"
+updated_at: "2026-10-05T10:10:00Z"
 summary: Formal verification of fnd-2026-0004 (FORMAL-204 LENGTH half) - Lean 4 v4.22.0 kernel accepted all three top-level theorem families (canonical lengths, off-by-one rejection, cross-param-set rejection) with zero sorries, zero file-introduced axioms, and an axiom inventory limited to {propext, Quot.sound}.
 epistemic_status: verified_conclusion
 provenance:
@@ -27,7 +27,12 @@ links:
 method: formal-verifier
 result: |
   Lean 4 v4.22.0 kernel accepted formal/Formal/LengthCheck.lean with
-  0 errors, 0 sorries, 0 file-introduced axioms, 0 warnings.
+  0 errors, 0 sorries, 0 file-introduced axioms, 1 warning.
+
+  The single warning is `Formal/ByteEncode.lean:381:44: unused variable
+  'hB'` -- emitted by the FORMAL-203 module in the same `lake build`, not by
+  LengthCheck.lean. It is a `linter.unusedVariables` notice and does not bear on
+  any theorem verified here.
 
   All three top-level theorem families hold with axiom inventory
   limited to {propext, Quot.sound} (subset of standard Lean 4 core):
@@ -72,3 +77,26 @@ governance_correction_2026_10_04:
   scope: >
     Routing only. The verification result, status, and epistemic_status are
     unchanged, and no old research claim is reopened by this correction.
+
+language_correction_2026_10_05:
+  reason: >
+    `result` opened with "0 errors, 0 sorries, 0 file-introduced axioms, 0
+    warnings." The cited source, formal/build_output_r2.log, records ONE
+    warning (`Formal/ByteEncode.lean:381:44: unused variable 'hB'`). This
+    artifact is the deterministic verification of FORMAL-204, so a
+    miscounted warning in it is a transcription error in the very field whose
+    purpose is to be counted rather than estimated.
+  what_changed: >
+    `result` now says 1 warning and names it, stating that it originates in
+    ByteEncode.lean (FORMAL-203) rather than in LengthCheck.lean (FORMAL-204).
+  what_did_not_change: >
+    The verification verdict. `status: pass`, `method: formal-verifier`,
+    0 errors, 0 sorries, 0 file-introduced axioms and the axiom inventory are
+    all unchanged and all confirmed by the same log. The warning is a
+    stylistic linter notice in a different module and does not touch any
+    theorem verified here.
+  scope: >
+    Build-log transcription only. Nothing is promoted or demoted, no theorem
+    claim is reopened, and the prior value is recorded here rather than
+    silently replaced.
+  evidence: "formal/build_output_r2.log, read directly 2026-10-05 (1 `warning:` line, 0 `error` lines)"

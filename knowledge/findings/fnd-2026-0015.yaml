@@ -30,6 +30,8 @@ links:
   targets: [tgt-2026-0007]
   reviews: []
   verifications: []
+supersedes:
+  corrects: [obs-2026-0043]
 title: "FND-2026-0015 - FROST cleanroom oracle reproduces both RFC 9591 KATs in the cleanroom cohort (candidate; independent cohort pending)"
 correction_2026_09_26:
   reason: >

@@ -22,6 +22,8 @@ links:
   reproducers: [rpr-2026-0016]
   specifications: [spc-2026-0006]
   targets: [tgt-2026-0007]
+supersedes:
+  corrects: [obs-2026-0044]
 title: "OBS-2026-0043 - FROST cross-impl matrix observed results"
 correction_2026_09_26:
   reason: >

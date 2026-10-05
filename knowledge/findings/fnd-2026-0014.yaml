@@ -30,6 +30,8 @@ links:
   targets: [tgt-2026-0006]
   reviews: [rev-2026-0016, rev-2026-0017]
   verifications: [vrf-2026-0016]
+supersedes:
+  corrects: [obs-2026-0042]
 title: "FND-2026-0014 - pycose 1.1.0 emits protected-header maps in insertion order (signer-side interop divergence; no RFC violation established)"
 correction_2026_09_28:
   reason: >

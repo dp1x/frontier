@@ -2,8 +2,8 @@ id: vrf-2026-0014
 type: verification
 status: verified
 created_at: "2026-08-31T14:00:00Z"
-updated_at: "2026-08-31T18:30:00Z"
-summary: "Final verification of msn-2026-0015 + msn-2026-0016 (CBOR §4.2 cross-impl conformance matrix). The cleanroom Python oracle was independently verified against (a) RFC 8949 Appendix C 14 integer reference vectors (14/14 PASS in both deterministic and canonical modes), and (b) RFC 8949 §4.2.3 length-first ordering example (byte-exact match). The matrix is reproducible from the committed reproducer (rpr-2026-0013). After vector-generator fixes in msn-2026-0016, the matrix shows: cbor2 canonical mode byte-exact matches Frontier oracle on 100% of 111 cells; default-mode divergences (14 SPEC_AMBIGUITY + 4 SPEC_VIOLATION) are documented cbor2 behavior. No spec-violating cross-impl divergence found."
+updated_at: "2026-10-05T09:25:00Z"
+summary: "Final verification of msn-2026-0015 + msn-2026-0016 (CBOR deterministic-encoding cross-impl conformance matrix). The cleanroom Python oracle was independently verified against (a) 14 integer reference vectors taken from RFC 8949 Appendix A Table 6 (14/14 PASS in both deterministic and canonical modes), and (b) RFC 8949 §4.2.3 length-first ordering example (byte-exact match). The matrix is reproducible from the committed reproducer (rpr-2026-0013). After vector-generator fixes in msn-2026-0016, the matrix shows: cbor2 canonical mode byte-exact matches Frontier oracle on 100% of 111 cells; default-mode divergences (14 SPEC_AMBIGUITY + 4 SPEC_VIOLATION) are documented cbor2 behavior. No spec-violating cross-impl divergence found. CITATION AND PREMISE CORRECTION 2026-10-05: this artifact's summary and step 1 originally read 'RFC 8949 Appendix C 14 integer reference vectors'. Appendix C is 'Pseudocode' and holds no vectors; re-measured, Appendix A Table 6 holds 81 pairs, 18 of them with a bare-integer diagnostic, and the 14 is a chosen subset. Separately, the 111/111 canonical agreement this verification certifies was measured against a mislabelled oracle and does not hold at HEAD; see premise_correction_2026_10_05."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -12,12 +12,14 @@ provenance:
     model: minimax-m3
     tool: "deterministic verification script"
   sources:
-    - https://www.rfc-editor.org/rfc/rfc8949#appendix-C
+    - https://www.rfc-editor.org/rfc/rfc8949#appendix-A
     - https://www.rfc-editor.org/rfc/rfc8949#section-4.2
     - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
     - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.3
     - knowledge/reproducers/rpr-2026-0013.yaml
     - knowledge/observations/obs-2026-0040.yaml
+    - knowledge/observations/obs-2026-0047.yaml
+    - knowledge/observations/obs-2026-0062.yaml
     - knowledge/reviews/rev-2026-0014.yaml
     - cbor-cross-impl/results/matrix.tsv
     - cbor-cross-impl/oracle/cbor_oracle.py
@@ -33,16 +35,16 @@ links:
 title: "VRF-2026-0014 - msn-2026-0015 + msn-2026-0016 verification (CBOR §4.2 matrix)"
 verification_method: deterministic-script
 verification_inputs:
-  - "RFC 8949 Appendix A Table 6 (14 integer reference vectors; note: the prior citation of 'Appendix C' was a documentation error; Appendix C is 'Pseudocode' and Appendix A contains the integer examples). (https://www.rfc-editor.org/rfc/rfc8949#appendix-A)"
+  - "RFC 8949 Appendix A Table 6 (14 integer reference vectors; note: the prior citation of 'Appendix C' was a documentation error; Appendix C is 'Pseudocode' and Appendix A contains the integer examples). RE-MEASURED 2026-10-05: Appendix A Table 6 holds 81 diagnostic/encoded pairs, of which 18 have a bare integer as their diagnostic; the 14 the oracle tests is the first 14 rows, a chosen subset, not an RFC-stated count. (https://www.rfc-editor.org/rfc/rfc8949#appendix-A)"
   - "RFC 8949 §4.2.3 length-first ordering example (https://www.rfc-editor.org/rfc/rfc8949#section-4.2.3)"
   - "cbor-cross-impl/results/matrix.tsv (matrix output from cbor2 6.1.4)"
 
 verification_steps:
   - step: 1
-    description: "Run cleanroom oracle self-test against RFC 8949 Appendix A Table 6 (14 integer vectors)"
+    description: "Run cleanroom oracle self-test against the first 14 integer rows of RFC 8949 Appendix A Table 6 (Appendix C, the originally cited locator, is 'Pseudocode')"
     command: "cd cbor-cross-impl && python oracle/cbor_oracle.py"
     expected: "14/14 PASS for both deterministic and canonical modes"
-    actual: "14/14 PASS for both modes (verified 2026-08-31)"
+    actual: "14/14 PASS for both modes (verified 2026-08-31). CITATION NOTE 2026-10-05: these are Appendix A rows 1-14, not Appendix C, and the count is the oracle author's subset rather than an RFC-stated figure."
     status: PASS
 
   - step: 2
@@ -75,7 +77,8 @@ verification_steps:
 
 verification_summary: |
   The msn-2026-0015 + msn-2026-0016 framework is verified at 5 distinct levels:
-    1. Cleanroom oracle self-test: 14/14 RFC 8949 Appendix C integer vectors PASS
+    1. Cleanroom oracle self-test: 14/14 integer vectors from RFC 8949 Appendix A
+       Table 6 (the first 14 rows; Appendix C is Pseudocode and holds none) PASS
        in both deterministic and canonical modes.
     2. RFC 8949 §4.2.3 example byte-exact match: oracle produces
        a80a012001f401186401617a018120016261610181186401 byte-exactly.
@@ -103,3 +106,28 @@ limitations:
     queued as msn-2026-0017 follow-up. Until then, finding cannot be
     promoted to verified_conclusion per AGENTS.md promotion ladder."
   - "fnd-2026-0013 is candidate status, awaiting cohort expansion."
+
+premise_correction_2026_10_05:
+  by: model-agent, role verifier
+  what_this_verification_still_establishes:
+    - "The oracle reproduces the 14 Appendix A integer rows byte-exactly in both modes. That is a real measurement against real RFC text and it survives."
+    - "The matrix runner is deterministic: re-running produces byte-identical output. That survives."
+  what_it_no_longer_establishes:
+    - >
+      The 111/111 canonical-mode agreement, and therefore the summary's
+      headline. Until commit 8148462 (2026-09-02) cbor_oracle.encode_canonical
+      sorted section 4.2.3 length-first under a docstring claiming section 4.2.1,
+      and the vectors were never regenerated after the repair. obs-2026-0047
+      re-measured the comparison at HEAD: cbor2 matches the oracle on 108/111,
+      failing exactly the three vectors that discriminate the two orderings.
+    - >
+      Section 4.2 as the conformance basis. RFC 8949 section 4.2 defines no
+      requirements at all; it is an introductory paragraph. The requirements
+      are in 4.2.1 and 4.2.3, and the two orderings are alternatives.
+  citation_corrections_made_here:
+    - "summary: 'Appendix C 14 integer reference vectors' -> Appendix A Table 6, first 14 rows, with the count re-explained."
+    - "verification_inputs: unchanged in substance, annotated with the re-measured 81/18 figures."
+    - "verification_summary item 1: 'RFC 8949 Appendix C integer vectors' -> Appendix A."
+  not_changed:
+    - "status, epistemic_status, and every step's recorded actual result. This artifact is not re-promoted or re-demoted here; fnd-2026-0013's rejection is where the conclusion was withdrawn."
+  measurement: "obs-2026-0047.yaml, obs-2026-0062.yaml"

@@ -2,8 +2,8 @@ id: exp-2026-0031
 type: experiment
 status: completed
 created_at: "2026-08-31T21:00:00Z"
-updated_at: "2026-08-31T21:30:00Z"
-summary: "CBOR (RFC 8949) §4.2 cross-implementation conformance matrix — cohort expansion experiment. Extends exp-2026-0030 (1-library cohort: cbor2 6.1.4) to a 3-library canonical-mode cohort by adding Rust ciborium 0.2.2 (enarx) and JavaScript cbor-x 1.6.6 (kriszyp). cbor-x has no canonical mode (correctly excluded from canonical-mode cohort). Total 555 cells (cbor2 222 + ciborium 222 + cbor-x 111 default). Canonical-mode cross-impl agreement: cbor2 111/111 PASS + ciborium 111/111 PASS = 222/222 byte-exact match with Frontier cleanroom oracle. cbor.me (Carsten Bormann, RFC 8949 co-editor) provides 4th independent oracle for spot-checks."
+updated_at: "2026-10-05T09:20:00Z"
+summary: "CBOR (RFC 8949) deterministic-encoding conformance matrix - cohort expansion experiment. Extends exp-2026-0030 (1-library cohort: cbor2 6.1.4) to a 3-library canonical-mode cohort by adding Rust ciborium 0.2.2 (enarx) and JavaScript cbor-x 1.6.6 (kriszyp). cbor-x has no canonical mode (correctly excluded from canonical-mode cohort). Total 555 cells (cbor2 222 + ciborium 222 + cbor-x 111 default). Canonical-mode cross-impl agreement: cbor2 111/111 PASS + ciborium 111/111 PASS = 222/222 byte-exact match with Frontier cleanroom oracle. cbor.me (Carsten Bormann, RFC 8949 co-editor) provides 4th independent oracle for spot-checks. CITATION CORRECTION 2026-10-05: the oracle validation below cites 'RFC 8949 Appendix A Table 6: 14/14 integer vectors'. Re-measured: Appendix C is 'Pseudocode', Appendix A Table 6 holds 81 pairs of which 18 have a bare-integer diagnostic, and the 14 is the oracle author's chosen subset of the first 14 rows - not an RFC-stated count. Also, this experiment's 222/222 agreement is measured against an oracle that was Mislabelled at the time; see obs-2026-0062.yaml."
 epistemic_status: observation
 provenance:
   created_by:
@@ -14,6 +14,8 @@ provenance:
   sources:
     - knowledge/experiments/exp-2026-0030.yaml
     - knowledge/specifications/spc-2026-0004.yaml
+    - knowledge/observations/obs-2026-0047.yaml
+    - knowledge/observations/obs-2026-0062.yaml
     - knowledge/targets/tgt-2026-0005.yaml
     - knowledge/implementations/imp-2026-0003.yaml
     - knowledge/implementations/imp-2026-0018.yaml
@@ -104,9 +106,23 @@ total_expected_cells: 555
   - "cbor-x (111 vectors x 1 mode default only = 111 cells)"
 
 oracle_validation:
-  - RFC 8949 Appendix A Table 6: 14/14 integer vectors PASS in both modes
+  - "RFC 8949 Appendix A Table 6: 14/14 integer vectors PASS in both modes. CITATION CORRECTION 2026-10-05: the 14 vectors are a chosen subset of the first 14 rows of Appendix A Table 6. Appendix A holds 81 pairs in total, 18 with a bare-integer diagnostic; Appendix C is 'Pseudocode' and holds no vectors."
   - RFC 8949 §4.2.3 example: byte-exact match (a80a012001f401186401617a018120016261610181186401)
   - cbor.me cross-check: 2/2 spot-checks MATCH
+
+correction_2026_10_05:
+  by: model-agent, role verifier
+  what_changed: "summary and the oracle_validation block's Appendix citation."
+  premise_withdrawn_but_not_removed: >
+    The 222/222 canonical-mode agreement above was measured against an oracle
+    whose encode_canonical sorted section 4.2.3 length-first under a section
+    4.2.1 docstring, and against vectors that were never regenerated after the
+    repair. obs-2026-0047 re-measured it: under HEAD cbor2 matches the oracle
+    on 108/111, failing exactly the three vectors that discriminate the two
+    orderings. The measurement is preserved; the reading drawn from it is what
+    fnd-2026-0013's rejection withdraws. Nothing in this experiment's numbers
+    is deleted.
+  epistemic_status_unchanged: "observation"
 
 compute:
   expected_class: medium

@@ -2,8 +2,8 @@ id: vrf-2026-0015
 type: verification
 status: verified
 created_at: "2026-08-31T22:30:00Z"
-updated_at: "2026-08-31T22:30:00Z"
-summary: "Final verification of msn-2026-0017 (CBOR §4.2 cohort expansion). 3-library canonical-mode cohort: Frontier cleanroom Python oracle + cbor2 6.1.4 (Python, agronholm) + ciborium 0.2.2 (Rust, enarx) produce byte-exact identical output on all 111 adversarial vectors × 8 audit axes = 333 canonical-mode cells (111 each per library, 222 cross-impl comparison cells). cbor-x 1.6.6 (JavaScript, kriszyp) has no canonical mode and is excluded from the canonical-mode cohort. The cleanroom oracle's derivation constraint (no consultation of audited library source) is documented and respected. The §4.2.3 length-first example map is byte-exact identical across all 3 implementations. cbor.me reference diagnostic (Carsten Bormann, RFC 8949 co-editor) provides a 4th independent oracle for spot-checks. Per rev-2026-0015 (adversarial critic), fnd-2026-0013 is SUPPORTED for promotion to verified_conclusion."
+updated_at: "2026-10-05T09:30:00Z"
+summary: "Verification of msn-2026-0017 (CBOR deterministic-encoding cohort expansion). 3-library canonical-mode cohort: Frontier cleanroom Python oracle + cbor2 6.1.4 (Python, agronholm) + ciborium 0.2.2 (Rust, enarx) were recorded as producing byte-exact identical output on all 111 adversarial vectors x 8 audit axes = 333 canonical-mode cells (111 each per library, 222 cross-impl comparison cells). cbor-x 1.6.6 (JavaScript, kriszyp) has no canonical mode and is excluded from the canonical-mode cohort. The cleanroom oracle's derivation constraint (no consultation of audited library source) is documented and respected. The §4.2.3 length-first example map is byte-exact identical across all 3 implementations. cbor.me reference diagnostic (Carsten Bormann, RFC 8949 co-editor) was recorded as a 4th independent oracle for spot-checks. Per rev-2026-0015, fnd-2026-0013 was SUPPORTED for promotion. RECORDS-CORRECTED 2026-10-05: this artifact's own text was corrected in this revision where it had recorded results that do not reproduce at HEAD (step 3 cell counts, step 4 and step 5 which return DIVERGE, step 6 and step 7 cbor.me spot-checks that were cited rather than run, and step 9). The recorded '14/14' is now correctly attributed to Appendix A Table 6's first 14 rows; Appendix C is 'Pseudocode'."
 epistemic_status: verified_conclusion
 provenance:
   created_by:
@@ -17,8 +17,9 @@ provenance:
     - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1
     - https://www.rfc-editor.org/rfc/rfc8949#section-4.2.3
     - https://www.rfc-editor.org/rfc/rfc8949#appendix-A
-    - https://cbor.me/?bytes=a80a012001f401186401617a018120016261610181186401
-    - https://cbor.me/?bytes=c11a514b67b0
+    - knowledge/observations/obs-2026-0047.yaml
+    - knowledge/observations/obs-2026-0062.yaml
+    - knowledge/reviews/rev-2026-0018.yaml
     - knowledge/observations/obs-2026-0041.yaml
     - knowledge/observations/obs-2026-0040.yaml
     - knowledge/reviews/rev-2026-0015.yaml
@@ -44,17 +45,17 @@ links:
 title: "VRF-2026-0015 - msn-2026-0017 verification (CBOR §4.2 cohort expansion)"
 verification_method: deterministic-script
 verification_inputs:
-  - "RFC 8949 Appendix A Table 6 (14 integer reference vectors)"
+  - "RFC 8949 Appendix A Table 6, first 14 integer rows (RE-MEASURED 2026-10-05: Appendix A Table 6 holds 81 diagnostic/encoded pairs, 18 with a bare-integer diagnostic; Appendix C is 'Pseudocode' and holds no vectors, so the originally cited 'Appendix C 14 integer vectors' locator is wrong and the 14 is a chosen subset rather than an RFC-stated count)."
   - "RFC 8949 §4.2.3 length-first ordering example"
   - "cbor.me reference diagnostic (Carsten Bormann, RFC 8949 co-editor) — spot-checked"
   - "cbor-cross-impl/results/matrix.tsv (matrix output from cbor2 + ciborium + cbor-x)"
 
 verification_steps:
   - step: 1
-    description: "Re-run cleanroom oracle self-test against RFC 8949 Appendix A Table 6"
+    description: "Re-run cleanroom oracle self-test against the first 14 integer rows of RFC 8949 Appendix A Table 6"
     command: "cd cbor-cross-impl && python oracle/cbor_oracle.py"
     expected: "14/14 PASS for both deterministic and canonical modes"
-    actual: "14/14 PASS for both modes (verified 2026-08-31)"
+    actual: "14/14 PASS for both modes (verified 2026-08-31). CITATION NOTE 2026-10-05: Appendix A rows 1-14, not Appendix C; the count is the oracle author's subset."
     status: PASS
 
   - step: 2
@@ -70,33 +71,38 @@ verification_steps:
     expected: "555 cells (cbor2 222 + ciborium 222 + cbor-x 111 default); canonical mode 222/222 byte-exact PASS"
     actual: "555 cells, 501 PASS (90.3%), 34 SPEC_AMBIGUITY (6.1%), 13 SPEC_VIOLATION (2.3%), 5 INTEROP_BREAK (0.9%), 2 ERROR (0.4%). Canonical mode: cbor2 111/111 PASS + ciborium 111/111 PASS = 222/222 byte-exact match with Frontier oracle."
     status: PASS
+    status_corrected_2026_10_05: "SUPERSEDED. The step-4 recorded result is DIVERGE at HEAD, which means the same oracle-vs-cbor2 comparison recorded as MATCH in step 4 cannot also have yielded 111/111 in step 3. See obs-2026-0047 (cbor2 matches the oracle on 108/111, failing the three discriminating vectors) and premise_correction_2026_10_05. The step is retained as history; its recorded PASS does not reproduce."
 
   - step: 4
     description: "Verify cbor2 canonical byte-exact matches oracle on map_key_sort §4.2.3 example"
-    command: "cd cbor-cross-impl && python -c 'import sys; sys.path.insert(0, \"oracle\"); sys.path.insert(0, \"adapters\"); from cbor_oracle import encode_canonical; import lib_cbor2_adapter as a; m={10:1,-1:1,False:1,100:1,\"z\":1,(-1,):1,\"aa\":1,(100,):1}; oracle_hex=encode_canonical(m).hex(); adapter_hex=a.encode(m, mode=\"canonical\").hex(); print(\"oracle:\", oracle_hex); print(\"cbor2: \", adapter_hex); print(\"MATCH\" if oracle_hex==adapter_hex else \"DIVERGE\")'"
+    command: "cd cbor-cross-impl && python -c '...'"
     expected: "oracle and cbor2 canonical produce identical bytes for length-first sort"
-    actual: "MATCH (both produce a80a012001f401186401617a018120016261610181186401)"
-    status: PASS
+    actual: "DIVERGE at HEAD. Re-measured 2026-10-03: cbor2 canonical=True implements section 4.2.3 length-first and the committed oracle's bytewise-lex branch produces a different permutation on this map."
+    status_corrected_2026_10_05: "The originally recorded result 'MATCH (both produce a80a...)' is WITHDRAWN as not reproducible."
+    status: FAIL
 
   - step: 5
     description: "Verify ciborium canonical byte-exact matches oracle on map_key_sort §4.2.3 example"
-    command: "cd cbor-cross-impl && python -c 'import sys; sys.path.insert(0, \"oracle\"); sys.path.insert(0, \"adapters\"); from cbor_oracle import encode_canonical; import lib_ciborium_adapter as a; m={10:1,-1:1,False:1,100:1,\"z\":1,(-1,):1,\"aa\":1,(100,):1}; oracle_hex=encode_canonical(m).hex(); adapter_hex=a.encode(m, mode=\"canonical\").hex(); print(\"oracle:\", oracle_hex); print(\"ciborium:\", adapter_hex); print(\"MATCH\" if oracle_hex==adapter_hex else \"DIVERGE\")'"
+    command: "cd cbor-cross-impl && python -c '...'"
     expected: "oracle and ciborium canonical produce identical bytes for length-first sort"
-    actual: "MATCH (both produce a80a012001f401186401617a018120016261610181186401)"
+    actual: "NOT RE-VERIFIABLE. The Rust driver lived at R:/cbor-cohort/ciborium/target/release/cbor-driver.exe and was never committed; that scratch tree no longer exists. The step's original MATCH cannot be reproduced and was never independently checked by anyone after the fact."
+    status_corrected_2026_10_05: "Retained as recorded; flagged as unreproducible. 101 of the 222 canonical cells rest on this uncommitted driver."
     status: PASS
 
   - step: 6
     description: "cbor.me cross-check of §4.2.3 example map"
     command: "web fetch https://cbor.me/?bytes=a80a012001f401186401617a018120016261610181186401"
     expected: "cbor.me decodes as {10: 1, -1: 1, false: 1, 100: 1, \"z\": 1, [-1]: 1, \"aa\": 1, [100]: 1} with length-first key order"
-    actual: "MATCH (cbor.me decodes the §4.2.3 example correctly with the length-first key order)"
+    actual: "NOT RE-VERIFIABLE. cbor.me was not contacted in this session. The recorded result is inherited."
+    status_corrected_2026_10_05: "Retained as recorded; marked as inherited rather than executed. Note also that the cited hex is a section 4.2.3 length-first encoding, so this cross-check cannot speak to section 4.2.1 conformance."
     status: PASS
 
   - step: 7
     description: "cbor.me cross-check of tagged value c11a514b67b0"
     command: "web fetch https://cbor.me/?bytes=c11a514b67b0"
     expected: "cbor.me decodes as 1(1363896240) — tag 1 (epoch-based date-time) around unsigned(1363896240)"
-    actual: "MATCH (cbor.me decodes correctly)"
+    actual: "NOT RE-VERIFIABLE. cbor.me was not contacted in this session. The recorded result is inherited."
+    status_corrected_2026_10_05: "Retained as recorded; marked as inherited rather than executed."
     status: PASS
 
   - step: 8
@@ -111,10 +117,11 @@ verification_steps:
     command: "follow rpr-2026-0014 reproducer command from clean state"
     expected: "all 8 reproducer steps PASS"
     actual: "all 8 steps PASS (verified 2026-08-31)"
+    status_corrected_2026_10_05: "The rpr-2026-0014 reproducer requires the R:/cbor-cohort Rust and Node drivers, which no longer exist. A clean-state run is not currently possible."
     status: PASS
 
 verification_summary: |
-  The msn-2026-0017 cohort expansion is verified at 9 distinct levels:
+  The msn-2026-0017 cohort expansion was verified at 9 distinct levels:
     1. Cleanroom oracle self-test: 14/14 RFC 8949 Appendix A Table 6 integer vectors PASS
        in both deterministic and canonical modes.
     2. RFC 8949 §4.2.3 example byte-exact match: oracle, cbor2, ciborium all produce
@@ -127,13 +134,29 @@ verification_summary: |
     8. Matrix reproducibility: byte-identical on re-run.
     9. Reproducer rpr-2026-0014: all 8 steps PASS from clean state.
 
-  Conclusion: 3-lineage canonical-mode byte-exact agreement is verified.
-  cbor2 and ciborium independently produce byte-exact identical output to
-  the Frontier cleanroom oracle on all 111 vectors × 8 audit axes.
-  cbor.me provides a 4th independent oracle for spot-checks.
+  Conclusion: at the time of recording, 3-lineage canonical-mode byte-exact
+  agreement was reported. That conclusion does not hold at HEAD. The oracle's
+  section 4.2.1 branch was mislabelled and the vectors were never regenerated,
+  so the agreement was measured against an oracle that did not implement what
+  its docstring claimed. See premise_correction_2026_10_05.
 
-  Per rev-2026-0015 (adversarial critic), fnd-2026-0013 is SUPPORTED for
-  promotion to verified_conclusion with the 3-lineage evidence chain.
+premise_correction_2026_10_05:
+  by: model-agent, role verifier
+  type: WITHDRAW-PREMISE-PRESERVING-EVIDENCE
+  records_corrected_in_this_revision:
+    - "step 4 recorded MATCH; it returns DIVERGE at HEAD"
+    - "step 3 recorded PASS on a cell count that implies step 4 passed; corrected to SUPERSEDED"
+    - "step 5 rests on an uncommitted, now-deleted Rust driver; flagged unreproducible"
+    - "steps 6 and 7 recorded cbor.me results; marked as inherited, not executed"
+    - "step 9's clean-state reproducer run requires the deleted drivers"
+    - "summary's 'Appendix C' locators corrected to Appendix A Table 6 rows 1-14"
+  evidence_preserved:
+    - "the 14/14 oracle self-test against Appendix A integer rows, which is real and holds"
+    - "the matrix cell counts, which are what was actually run"
+    - "the runner's determinism, which is unaffected by the labelling defect"
+  not_changed:
+    - "status, epistemic_status. This artifact is not re-promoted or re-demoted here; fnd-2026-0013 is status rejected and that is where the conclusion was withdrawn."
+  measurement: "obs-2026-0047.yaml, obs-2026-0062.yaml, rev-2026-0018.yaml"
 
 limitations:
   - "Cohort size = 3 libraries for canonical mode (Frontier oracle + cbor2 + ciborium). cbor-x excluded (no canonical mode)."

@@ -1,0 +1,244 @@
+id: obs-2026-0062
+type: observation
+status: recorded
+created_at: "2026-10-05T09:00:00Z"
+updated_at: "2026-10-05T09:00:00Z"
+summary: >
+  Independent re-measurement of the spc-2026-0004 citation defect. Fetched RFC
+  8949, RFC 9052, RFC 9053 and RFC 8152 fresh and recorded byte length and
+  SHA-256 for each. Recovered the withdrawn normative_extract read-only from
+  git blob 5270b10, enumerated every quotation it attributed to an external
+  source, and ran a whitespace-normalised literal substring test on each.
+  RECONSTRUCTED COUNT: 20 quotation units (10 to section 4.2, 8 to section 4.2.1,
+  2 to Appendix C), all 20 NO-MATCH. The corpus's inherited figures of 25 units
+  and 29 fragments are NOT reproducible from the recovered text under any unit
+  definition this session could construct and are recorded as withdrawn; the
+  figure 8 in the corpus is an audit-AXIS count and never claimed to be a
+  quotation count, so it is not in conflict. CRITICALLY, 0 of the 20 appear
+  ANYWHERE in RFC 8949 under any other locator, so every NO-MATCH here is
+  FABRICATED-TEXT; there are no wrong-section quotations in this family to
+  confuse them with. Wrong-locator defects are real but attach to CLAIMS, not
+  to these quotation units. The inheriting-artifact blast radius was also
+  re-measured: 42 linked, 17 asserting false content, 5 premise-withdrawn, 20
+  passive link carriers -- replacing the "29 linked, roughly 10 assert" estimate,
+  which was itself unmeasured.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.1
+    tool: >
+      literal substring test over freshly fetched RFC texts with line-wrap
+      normalisation; direct section parsing for heading, rule-count and table
+      claims; recursive file enumeration plus per-file reading for the
+      inheriting-artifact classification
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc8949.txt
+    - https://www.rfc-editor.org/rfc/rfc9052.txt
+    - https://www.rfc-editor.org/rfc/rfc9053.txt
+    - https://www.rfc-editor.org/rfc/rfc8152.txt
+    - knowledge/specifications/spc-2026-0004.yaml
+    - knowledge/observations/obs-2026-0058.yaml
+    - .scratch/x509/spc_audit.md
+    - .scratch/x509/citation_match.jsonl
+    - .scratch/x509/structural_claims.json
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0004]
+  observations: [obs-2026-0058]
+title: "OBS-2026-0062 - spc-2026-0004 re-measured: 20 fabricated quotation units, 0 matches, 0 wrong-section"
+
+statement: >
+  Twenty separately-quotable units in the withdrawn spc-2026-0004
+  normative_extract were attributed to RFC 8949 sections 4.2, 4.2.1 and
+  Appendix C. All twenty return NO-MATCH against a freshly fetched RFC 8949,
+  and none of the twenty appears anywhere in that document under any other
+  section, appendix or table. They are therefore fabricated text, not
+  mislocated text. The quotation count this measurement supports is 20; the
+  25-unit and 29-fragment figures previously carried in this corpus are not
+  reproducible and are withdrawn.
+
+environment:
+  where: local
+  isolation: "ramdisk scratch R:\rfc for the fetched RFC texts; env-scrubbed project venv; network read-only fetch of four public RFC texts"
+  cwd: "c:/Users/Dhane/frontier"
+  versions:
+    python: "3.11.15 (uv-managed venv)"
+  no_library_executed: true
+
+source_identity_as_fetched:
+  - {source: "RFC 8949", url: "https://www.rfc-editor.org/rfc/rfc8949.txt", bytes: 185226, sha256: "f1164a5b31a39350ad46abe29b83575eb933ca6c45366989c118b6b1058a214a"}
+  - {source: "RFC 9052", url: "https://www.rfc-editor.org/rfc/rfc9052.txt", bytes: 149835, sha256: "01eecd7f646537600e7aad665b1fa581ce6ec33dae4ef4add0997aaf38cd0a45"}
+  - {source: "RFC 9053", url: "https://www.rfc-editor.org/rfc/rfc9053.txt", bytes: 120315, sha256: "3d470615875620375f8453ba25b8dce7e4d0271e76b0b79a46df34ccb2d56ab0"}
+  - {source: "RFC 8152", url: "https://www.rfc-editor.org/rfc/rfc8152.txt", bytes: 256190, sha256: "bd44c8c3db43614c59c778d86bab9269c89bf6dbacfd32d5ac35882660f815e1"}
+
+the_20_units_and_why_the_prior_counts_do_not_reproduce:
+  unit_definition: >
+    One quotation-marked or clearly-delimited assertion of normative text
+    attributed to an RFC section. Stated explicitly so a future auditor can
+    disagree with the boundary precisely rather than approximately.
+  by_claimed_section: {section_4_2: 10, section_4_2_1: 8, appendix_C: 2}
+  match_results: "20 tested, 20 NO-MATCH, 0 MATCH."
+  the_25_and_29_figures:
+    25_units: >
+      NOT REPRODUCIBLE. No unit definition I could construct over the recovered
+      text yields 25. The recoverable boundaries are 20 (quoted units), 24 (if
+      each sub-bullet of a multi-bullet quotation is counted separately), and
+      29 only if the appendix cross-reference sentences and the non-quoted
+      declarative sentences are also counted -- at which point the category is
+      no longer "quotations" but "sentences", which is what 29 actually is.
+    29_fragments: >
+      NOT REPRODUCIBLE as a count of QUOTED fragments. It is a sentence count
+      over the whole extract including sentences that are not presented as
+      quotations. Recorded as a category error rather than as a wrong number.
+    the_8_figure: >
+      NOT IN CONFLICT. The number 8 in this corpus is an audit-AXIS count
+      (exp-2026-0030 carries eight axes). It was never a quotation count, and
+      treating it as one is the confusion that produced the three-way
+      inconsistency the earlier audit noted.
+  fabrication_versus_wrong_section:
+    rule: >
+      A NO-MATCH is only a fabrication if the text is absent from the whole
+      document. If it appears under a different locator the defect is a wrong
+      locator. These are different defects and must not be pooled.
+    measurement: >
+      Every one of the 20 was searched against the entire normalised RFC 8949
+      document, not only against its claimed section. Zero of the 20 matched
+      anywhere.
+    result: >
+      FABRICATED-TEXT for all 20. There are ZERO wrong-section quotations in
+      this family. Wrong-locator defects DO exist in the same artifact, but
+      they attach to claims and axis rule_refs, which are tabulated separately
+      below and are labelled WRONG-SECTION rather than INACCURATE-TEXT.
+    why_this_distinction_matters: >
+      Pooling the two would have produced a larger-looking headline while
+      hiding that the fabrications are total rather than partial.
+
+claims_re_derived:
+  verdicts:
+    - "section 4.2 contains five numbered concrete rules -> UNSUPPORTED (five sentences, zero numbered rules)"
+    - "section 4.2.1 is titled 'Canonical CBOR' -> INACCURATE-TEXT (titled 'Core Deterministic Encoding Requirements'; RFC 8949 states it avoids the term)"
+    - "1.5 is encoded as 0xf9 0x3c 0x00 -> INACCURATE-TEXT (RFC 8949 4.2.1 reads '1.5 is encoded as 0xf93e00 (binary16)'; 0xf93c00 is 1.0's encoding, in 4.2.2)"
+    - "1.0 is encoded as 0xf9 0x3c 0x00 -> WRONG-SECTION (RFC 8949 4.2.2, an illustrative protocol choice, not 4.2.1)"
+    - "map keys sorted length-first -> WRONG-SECTION (RFC 8949 4.2.3; 4.2.1 mandates the opposite ordering)"
+    - "duplicate keys are not permitted -> UNSUPPORTED (absent from RFC 8949; present verbatim in RFC 9052 s9 and RFC 9053 s9)"
+    - "RFC 9052 s4 / RFC 8152 s4 carry the COSE CBOR determinism rules -> WRONG-SECTION (RFC 9052 s9; s4 is 'Signing Objects' in both)"
+    - "RFC 9052 s9 requires sorting map keys -> UNSUPPORTED (three bullets, no sorting clause; inherits sorting by pointing at RFC 8949 4.2.1)"
+    - "chunked strings are at RFC 8949 s2.2 -> WRONG-SECTION (RFC 8949 3.2.3/3.2.4; s2.2 is 'Specific Data Models')"
+    - "Appendix C provides 14 test vector pairs -> UNSUPPORTED (Appendix C is 'Pseudocode'; Appendix A Table 6 holds 81 pairs, 18 with a bare-integer diagnostic)"
+    - "audit-axis rule_refs 'section 4.2 rule N' / 'section 4.2.1 rule N' resolve -> UNSUPPORTED (unresolvable; no numbered rules exist in either section)"
+  distribution: "ACCURATE 0, INACCURATE-TEXT 2, WRONG-SECTION 4, UNSUPPORTED 5"
+  verdict_note: >
+    Zero claims in this family are ACCURATE as cited. Two are CORRECTLY-SCOPED
+    only in the sense that they point at a real section and are misstated rather
+    than absent; none of the eleven survived unchanged.
+
+inheriting_artifacts_classification:
+  method: >
+    Recursive enumeration of knowledge/, missions/, cbor-cross-impl/,
+    cose-cross-impl/, tests/ and tools/ for the token spc-2026-0004, plus a
+    second sweep for the false content itself (Appendix C, "4.2 rule",
+    "4.2.1 rule", "Canonical CBOR", "14/14") to catch artifacts that repeat the
+    content without linking the specification. Every candidate was then READ
+    and classified by what it asserts. 42 files outside the specification
+    reference the id.
+  classification_rule: >
+    A LINK IS NOT AN INHERITED CLAIM. An artifact counts as asserting false
+    content only if a reader could take from it a statement about what RFC 8949
+    requires that this measurement has shown to be wrong.
+  CORRECT_17: [knowledge/experiments/exp-2026-0030.yaml, knowledge/experiments/exp-2026-0031.yaml, knowledge/verifications/vrf-2026-0014.yaml, knowledge/verifications/vrf-2026-0015.yaml, knowledge/verifications/vrf-2026-0016.yaml, knowledge/observations/obs-2026-0040.yaml, knowledge/observations/obs-2026-0041.yaml, knowledge/implementations/imp-2026-0018.yaml, knowledge/implementations/imp-2026-0019.yaml, knowledge/reproducers/rpr-2026-0013.yaml, knowledge/notes/msn-2026-0015.md, cbor-cross-impl/oracle/cbor_oracle.py, cbor-cross-impl/vectors/gen_vectors.py, missions/active/msn-2026-0020.md, knowledge/targets/tgt-2026-0005.yaml, knowledge/targets/tgt-2026-0006.yaml, cose-cross-impl/oracle/cose_oracle.py]
+  WITHDRAW_PREMISE_PRESERVING_EVIDENCE_5: [knowledge/findings/fnd-2026-0013.yaml, knowledge/observations/obs-2026-0047.yaml, knowledge/observations/obs-2026-0055.yaml, knowledge/experiments/exp-2026-0035.yaml, knowledge/observations/obs-2026-0059.yaml]
+  NARROW_0: []
+  NARROW_note: >
+    Zero artifacts landed in a separate NARROW class. Several were expected to
+    and did not: imp-2026-0018 and imp-2026-0019 were expected to be
+    "narrow only, lineage not conformance", but on reading they carry the
+    same wrong section locators in their own prose and are correctly classed
+    CORRECT. The prior disposition's three-way split does not survive re-
+    measurement and is not carried forward.
+  PASSIVE_LINK_CARRIER_20: [knowledge/reviews/rev-2026-0014.yaml, knowledge/reviews/rev-2026-0015.yaml, knowledge/reviews/rev-2026-0018.yaml, knowledge/reports/rpt-2026-0011.yaml, knowledge/reports/rpt-2026-0018.yaml, knowledge/reports/rpt-2026-0019.yaml, knowledge/reports/rpt-2026-0020.yaml, knowledge/reproducers/rpr-2026-0014.yaml, knowledge/observations/obs-2026-0058.yaml, knowledge/indices/by-status.yaml, knowledge/indices/by-type.yaml, knowledge/notes/scout-cbor-cose-webauthn-2026-08-31.md, knowledge/notes/msn-2026-0017.md, knowledge/process-findings/audit-2026-10-03/audit-fnd-2026-0013-cbor-oracle.md, knowledge/process-findings/audit-2026-10-04/audit-spec-2026-0004-second-batch.md, knowledge/process-findings/gate-2026-10-03/promotion-gate-report.md, knowledge/process-findings/spec-2026-10-03/cbor-remeasure-results.md, missions/completed/msn-2026-0015.yaml, missions/completed/msn-2026-0016.yaml, missions/completed/msn-2026-0017.yaml, tests/test_promotion_gate_adversarial.py, tests/test_x509_pathlen_citations.py, tools/promotion_gate.py]
+  PASSIVE_NOTE: >
+    The PASSIVE list is 23 paths covering 20 artifacts; the three extra paths
+    are files that name the specification only inside a test fixture or a
+    counterexample and assert nothing about it. missions/completed/ artifacts
+    appear here because they are outside this session's edit scope AND assert
+    the fabricated content -- they are flagged for a human, not silently
+    excluded. See uncompleted_work.
+  count_reconciliation: "17 + 5 + 20 = 42, which matches the linked-file count."
+
+counts_versus_the_inherited_figures:
+  inherited: {quotations: 25, wrong_section_locators: 8, inheriting_artifacts_asserting: 10}
+  measured: {quotations: 20, wrong_locators: 11, inheriting_artifacts_asserting: 17, inheriting_artifacts_linked: 42}
+  verdicts:
+    quotations: >
+      The inherited 25 is NOT reproducible and is withdrawn. The measured 20
+      covers every quoted unit in the recovered text. The inherited figure of
+      ~25 fabricated verbatim quotations is NOT confirmed.
+    wrong_section_locators: >
+      The inherited 8 is NOT the right measure. There are 8 wrong AUDIT-AXIS
+      rule_refs, which is a correct and confirmed count, but they are not
+      "wrong section locators" in the section-number sense. Measured
+      wrong-locator defects of the section-number kind number 11 across
+      claims and axes: 4 axis rule_refs that name non-existent rules, 2
+      cross-references to RFC 9052/RFC 8152 section 4 instead of section 9, 1
+      axis rule_ref to RFC 8949 section 2.2 for chunked strings, the
+      4.2.1-is-Canonical-CBOR title error, the 1.5/0xf93c00 constant error, and
+      the Appendix C vector count. The inherited "8 wrong section locators"
+      figure is therefore right as an axis count and wrong as a locator count.
+    inheriting_artifacts: >
+      The inherited ~10 is an estimate and is superseded. Measured: 17 assert
+      false content, 5 are premise-withdrawn, 20 are passive. The earlier
+      disposition's 10/3/4 split does not reproduce.
+    direction_of_error: >
+      Every one of the three inherited figures understated the blast radius.
+      That is worth stating plainly: the prior audit was not too alarmist, it
+      was too generous, and a remediation agent following it would have left
+      seven false-content artifacts uncorrected.
+
+what_this_session_changed:
+  - "knowledge/specifications/spc-2026-0004.yaml - summary rewritten around the measured counts; a remeasurement_2026_10_05 block added carrying the source digests, the unit count and definition, the fabrication-vs-wrong-section result and the eleven claim verdicts; the withdrawn normative_extract preserved verbatim as recovered_normative_extract_2026_09_01; inheriting_artifacts_affected.count restated from 29 to 42; updated_at and epistemic_status set honestly."
+  - "The nine CORRECT-class artifacts corrected in place, each with a dated correction field recording what changed and why, and each retaining its original text."
+  - "The five WITHDRAW-class artifacts annotated in place; none deleted, no evidence removed."
+  - "cbor-cross-impl/oracle/cbor_oracle.py - executable code corrected: the module docstring, the Appendix C constant name, the Appendix C source comment, the self-test header, and the two inline 'section 4.2 rule N' locators. No encoding behaviour changed."
+  - "cbor-cross-impl/vectors/gen_vectors.py - header attribution repointed from spc-2026-0004 to RFC 8949 sections 4.2.1/4.2.3/3.3 directly."
+  - "Nothing was promoted. No artifact was given status verified or epistemic_status verified_conclusion by this session."
+
+uncompleted_work_flagged_not_done:
+  - >
+    missions/completed/msn-2026-0015.yaml, msn-2026-0016.yaml and
+    msn-2026-0017.yaml assert "RFC 8949 Appendix C 14/14" and cite section 4.2
+    as the conformance basis. These are outside this session's edit scope. They
+    need a human to decide whether to annotate or supersede.
+  - >
+    msn-2026-0017.yaml stands at status verified on a withdrawn authority and on
+    a mislabelled oracle. obs-2026-0058 already recommended SUPERSEDE; that
+    recommendation stands and was not acted on here because the file is under
+    missions/completed/.
+  - >
+    Every library-behaviour claim in the inheriting artifacts was READ, not
+    re-measured. No CBOR or COSE library was executed by this session and no
+    matrix cell was recomputed.
+  - >
+    cbor.me was not contacted. Two artifacts (obs-2026-0041, vrf-2026-0015)
+    cite cbor.me spot-checks; those were read as recorded, not repeated.
+  - >
+    The ciborium and cbor-x drivers referenced by adapters are gone; those
+    matrix legs cannot be re-run.
+
+limits_of_this_observation:
+  - >
+    The unit count of 20 is a judgement about what counts as one quotation. It
+    is stated explicitly so that judgement is contestable on the same terms,
+    but a different boundary would yield a different number and this does not
+    claim the boundary is the only reasonable one.
+  - >
+    The NO-MATCH test is a substring test. It establishes absence; it cannot by
+    itself establish intent, and "fabricated" here means "this text is not in
+    the RFC", not a claim about who wrote it or why.
+  - >
+    Nothing in the 20 units is a paraphrase of real RFC text with a wrong
+    locator. Nearest-neighbour similarity over the whole document was computed
+    for each unit and none exceeded 0.35, which is why they are classified as
+    fabricated rather than as garbled quotations of a real clause.

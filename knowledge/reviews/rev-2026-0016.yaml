@@ -29,6 +29,8 @@ links:
   reproducers: [rpr-2026-0015]
   specifications: [spc-2026-0005]
   verifications: [vrf-2026-0016]
+supersedes:
+  corrects: [fnd-2026-0014]
 title: "REV-2026-0016 - Adversarial critic review of fnd-2026-0014"
 review_role: "adversarial_critic (non-synthesizer)"
 review_attempted_disproofs:

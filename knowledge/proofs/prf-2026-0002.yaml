@@ -2,7 +2,7 @@ id: prf-2026-0002
 type: proof
 status: verified
 created_at: "2026-08-29T18:00:00Z"
-updated_at: "2026-08-29T18:00:00Z"
+updated_at: "2026-10-05T10:05:00Z"
 summary: Lean 4 v4.22.0 kernel-checked proof of FIPS 203 §7.2 LENGTH half (len(ek) = 384k+32) (FORMAL-204).  Three top-level theorem families (canonical lengths, off-by-one rejection, cross-param-set rejection) hold with zero sorries, zero file-introduced axioms, axiom inventory limited to {propext, Quot.sound}.
 epistemic_status: verified_conclusion
 provenance:
@@ -53,7 +53,8 @@ kernel_check:
   sorries: 0
   axioms_introduced: 0
   total_axioms_used: [propext, Quot.sound]
-  warnings: 0
+  warnings: 1
+  warning_detail: "Formal/ByteEncode.lean:381:44: unused variable `hB` (stylistic; emitted by the FORMAL-203 module in the same build, not by LengthCheck.lean)"
 spec_citations:
   - "FIPS 203 Section 7.2 (Encapsulation key check), Eq 7.1 step 1, printed p.36 / PDF p.45: confirmed"
   - "FIPS 203 Algorithm 5 (ByteEncode_d), printed p.22 / PDF p.31: confirmed (referenced by MODULUS half)"
@@ -99,3 +100,22 @@ governance_correction_2026_10_04:
   scope: >
     Reproduction route only. No claim, status, or epistemic_status is changed by
     this correction, and no old research claim is reopened.
+
+language_correction_2026_10_05:
+  reason: >
+    `kernel_check.warnings` read 0. The cited log, formal/build_output_r2.log,
+    records exactly one warning: `Formal/ByteEncode.lean:381:44: unused variable
+    'hB'`. It also records `⚠ [3050/3053] Replayed Formal.ByteEncode`, so
+    ByteEncode was replayed rather than rebuilt in that run -- consistent with
+    a cache-warm incremental build, and not evidence of an error.
+  what_changed: "kernel_check.warnings: 0 -> 1, with warning_detail naming the single warning"
+  what_did_not_change: >
+    Nothing load-bearing. `Build completed successfully.`, sorries: 0 and
+    axioms_introduced: 0 are unchanged and are confirmed by the same log. The
+    warning is `linter.unusedVariables` in a DIFFERENT module (ByteEncode.lean),
+    is stylistic, and does not bear on any LengthCheck.lean theorem.
+  scope: >
+    Build-log transcription only. status and epistemic_status are unchanged, no
+    theorem claim is reopened, and nothing is promoted. The prior value is
+    recorded here rather than silently replaced.
+  evidence: "formal/build_output_r2.log, read directly 2026-10-05 (1 `warning:` line, 0 `error` lines)"

@@ -2,7 +2,7 @@ id: obs-2026-0059
 type: observation
 status: current
 created_at: "2026-10-05T06:20:00Z"
-updated_at: "2026-10-05T06:30:00Z"
+updated_at: "2026-10-05T10:45:00Z"
 summary: >
   The "how many of spc-2026-0004's 8 axes discriminate" dispute is SETTLED BY
   MEASUREMENT, and the measurement corrects a claim THIS SESSION made. Under
@@ -11,6 +11,12 @@ summary: >
   can tell RFC 8949 4.2.1 from 4.2.3", it is three of five map_key_sort
   vectors. Every previously reported figure was answering a different
   question, and the bare number was never reproducible.
+  ADDED 2026-10-05 by the citation remediation: none of the four criteria
+  below is answerable as stated until each axis has a real RFC locator, because
+  four of the eight axes cite numbered rules that do not exist in RFC 8949 and
+  one cites a section whose subject is not chunked strings. The axis a vector
+  "discriminates on" is currently defined by a citation that resolves to
+  nothing. See obs-2026-0062.yaml.
 epistemic_status: observation
 provenance:
   created_by:
@@ -127,6 +133,17 @@ the_standing_rule_produced_by_this_dispute:
     A discriminating-power figure may be cited ONLY with the criterion attached.
     "2 of 8", "4 of 8" and "7 of 8" are all answers to different questions
     about the same 555 rows, and a bare number is not reproducible.
+  precondition_added_2026_10_05: >
+    The criterion is necessary but not sufficient. Each axis must also have a
+    resolvable RFC locator before "discriminating on this axis" means anything.
+    Measured 2026-10-05: six of the eight rule_ref strings in exp-2026-0030
+    name numbered rules that do not exist in RFC 8949 (sections 4.2 and 4.2.1
+    have no numbered rules), one names RFC 8949 section 2.2 for chunked strings
+    whose real home is 3.2.3/3.2.4, and the duplicate_key_rejection axis cites
+    RFC 8949 for a prohibition that exists only in RFC 9052/9053 section 9.
+    Five of the eight axes therefore test a requirement this repository cannot
+    currently name. Fixing the locators is a precondition for the next round of
+    this count, not an optional tidy-up.
   enforced_where: >
     Recorded here rather than enforced mechanically. A mechanical check would
     have to know which criterion an author intended, which is not derivable

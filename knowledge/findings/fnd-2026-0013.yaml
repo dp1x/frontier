@@ -2,7 +2,7 @@ id: fnd-2026-0013
 type: finding
 status: rejected
 created_at: "2026-08-31T15:00:00Z"
-updated_at: "2026-10-03T00:00:00Z"
+updated_at: "2026-10-05T10:25:00Z"
 summary: "REJECTED 2026-10-03 after independent adversarial audit (rev-2026-0018). The finding claimed cbor2 and ciborium produce byte-exact canonical-mode agreement with the Frontier oracle. REFUTED by a mislabelled ORACLE in Frontier's own code: until commit 8148462 (2026-09-02) cbor_oracle.encode_canonical sorted RFC 8949 section 4.2.3 length-first under a docstring claiming section 4.2.1, and the vectors were never regenerated after the repair. The test is structurally blind - canonical and default expected values are identical for 111/111 vectors. Under HEAD cbor2 matches the oracle on 108/111, failing exactly the 3 discriminating vectors. A defensible replacement claim exists and should be re-measured against regenerated vectors."
 epistemic_status: interpretation
 epistemic_status_corrected_2026_10_05: >
@@ -88,6 +88,42 @@ correction_2026_10_03:
     3 that discriminate. This can be re-measured cleanly once the vector set is
     regenerated against the repaired oracle.
   evidence: rev-2026-0018
+
+citation_correction_2026_10_05:
+  by: model-agent, role verifier
+  class: WITHDRAW-PREMISE-PRESERVING-EVIDENCE
+  what_was_measured_again: >
+    This finding's premise is spc-2026-0004, whose normative extract was entirely
+    fabricated. Re-measured against a freshly fetched RFC 8949 (185226 bytes,
+    sha256 f1164a5b31a39350ad46abe29b83575eb933ca6c45366989c118b6b1058a214a): the
+    extract contained 20 separately-quotable units attributed to RFC 8949 and
+    all 20 are absent from the document. The corpus's figure of 25 is not
+    reproducible; the measured figure is 20.
+  statements_here_that_are_now_false:
+    - >
+      "8 audit axes from spc-2026-0004" -- the count of eight is correct, but
+      every one of those axes' rule_ref strings named a numbered rule that does
+      not exist in RFC 8949. Section 4.2 introduces no numbered rules and
+      Section 4.2.1 carries three unnumbered bullets, so "section 4.2 rule 1..5"
+      and "section 4.2.1 rule 3/5" resolve to nothing.
+    - >
+      "All three canonical-mode implementations implement RFC 8949 §4.2.3
+      length-first map key ordering" -- the attribution is CORRECT and is
+      independently confirmed: RFC 8949 Section 4.2.3 is titled 'Length-First Map
+      Key Ordering' and states both rules as quoted. What is missing from this
+      finding is that Section 4.2.1 mandates the OPPOSITE ordering, so
+      "§4.2.3 conformant" describes a choice between two normative alternatives,
+      not conformance to a single requirement.
+    - >
+      "Default-mode divergences (52 cells...)" -- the 52 token was already
+      flagged as unreconstructable in the correction block above; it remains so.
+      The enumerated breakdown sums to 54.
+  what_is_UNCHANGED: >
+    Nothing in the measurement, the matrix, the lineage analysis or the
+    rejection is altered. The rejection was already correct; this block only
+    adds the citation defect that the rejection's own collateral list recorded
+    but did not quantify.
+  measurement: obs-2026-0062.yaml
 
 disclosure_scope_note: >
   disclosure is recorded as 'embargoed' solely because the schema offers no

@@ -31,6 +31,8 @@ links:
   reviews: [rev-2026-0016]
   missions: [msn-2026-0020]
   targets: [tgt-2026-0006]
+supersedes:
+  corrects: [fnd-2026-0014]
 role: adversarial-critic
 verdict: disputes
 independent: true

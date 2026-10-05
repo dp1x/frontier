@@ -64,6 +64,8 @@ links:
   experiments: [exp-2026-0037]
   observations: [obs-2026-0050]
   reviews: [rev-2026-0020, rev-2026-0021]
+supersedes:
+  corrects: [rev-2026-0020]
 normative_checks:
   - source: https://www.rfc-editor.org/rfc/rfc5280.txt
     section: "6.2"

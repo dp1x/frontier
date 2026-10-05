@@ -2,7 +2,7 @@ id: exp-2026-0018
 type: experiment
 status: complete
 created_at: "2026-08-29T18:00:00Z"
-updated_at: "2026-08-29T18:00:00Z"
+updated_at: "2026-10-05T10:00:00Z"
 summary: FORMAL-204 Lean 4 v4.22.0 kernel build of formal/Formal/LengthCheck.lean - canonical lengths (T1), off-by-one rejection (T2), and cross-param-set rejection (T3) theorems checked end-to-end with zero sorries and zero file-introduced axioms.
 epistemic_status: verified_conclusion
 provenance:
@@ -62,9 +62,8 @@ environment:
   mathlib: 4.22.0 (cache, 7067 files)
   build_time_seconds: 13
 stdout: |
-  [3050/3053] Built Formal.LengthCheck
-  [3051/3053] Built Formal.ByteEncode
-  [3052/3053] Built Formal
+  ⚠ [3050/3053] Replayed Formal.ByteEncode
+  warning: Formal/ByteEncode.lean:381:44: unused variable `hB`
   Build completed successfully.
 exit_code: 0
 results:
@@ -72,7 +71,8 @@ results:
   sorries: 0
   axioms_introduced: 0
   total_axioms_used: [propext, Quot.sound]
-  warnings: 0
+  warnings: 1
+  warning_detail: "Formal/ByteEncode.lean:381:44: unused variable `hB` (stylistic; belongs to FORMAL-203's file, not to LengthCheck.lean)"
 disclosure: public
 compute_route: github-actions
 governance_correction_2026_10_04:
@@ -94,3 +94,26 @@ governance_correction_2026_10_04:
   scope: >
     Compute routing only. No result, status, or epistemic_status is changed by
     this correction, and no old research claim is reopened.
+
+language_correction_2026_10_05:
+  reason: >
+    `results.warnings` read 0 and `stdout` was a paraphrase that showed three
+    `Built` lines and no warning. Neither matches the committed build log this
+    artifact cites as its source (formal/build_output_r2.log), which records
+    `⚠ [3050/3053] Replayed Formal.ByteEncode`, then
+    `warning: Formal/ByteEncode.lean:381:44: unused variable 'hB'`, then
+    `Build completed successfully.` The log carries exactly ONE warning; 0 was
+    not recorded by any run.
+  what_changed:
+    - "results.warnings: 0 -> 1, with warning_detail naming the single warning"
+    - "stdout: replaced the paraphrased three-line `Built` transcript with the log's actual three lines, verbatim"
+  what_did_not_change: >
+    The kernel check itself. `Build completed successfully.`, sorries: 0 and
+    axioms_introduced: 0 are unchanged and are confirmed by the same log. The
+    warning is `linter.unusedVariables` in ByteEncode.lean (FORMAL-203's file),
+    which is stylistic and does not bear on LengthCheck.lean's theorems.
+  scope: >
+    Build-log transcription only. status and epistemic_status are unchanged,
+    and no theorem claim is reopened. The pre-correction values are recorded
+    here rather than silently replaced.
+  evidence: "formal/build_output_r2.log, read directly 2026-10-05 (1 `warning:` line, 0 `error` lines)"

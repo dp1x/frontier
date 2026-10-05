@@ -2,8 +2,8 @@ id: obs-2026-0047
 type: observation
 status: recorded
 created_at: "2026-10-03T00:00:00Z"
-updated_at: "2026-10-03T00:00:00Z"
-summary: "Deterministic re-measurement of the refuted CBOR cohort claim (fnd-2026-0013). cbor2 6.1.4's canonical=True implements RFC 8949 section 4.2.3 length-first, not section 4.2.1 bytewise-lex: it matches section 4.2.3 on 111/111 vectors and section 4.2.1 on 108/111, diverging on exactly the 3 discriminating vectors. This is a false alarm, not a cbor2 defect; the defect was Frontier's own mislabelled oracle. Verified independently by the orchestrator using the repo's own vector decoder."
+updated_at: "2026-10-05T10:30:00Z"
+summary: "Deterministic re-measurement of the refuted CBOR cohort claim (fnd-2026-0013). cbor2 6.1.4's canonical=True implements RFC 8949 section 4.2.3 length-first, not section 4.2.1 bytewise-lex: it matches section 4.2.3 on 111/111 vectors and section 4.2.1 on 108/111, diverging on exactly the 3 discriminating vectors. This is a false alarm, not a cbor2 defect; the defect was Frontier's own mislabelled oracle. Verified independently by the orchestrator using the repo's own vector decoder. CITATION CONFIRMATION 2026-10-05: this observation's section attributions were independently re-checked against a freshly fetched RFC 8949 and are CORRECT -- Section 4.2.1 does mandate bytewise lexicographic ordering and Section 4.2.3 does specify length-first. Its scope limitation that called the spc-2026-0004 quotations 'uncorrected' is now stale: they are withdrawn and re-measured at 20 units (obs-2026-0062.yaml)."
 epistemic_status: observation
 provenance:
   created_by:
@@ -26,6 +26,7 @@ links:
   reviews: [rev-2026-0018]
   experiments: [exp-2026-0035]
   targets: [tgt-2026-0005]
+  observations: [obs-2026-0062]
 title: "OBS-2026-0047 - cbor2 canonical=True implements RFC 8949 section 4.2.3, not 4.2.1 (measured on 111 vectors)"
 statement: >
   Measured cbor2 6.1.4 against Frontier's repaired RFC 8949 reference across the
@@ -111,7 +112,7 @@ scope_limitations:
   - "cbor2 6.1.5 is the current release; behaviour at 6.1.5 is not measured."
   - "The committed vector files were NOT regenerated. Whether a regenerated corpus changes the 3 discriminating vectors is untested."
   - "cbor.me was not contacted or run; the original finding cited it without running it."
-  - "spc-2026-0004's fabricated section 4.2.1 quotations were reported by the audit and are out of scope here; they remain uncorrected."
+  - "spc-2026-0004's fabricated section 4.2.1 quotations were reported by the audit and were out of scope here. SUPERSEDED 2026-10-05: they have since been withdrawn and re-measured. RFC 8949 sha256 f1164a5b31a39350ad46abe29b83575eb933ca6c45366989c118b6b1058a214a, 185226 bytes; 20 quotation units, 20 NO-MATCH. See obs-2026-0062.yaml."
   - >
     The cose-cross-impl vectors were regenerated in memory during the subagent's
     control run and came back 80/80 fields identical, so the stale-vector rot is
