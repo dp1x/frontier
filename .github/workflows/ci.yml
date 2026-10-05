@@ -30,3 +30,15 @@ jobs:
         run: pytest -q
       - name: Validate research state
         run: python -m frontier.cli validate
+      - name: Artifact envelope lint
+        # Every tracked artifact must parse and carry the required envelope
+        # fields. This was never wired in, which is why a two-byte "{}" stub sat
+        # in knowledge/indices undetected through an entire session.
+        run: python tools/lint_artifacts.py
+      - name: Promotion gate selftest
+        # The gate is the instrument that decides whether a finding may be
+        # promoted. Its selftest exercises nine refusal modes plus one ALLOW
+        # control. A gate that is never run is not a gate: this session found and
+        # fixed a splice defect in it, and without this step nothing would have
+        # noticed the fix regress.
+        run: python tools/promotion_gate.py --selftest
