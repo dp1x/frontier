@@ -1,0 +1,177 @@
+id: obs-2026-0066
+type: observation
+status: current
+created_at: "2026-10-05T21:15:00Z"
+updated_at: "2026-10-05T21:15:00Z"
+summary: >
+  The CURRENT YAML specification (1.2.2) imposes no RFC 2119 requirement of any
+  kind on duplicate mapping keys, while YAML 1.2.1 DID carry an explicit MUST.
+  The uniqueness property survives as definitional prose in the information
+  model, but no BNF production contains a uniqueness predicate, and the only
+  rejection clause is a SHOULD whose targets are enumerated exhaustively and do
+  not include duplicates. The normative half of the YAML mission is therefore a
+  dead end; the parser-behaviour half is not.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: source-analyst
+    model: grok-4.7
+    tool: >
+      Four specification revisions downloaded from yaml.org with SHA-256
+      recorded; 21 quotations and negative checks each verified by a
+      mechanical PowerShell harness (21 PASS / 0 FAIL). Live parser probes
+      against four installed parsers, with lineage established by forcing a
+      pure-Python parser path and byte-comparing its event stream against the C
+      one.
+  sources:
+    - https://yaml.org/spec/1.2.2/
+    - https://yaml.org/spec/1.2.1/
+    - https://yaml.org/spec/1.1/
+  parent: null
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0033]
+
+THE_NEGATIVE_RESULT_THAT_DECIDES_THE_MISSION:
+  question: "Does the current YAML specification require anything normative about duplicate mapping keys?"
+  answer: "NO -- nothing normative. The property exists only in the information model."
+  the_decisive_negative_check:
+    command: "Select-String -Path R:\\yaml-spec\\yaml-1.2.2-spec.md -Pattern '(MUST|SHALL|REQUIRED)\\s*\\w*\\s*unique|unique\\s+\\w*\\s*(MUST|SHALL|REQUIRED)'"
+    result: "0 matches across the entire 151,091-byte specification"
+  what_the_spec_says_instead:
+    - locator: "3.2.1.1, line 892"
+      quote_verbatim: "with the restriction that each of the keys is unique."
+    - locator: "3.2.1, line 859"
+      quote_verbatim: "their [keys] are unordered and must be unique."
+      note: "lowercase 'must' in explanatory prose, not RFC 2119"
+    - locator: "3.2.1.3, line 991"
+      quote_verbatim: "A [mapping's] [keys] are unique if no two keys are equal to each other."
+  all_three_are_definitional_prose_in_the_non_normative_model_chapters: true
+  no_bnf_production_carries_a_uniqueness_predicate: >
+    A duplicate-key stream matches `l-block-mapping` / `l-flow-mapping` and is
+    therefore WELL-FORMED per 3.3.1. This is the precise reason no parser is
+    obliged to reject: the input is not ill-formed.
+
+the_consequence_is_UNDEFINED_not_permitted:
+  the_only_rejection_clause:
+    locator: "3.3.1"
+    strength: "SHOULD"
+    fact: >
+      Its targets are enumerated exhaustively -- "ill-formed streams and
+      unidentified aliases". A duplicate key is NEITHER. So the specification
+      does not merely decline to require rejection; it leaves the behaviour
+      undefined.
+  the_word_duplicate:
+    occurrences_in_all_of_1_2_2: 2
+    locators: "line 943 and line 5350"
+    the_one_technical_use_is_hedged:
+      quote_verbatim: >
+        only a YAML [processor] which recognizes integer [formats] would
+        correctly flag the duplicate [key] as an error.
+      reading: "modal and hedged; it describes a capability, it mandates nothing"
+
+THE_SPEC_REGRESSION_THAT_MAKES_THIS_WORTH_RECORDING:
+  yaml_1_2_1_did_say_it_outright:
+    locator: "YAML 1.2.1, section 1.3"
+    quote_verbatim: >
+      while YAML insists they MUST be ... choosing to treat duplicates as an
+      error.
+  the_important_qualification: >
+    That MUST is in CHAPTER 1, which is explanatory prose ABOUT JSON. It is not
+    one of the chapters that formally define the format. So even 1.2.1's MUST
+    was arguably non-normative by placement.
+  what_changed_between_revisions: >
+    1.2.2 appears to have silently deleted the MUST while RETAINING the
+    uniqueness property in the model chapters. No errata, migration note or
+    changelog entry was located explaining this.
+  why_this_matters_for_citation: >
+    Citing "YAML requires unique keys" from 1.2.1 as if it were current would be
+    a real error. Several widely-circulated secondary sources do exactly this.
+
+SECURITY_FRAMING_IS_EXTERNAL_TO_THE_SPEC:
+  finding: >
+    No YAML revision (1.1, 1.2.1, 1.2.2) has a security considerations chapter;
+    "Considerations" returns zero matches in all four downloaded files.
+  consequence: >
+    Duplicate keys are NOT named as a signature-wrapping or config-injection
+    vector by the specification. That framing comes from outside the spec and
+    must be sourced elsewhere before being asserted.
+
+what_this_means_for_the_yaml_mission:
+  the_normative_half_should_be_dropped: >
+    There is no MUST, no rejection obligation and no defined consequence, so no
+    conformance claim can be written. Any "YAML requires X" finding would be
+    fabricated.
+  the_parser_behaviour_half_is_worth_running: >
+    Recorded in hyp-2026-0033. The question becomes "at which layer does the
+    duplicate disappear, and do implementations agree", which is a comparative
+    census with NO conformance framing.
+
+THE_PARSER_CENSUS_AS_MEASURED:
+  all_four_parsers_expose_the_duplicate_at_a_low_layer: true
+  the_headline_finding: >
+    Normalization happens ONLY at the construction boundary, and the four
+    implementations split three different ways there. A high-level mapping API
+    test would have seen one of three behaviours and concluded nothing.
+  per_parser:
+    - parser: "PyYAML 6.0.3"
+      lowest_layer_exposing_dup: "events AND nodes"
+      construction_behaviour: "silent last-wins"
+    - parser: "ruamel.yaml 0.19.1"
+      lowest_layer_exposing_dup: "events AND nodes"
+      construction_behaviour: "DuplicateKeyError"
+    - parser: "gopkg.in/yaml.v3 v3.0.1"
+      lowest_layer_exposing_dup: "nodes only (no token API exported)"
+      construction_behaviour: "error"
+    - parser: "js-yaml 5.4.2"
+      lowest_layer_exposing_dup: "tokenizer, nodes, construct"
+      construction_behaviour: "error (but with json:true it becomes last-wins)"
+  lineage_CORRECTION:
+    claim: "PyYAML and ruamel are ONE family, not two implementations."
+    how_established: >
+      Both are libyaml-derived and preserve the duplicate identically. On this
+      machine PyYAML runs the C libyaml (`__with_libyaml__ == True`) while the
+      ruamel wheel has no C extension. PyYAML's pure-Python parser was forced
+      and its event stream byte-compared against the raw `yaml._yaml.CParser`:
+      IDENTICAL.
+    genuine_independence: "yaml.v3 (Go) and js-yaml (pure JS) -- three lineages total, not four."
+  a_mechanism_others_must_record: "libyaml itself was NOT tested standalone; no C compiler was available. Stated rather than implied."
+
+A_SHARP_RESULT_THAT_NO_HIGH_LEVEL_TEST_COULD_FIND:
+  vector: "1: x` / `0o1: y` -- the duplicate key the specification itself names"
+  why_this_vector: "Line 943 of 1.2.2 explicitly names integer-format duplicates as the case worth catching."
+  observations:
+    pyyaml: "silently yields TWO keys"
+    ruamel: "catches it"
+    js_yaml: "catches it"
+    gopkg_in_yaml_v3: >
+      SILENTLY YIELDS TWO KEYS -- despite having a mandatory, unconfigurable
+      `uniqueKeys` check, because it compares RAW STRINGS
+      (`ni.Value == nj.Value`, decode.go:776) and therefore cannot perform the
+      canonical-form comparison the specification describes.
+  why_this_matters: >
+    The implementation that LOOKS strictest is the one that misses the
+    specification's own named case. The divergence is only visible because the
+    probe was built at the NODE layer. This is direct empirical justification
+    for the repository's standing rule that experiments about raw structure
+    must run at the lowest honest layer.
+
+corrections_to_the_briefs_priors:
+  - "yaml.v3's duplicate check is NOT configurable -- `uniqueKeys: true` has exactly one assignment site. A brief that assumed it was toggleable is wrong."
+  - "ruamel REMOVED `parse()` in 0.19, so a probe written against an older API fails on the current wheel."
+
+scope_and_limits:
+  - >
+    This observation makes NO claim about which parser is correct. There is no
+    normative standard against which to be correct.
+  - >
+    The claim is scoped to the four revisions downloaded from yaml.org and
+    hashed, and to the four parser versions installed on this machine.
+  - >
+    3.2.1.3 defines key equality RECURSIVELY, and no parser tested here
+    demonstrably implements that. Non-scalar duplicate keys are an untested
+    follow-up, recorded rather than claimed.
+
+supersedes: {}
+corrects: {}

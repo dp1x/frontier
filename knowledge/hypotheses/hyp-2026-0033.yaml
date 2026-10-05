@@ -1,0 +1,144 @@
+id: hyp-2026-0033
+type: hypothesis
+status: active
+created_at: "2026-10-05T21:20:00Z"
+updated_at: "2026-10-05T21:20:00Z"
+summary: >
+  REFRAMED after obs-2026-0066. The original question ("does YAML require
+  unique keys, and do parsers comply") is unanswerable as a conformance
+  question because the current specification imposes no normative requirement
+  at all. The surviving, sharper question is comparative: at which layer does
+  the duplicate disappear, and do independent implementations agree? Three
+  lineages already split three ways at the construction boundary, and the
+  implementation with the strictest-looking check misses the one case the
+  specification itself names.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: research-scout
+    model: grok-4.7
+    tool: >
+      reframed from the normative analysis in obs-2026-0066 plus live probes
+      against four installed parsers across three independent lineages
+  sources:
+    - knowledge/observations/obs-2026-0066.yaml
+    - https://yaml.org/spec/1.2.2/
+  parent: null
+  generation: 0
+links:
+  observations: [obs-2026-0066]
+
+why_the_original_framing_was_dropped:
+  the_dead_end: >
+    YAML 1.2.2 contains no MUST/SHALL/REQUIRED co-occurring with "unique". No
+    BNF production carries a uniqueness predicate, so a duplicate-key stream is
+    WELL-FORMED per 3.3.1, and the only rejection clause is a SHOULD whose
+    enumerated targets do not include duplicates. A conformance claim would
+    therefore have nothing to be conformant to.
+  a_specification_mistake_this_would_have_repeated: >
+    YAML 1.2.1 section 1.3 DOES contain an explicit MUST about treating
+    duplicates as an error. Citing that as current -- which many secondary
+    sources do -- would be a fabrication of exactly the kind this repository
+    exists to catch. It is also in Chapter 1 explanatory prose about JSON
+    rather than a formally-defining chapter.
+
+the_reframed_question: >
+  At which layer does a YAML parser lose the information that a mapping had a
+  duplicate key, and do independent implementations agree on the layer and on
+  the resulting behaviour?
+
+why_this_is_still_worth_asking:
+  - >
+    It is a LAYER question, not a compliance question, and layer questions do
+    not need a normative standard to be worth asking.
+  - >
+    The preliminary census already found a three-way split among three
+    lineages, which is a real interoperability fact about the ecosystem.
+  - >
+    It produced a concrete, reproducible finding that no high-level API test
+    could have found: gopkg.in/yaml.v3 has a mandatory, unconfigurable
+    `uniqueKeys` check that compares raw strings and therefore MISSES the one
+    duplicate case the specification explicitly names (integer-format
+    duplicates such as `1:` vs `0o1:`). The implementation that looks
+    strictest is the one that misses the named case.
+
+competing_hypotheses:
+  H1: >
+    All independent implementations agree on where the duplicate is lost, so
+    the ecosystem is consistent at the low layer and any difference is a
+    policy choice.
+  H2: >
+    Implementations disagree about what constitutes the SAME key -- notably
+    whether keys are compared by raw scalar text or by canonical resolved
+    value. This predicts exactly the observed yaml.v3 divergence on
+    integer-format duplicates.
+  H3: >
+    The comparison is not merely about duplicates: the same layer disagreement
+    affects ordinary key handling, so this is a symptom of a broader divergence
+    in key-equality semantics.
+  H4: >
+    Key equality per 3.2.1.3 is RECURSIVE, and no implementation implements it,
+    so the divergence is deeper than duplicate detection.
+
+discriminating_design:
+  the_vectors_that_discriminate:
+    - "duplicate scalar keys with the SAME text (`a:` twice) -- the trivial case; every implementation should agree here, so it is a HARNESS CONTROL, not a discriminator"
+    - "duplicate keys differing only in integer FORMAT (`1:` vs `0o1:`) -- the specification's own named case at line 943; predicts H2"
+    - "duplicate keys differing only in case (`A:` vs `a:`) -- tests whether case is canonicalised"
+    - "duplicate keys differing in quoting style (`a:` vs `'a':`) -- tests whether presentation is stripped before comparison"
+    - "duplicate NON-SCALAR keys -- tests H4, the recursive equality definition; currently untested by any implementation"
+  the_layers_to_probe_per_parser:
+    - "token/event stream -- does the duplicate appear here?"
+    - "node graph -- does the duplicate appear here?"
+    - "high-level constructed map -- where has it gone?"
+  the_measurement_that_matters: >
+    The LAYER AT WHICH each parser loses the duplicate, per parser, per
+    lineage. A matrix whose rows are layers and whose columns are parsers.
+
+required_lineage_statement:
+  pyyaml_and_ruamel_are_ONE_family: >
+    Both are libyaml-derived. Verified here by forcing PyYAML's pure-Python
+    parser and byte-comparing its event stream against the C `CParser` path:
+    identical. Counting them as two independent implementations would be a
+    lineage error, and this repository has been burned by exactly that class of
+    mistake before.
+  genuine_lineages: "yaml.v3 (Go), js-yaml (pure JS), and the libyaml family. Three, not four."
+
+what_would_falsify_this: >
+  If a parser turns out to lose the duplicate at the TOKENIZER rather than at
+  the construction boundary, the shared "normalization happens at construction"
+  model is wrong and the layer question needs restating.
+
+what_this_mission_may_not_claim:
+  - >
+    No conformance claim in either direction. The specification provides no
+    requirement to conform to (obs-2026-0066).
+  - >
+    No security claim. The specification has no security considerations chapter
+    and never names duplicate keys as an attack vector; that framing must be
+    sourced from outside YAML before it is asserted anywhere.
+  - >
+    No claim about libyaml standalone behaviour: it was not tested, because no C
+    compiler was available on this machine.
+
+compute_class: lightweight
+routing_note: >
+  All four parsers are pure-wheel installs and run on the existing venv. libyaml
+  standalone would need a C toolchain and would belong on GitHub Actions per
+  AGENTS.md's compute-routing HARD RULE.
+
+budget_and_stopping_condition:
+  attempts: 2
+  stopping: >
+    Stop once the layer at which each of the three lineages loses the duplicate
+    is measured for the discriminating vectors. A finding that all lineages
+    agree is a legitimate negative and is preserved rather than extended with
+    more vectors.
+
+acceptance_criteria:
+  - "Each parser's lineage established from its own distribution metadata, not asserted."
+  - "Per-layer (token / node / constructed) results recorded for every vector."
+  - "The integer-format duplicate vector is exercised on every lineage."
+  - "Non-scalar duplicate keys either tested or explicitly recorded as untested."
+  - "No conformance language anywhere in the resulting artifacts."
