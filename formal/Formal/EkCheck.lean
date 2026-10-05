@@ -358,6 +358,7 @@ theorem prefix_last_bit_byte (k : Nat) :
   -- numerals as Ints, so the strict form of the bound is produced by omega
   -- from an inequality in the same shape omega normalises.
   have hk : k + 1 > k := by omega
+  have hk' : (0 : Nat) < 8 * 384 * k := by omega
   have hpos : (0 : Nat) < 8 * 384 * k := Nat.mul_pos (Nat.mul_pos h8 h1) (by omega)
   have hr : (8 * 384 * k - 1) % 8 < 8 := Nat.mod_lt _ h8
   have hdecomp := Nat.div_add_mod (8 * 384 * k - 1) 8
@@ -746,25 +747,45 @@ theorem B2_bytes (y : Nat) : ekBytes 2 B2 y = B2raw y := by
   by_cases h : y < 384 * 2 + 32
   · rw [ekBytes_val 2 B2 y h]
     -- `by_cases` on `y = 768` only produces a HYPOTHESIS; the `if` inside
-    -- `B2raw` stays closed until the definition is unfolded.  Each branch is
-    -- then a single `if` on a numeral, so it closes by `decide`/`simp`
-    -- without any further rewriting.
+    -- `B2raw` stays closed until the definition is unfolded.  The rewrite is
+    -- then done in two steps, because after the first `if` is discharged the
+    -- second one is closed and no longer matches a chained rewrite.  `show`
+    -- rewrites modulo instances, so `ekOfTotal` becomes `B2raw y % 256`
+    -- under it without a separate `unfold`.
     rcases Nat.lt_trichotomy y 768 with hlt | heq | hgt
-    · show B2raw y % 256 = B2raw y
-      simp [B2raw, Nat.mod_eq_of_lt (by omega), hlt.ne', hgt]
+    · have hlt768 : ¬ y = 768 := by omega
+      have hlt769 : ¬ y = 769 := Nat.ne_of_lt (by omega)
+      show B2raw y % 256 = B2raw y
+      rw [B2raw, if_neg hlt768]
+      rw [B2raw, if_neg hlt769]
+      norm_num
     · subst heq
       show B2raw 768 % 256 = B2raw 768
-      simp [B2raw]
+      rw [B2raw, if_pos rfl]
+      rw [B2raw, if_neg (by omega : ¬ (768 : Nat) = 769)]
+      norm_num
     · rcases Nat.lt_trichotomy y 769 with hlt' | heq' | hgt'
-      · show B2raw y % 256 = B2raw y
-        simp [B2raw, Nat.mod_eq_of_lt (by omega), hlt.ne', hgt, hlt'.ne']
+      · have hlt768 : ¬ y = 768 := by omega
+        have hgt769 : ¬ y = 769 := by omega
+        show B2raw y % 256 = B2raw y
+        rw [B2raw, if_neg hlt768]
+        rw [B2raw, if_neg hgt769]
+        norm_num
       · subst heq'
         show B2raw 769 % 256 = B2raw 769
-        simp [B2raw]
-      · show B2raw y % 256 = B2raw y
-        simp [B2raw, Nat.mod_eq_of_lt (by omega), hlt.ne', hgt.ne']
+        rw [B2raw, if_neg (by omega : ¬ (769 : Nat) = 768)]
+        rw [B2raw, if_pos rfl]
+        norm_num
+      · have hgt768 : ¬ y = 768 := by omega
+        have hgt769 : ¬ y = 769 := by omega
+        show B2raw y % 256 = B2raw y
+        rw [B2raw, if_neg hgt768]
+        rw [B2raw, if_neg hgt769]
+        norm_num
   · rw [ekBytes_outside 2 B2 y h]
-    simp [B2raw, h.ne', Nat.not_lt.mpr h]
+    have hne : ¬ y < 384 * 2 + 32 := h
+    rw [B2raw, if_neg (by omega : ¬ y = 768)]
+    rw [B2raw, if_neg (by omega : ¬ y = 769)]
 
 theorem B2_bytes_768 : ekBytes 2 B2 768 = 1 := by
   rw [B2_bytes, B2raw, if_pos rfl]
@@ -899,30 +920,53 @@ def B2alt : Ek 2 := ekOfTotal 2 B2altRaw
 theorem B2alt_bytes (y : Nat) : ekBytes 2 B2alt y = B2altRaw y := by
   by_cases h : y < 384 * 2 + 32
   · rw [ekBytes_val 2 B2alt y h]
-    -- As in `B2_bytes`: unfold the definition so the `if`s are open, split
-    -- the index, and let `simp` close each branch.
+    -- As in `B2_bytes`: one `if` per rewrite, since discharging the first
+    -- closes the next one for a chained rewrite.
     rcases Nat.lt_trichotomy y 768 with hlt | heq | hgt
     · show B2altRaw y % 256 = B2altRaw y
-      simp [B2altRaw, Nat.mod_eq_of_lt (by omega), hlt.ne', hgt, Nat.lt_trans hlt hgt']
+      rw [B2altRaw, if_neg (by omega : ¬ y = 768)]
+      rw [B2altRaw, if_neg (by omega : ¬ y = 769)]
+      rw [B2altRaw, if_neg (Nat.ne_of_lt (Nat.lt_trans hlt (by omega : 769 ≤ y)))]
+      norm_num
     · subst heq
       show B2altRaw 768 % 256 = B2altRaw 768
-      simp [B2altRaw]
+      rw [B2altRaw, if_pos rfl]
+      rw [B2altRaw, if_neg (by omega : ¬ (768 : Nat) = 769)]
+      rw [B2altRaw, if_neg (by omega : ¬ (768 : Nat) = 780)]
+      norm_num
     · rcases Nat.lt_trichotomy y 769 with hlt' | heq' | hgt'
       · show B2altRaw y % 256 = B2altRaw y
-        simp [B2altRaw, Nat.mod_eq_of_lt (by omega), hlt.ne', hgt, hlt'.ne', hgt'.ne']
+        rw [B2altRaw, if_neg (by omega : ¬ y = 768)]
+        rw [B2altRaw, if_neg (by omega : ¬ y = 769)]
+        rw [B2altRaw, if_neg (by omega : ¬ y = 780)]
+        norm_num
       · subst heq'
         show B2altRaw 769 % 256 = B2altRaw 769
-        simp [B2altRaw]
+        rw [B2altRaw, if_neg (by omega : ¬ (769 : Nat) = 768)]
+        rw [B2altRaw, if_pos rfl]
+        rw [B2altRaw, if_neg (by omega : ¬ (769 : Nat) = 780)]
+        norm_num
       · rcases Nat.lt_trichotomy y 780 with hlt'' | heq'' | hgt''
         · show B2altRaw y % 256 = B2altRaw y
-          simp [B2altRaw, Nat.mod_eq_of_lt (by omega), hlt.ne', hgt.ne', hlt''.ne']
+          rw [B2altRaw, if_neg (by omega : ¬ y = 768)]
+          rw [B2altRaw, if_neg (by omega : ¬ y = 769)]
+          rw [B2altRaw, if_neg (by omega : ¬ y = 780)]
+          norm_num
         · subst heq''
           show B2altRaw 780 % 256 = B2altRaw 780
-          simp [B2altRaw]
+          rw [B2altRaw, if_neg (by omega : ¬ (780 : Nat) = 768)]
+          rw [B2altRaw, if_neg (by omega : ¬ (780 : Nat) = 769)]
+          rw [B2altRaw, if_pos rfl]
+          norm_num
         · show B2altRaw y % 256 = B2altRaw y
-          simp [B2altRaw, Nat.mod_eq_of_lt (by omega), hlt.ne', hgt.ne', hgt''.ne']
+          rw [B2altRaw, if_neg (by omega : ¬ y = 768)]
+          rw [B2altRaw, if_neg (by omega : ¬ y = 769)]
+          rw [B2altRaw, if_neg (by omega : ¬ y = 780)]
+          norm_num
   · rw [ekBytes_outside 2 B2alt y h]
-    simp [B2altRaw, h.ne', Nat.not_lt.mpr h]
+    rw [B2altRaw, if_neg (by omega : ¬ y = 768)]
+    rw [B2altRaw, if_neg (by omega : ¬ y = 769)]
+    rw [B2altRaw, if_neg (by omega : ¬ y = 780)]
 
 theorem B2alt_bytes_780 : ekBytes 2 B2alt 780 = 42 := by
   rw [B2alt_bytes, B2altRaw, if_neg (by norm_num), if_neg (by norm_num), if_pos rfl]
