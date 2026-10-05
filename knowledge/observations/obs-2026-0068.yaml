@@ -1,0 +1,157 @@
+id: obs-2026-0068
+type: observation
+status: current
+created_at: "2026-10-05T23:45:00Z"
+updated_at: "2026-10-05T23:45:00Z"
+summary: >
+  Two of four independently-lineaged PNG decoders -- Pillow 12.3.0 and Go
+  image/png 1.26.4 -- silently ACCEPT and RENDER a structurally valid PNG
+  containing an unknown CRITICAL chunk, indicating no error, while the same
+  two reject the identical file when only its CRC is corrupted. The
+  specification requires that such a chunk be reported to the user. The
+  mechanism is located in source for both. Independently reproduced by the
+  orchestrator with a separately written script for Pillow.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      Direct execution against four decoder cores with per-cell reason
+      attribution, plus an independent re-execution of the Pillow case by the
+      orchestrator using a script that does not use the harness.
+  sources:
+    - crypto/png-critical-chunk/vectors.jsonl
+    - knowledge/experiments/exp-2026-0039.yaml
+    - knowledge/specifications/spc-2026-0007.yaml
+  parent: exp-2026-0039
+  generation: 1
+links:
+  experiments: [exp-2026-0039]
+  hypotheses: [hyp-2026-0032]
+  specifications: [spc-2026-0007]
+
+what_was_measured:
+  statement: >
+    A minimal, fully conforming PNG containing one unknown chunk whose type is
+    `VQAx` -- ancillary bit 0, private bit 0, reserved bit 0, therefore an
+    unknown CRITICAL chunk, with a VALID CRC -- is decoded successfully, with
+    pixels returned and no error indicated, by Pillow 12.3.0 and by Go
+    image/png 1.26.4.
+  the_control_that_makes_it_meaningful: >
+    The identical file with a deliberately corrupted CRC is REJECTED by both.
+    So neither core is lax about CRCs, and the acceptance cannot be explained by
+    the core ignoring stream integrity generally. The difference between the
+    two files is exactly the chunk's criticality.
+  the_specification_position:
+    locator: "PNG Third Edition, 5.4 Table 6 and 13.1"
+    quote_verbatim: >
+      A decoder trying to extract the image, upon encountering an unknown chunk
+      type in which the ancillary bit is 0, shall indicate to the user that the
+      image contains information it cannot safely interpret.
+    and: "Encountering an unknown critical chunk is a fatal condition for any decoder trying to extract the image from the datastream."
+
+the_scope_limit_that_governs_this_claim:
+  what_would_NOT_be_a_violation: >
+    PNG 13.1 permits a decoder that signals an error to CONTINUE displaying
+    already-visible data ("fail gracefully"), and states the application as a
+    whole need not terminate. So a decoder that reports the condition and then
+    renders would be CONFORMANT.
+  what_IS_being_claimed_here: >
+    Neither core INDICATED anything to the caller. No exception was raised, no
+    warning was emitted, no callback fired. The claim is about SILENT acceptance
+    specifically, and it was checked per cell rather than inferred from
+    "it rendered".
+
+source_level_mechanisms:
+  pillow_12_3_0:
+    files_and_lines: "PIL/PngImagePlugin.py:205, 787-793, 795"
+    sequence:
+      - "line 205: getattr(self, f\"chunk_{cid}\") raises AttributeError because no chunk_VQAx method exists"
+      - "lines 787-793: the AttributeError is caught and the chunk is dropped"
+      - "line 795: self.png.crc(cid, s) runs and PASSES, because the vector's CRC is valid"
+    the_key_fact: "The ancillary bit is never read on this path at all."
+  go_image_png_1_26_4:
+    files_and_lines: "src/image/png/reader.go:880 (switch), 929-946 (default tail)"
+    sequence:
+      - "no VQAx case exists in the chunk-type switch"
+      - "the default tail skips the payload and calls verifyChecksum()"
+      - "verifyChecksum() passes, and decoding continues"
+  contrast_with_cores_that_behave_correctly:
+    stb_image: "tests (c.type & (1 << 29)) == 0 at stb_image.h:5244, which is bit 5 of the first type byte -- exactly the PNG ancillary bit"
+    wuffs: "reaches decode_other_chunk and emits \"#png: bad chunk\" for the unknown critical type"
+
+a_second_gap_in_a_core_that_otherwise_behaves_correctly:
+  core: "Wuffs 0.3.5"
+  observation: >
+    Wuffs rejects the unknown-critical chunk in the PRIMARY position but ACCEPTS
+    it when the same chunk is placed after the image data
+    (`place-cri-after-idat`).
+  mechanism: >
+    Its post-IDAT walk (wuffs-v0.3.c:43202-43227) validates only IEND, fdAT and
+    fcTL, so a chunk appearing after the image data never reaches the
+    criticality test.
+  significance: >
+    "Rejects unknown critical chunks" is NOT a single boolean property of an
+    implementation. Any future claim about a decoder's conformance must be
+    scoped to the position tested, not just the file.
+
+independence_of_the_cohort:
+  four_cores_run: ["Pillow 12.3.0", "Go image/png go1.26.4", "stb_image v2.30", "Wuffs 0.3.5"]
+  none_links_libpng: true
+  how_established: >
+    By inspecting shipped binaries and source -- 0 libpng symbols in
+    _imaging.pyd, no cgo in Go's implementation, stb ships its own stb_zlib,
+    Wuffs ships its own std/zlib.
+  not_built: "libpng and libspng -- NOT_BUILT, no system install and a native build is CI work per AGENTS.md"
+
+INDEPENDENT_REPRODUCTION_OF_THE_PILLOW_CASE:
+  method: >
+    The orchestrator wrote a fresh script -- no import of the harness, the
+    oracle, or the cohort agent's instrumentation -- calling
+    `Image.open(p); im.load()` and reading pixels.
+  observed:
+    ctl-00-minimal: "ACCEPT (1,1) L [0]"
+    pair-primary-anc: "ACCEPT (1,1) L [0]"
+    pair-primary-cri: "ACCEPT (1,1) L [0]"
+    place-cri-after-idat: "ACCEPT (1,1) L [0]"
+    negc-cri-badcrc: "REJECT UnidentifiedImageError"
+  what_it_proves: >
+    Pillow decodes the image FROM the unknown-critical file and refuses the
+    same file with only the CRC changed. The reproduction is independent of the
+    harness; it is NOT a second implementation, and the Go result has not been
+    re-executed by the orchestrator.
+
+HONEST_LIMITS:
+  - "Scope is four cores. This is not a statement about PNG decoders in general, and libpng -- the most widely deployed core -- is NOT_BUILT."
+  - "One version of each implementation."
+  - >
+    No security claim is made or implied. Nothing here demonstrates an
+    exploitable consequence; it is a conformance and interop observation.
+  - >
+    Pillow discards its cause chain, so its CRC attribution rests on an
+    instrumented spy plus the negative control rather than on the library's own
+    reporting.
+  - >
+    No upstream report has been filed and none should be until the cohort is
+    widened and an independent adversarial review has run.
+  - >
+    A previous session found that a "compliant" framing can be refuted by RFC
+    5280's augmentation clause, so the normative reading here was checked
+    against the actual text of 13.1 rather than assumed. That reading does have
+    an escape: 13.1 concedes criticality is "not necessarily relevant to every
+    conceivable decoder". Both Pillow and Go ARE trying to extract the image, so
+    that carve-out does not apply to them.
+
+next_evidence_that_would_change_the_strength_of_this:
+  - "Build and run libpng and libspng on CI, so the scope names more than four cores."
+  - "Adversarial review by a non-synthesizer role with a mandate to disprove it."
+  - >
+    A determination of whether the unknown-critical chunk is one an attacker
+    could actually introduce without other detectable changes -- that is the
+    step between a conformance observation and a security finding, and it has
+    not been taken.
+
+supersedes: {}
+corrects: {}

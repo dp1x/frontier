@@ -1,0 +1,238 @@
+id: exp-2026-0039
+type: experiment
+status: completed
+created_at: "2026-10-05T23:00:00Z"
+updated_at: "2026-10-05T23:40:00Z"
+summary: >
+  The PNG unknown-critical-chunk corpus was executed against four genuinely
+  distinct decoder cores. The result DISCRIMINATES: two cores (stb_image,
+  Wuffs) reject the unknown-critical vector for the right reason; two (Pillow
+  12.3.0, Go image/png 1.26.4) silently accept and render it with no error
+  indicated. Zero of 44 cells were unattributable. The Pillow result was
+  independently reproduced by the orchestrator with a separately written script
+  that does not use the harness.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: >
+      Direct execution of the committed 11-vector corpus against four cores,
+      with per-cell reason attribution from source reading plus differential
+      inference against the bad-CRC negative controls. The Pillow result was
+      then re-executed by the orchestrator using a fresh, independently written
+      script.
+  sources:
+    - crypto/png-critical-chunk/vectors.jsonl
+    - knowledge/specifications/spc-2026-0007.yaml
+    - knowledge/hypotheses/hyp-2026-0032.yaml
+  parent: hyp-2026-0032
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0032]
+  observations: [obs-2026-0068]
+  specifications: [spc-2026-0007]
+
+the_question_and_its_answer:
+  question: >
+    Does a decoder reject a structurally valid file containing an unknown
+    CRITICAL chunk, while accepting the paired unknown ANCILLARY file, and for
+    the RIGHT reason?
+  answer: "IT DEPENDS, AND THE SPLIT IS SHARP. Two of four cores reject correctly; two silently accept and render."
+  hypothesis_outcome: >
+    H1 is REFUTED as a general claim. H3 is CONFIRMED for two cores: they accept
+    a structurally valid unknown critical chunk contrary to the specification's
+    requirement to indicate an error. H2 is refuted -- every rejection is
+    attributable to criticality, none to CRC or malformed framing.
+
+corpus_as_executed:
+  vectors: 11
+  discriminating: 9
+  all_sha256_verified_before_and_after: true
+  no_corpus_disagreement: >
+    The agent independently recomputed every vector's SHA-256 before and after
+    the run and confirmed none of the 11 files was modified. The corpus is
+    immutable across the experiment.
+
+THE_COHORT:
+  independence_model: >
+    Four cores, ZERO of which link libpng. Independence was established by
+    inspecting the shipped binaries and source, not assumed from names.
+  members:
+    - implementation: "Pillow 12.3.0 (win_amd64 wheel)"
+      parser_core: "pure-Python PngImagePlugin.ChunkStream plus the _imaging C zip codec"
+      uses_libpng: false
+      how_established: "0 libpng symbols in _imaging.pyd; 0 mentions in the plugin"
+    - implementation: "Go image/png, go1.26.4 windows/arm64"
+      parser_core: "reader.go parseChunk"
+      uses_libpng: false
+      how_established: "ships its own compress/flate; no cgo"
+    - implementation: "stb_image v2.30 @ 2c980bb5 (2026-08-01)"
+      parser_core: "stbi__parse_png_file"
+      uses_libpng: false
+      how_established: "ships its own stb_zlib"
+    - implementation: "Wuffs 0.3.5+3404.20260711"
+      parser_core: "std/png decode_other_chunk"
+      uses_libpng: false
+      how_established: "ships its own std/zlib"
+  not_built:
+    - implementation: "libpng / libspng"
+      reason: "NOT_BUILT. No vcpkg manifest and no system install. Building them creates a heavy tree that per AGENTS.md belongs on CI, not locally."
+  an_agent_lineage_correction: >
+    An in-repo adapter for a DIFFERENT experiment had labelled a cryptography-
+    related core as "rustls-webpki"; a prior session already refuted that. No
+    such error is repeated here: each of the four cores was established from its
+    own shipped artefacts.
+
+RESULTS_ON_THE_DECISIVE_PAIR:
+  - implementation: "stb_image v2.30"
+    ancillary: "ACCEPTED"
+    critical: "REJECTED -- \"VQAx PNG chunk not known\""
+    reason_class: "UNKNOWN_CRITICAL_REJECTED"
+  - implementation: "Wuffs 0.3.5"
+    ancillary: "ACCEPTED"
+    critical: "REJECTED -- \"#png: bad chunk\""
+    reason_class: "UNKNOWN_CRITICAL_REJECTED"
+  - implementation: "Pillow 12.3.0"
+    ancillary: "ACCEPTED"
+    critical: "ACCEPTED, NO ERROR, IMAGE RENDERED"
+    reason_class: "ACCEPTED"
+  - implementation: "Go image/png 1.26.4"
+    ancillary: "ACCEPTED"
+    critical: "ACCEPTED, NO ERROR, IMAGE RENDERED"
+    reason_class: "ACCEPTED"
+
+cell_tally:
+  total: 44
+  ACCEPTED: 35
+  UNKNOWN_CRITICAL_REJECTED: 5
+  CRC_MISMATCH: 4
+  GENERIC_DECODE_ERROR: 0
+  why_the_zero_matters: >
+    "GENERIC_DECODE_ERROR: 0" is the headline instrument fact. A rejection that
+    cannot be attributed to a cause is NOT evidence, and the previous framing of
+    this question was vacuous precisely because its rejections were
+    unattributable. Every one of the 44 cells has a reason.
+
+HOW_ATTRIBUTION_WAS_ACHIEVED_WITHOUT_MONKEY_PATCHING:
+  the_problem_encountered: >
+    An earlier attempt to instrument Pillow by patching `ChunkStream.call`
+    failed with "`call` is on `ChunkStream` (base), patched at wrong level".
+  the_method_that_worked: >
+    DIFFERENTIAL INFERENCE against the bad-CRC negative controls, not
+    introspection. Each core was run over a matrix of probe cells, so a core
+    that demonstrably fails `negc-*-badcrc` is known to check CRCs, which makes
+    its rejection of the unknown-critical vector attributable to criticality.
+  the_pillow_specific_gap_and_fix: >
+    Pillow discards the cause chain and surfaces a generic
+    `UnidentifiedImageError`, so the reason was recovered verbatim from an
+    instrumented CRC spy:
+    "broken PNG file (bad header checksum in b'vQAx')".
+
+source_level_mechanisms:
+  stb_image:
+    site: "stb_image.h:5244"
+    test: "(c.type & (1 << 29)) == 0"
+    note: >
+      This is bit 5 of the first type byte shifted into position 29, i.e.
+      exactly the PNG ancillary bit, and matches spc-2026-0007. Its header
+      states "no CRC checking", so `negc-anc-badcrc` DECODING SUCCESSFULLY is
+      positive proof that its rejections are not CRC-driven.
+  wuffs:
+    site: "decode_other_chunk"
+    note: >
+      Emits a distinct "#png: bad checksum" for the bad-CRC control and also
+      ACCEPTS that control as an ancillary chunk, separating the two paths.
+  pillow:
+    site: "PngImagePlugin.py:205, 787-793, 795"
+    mechanism: >
+      `getattr(self, f"chunk_{cid}")` at line 205 finds no `chunk_VQAx`, so an
+      AttributeError is raised. Lines 787-793 catch it and drop the chunk.
+      Line 795 then runs the CRC check, which PASSES because the vector's CRC is
+      valid. The ancillary bit is NEVER READ on this path.
+    the_significance: >
+      Pillow is not lax about CRCs -- it rejects `negc-cri-badcrc` -- so this is
+      specifically and only an unknown-CRITICAL gap.
+  go_image_png:
+    site: "reader.go:880 switch, default tail at 929-946"
+    mechanism: >
+      There is no `VQAx` case in the switch. The default tail skips the payload
+      and calls verifyChecksum(), which passes.
+
+INDEPENDENT_REPRODUCTION:
+  what: >
+    The orchestrator re-executed the Pillow result with a freshly written script
+    that does not import the harness, the oracle, or the cohort agent's
+    instrumentation of any kind.
+  the_script_essence: >
+    `Image.open(path)` then `.load()` then reading the pixels, for five vectors.
+  the_output:
+    ctl-00-minimal: "ACCEPT (1,1) L pixels=[0]"
+    pair-primary-anc: "ACCEPT (1,1) L pixels=[0]"
+    pair-primary-cri: "ACCEPT (1,1) L pixels=[0]"
+    place-cri-after-idat: "ACCEPT (1,1) L pixels=[0]"
+    negc-cri-badcrc: "REJECT UnidentifiedImageError"
+  conclusion: >
+    CONFIRMED. Pillow renders a 1x1 image from a file containing an unknown
+    critical chunk, and rejects the same file when only its CRC is corrupted.
+    The second case is the control that proves the first is not a CRC artefact.
+  what_this_reproduction_is_not: >
+    It is a second SCRIPT against the same library and the same vector bytes. It
+    is a genuine independent reproduction of the BEHAVIOUR, but it is not a
+    second independent implementation. The Go result rests on the cohort agent's
+    separately written Go program plus its source reading; it has not been
+    independently re-executed by the orchestrator and is recorded as such.
+
+A_PLACEMENT_DIVERGENCE_WORTH_RECORDING:
+  observation: >
+    `place-cri-after-idat` is rejected by stb_image but ACCEPTED by Wuffs.
+  mechanism: >
+    Wuffs's post-IDAT walk (wuffs-v0.3.c:43202-43227) validates only IEND, fdAT
+    and fcTL, so a chunk appearing after the image data never reaches the
+    criticality test at all.
+  significance: >
+    This is a SECOND, independent unknown-critical gap in Wuffs -- a core that
+    behaves correctly on the primary pair but silently accepts an unknown
+    critical chunk in one position. It shows that "does this decoder reject
+    unknown critical chunks" is not a single yes/no property of an
+    implementation.
+  tier: "secondary; the primary pair is unaffected."
+
+compute_routing:
+  classification: "lightweight"
+  what_ran_locally: "pure-wheel installs and pure-Python/Go interpretation; no native library build"
+  what_did_not_run_locally: "libpng/libspng compilation (NOT_BUILT) -- deferred to CI per the compute-routing HARD RULE"
+  scratch_hygiene: >
+    R: shrank from 119.6 MB to 0.7 MB. Go module and build caches, the stb clone,
+    and all .obj/test binaries were deleted in-session. Recorded per AGENTS.md's
+    requirement to account for build output.
+
+honest_limits:
+  - >
+    NO CLAIM IS MADE ABOUT libpng OR libspng. They are NOT_BUILT. Four cores is
+    not "the ecosystem", and any scope statement must say "of the four cores
+    exercised".
+  - >
+    The discrepancy is characterised as SILENT ACCEPTANCE with no error
+    indicated. Per spc-2026-0007 png-p5, a decoder that signals an error AND
+    continues is CONFORMANT. What these two cores do is not signal at all, which
+    is the non-conformant case; but that distinction turns entirely on whether
+    an error was indicated, and it was checked and recorded per cell.
+  - >
+    No security claim. Nothing here shows an exploitable consequence.
+  - >
+    Each implementation was tested at one version only.
+  - >
+    Pillow discards the cause chain, so the CRC-attribution for Pillow rests on
+    an instrumented spy rather than on the library's own reporting. The negative
+    control mitigates this but does not eliminate the instrumentation.
+
+what_would_earn_promotion:
+  - "Go image/png independently re-executed by a second route."
+  - "libpng and libspng built and run, so the scope claim can name more than four cores."
+  - "An independent review by a non-synthesizer role with an explicit mandate to disprove it."
+  - "A determination of whether the project wants to file upstream; that is a human decision and nothing was filed."
+
+supersedes: {}
+corrects: {}
