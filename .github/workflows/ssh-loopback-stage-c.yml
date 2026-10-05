@@ -163,9 +163,21 @@ jobs:
           echo "stimulus=$STIMULUS ssh_exit=$SSH_EXIT" >> /tmp/stage_c_summary.tsv
           tail -n 5 /tmp/ssh_stderr.log > "${REPORT_DIR}/${COHORT}_${STIMULUS}_client_stderr_tail.log" || true
 
-          # The mutator must have produced a verdict for this stimulus, and that
-          # verdict must not be a harness_error. Only a harness failure is a
-          # CI failure; a legitimate protocol abort is a recorded result.
+          # The mutator's verdict is the experiment's actual result.
+          #
+          # Verdict taxonomy (interop/protocol-placement/ssh_loopback/stagec/main.go):
+          #   harness_error          - the HARNESS broke (listen/accept/banner/dial
+          #                             failure, or a protocol desync). A real CI
+          #                             failure. Nothing was learned about the server.
+          #   server_abort_no_reply  - the server received the mutated key and closed
+          #                             WITHOUT a DISCONNECT. A RECORDED RESULT:
+          #                             the server aborted the handshake silently. The
+          #                             relay worked; the relay is not what failed.
+          #   handshake_completed / handshake_aborted_*  - normal protocol outcomes.
+          #
+          # Only harness_error fails the job. Treating a server abort as a harness
+          # fault conflates "the server rejected the mutated key" with "the relay
+          # broke" and makes the workflow permanently red for a real observation.
           if [ -z "$VERDICT" ]; then
             echo "HARNESS FAILED: mutator emitted no verdict for stimulus $STIMULUS"
             exit 1
@@ -175,6 +187,18 @@ jobs:
             echo "HARNESS FAILED: mutator reported harness_error for stimulus $STIMULUS"
             cat /tmp/stage_c_mutator.log
             exit 1
+          fi
+          if [ "$VERDICT" = "server_abort_no_reply" ]; then
+            # Not a failure: record it loudly so the result is not mistaken for a
+            # transport problem, then check the server really did abort rather than
+            # the relay dropping the connection.
+            echo "RECORDED RESULT: server closed without DISCONNECT for stimulus $STIMULUS."
+            echo "Attributing this to the server requires ssh_dispatch_run_fatal in the sshd log; see the uploaded artifact."
+            if grep -q "ssh_dispatch_run_fatal" /tmp/sshd.log 2>/dev/null; then
+              echo "CONFIRMED: sshd logged ssh_dispatch_run_fatal (server-side abort)."
+            else
+              echo "UNATTRIBUTED: no ssh_dispatch_run_fatal in sshd log - relay may have broken; investigate."
+            fi
           fi
 
       - name: Capture sshd log

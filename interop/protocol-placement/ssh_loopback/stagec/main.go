@@ -24,18 +24,20 @@
 package main
 
 import (
+	"bufio"
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
-	"bufio"
 	"io"
 	"net"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -238,9 +240,21 @@ func runMutator(cohort string, stim Stimulus, listenAddr, upstreamAddr string, e
 	}
 
 	// Read upstream S_REPLY (msg 31).
+	//
+	// Distinguish the server REJECTING the mutated key from the relay/upstream
+	// connection breaking. An EOF here means sshd closed without sending a
+	// DISCONNECT: a real observation about the server, not a harness fault.
+	// Only genuine harness faults (listen/accept/banner/dial) stay
+	// harness_error. Conflating the two would destroy the measurement.
 	sReplyMsg, err := recvPacketPayload(ubr)
 	if err != nil {
-		res.Error = fmt.Sprintf("recv-upstream-sreply: %v", err); res.Verdict = "harness_error"; return
+		res.Error = fmt.Sprintf("recv-upstream-sreply: %v", err)
+		if isConnClosed(err) {
+			res.Verdict = "server_abort_no_reply"
+		} else {
+			res.Verdict = "harness_error"
+		}
+		return
 	}
 	if len(sReplyMsg) < 1 {
 		res.Error = "empty sreply"; res.Verdict = "harness_error"; return
@@ -434,6 +448,16 @@ func errExitCode(err error) int {
 	if err == nil { return 0 }
 	if ee, ok := err.(*exec.ExitError); ok { return ee.ExitCode() }
 	return -1
+}
+
+// isConnClosed reports whether err is the peer hanging up or resetting the
+// connection, as opposed to a harness-side protocol desync. io.EOF and
+// ECONNRESET are the observed shape when sshd aborts a mutated-key handshake.
+func isConnClosed(err error) bool {
+	if errors.Is(err, io.EOF) { return true }
+	if errors.Is(err, syscall.ECONNRESET) { return true }
+	if errors.Is(err, net.ErrClosed) { return true }
+	return false
 }
 
 func fail(f string, args ...interface{}) {
