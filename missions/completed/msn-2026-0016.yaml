@@ -117,6 +117,15 @@ stopping_conditions:
   - "All bugs fixed AND matrix shows all cells agree → terminalize as inconclusive-after-budget (acceptable negative result)"
   - "Budget exhausted without resolution → terminalize as inconclusive-after-budget"
 artifacts: []
+# CITATION CORRECTION 2026-10-05: the acceptance_criteria above read
+# "Oracle self-test passes RFC 8949 Appendix C 14/14 vectors". Appendix C is
+# 'Pseudocode' and holds no vectors. The 14 are the first 14 integer rows of
+# Appendix A Table 6, which holds 81 pairs in total, 18 of them with a
+# bare-integer diagnostic. The PASS result is unaffected; the locator and the
+# implied count were wrong. See obs-2026-0062.yaml.
+supersedes:
+  corrects:
+    - fnd-2026-0013
 follow_ups:
   - "If fnd-2026-0013 promoted: queue msn-2026-0017 (COSE message-encoding audit using same framework)."
   - "If all cells agree: queue msn-2026-0018 (re-run with expanded cohort)."

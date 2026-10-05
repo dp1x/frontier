@@ -79,6 +79,13 @@ VERIFICATION_METHODS = frozenset(
 
 DISCLOSURE_VALUES = frozenset({"public", "embargoed", "escalate/security-sensitive"})
 
+# ``supersedes`` is the envelope's only OPTIONAL field, so it must be checked
+# for shape wherever it appears without being required anywhere. The three
+# relations are distinct on purpose: correcting a fact, withdrawing a claim
+# and taking over a subject are different acts with different consequences for
+# the target's status.
+SUPERSESSION_RELATIONS = ("corrects", "withdraws", "replaces")
+
 # Mission status -> allowed queue directories.
 MISSION_DIRS = {
     "pending": {"pending"},
@@ -212,6 +219,7 @@ def validate_document(doc: object) -> list[str]:
     links = doc.get("links")
     if links is not None and not isinstance(links, dict):
         errors.append(f"{label}: links must be a mapping")
+    errors.extend(_validate_supersedes_shape(doc, label))
 
     if dtype == "mission":
         errors.extend(_validate_mission(doc, label))
@@ -219,6 +227,40 @@ def validate_document(doc: object) -> list[str]:
         errors.extend(_validate_finding(doc, label))
     elif dtype == "verification":
         errors.extend(_validate_verification(doc, label))
+    return errors
+
+
+def _validate_supersedes_shape(doc: dict, label: str) -> list[str]:
+    """Check the OPTIONAL ``supersedes`` field's shape.
+
+    Absent is valid and is the case for every artifact written before the
+    field existed, so only a present value is policed: unknown relation keys,
+    non-list values, and empty relations are refused. Whether the named IDs
+    resolve is a graph question and belongs to ``_check_references``.
+    """
+    if "supersedes" not in doc:
+        return []
+    block = doc["supersedes"]
+    if not isinstance(block, dict):
+        return [f"{label}: supersedes must be a mapping of relation -> artifact ids"]
+    errors: list[str] = []
+    for relation in sorted(block):
+        if relation not in SUPERSESSION_RELATIONS:
+            errors.append(
+                f"{label}: unknown supersedes relation {relation!r}; "
+                f"use one of {', '.join(SUPERSESSION_RELATIONS)}"
+            )
+            continue
+        value = block[relation]
+        if not isinstance(value, list):
+            errors.append(
+                f"{label}: supersedes.{relation} must be a list of artifact ids"
+            )
+        elif not value:
+            errors.append(
+                f"{label}: supersedes.{relation} is empty; omit the relation "
+                "instead of listing no targets"
+            )
     return errors
 
 
@@ -282,6 +324,7 @@ def validate_repo(root: Path) -> RepoValidationResult:
     errors.extend(check_index_consistency(root, docs))
     errors.extend(check_evidence_committed_claims(root, docs))
     errors.extend(check_epistemic_status_consistency(docs))
+    errors.extend(check_superseded_authority(docs))
 
     return RepoValidationResult(ok=not errors, errors=errors, warnings=warnings)
 
@@ -324,6 +367,163 @@ def check_epistemic_status_consistency(
                 "what survives in the prose instead."
             )
     return errors
+
+
+# Statuses that mean the artifact's own claim is DEAD -- the thing it
+# asserted is known not to hold.  ``disputed`` is deliberately absent: this
+# repository uses it for "the claim survives, the evidence was overstated"
+# (see the summaries of fnd-2026-0001, fnd-2026-0005 and fnd-2026-0010), so a
+# disputed artifact is still citable.  A rejected, withdrawn or superseded
+# one is not an authority for anything.
+DEAD_CLAIM_STATUSES = frozenset(
+    {
+        "rejected",
+        "withdrawn",
+        "superseded",
+        "abandoned",
+        "archived",
+        "invalidated",
+        "retracted",
+        "refuted",
+        "disproved",
+    }
+)
+
+# Statuses that assert a conclusion has been established.
+HOLDING_STATUSES = frozenset(
+    {"verified", "verified_conclusion", "proved", "final", "pass"}
+)
+
+# Reference slots that mean "this artifact is BUILT ON that one", as opposed to
+# links that merely record what was examined.  A review listing the finding it
+# reviewed, or a report listing every finding in the corpus, is not resting on
+# any of them -- obs-2026-0058 states that distinction outright and treats
+# treating link-carriers as contaminated as overstating the blast radius.  These
+# three slots are the ones the corpus uses to declare a dependency, a parentage
+# or an authority.
+AUTHORITY_REFERENCE_KEYS = ("dependencies", "provenance.parent", "links.specifications")
+
+
+def _authority_references(doc: dict) -> list[tuple[str, str]]:
+    """Every ``(slot, id)`` this artifact declares itself built on."""
+    out: list[tuple[str, str]] = []
+    for dep in doc.get("dependencies") or []:
+        if isinstance(dep, str) and dep:
+            out.append(("dependencies", dep))
+    parent = (doc.get("provenance") or {}).get("parent")
+    if isinstance(parent, str) and parent:
+        out.append(("provenance.parent", parent))
+    specs = (doc.get("links") or {}).get("specifications")
+    if isinstance(specs, list):
+        out.extend(("links.specifications", s) for s in specs if isinstance(s, str) and s)
+    return out
+
+
+def check_superseded_authority(docs: list[tuple[Path, dict]]) -> list[str]:
+    """Refuse a current conclusion that rests on a dead claim.
+
+    ``msn-2026-0017`` stood ``verified`` while resting on ``fnd-2026-0013``
+    (``rejected``) and ``spc-2026-0004`` (``disputed``, normative extract
+    withdrawn).  Nothing caught it because the dependency was expressed as a
+    plain ID and the retraction lived in the target's prose.  Recording the
+    relation as ``supersedes`` and then VALIDATING it makes the contradiction a
+    graph fact instead of a thing a reader has to notice.
+
+    The check is narrow on purpose, because a rule that fires on everything is
+    useless.  Three filters do the work:
+
+    * **Only dead claims.**  ``disputed`` is excluded: the corpus uses it for
+      "survives, evidence overstated", which is citable.  See
+      ``DEAD_CLAIM_STATUSES``.
+    * **Only authority edges.**  ``links.findings`` and friends record what was
+      examined; ``dependencies``, ``provenance.parent`` and
+      ``links.specifications`` declare what the artifact is built on.  Counting
+      examination links would fire on 91 edges in this corpus instead of 4.
+    * **Acknowledgement discharges it.**  An artifact that itself records the
+      supersession -- by naming the dead authority in ``supersedes``, or by
+      saying so in its own text -- has already confronted it and is carrying
+      the correction forward.  That is exactly what a corrected artifact is
+      supposed to look like, so it must not be an error.
+    """
+    by_id: dict[str, dict] = {}
+    for _rel, doc in docs:
+        if isinstance(doc, dict) and isinstance(doc.get("id"), str):
+            by_id[doc["id"]] = doc
+
+    errors: list[str] = []
+    for rel, doc in docs:
+        if not isinstance(doc, dict):
+            continue
+        status = doc.get("status")
+        epistemic = doc.get("epistemic_status")
+        if status not in HOLDING_STATUSES and epistemic != "verified_conclusion":
+            continue
+        acknowledged = _declared_supersessions(doc)
+        for slot, ref in _authority_references(doc):
+            target = by_id.get(ref)
+            if target is None or target.get("status") not in DEAD_CLAIM_STATUSES:
+                continue
+            if ref in acknowledged or _textually_acknowledges(doc, ref):
+                continue
+            errors.append(
+                f"{rel}: {doc.get('id', '<unknown>')} asserts a current "
+                f"conclusion (status={status!r}, "
+                f"epistemic_status={epistemic!r}) while resting on {ref} via "
+                f"{slot}, whose status is {target.get('status')!r}. A dead "
+                "claim is not an authority. Record the relation in "
+                "'supersedes' (corrects/withdraws/replaces) or state the "
+                "correction in this artifact, or re-open the conclusion."
+            )
+    return errors
+
+
+def _declared_supersessions(doc: dict) -> set[str]:
+    """IDs this artifact names in its ``supersedes`` block, in any relation."""
+    block = doc.get("supersedes")
+    if not isinstance(block, dict):
+        return set()
+    out: set[str] = set()
+    for values in block.values():
+        if isinstance(values, list):
+            out.update(v for v in values if isinstance(v, str))
+    return out
+
+
+def _textually_acknowledges(doc: dict, ref: str) -> bool:
+    """True when the artifact's own prose confronts ``ref``'s dead status.
+
+    Most of the corpus predates the field and records corrections in prose --
+    ``corrected_by:``, ``superseded_by:``, ``what_is_withdrawn:``.  Requiring
+    the field everywhere would make every historical correction an error,
+    which is the opposite of what the record is for.  The window is one
+    paragraph around the ID rather than the whole document, because the corpus
+    convention is to name the superseded artifact beside the correction.
+    """
+    cues = (
+        "supersed",
+        "withdraw",
+        "retract",
+        "refut",
+        "correct",
+        "replac",
+        "no longer",
+        "not evidence",
+        "must not",
+        "is false",
+        "was wrong",
+        "disput",
+        "reject",
+    )
+    lowered_ref = ref.lower()
+    for text in _iter_text(doc):
+        lowered = text.lower()
+        idx = lowered.find(lowered_ref)
+        if idx == -1:
+            continue
+        window = lowered[max(0, idx - 400) : idx + 400]
+        if any(cue in window for cue in cues):
+            return True
+    return False
 
 
 def check_evidence_committed_claims(
@@ -624,6 +824,11 @@ def _check_references(
     links = doc.get("links") or {}
     if isinstance(links, dict):
         for values in links.values():
+            if isinstance(values, list):
+                refs.extend(v for v in values if isinstance(v, str))
+    supersedes = doc.get("supersedes") or {}
+    if isinstance(supersedes, dict):
+        for values in supersedes.values():
             if isinstance(values, list):
                 refs.extend(v for v in values if isinstance(v, str))
     # Mission `artifacts` may mix ID references and repository-relative file

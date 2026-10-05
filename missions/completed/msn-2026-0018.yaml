@@ -1,8 +1,32 @@
 id: msn-2026-0018
 type: mission
 status: verified
+supersedes:
+  corrects:
+    - msn-2026-0017
 created_at: "2026-08-31T23:30:00Z"
 updated_at: "2026-09-02T04:30:00Z"
+inherited_dead_authority:
+  reference: msn-2026-0017
+  inherited_status: superseded
+  subject: "COSE message encoding (RFC 8152, 9052, 9053)"
+  note: >
+    This mission BUILT ON the CBOR framework of msn-2026-0017, which is now
+    superseded: its promoted finding fnd-2026-0013 was rejected and its
+    specification authority spc-2026-0004 was withdrawn for carrying fabricated
+    verbatim quotations attributed to RFC 8949.
+
+    This mission's own conclusions are NOT thereby refuted. It is about COSE
+    message encoding (RFC 8152, 9052, 9053), not CBOR, and its results rest on
+    those specifications rather than on spc-2026-0004's quotations. What is
+    recorded here is the weaker, honest claim: the inherited framework is a dead
+    authority, and whether the COSE results survive the loss of that framework is
+    an OPEN question rather than a settled one.
+
+    Recorded 2026-10-05 so the contradiction is visible rather than latent.
+
+
+
 terminal_reason: "Mission terminalized after the original fnd-2026-0014 promotion. Later direct probing (obs-2026-0045) corrected that finding's tstr-only scope: a descending int-only protected map also preserved insertion order; mixed-key vectors were confounded. The original cohort tested 40 vectors / 10 axes / 80 cells: 74 PASS, 4 SPEC_VIOLATION, 2 NOT_SUPPORTED. 3 more libraries (cose-c, cose-java, coset) were deferred. Mission budget was exhausted on cohort establishment, instrument validation and repair, adversarial review, and deterministic verification; those original steps do not verify the later scope correction."
 summary: "COSE (RFC 8152/9052/9053) message-encoding conformance audit. Build on the verified CBOR §4.2 framework (msn-2026-0015/0016/0017) by adding 4-5 lineage-independent COSE implementations to a new conformance matrix. Cohort candidates: cose-c (COSE WG reference, C/C++), cose-java (COSE WG, Java), coset (Google, Rust), go-cose (Veraison/ex-Mozilla, Go), pycose (Timothy Claeys, Python). Focus axes: (1) COSE_Sign1/Encrypt0/Mac0 message-construction encoding, (2) header parameter canonicalization (the 'empty protected bucket' divergence is a known interop issue), (3) Sig_structure/Enc_structure/MAC_structure encoding per RFC 9052, (4) deterministic ECDSA nonce generation (RFC 6979) for COSE_Sign1 with ES256/ES384/ES512, (5) ECDSA r||s fixed-length encoding (RFC 9053 §2.1), (6) AES-GCM/ChaCha20-Poly1305 nonce and AAD construction, (7) COSE_KDF_Context encoding for ECDH-ES. Determine implementation lineage, upstream ancestry, shared code, shared test vectors, and specification lineage for every cohort member before interpreting cross-impl results. Validate the research instrument before trusting new cohort results. Promote findings through the standard evidence ladder."
 epistemic_status: hypothesis

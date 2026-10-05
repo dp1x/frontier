@@ -19,12 +19,44 @@
                                    "verified_conclusion"]},
     "provenance": {"$ref": "#/$defs/provenance"},
     "links": {"type": "object"},
+    "supersedes": {"$ref": "#/$defs/supersedes"},
     "path": {"type": "string"},
     "reproduction_commands": {"type": "array", "minItems": 1,
                                "items": {"type": "string"}},
     "reproduced_on": {"type": "array", "items": {"type": "object"}}
   },
   "$defs": {
+    "supersedes": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "corrects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(tgt|spc|imp|hyp|exp|obs|rpr|rev|vrf|fnd|cnj|prf|msn|rpt)-[0-9]{4}-[0-9]{4}$"
+          },
+          "description": "Targets whose wording, scope, locator or count was wrong. Part of the target survives, so the target's status is unchanged."
+        },
+        "withdraws": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(tgt|spc|imp|hyp|exp|obs|rpr|rev|vrf|fnd|cnj|prf|msn|rpt)-[0-9]{4}-[0-9]{4}$"
+          },
+          "description": "Targets whose claim is dead: the target's status is withdrawn, rejected or superseded and none of its substance carries."
+        },
+        "replaces": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(tgt|spc|imp|hyp|exp|obs|rpr|rev|vrf|fnd|cnj|prf|msn|rpt)-[0-9]{4}-[0-9]{4}$"
+          },
+          "description": "Targets whose subject this artifact takes over wholesale. The target's status is superseded and this artifact is its successor."
+        }
+      }
+    },
     "provenance": {
       "type": "object",
       "required": ["created_by", "sources"],

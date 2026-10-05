@@ -1,8 +1,37 @@
 id: msn-2026-0017
 type: mission
-status: verified
+status: superseded
 created_at: "2026-08-31T18:00:00Z"
-updated_at: "2026-08-31T23:30:00Z"
+updated_at: "2026-10-05T12:40:00Z"
+supersedes:
+  withdraws:
+    - fnd-2026-0013
+epistemic_status: interpretation
+supersession_reason: >
+  Terminalised `verified` while resting on fnd-2026-0013, whose status is
+  `rejected`. The underlying authority (spc-2026-0004) carried fabricated
+  quotations, so the conclusion cannot stand as current.
+terminal_reason: >
+  SUPERSEDED. The mission's `verified` state is withdrawn because its sole
+  promoted finding was rejected and its specification authority was withdrawn.
+  The experimental work -- the cohort expansion, the lineage analysis and the
+  111-vector matrix -- is preserved as history and is NOT claimed to have been
+  wrong; only the conclusion drawn from it no longer holds.
+
+why_the_verified_state_is_withdrawn: >
+  fnd-2026-0013, which this mission promoted, is `rejected`. Its
+  canonical-mode byte-exact conformance claim was built on spc-2026-0004, and 25
+  of that specification's verbatim quotations attributed to RFC 8949 were found
+  FABRICATED -- two independent greps of a freshly fetched RFC 8949 returned
+  zero matches. See rpt-2026-0020 and obs-2026-0058.
+
+  A verified mission resting on a rejected finding is a dead claim, and a dead
+  claim is not an authority. Recording the supersession here is what lets the
+  validator refuse the contradiction mechanically rather than leaving it to be
+  rediscovered by a future session.
+
+  Two further missions (msn-2026-0018, msn-2026-0019) descend from this one and
+  inherited the same dead authority. They are superseded on the same grounds.
 summary: "CBOR (RFC 8949) §4.2 cross-implementation conformance matrix — cohort expansion. Build on the msn-2026-0015/0016 cleanroom oracle + vector generator + matrix runner framework by adding three lineage-independent implementations: Rust ciborium (Well-Typed/RustCrypto lineage), Haskell cborg (Well-Typed academic lineage), and JavaScript cbor-x (dentsu-dev lineage). Determine implementation lineage, upstream ancestry, authorship overlaps, shared test-vector provenance, shared generated fixtures, and specification lineage for every cohort member before interpreting cross-implementation results. Re-run the full 8-axis adversarial vector matrix (111 vectors × canonical+default modes) across all four implementations. Validate the research instrument (generator, serializer, cleanroom oracle, adapters, runner, comparator, canonicalization logic, mutation logic, expected-value construction) using RFC 8949 Appendix C material, published reference vectors, independent round-trip invariants, and positive/negative controls. Investigate every disagreement; classify each as implementation bug, specification ambiguity, documented mode difference, unsupported feature, or oracle/instrument problem. Promote fnd-2026-0013 if the expanded cohort confirms the canonical-mode byte-exact match across independent lineages; preserve unsupported/incomparable cells honestly."
 epistemic_status: hypothesis
 provenance:
