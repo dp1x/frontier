@@ -1,8 +1,8 @@
 id: msn-2026-0022
 type: mission
-status: active
+status: verified
 created_at: "2026-10-04T10:00:00Z"
-updated_at: "2026-10-04T18:00:00Z"
+updated_at: "2026-10-17T14:00:00Z"
 summary: >
   X.509 pathLenConstraint conformance investigation, using C2SP x509-limbo's
   published divergence as a LEAD rather than an oracle. Scope was decided by
@@ -50,6 +50,7 @@ links:
   experiments: [exp-2026-0037]
   observations: [obs-2026-0050]
   findings: [fnd-2026-0016]
+  verifications: [vrf-2026-0018]
 title: "MSN-2026-0022 - X.509 pathLenConstraint conformance across independently-lineaged validation cores"
 objective: >
   Determine independently, from the authoritative RFC 5280 text and from
@@ -104,6 +105,11 @@ artifacts:
   - knowledge/experiments/exp-2026-0037.yaml
   - knowledge/observations/obs-2026-0050.yaml
   - knowledge/findings/fnd-2026-0016.yaml
+  - knowledge/verifications/vrf-2026-0018.yaml
 notes_path: knowledge/notes/msn-2026-0022.md
 blocked_reason: null
-terminal_reason: null
+terminal_reason: >
+  Verified 2026-10-17. The pathLen rule is derived from RFC 5280 6.1 and 6.2;
+  the divergence is a conformant tightening, not a spec violation. The 20-case
+  corpus passes structural, oracle-agreement, discrimination, and citation
+  tests (vrf-2026-0018). Finding fnd-2026-0016 promoted to verified_conclusion.

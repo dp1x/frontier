@@ -1,0 +1,58 @@
+id: vrf-2026-0018
+type: verification
+status: current
+created_at: "2026-10-17T14:00:00Z"
+updated_at: "2026-10-17T14:00:00Z"
+summary: >
+  Deterministic verification of MSN-2026-0022 (X.509 pathLenConstraint):
+  the 20-case corpus is structurally valid, the two oracles agree on every
+  case, H1 and H2 discriminate, and the pathLen rule is derived from RFC 5280
+  6.1. Implementation verdicts are attributed to pyca/cryptography 50.0.1
+  (in-tree crate) and wbond/certvalidator 0.11.1.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: beam-free
+    tool: pytest + corpus re-execution
+  sources:
+    - crypto/x509-pathlen/corpus.py
+    - crypto/x509-pathlen/minimal_chain.py
+    - crypto/x509-pathlen/minimal_oracle.py
+    - crypto/x509-pathlen/oracle.py
+    - tests/test_x509_minimal_corpus.py
+    - tests/test_x509_corpus_reproducibility.py
+    - tests/test_x509_pathlen_oracle.py
+    - tests/test_x509_pathlen_citations.py
+    - knowledge/findings/fnd-2026-0016.yaml
+    - knowledge/reviews/rev-2026-0021.yaml
+  parent: msn-2026-0022
+  generation: 1
+links:
+  missions: [msn-2026-0022]
+  findings: [fnd-2026-0016]
+  reviews: [rev-2026-0020, rev-2026-0021]
+  experiments: [exp-2026-0037]
+  observations: [obs-2026-0050]
+title: "VRF-2026-0018 - Deterministic verification of MSN-2026-0022"
+method: deterministic-script
+verification_steps:
+  step_1_corpus_structural_validity:
+    command: ".venv/Scripts/python.exe -m pytest tests/test_x509_minimal_corpus.py -q"
+    result: "PASS (all tests)"
+  step_2_oracle_agreement_and_discrimination:
+    command: ".venv/Scripts/python.exe -m pytest tests/test_x509_minimal_corpus.py -q (includes H2 discrimination)"
+    result: "PASS"
+  step_3_citation_audit:
+    command: ".venv/Scripts/python.exe -m pytest tests/test_x509_pathlen_citations.py -q"
+    result: "PASS"
+  step_4_reproducibility:
+    command: ".venv/Scripts/python.exe -m pytest tests/test_x509_corpus_reproducibility.py tests/test_x509_pathlen_oracle.py -q"
+    result: "PASS"
+verdict: VERIFIED
+promotion_decision: "Promote fnd-2026-0016 to verified_conclusion as a conformance observation (not a spec violation)."
+residual_limitations:
+  - "Only two validation cores executed: pyca/cryptography 50.0.1 and wbond/certvalidator 0.11.1."
+  - "No claim about OpenSSL, BoringSSL, Go, GnuTLS, or other implementations."
+  - "The finding remains a conformance observation, not a security claim."

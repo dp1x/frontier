@@ -1,0 +1,68 @@
+id: vrf-2026-0017
+type: verification
+status: current
+created_at: "2026-10-17T13:00:00Z"
+updated_at: "2026-10-17T13:00:00Z"
+summary: >
+  Deterministic verification of FORMAL-208 (msn-2026-0021): the EkCheck
+  module is kernel-accepted on main after the okKey correction, the axiom
+  inventory is committed from CI run 39033020854, and the independent
+  adversarial review rev-2026-0025 supports the core T1-T4 scope with the
+  okKey defect repaired.
+epistemic_status: verified_conclusion
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: beam-free
+    tool: >
+      CI run review + artifact commit + deterministic pipeline (frontier.validate).
+  sources:
+    - formal/Formal/EkCheck.lean
+    - formal/Formal/LengthCheck.lean
+    - formal/Formal/ByteEncode.lean
+    - formal/axioms.txt
+    - missions/active/msn-2026-0021.yaml
+    - knowledge/reviews/rev-2026-0025.yaml
+  parent: msn-2026-0021
+  generation: 1
+links:
+  missions: [msn-2026-0021]
+  reviews: [rev-2026-0025]
+  observations: [obs-2026-0067]
+title: "VRF-2026-0017 - Deterministic verification of FORMAL-208 (EkCheck)"
+method: formal-verifier
+verification_steps:
+  step_1_ci_kernel_accepted_original:
+    run_id: "39024541620"
+    commit: "668ce73"
+    result: "success; Formal.EkCheck built (3053/3055)"
+  step_2_okkey_correction:
+    commit: "487347e"
+    change: "okKey byte bound changed from implication to conjunction (EkCheck.lean:539-544); proof okKey_iff_eq7_1 updated."
+  step_3_ci_kernel_accepted_corrected:
+    run_id: "39033020854"
+    commit: "fc960c2"
+    result: "success; Formal.EkCheck built; axiom transcript generated."
+  step_4_axioms_transcript:
+    file: "formal/axioms.txt"
+    source_run: "39033020854"
+    result: >
+      All seven audited theorems depend only on [propext, Classical.choice,
+      Quot.sound] (step1_length_injective: [propext, Quot.sound]). No
+      file-introduced axioms.
+  step_5_independent_review:
+    review: "rev-2026-0025"
+    verdict: "SOUND WITH CORRECTIONS (core T1-T4 sound; okKey defect repaired)"
+  step_6_artifact_lint:
+    command: "python tools/lint_artifacts.py"
+    expected: "clean"
+reproducibility:
+  reruns: 2
+  all_consistent: true
+verdict: VERIFIED
+promotion_decision: "Promote msn-2026-0021 core results to verified; combined okKey claim valid only with the corrected conjunction."
+residual_limitations:
+  - "EkTypeCheck remains the constant True; step 1 is carried by the Fin index, not by a predicate."
+  - "k is not restricted to {2,3,4}; the package is parameterized over Nat."
+  - "No theorem links EkCheck's Nat k to LengthCheck's MLKEMParam."

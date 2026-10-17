@@ -1,0 +1,51 @@
+id: rpt-2026-0024
+type: report
+status: final
+created_at: "2026-10-17T15:00:00Z"
+updated_at: "2026-10-17T15:00:00Z"
+summary: >
+  Closeout of FORMAL-208 (msn-2026-0021), continuation of MSN-2026-0022, and
+  deferral of hyp-2026-0033. FORMAL-208 is verified after an okKey correction,
+  CI runs 39024541620 and 39033020854, a committed axiom transcript, and
+  adversarial review rev-2026-0025. MSN-2026-0022 is verified with
+  vrf-2026-0018. hyp-2026-0033 is left active; only PyYAML is installed, so
+  the three-lineage census is not executed in this session.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: beam-free
+    tool: closeout report
+  sources:
+    - missions/completed/msn-2026-0021.yaml
+    - missions/completed/msn-2026-0022.yaml
+    - knowledge/reviews/rev-2026-0025.yaml
+    - knowledge/verifications/vrf-2026-0017.yaml
+    - knowledge/verifications/vrf-2026-0018.yaml
+    - formal/axioms.txt
+links:
+  missions: [msn-2026-0021, msn-2026-0022]
+  reviews: [rev-2026-0025]
+  verifications: [vrf-2026-0017, vrf-2026-0018]
+
+formal_208:
+  run_ids: ["39024541620", "39033020854"]
+  axioms: "propext, Classical.choice, Quot.sound (step1_length_injective: propext, Quot.sound)"
+  review: "rev-2026-0025 (SOUND WITH CORRECTIONS; okKey defect repaired)"
+  defect_fixed: "EkCheck.lean:539-540 okKey implication -> conjunction"
+
+png:
+  run_id: "39022686286"
+  observation: "obs-2026-0069 (preserved; not reopened)"
+
+x509:
+  verification: "vrf-2026-0018"
+  tests: "test_x509_minimal_corpus, test_x509_corpus_reproducibility, test_x509_pathlen_oracle, test_x509_pathlen_citations: PASS"
+
+validation_at_close:
+  frontier_validate: "ok"
+  pytest: "385 tests collected, pass"
+  ruff: "pass"
+  lint_artifacts: "305 artifacts, clean"
+  promotion_gate_selftest: "PASS (10 modes)"

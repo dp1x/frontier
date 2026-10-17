@@ -64,6 +64,8 @@ links:
   experiments: [exp-2026-0037]
   observations: [obs-2026-0050]
   reviews: [rev-2026-0020, rev-2026-0021]
+  reproducers: [rpr-2026-0017]
+  verifications: [vrf-2026-0018]
 supersedes:
   corrects: [rev-2026-0020]
 normative_checks:
