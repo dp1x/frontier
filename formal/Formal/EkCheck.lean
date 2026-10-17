@@ -294,9 +294,7 @@ with `i < nCoeff k`: any bit position below the prefix's `12 * nCoeff k`
 bits belongs to a coefficient numbered below `nCoeff k`. -/
 theorem coeff_mem_prefix {k : Nat} {p : Nat} (hp : p < 12 * nCoeff k) :
     p / 12 < nCoeff k := by
-  have hle : 12 * (p / 12) <= p := Nat.mul_div_le p 12
-  have hlt : 12 * (p / 12) < 12 * nCoeff k := by omega
-  exact Nat.lt_of_mul_lt_mul_left (by omega) hlt
+  exact Nat.div_lt_of_lt_mul hp
 
 /-- The `384 * k`-byte prefix holds `8 * 384 * k = 12 * nCoeff k` bits, so
 the prefix contains exactly `nCoeff k` twelve-bit coefficients and the
@@ -417,6 +415,7 @@ theorem eq7_1_accept (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
   rw [seg_bit (ekBytes k ek) ((8 * y + s) / 12) ((8 * y + s) % 12) hmod]
   rw [← Nat.div_add_mod (8 * y + s) 12]
   exact gbit_byte (ekBytes k ek) y s hs
+
 
 /-- A disagreement byte for an out-of-range segment `i` is witnessed at the
 index `(12 * i + j) / 8` for some differing bit `j < 12`.  This re-states
@@ -891,6 +890,7 @@ theorem unbounded_reencode_disagrees_at_768 :
     have hdiv : (8 * 768 + 0) / 12 = 512 := by decide
     have hmod : (8 * 768 + 0) % 12 = 0 := by decide
     rw [hdiv, hmod]
+    rw [show (fun i => dec (ekBytes 2 B2) i) 512 = dec (ekBytes 2 B2) 512 by rfl]
     rw [hdec]
     decide
   intro hEq
