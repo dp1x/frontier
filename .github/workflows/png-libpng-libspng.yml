@@ -1,0 +1,115 @@
+﻿name: png-libpng-libspng
+
+# msn-2026-0023: build libpng and libspng from pinned source revisions and run
+# the committed 11-vector PNG unknown-critical-chunk corpus through them.
+# No secrets; contents: read. Heavy build trees stay on the runner.
+
+on:
+  workflow_dispatch:
+    inputs:
+      libpng_ref:
+        description: "libpng git ref (tag or commit SHA) to build"
+        required: true
+        type: string
+      libspng_ref:
+        description: "libspng git ref (tag or commit SHA) to build"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Frontier
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake git pkg-config zlib1g-dev python3
+
+      - name: Record toolchain
+        run: |
+          echo "gcc: $(gcc --version | head -n1)"
+          echo "cmake: $(cmake --version | head -n1)"
+          echo "python: $(python3 --version)"
+
+      - name: Build libpng
+        env:
+          LIBPNG_REF: ${{ inputs.libpng_ref }}
+        run: |
+          set -euo pipefail
+          git clone https://github.com/pnggroup/libpng.git /tmp/libpng-src
+          cd /tmp/libpng-src
+          git checkout "$LIBPNG_REF"
+          echo "libpng_ref_input=$LIBPNG_REF" | tee /tmp/libpng_ref.txt
+          echo "libpng_commit=$(git rev-parse HEAD)" | tee -a /tmp/libpng_ref.txt
+          echo "libpng_describe=$(git describe --tags --always 2>/dev/null || true)" | tee -a /tmp/libpng_ref.txt
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
+          make -j"$(nproc)"
+          sudo make install
+          sudo ldconfig
+          cat /tmp/libpng_ref.txt
+
+      - name: Build libspng
+        env:
+          LIBSPNG_REF: ${{ inputs.libspng_ref }}
+        run: |
+          set -euo pipefail
+          git clone https://github.com/randy408/libspng.git /tmp/libspng-src
+          cd /tmp/libspng-src
+          git checkout "$LIBSPNG_REF"
+          echo "libspng_ref_input=$LIBSPNG_REF" | tee /tmp/libspng_ref.txt
+          echo "libspng_commit=$(git rev-parse HEAD)" | tee -a /tmp/libspng_ref.txt
+          echo "libspng_describe=$(git describe --tags --always 2>/dev/null || true)" | tee -a /tmp/libspng_ref.txt
+          # Build approach (cmake vs meson) to be confirmed by external research.
+          if [ -f CMakeLists.txt ]; then
+            mkdir build && cd build
+            cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
+            make -j"$(nproc)"
+            sudo make install
+          elif [ -f meson.build ]; then
+            sudo apt-get install -y meson ninja-build
+            meson setup build --prefix=/usr/local
+            ninja -C build
+            sudo ninja -C build install
+          else
+            echo "No supported build system found" >&2
+            exit 1
+          fi
+          sudo ldconfig
+          cat /tmp/libspng_ref.txt
+
+      - name: Compile harnesses
+        run: |
+          set -euo pipefail
+          cd crypto/png-critical-chunk/harness
+          cc -O2 -Wall -Wextra -o /tmp/libpng_decode libpng_decode.c -lpng -lz
+          cc -O2 -Wall -Wextra -o /tmp/libspng_decode libspng_decode.c -lspng -lz
+
+      - name: Run libpng over the corpus
+        run: |
+          set -euo pipefail
+          cd crypto/png-critical-chunk/vectors
+          /tmp/libpng_decode *.png 2>&1 | tee /tmp/libpng_results.txt
+
+      - name: Run libspng over the corpus
+        run: |
+          set -euo pipefail
+          cd crypto/png-critical-chunk/vectors
+          /tmp/libspng_decode *.png 2>&1 | tee /tmp/libspng_results.txt
+
+      - name: Save result bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: png-libpng-libspng-results
+          path: |
+            /tmp/libpng_ref.txt
+            /tmp/libspng_ref.txt
+            /tmp/libpng_results.txt
+            /tmp/libspng_results.txt

@@ -2,7 +2,7 @@ id: msn-2026-0023
 type: mission
 status: active
 created_at: "2026-10-05T23:00:00Z"
-updated_at: "2026-10-06T00:30:00Z"
+updated_at: "2026-10-17T00:00:00Z"
 summary: >
   PNG unknown-critical-chunk handling. The corpus is built and verified, four
   independent decoder cores have been executed against it, and a
@@ -95,6 +95,9 @@ artifacts:
   - knowledge/hypotheses/hyp-2026-0032.yaml
   - knowledge/experiments/exp-2026-0039.yaml
   - knowledge/observations/obs-2026-0068.yaml
+  - .github/workflows/png-libpng-libspng.yml
+  - crypto/png-critical-chunk/harness/libpng_decode.c
+  - crypto/png-critical-chunk/harness/libspng_decode.c
 notes_path: knowledge/notes/msn-2026-0023.md
 blocked_reason: null
 terminal_reason: null
@@ -124,7 +127,7 @@ what_is_not_established:
   - "Anything about libpng or libspng. They are NOT_BUILT."
   - "Whether this is a defect, a policy choice, or a scope question. That is what the adversarial review is for."
   - "Any security consequence. Nothing here demonstrates an exploitable path."
-  - "Whether the Go result reproduces outside the cohort agent's own program."
+  - "Go result reproduced independently by orchestrator on 2026-10-17 using a separately written Go program (go1.26.4); pair-primary-cri accepted, negc-cri-badcrc rejected. This closes the Go reproduction gap, though it remains the same library/version."
 
 the_strongest_next_action:
   >
