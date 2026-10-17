@@ -50,8 +50,8 @@ jobs:
             '#print axioms Fips203.EkCheck.seed_region_unconstrained' \
             '#print axioms Fips203.EkCheck.step1_length_injective' \
             '#print axioms Fips203.EkCheck.okKey_iff_eq7_1' > /tmp/ax.lean
-          lake env lean /tmp/ax.lean > formal/axioms.txt 2>&1
-          cat formal/axioms.txt
+          lake env lean /tmp/ax.lean > axioms.txt 2>&1
+          cat axioms.txt
       - uses: actions/upload-artifact@v4
         with:
           name: lean_build_log
