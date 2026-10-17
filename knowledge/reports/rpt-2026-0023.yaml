@@ -1,0 +1,54 @@
+id: rpt-2026-0023
+type: report
+status: final
+created_at: "2026-10-17T11:00:00Z"
+updated_at: "2026-10-17T11:00:00Z"
+summary: >
+  Session continued from cd442ce. PNG mission msn-2026-0023 was closed after CI
+  run 39022686286 built libpng 1.6.59 and libspng 0.7.4 and ran the 11-vector
+  corpus; both reject the unknown critical chunk in the primary position while
+  accepting the ancillary twin. FORMAL-208 advanced on branch formal-208-rewrite
+  from 17a6d2d; four-error state was repaired across iterative CI runs, and run
+  39024541620 achieved a kernel-accepted build of Formal/EkCheck.lean. The
+  repaired branch was merged into main. All validation checks pass.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: beam-free
+    tool: >
+      Direct inspection, CI dispatch and log review, artifact updates, and merges.
+  sources:
+    - knowledge/observations/obs-2026-0069.yaml
+    - missions/completed/msn-2026-0023.yaml
+    - missions/active/msn-2026-0021.yaml
+    - .github/workflows/png-libpng-libspng.yml
+    - formal/Formal/EkCheck.lean
+links:
+  missions: [msn-2026-0021, msn-2026-0023]
+  observations: [obs-2026-0069]
+  experiments: [exp-2026-0039]
+
+png_ci_result:
+  run_id: "39022686286"
+  libpng: "1.6.59 rejects pair-primary-cri; accepts pair-primary-anc"
+  libspng: "0.7.4 rejects pair-primary-cri; accepts pair-primary-anc"
+  caveats: "Trailing chunks and CRC attribution have documented limitations."
+
+formal_208_result:
+  starting_commit: "17a6d2d"
+  final_commit: "668ce73"
+  run_id: "39024541620"
+  result: "kernel-accepted build of Formal/EkCheck.lean"
+  merge: "formal-208-rewrite merged into main"
+
+validation_at_close:
+  frontier_validate: "ok"
+  pytest: "pass"
+  ruff: "pass"
+  lint_artifacts: "pass"
+  promotion_gate_selftest: "pass"
+
+supersedes: {}
+corrects: {}
