@@ -1,4 +1,4 @@
-﻿/-
+/-
 FIPS 203 Section 7.2 encapsulation key check (Eq 7.1) over a BOUNDED byte
 index, for a FIXED parameter set.  Mission msn-2026-0021 (FORMAL-208).
 
