@@ -1,0 +1,103 @@
+id: obs-2026-0069
+type: observation
+status: current
+created_at: "2026-10-17T10:00:00Z"
+updated_at: "2026-10-17T10:00:00Z"
+summary: >
+  CI run 39022686286 built libpng 1.6.59 and libspng 0.7.4 on ubuntu-latest
+  and executed the committed 11-vector PNG corpus. Both libraries reject the
+  unknown critical chunk in the primary position (pair-primary-cri) while
+  accepting the ancillary twin (pair-primary-anc). This widens the exercised
+  cohort beyond the four original cores and removes the NOT_BUILT gap, while
+  preserving documented caveats about CRC attribution, trailing chunks, and
+  API ordering.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: beam-free
+    tool: >
+      GitHub Actions run 39022686286 of png-libpng-libspng.yml on commit
+      cd442ce, using pinned source revisions and C harnesses.
+  sources:
+    - .github/workflows/png-libpng-libspng.yml
+    - crypto/png-critical-chunk/harness/libpng_decode.c
+    - crypto/png-critical-chunk/harness/libspng_decode.c
+    - crypto/png-critical-chunk/vectors
+    - knowledge/experiments/exp-2026-0039.yaml
+    - knowledge/observations/obs-2026-0068.yaml
+  parent: obs-2026-0068
+  generation: 2
+links:
+  experiments: [exp-2026-0039]
+  observations: [obs-2026-0068]
+  specifications: [spc-2026-0007]
+  missions: [msn-2026-0023]
+
+ci_run:
+  run_id: "39022686286"
+  workflow: "png-libpng-libspng.yml"
+  commit: "cd442ce0824e6d00126296071860b8698c659f86"
+  conclusion: "success"
+  artifact: "png-libpng-libspng-results (ID 12097631295)"
+  artifact_sha256: "0a46a70af9ce63f31998b03d875151fce6f8970eb7f15efe2d172aadb83f941a"
+
+implementations:
+  - name: "libpng"
+    version: "1.6.59"
+    commit: "cd952f49f95bb27154ae77dbb103032d95f6e580"
+    build: "CMake/Ninja, Release, shared+static, PNG_TESTS=OFF, PNG_TOOLS=OFF, PNG_HARDWARE_OPTIMIZATIONS=OFF, zlib 1.3"
+    result_primary_pair:
+      ancillary: "ACCEPT"
+      critical: "REJECT (unhandled critical chunk)"
+    result_secondary:
+      place_anc_after_idat: "ACCEPT"
+      place_cri_after_idat: "ACCEPT (trailing chunk not reached by png_read_info/read_image; requires png_read_end)"
+    crc_attribution:
+      negc_anc_badcrc: "ACCEPT with CRC warning; default skip path does not reject ancillary unknown chunk"
+      negc_cri_badcrc: "REJECT"
+    limitation: >
+      The harness calls png_read_info and png_read_image but not png_read_end, so
+      trailing chunks are not validated. CRC handling for the ancillary skip path
+      is not a clean rejection and must not be cited as criticality evidence.
+  - name: "libspng"
+    version: "0.7.4"
+    commit: "fb768002d4288590083a476af628e51c3f1d47cd"
+    build: "CMake/Ninja, Release, shared+static, BUILD_EXAMPLES=OFF, ENABLE_OPT=OFF, zlib 1.3"
+    result_primary_pair:
+      ancillary: "ACCEPT"
+      critical: "REJECT (unknown critical chunk)"
+    result_secondary:
+      place_anc_after_idat: "ACCEPT"
+      place_cri_after_idat: "ACCEPT (initial read_chunks stops before tail; requires spng_decode_chunks)"
+    crc_attribution:
+      negc_anc_badcrc: "ACCEPT (bad CRC not rejected in this path)"
+      negc_cri_badcrc: "REJECT (unknown critical chunk; critical branch returns before CRC check)"
+    limitation: >
+      The unknown critical branch returns before the CRC check, so the error code
+      alone does not prove CRC validation. Trailing chunks require explicit
+      tail parsing. SPNG_KEEP_UNKNOWN_CHUNKS does not override critical rejection.
+
+interpretation:
+  - "libpng and libspng both reject the unknown critical chunk in the primary
+     position, matching stb_image and Wuffs and contrasting with Pillow and Go."
+  - "The cohort now includes six implementations, none of which are forks of
+     libpng for the four non-libpng cores; libpng and libspng are the reference
+     implementations most relevant to the scope claim."
+  - "The result supports the narrower claim that the silent acceptance in
+     Pillow and Go is an implementation gap, not a universal interpretation of
+     the specification."
+  - "It does not establish a security consequence, a defect classification
+     suitable for upstream reporting, or behavior of other versions."
+
+what_remains_unresolved:
+  - "Whether Pillow and Go maintainers consider this a defect, policy choice,
+     or out of scope."
+  - "stb_image and Wuffs contrast results remain cohort-sourced and were not
+     independently reviewed."
+  - "No upstream report has been filed and none should be without human
+     decision."
+
+supersedes: {}
+corrects: {}

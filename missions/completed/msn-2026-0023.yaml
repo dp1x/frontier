@@ -1,8 +1,16 @@
 id: msn-2026-0023
 type: mission
-status: active
+status: completed
 created_at: "2026-10-05T23:00:00Z"
-updated_at: "2026-10-17T00:00:00Z"
+updated_at: "2026-10-17T10:30:00Z"
+terminal_reason: >
+  Cohort widened to six implementations via CI run 39022686286: libpng 1.6.59
+  and libspng 0.7.4 both reject the unknown critical chunk in the primary
+  position while accepting the ancillary twin, matching stb_image and Wuffs.
+  Silent acceptance is isolated to Pillow 12.3.0 and Go image/png 1.26.4.
+  Independent adversarial review rev-2026-0024 confirmed the finding. No security
+  consequence or upstream action was established; mission closes as a conformance
+  observation with scoped claims.
 summary: >
   PNG unknown-critical-chunk handling. The corpus is built and verified, four
   independent decoder cores have been executed against it, and a
@@ -29,7 +37,7 @@ provenance:
 links:
   hypotheses: [hyp-2026-0032]
   experiments: [exp-2026-0039]
-  observations: [obs-2026-0068]
+  observations: [obs-2026-0068, obs-2026-0069]
   specifications: [spc-2026-0007]
   reviews: [rev-2026-0024]
 title: "MSN-2026-0023 - PNG unknown-critical-chunk handling across independent decoder cores"
@@ -79,7 +87,7 @@ acceptance_criteria:
 - Every cohort member's core and lineage established from its own distribution (DONE: none of the four links libpng).
 - The strongest candidate discrepancy independently reproduced outside the primary harness (DONE for Pillow by the orchestrator AND by the adversarial reviewer with separate scripts; DONE for Go by the adversarial reviewer's own Go program. Neither is a second IMPLEMENTATION -- two reproductions against the same libraries.)
 - An independent adversarial review with a mandate to disprove the finding (DONE: rev-2026-0024, CONFIRMED with one wording correction, which was applied to obs-2026-0068 and verified against the installed Pillow source).
-- libpng and libspng exercised so a broader scope claim becomes possible (NOT DONE).
+- libpng and libspng exercised on CI (DONE: run 39022686286, libpng 1.6.59 and libspng 0.7.4 both reject the unknown critical chunk in the primary position).
 stopping_conditions:
 - Adversarial review lands and either confirms or refutes the discrepancy.
 - Cohort widened to include libpng or libspng, or that route is recorded as CI-blocked.
@@ -95,6 +103,7 @@ artifacts:
   - knowledge/hypotheses/hyp-2026-0032.yaml
   - knowledge/experiments/exp-2026-0039.yaml
   - knowledge/observations/obs-2026-0068.yaml
+  - knowledge/observations/obs-2026-0069.yaml
   - .github/workflows/png-libpng-libspng.yml
   - crypto/png-critical-chunk/harness/libpng_decode.c
   - crypto/png-critical-chunk/harness/libspng_decode.c
