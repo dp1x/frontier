@@ -413,8 +413,7 @@ theorem eq7_1_accept (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
     rw [Nat.mod_eq_of_lt hsegAt]
   rw [hbit]
   rw [seg_bit (ekBytes k ek) ((8 * y + s) / 12) ((8 * y + s) % 12) hmod]
-  have heq' := (Nat.div_add_mod (8 * y + s) 12).symm
-  rw [heq']
+  rw [Nat.div_add_mod (8 * y + s) 12]
   exact gbit_byte (ekBytes k ek) y s hs
 
 /-- A disagreement byte for an out-of-range segment `i` is witnessed at the
