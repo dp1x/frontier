@@ -296,7 +296,7 @@ theorem coeff_mem_prefix {k : Nat} {p : Nat} (hp : p < 12 * nCoeff k) :
     p / 12 < nCoeff k := by
   have hle : 12 * (p / 12) <= p := Nat.mul_div_le p 12
   have hlt : 12 * (p / 12) < 12 * nCoeff k := by omega
-  exact Nat.lt_of_mul_lt_mul_left hlt (by omega)
+  exact Nat.lt_of_mul_lt_mul_left (by omega) hlt
 
 /-- The `384 * k`-byte prefix holds `8 * 384 * k = 12 * nCoeff k` bits, so
 the prefix contains exactly `nCoeff k` twelve-bit coefficients and the
@@ -415,6 +415,7 @@ theorem eq7_1_accept (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
     rw [Nat.mod_eq_of_lt hsegAt]
   rw [hbit]
   rw [seg_bit (ekBytes k ek) ((8 * y + s) / 12) ((8 * y + s) % 12) hmod]
+  rw [← Nat.div_add_mod (8 * y + s) 12]
   exact gbit_byte (ekBytes k ek) y s hs
 
 /-- A disagreement byte for an out-of-range segment `i` is witnessed at the
@@ -883,6 +884,7 @@ theorem unbounded_reencode_disagrees_at_768 :
   have hdec : dec (ekBytes 2 B2) 512 = 0 := by
     unfold dec
     rw [hseg512]
+    decide
   have hbit : bit (encByte (fun i => dec (ekBytes 2 B2) i) 768) 0 = 0 := by
     rw [enc_bit (fun i => dec (ekBytes 2 B2) i) 768 0 (by omega : (0 : Nat) < 8)]
     unfold ebit
