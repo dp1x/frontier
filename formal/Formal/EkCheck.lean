@@ -535,18 +535,21 @@ theorem eq7_1_reject_some_index (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek 
     ∃ y, y < 384 * k ∧ encByte (fun i => dec (ekBytes k ek) i) y ≠ ekBytes k ek y :=
   eq7_1_reject k ek hB hSeg
 
-/-- A key that passes step 1 and step 2: the combined Section 7.2 check. -/
+/-- A key that passes step 1 and step 2: the combined Section 7.2 check.
+
+Step 1 demands a BYTE array, so the byte bound is a conjunction, not an
+implication: an array whose bytes are all >= 256 does not pass. -/
 def okKey (k : Nat) (ek : Ek k) : Prop :=
-  EkTypeCheck k ek ∧ (∀ y, ekBytes k ek y < 256 → eq7_1 k ek)
+  EkTypeCheck k ek ∧ (∀ y, ekBytes k ek y < 256) ∧ eq7_1 k ek
 
 theorem okKey_iff_eq7_1 (k : Nat) (ek : Ek k)
     (hB : ∀ y, ekBytes k ek y < 256) :
     okKey k ek ↔ ∀ i, i < nCoeff k -> ekSeg k ek i < 3329 := by
   constructor
   · intro h i hi
-    exact eq7_1_to_seg_bound k ek hB (h.2 0 (hB 0)) i hi
+    exact eq7_1_to_seg_bound k ek hB h.2.2 i hi
   · intro hSeg
-    refine ⟨step1_type_check k ek, fun _ _ => eq7_1_of_seg_bound k ek hB hSeg⟩
+    refine ⟨step1_type_check k ek, hB, eq7_1_of_seg_bound k ek hB hSeg⟩
 
 /-! ## The unbounded contrast: what the OLD corpus statements say -/
 

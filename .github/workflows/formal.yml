@@ -38,7 +38,26 @@ jobs:
           test ${PIPESTATUS[0]} -eq 0
           ! grep -q "declaration uses 'sorry'" build.log
           ! grep -qi "error" build.log
+      - name: Generate axiom transcript
+        working-directory: formal
+        run: |
+          cat > /tmp/ax.lean <<'EOF'
+import Formal.EkCheck
+#print axioms Fips203.EkCheck.eq7_1_accept
+#print axioms Fips203.EkCheck.eq7_1_reject
+#print axioms Fips203.EkCheck.old_hypothesis_false_k2
+#print axioms Fips203.EkCheck.unbounded_reencode_disagrees_at_768
+#print axioms Fips203.EkCheck.seed_region_unconstrained
+#print axioms Fips203.EkCheck.step1_length_injective
+#print axioms Fips203.EkCheck.okKey_iff_eq7_1
+EOF
+          lake env lean /tmp/ax.lean > formal/axioms.txt 2>&1
+          cat formal/axioms.txt
       - uses: actions/upload-artifact@v4
         with:
           name: lean_build_log
           path: formal/build.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lean_axioms
+          path: formal/axioms.txt

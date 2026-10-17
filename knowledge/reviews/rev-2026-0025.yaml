@@ -1,0 +1,187 @@
+id: rev-2026-0025
+type: review
+status: completed
+created_at: "2026-10-17T12:00:00Z"
+updated_at: "2026-10-17T12:00:00Z"
+summary: >
+  Adversarial audit of FORMAL-208 (msn-2026-0021) against the EkCheck theorem
+  package as merged on main (HEAD 9fefabd; EkCheck.lean byte-identical to 668ce73).
+  The four required theorems (eq7_1_accept, eq7_1_reject, step1, old_hypothesis_false_k2)
+  are sound and non-vacuous: the accept hypothesis is inhabited (B2), the reject
+  direction witnesses a byte inside the 384k prefix for every k>=1, and the B2
+  counterexample arithmetic (bytes 0x01 0x0D at offset 768 -> segment 512 = 3329)
+  checks out. Two defects were found in auxiliary definitions: EkTypeCheck is the
+  constant True (step 1 lives only in the Fin index), and okKey's byte-bound
+  premise is an implication, so an all-bytes->=256 array passes without Eq (7.1).
+  No sorry/admit/native_decide present. Axiom inventory remains uncommitted.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-critic
+    model: beam-free
+    tool: >
+      Direct source audit of formal/Formal/EkCheck.lean, LengthCheck.lean,
+      ByteEncode.lean; git diff 668ce73..HEAD; arithmetic re-derivation; grep for
+      sorry/admit/native_decide/axiom.
+  sources:
+    - formal/Formal/EkCheck.lean
+    - formal/Formal/LengthCheck.lean
+    - formal/Formal/ByteEncode.lean
+    - missions/active/msn-2026-0021.yaml
+    - knowledge/observations/obs-2026-0067.yaml
+    - localdocs/refs/fips203.pdf
+  parent: msn-2026-0021
+  generation: 1
+links:
+  missions: [msn-2026-0021]
+  specifications: [spc-2026-0001]
+  targets: [tgt-2026-0001]
+review_of: msn-2026-0021
+independent: true
+independence: >
+  Reviewer was dispatched with an explicit mandate to DISPROVE the soundness and
+  meaningfulness of the EkCheck package, did not author the Lean code, and
+  re-derived the B2 arithmetic and the witness-byte bound independently rather
+  than transcribing the file's own proofs.
+VERDICT: "SOUND WITH CORRECTIONS"
+verdict_detail: >
+  The kernel-accepted core of FORMAL-208 (T1 eq7_1_accept, T2 eq7_1_reject,
+  T3 step1 with k load-bearing, T4 old_hypothesis_false_k2, plus
+  eq7_1_hypothesis_inhabited and the seed-region theorems) is sound and
+  non-vacuous: T1's bounded hypothesis is inhabited by B2, T2's reject
+  direction produces a byte index strictly inside the 384k prefix for every k>=1,
+  and the B2 witness genuinely satisfies Eq (7.1) while violating the old
+  unbounded corpus hypothesis. The package is NOT, however, promotion-ready as
+  written: the combined predicate okKey is weaker than Section 7.2 requires
+  (it accepts arrays whose bytes are all >= 256), and the step-1 predicate
+  EkTypeCheck is the constant True. These are corrections to auxiliary
+  definitions, not to the four required theorems.
+
+ATTACK_LINES_ATTEMPTED:
+  - line: "1 -- EkTypeCheck vacuity"
+    result: >
+      EkTypeCheck k ek := True (EkCheck.lean:318) and step1_type_check is trivial.
+      Step 1 is enforced by the type index Fin (384*k+32), not by the predicate.
+      FINDING: the predicate itself is vacuous; combined with okKey its conjunct
+      contributes nothing. This is the design recorded in the file, but it means
+      okKey does not actually check step 1. Not a soundness defect in T3
+      (step1_length_injective / load_bearing_examples carry the content), but
+      a real gap in the combined predicate.
+  - line: "2 -- okKey allows non-byte arrays"
+    result: >
+      DEFECT FOUND. okKey (EkCheck.lean:539-540) is
+      EkTypeCheck k ek /\ (forall y, ekBytes k ek y < 256 -> eq7_1 k ek).
+      If every byte is >= 256, every implication is vacuously true and okKey
+      holds regardless of Eq (7.1). For mixed arrays the <256 bytes force
+      eq7_1, which then fails, so only the all-non-byte case slips through.
+      FIPS 203 step 1 requires a byte array, so this is a genuine defect.
+      Exact location: formal/Formal/EkCheck.lean:539-540.
+  - line: "3 -- eq7_1_accept hypothesis bounded / hB quantifier"
+    result: >
+      hSeg is bounded by i < nCoeff k (EkCheck.lean:384). hB is unbounded over
+      Nat but ekBytes returns 0 outside the key (EkCheck.lean:244-245), and
+      0 < 256, so it is effectively a bound over the key length plus the seed
+      region. Inhabited (eq7_1_hypothesis_inhabited, B2). NOT vacuous.
+  - line: "4 -- eq7_1_reject witness byte bound for all k>0"
+    result: >
+      witness_byte_lt_prefix (EkCheck.lean:463-471) proves
+      (12*i+j)/8 < 384*k for i < nCoeff k = 256*k and j < 12. Verified by
+      hand: worst case i=256*k-1, j=11 gives (3072*k-1)/8 = 384*k-1.
+      Holds for all k>=1 (and is vacuous for k=0). Sound.
+  - line: "5 -- B2 counterexample arithmetic (bytes 768/769 -> seg512=3329)"
+    result: >
+      Verified: byte 768 = 1, byte 769 = 13 = 0x0D < 16, so segment 512
+      (bits 6144..6155) = 1 + 13*256 = 3329 = q. Because byte 769's low
+      nibble is 13 (<16) the straddle formula coincides with the naive one;
+      the latent straddle issue recorded in obs-2026-0067 FINDING_2 does not
+      affect this witness. B2_seg512 (EkCheck.lean:718) is sound.
+  - line: "6 -- unbounded_reencode_disagrees_at_768 proves LHS false"
+    result: >
+      Sound. It shows encByte (dec B2) 768 has bit 0 = 0 (because segment 512
+      decodes to 3329 % 3329 = 0) while B2's byte 768 = 1 has bit 0 = 1, so
+      the two bytes differ. This is exactly the first index Eq (7.1) does not
+      cover, and it does refute the unbounded roundtrip equality at that index.
+      Exact location: formal/Formal/EkCheck.lean:876-900.
+  - line: "7 -- step1_pairwise_distinct vs canonicalLength (Nat k vs MLKEMParam)"
+    result: >
+      No soundness defect, but a type-bridge gap: step1_pairwise_distinct
+      (EkCheck.lean:343-347) appeals to LengthCheck.canonicalLength over the
+      inductive MLKEMParam, while the rest of EkCheck works over Nat k.
+      There is no theorem in the file linking EkCheck.k to MLKEMParam.k2/k3/k4.
+      The load-bearing Nat-k property is step1_length_injective (326-330),
+      which is sound. Flagged as a documentation/bridge limitation, not a
+      defect in the proof.
+  - line: "8 -- hidden sorry / admit / native_decide"
+    result: >
+      None. The only textual hit for 'admit' is the word 'admittedly' in a
+      comment (EkCheck.lean:763). Proofs use 'decide' on closed ground terms
+      (B2_seg512, minimal-style computations), which are genuine kernel-evaluated
+      computations, not native_decide. Clean.
+  - line: "9 -- axiom dependencies"
+    result: >
+      UNVERIFIED. No formal/axioms.txt is committed (mission acceptance
+      criterion 7 unmet), and the reviewer did not run a build (no .lake cache
+      present; CI is the designated verifier). The file declares no 'axiom' or
+      'opaque', and imports only Mathlib.Tactic, Formal.ByteEncode, Formal.LengthCheck.
+      Axiom inventory must be established by the deterministic pipeline before
+      promotion; this review cannot confirm it.
+  - line: "10 -- k restricted to {2,3,4}"
+    result: >
+      Not enforced. Ek (k : Nat) accepts any Nat; step1_length_injective shows
+      distinctness but not membership in {2,3,4}. FIPS 203 allows only k=2,3,4.
+      This is a scope limitation explicitly recorded by the file ('one FIXED
+      value of k'), not a soundness defect in the required theorems, but it
+      means the package does not by itself exclude k=5.
+  - line: "11 -- Eq (7.1) does not constrain seed bytes"
+    result: >
+      By design and correct. eq7_1 (EkCheck.lean:361-362) quantifies only
+      y < 384*k, and prefix_bits_stop_before_seed (581-587) proves the prefix
+      stops before byte 384*k. seed_region_unconstrained and the B2/B2alt pair
+      witness this. Consistent with FIPS 203 Algorithm 13 line 19 / Algorithm 14
+      line 3. Sound.
+  - line: "12 -- CI / unchanged-on-main claim"
+    result: >
+      Verified: git diff --stat 668ce73 HEAD -- formal/Formal/EkCheck.lean
+      produces no output. The file is byte-identical to the merged build.
+      User-cited CI run 39024541620 is taken as the kernel-acceptance evidence.
+
+exact_defects_found:
+  - location: "formal/Formal/EkCheck.lean:318"
+    defect: >
+      EkTypeCheck (k : Nat) (ek : Ek k) : Prop := True. The type check is
+      carried by the Fin index, not by the predicate, so the predicate is
+      vacuous and okKey's first conjunct is trivially true.
+  - location: "formal/Formal/EkCheck.lean:539-540"
+    defect: >
+      okKey uses (forall y, ekBytes k ek y < 256 -> eq7_1 k ek). An array
+      whose bytes are all >= 256 satisfies okKey without Eq (7.1), so the
+      combined predicate is not faithful to FIPS 203 Section 7.2 (which requires
+      a byte array). Should be (forall y, ekBytes k ek y < 256) /\ eq7_1 k ek.
+  - location: "missions/active/msn-2026-0021.yaml (acceptance_criteria item 7)"
+    defect: >
+      formal/axioms.txt (committed #print axioms transcript) is not present in
+      the repository. Axiom inventory unverified. Not a Lean defect but an
+      evidence-chain gap that blocks promotion.
+
+promotion_readiness: >
+  NOT READY. The four required theorems and the counterexample are sound and
+  non-vacuous and were kernel-accepted by CI run 39024541620, and this review
+  supplies the independent non-synthesizer adversarial pass the mission requires.
+  However, promotion to 'verified' requires (a) correcting okKey to enforce the
+  byte bound as a conjunction rather than an implication, (b) deciding whether
+  EkTypeCheck should remain a type-level property (acceptable if documented) or
+  become a real predicate, and (c) committing formal/axioms.txt produced by the
+  deterministic pipeline. Until (a) and (c) are done, the package must not be
+  promoted, and the combined-predicate claim must not be cited as a verified
+  Section 7.2 check.
+
+mission_can_be_closed: >
+  NO, not as-is. The mission's binding acceptance criteria (kernel-accepted
+  proofs for both directions, k load-bearing, counterexample, CI green,
+  adversarial review) are substantially met, but the axioms transcript criterion
+  is unmet and the okKey defect means the "combined Section 7.2 check" claim
+  is currently unsound. Recommended: keep mission active, apply the two
+  corrections above plus the axioms transcript, then re-run this adversarial
+  review on the corrected file. The core T1-T4 results do not need to be
+  re-proved; only okKey and its equivalence theorem okKey_iff_eq7_1 change.
