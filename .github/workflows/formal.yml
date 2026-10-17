@@ -41,16 +41,15 @@ jobs:
       - name: Generate axiom transcript
         working-directory: formal
         run: |
-          cat > /tmp/ax.lean <<'EOF'
-import Formal.EkCheck
-#print axioms Fips203.EkCheck.eq7_1_accept
-#print axioms Fips203.EkCheck.eq7_1_reject
-#print axioms Fips203.EkCheck.old_hypothesis_false_k2
-#print axioms Fips203.EkCheck.unbounded_reencode_disagrees_at_768
-#print axioms Fips203.EkCheck.seed_region_unconstrained
-#print axioms Fips203.EkCheck.step1_length_injective
-#print axioms Fips203.EkCheck.okKey_iff_eq7_1
-EOF
+          printf '%s\n' \
+            'import Formal.EkCheck' \
+            '#print axioms Fips203.EkCheck.eq7_1_accept' \
+            '#print axioms Fips203.EkCheck.eq7_1_reject' \
+            '#print axioms Fips203.EkCheck.old_hypothesis_false_k2' \
+            '#print axioms Fips203.EkCheck.unbounded_reencode_disagrees_at_768' \
+            '#print axioms Fips203.EkCheck.seed_region_unconstrained' \
+            '#print axioms Fips203.EkCheck.step1_length_injective' \
+            '#print axioms Fips203.EkCheck.okKey_iff_eq7_1' > /tmp/ax.lean
           lake env lean /tmp/ax.lean > formal/axioms.txt 2>&1
           cat formal/axioms.txt
       - uses: actions/upload-artifact@v4
