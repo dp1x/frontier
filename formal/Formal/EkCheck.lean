@@ -294,10 +294,9 @@ with `i < nCoeff k`: any bit position below the prefix's `12 * nCoeff k`
 bits belongs to a coefficient numbered below `nCoeff k`. -/
 theorem coeff_mem_prefix {k : Nat} {p : Nat} (hp : p < 12 * nCoeff k) :
     p / 12 < nCoeff k := by
-  have h12 : (0 : Nat) < 12 := by omega
-  have heq := twelve_mul_nCoeff k
-  rw [nCoeff] at heq
-  omega
+  have hle : 12 * (p / 12) <= p := Nat.mul_div_le p 12
+  have hlt : 12 * (p / 12) < 12 * nCoeff k := by omega
+  exact Nat.lt_of_mul_lt_mul_left hlt (by omega)
 
 /-- The `384 * k`-byte prefix holds `8 * 384 * k = 12 * nCoeff k` bits, so
 the prefix contains exactly `nCoeff k` twelve-bit coefficients and the
@@ -401,11 +400,11 @@ theorem eq7_1_accept (k : Nat) (ek : Ek k) (hB : ∀ y, ekBytes k ek y < 256)
   have hcoeff : (8 * y + s) / 12 < nCoeff k :=
     coeff_mem_prefix (by
       have heq := twelve_mul_nCoeff k
-      rw [nCoeff] at heq
+      rw [heq]
       omega)
   have hsegAt : seg (ekBytes k ek) ((8 * y + s) / 12) < 3329 := by
     rw [← ekSeg_eq k ek ((8 * y + s) / 12)]
-    exact hSeg _ hcoeff
+    exact hSeg ((8 * y + s) / 12) hcoeff
   -- `dec B i = seg B i % 3329`, and `seg B i < 3329`, so the reduction is
   -- the identity; hence bit `(8*y+s) % 12` of `dec` is bit `(8*y+s)%12`
   -- of `seg`, which by `seg_bit` is global bit `8*y+s`.
@@ -889,7 +888,8 @@ theorem unbounded_reencode_disagrees_at_768 :
     unfold ebit
     have hdiv : (8 * 768 + 0) / 12 = 512 := by decide
     have hmod : (8 * 768 + 0) % 12 = 0 := by decide
-    rw [hdiv, hmod, hdec]
+    rw [hdiv, hmod]
+    rw [hdec]
     decide
   intro hEq
   have hbits : bit (encByte (fun i => dec (ekBytes 2 B2) i) 768) 0
