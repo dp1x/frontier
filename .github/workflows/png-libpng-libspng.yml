@@ -6,15 +6,12 @@
 
 on:
   workflow_dispatch:
-    inputs:
-      libpng_ref:
-        description: "libpng git ref (tag or commit SHA) to build"
-        required: true
-        type: string
-      libspng_ref:
-        description: "libspng git ref (tag or commit SHA) to build"
-        required: true
-        type: string
+  push:
+    branches: [main]
+    paths:
+      - "crypto/png-critical-chunk/**"
+      - ".github/workflows/png-libpng-libspng.yml"
+
 
 permissions:
   contents: read
@@ -30,7 +27,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential cmake git pkg-config zlib1g-dev python3
+            build-essential cmake git ninja-build pkg-config zlib1g-dev python3
+
 
       - name: Record toolchain
         run: |
@@ -39,51 +37,37 @@ jobs:
           echo "python: $(python3 --version)"
 
       - name: Build libpng
-        env:
-          LIBPNG_REF: ${{ inputs.libpng_ref }}
         run: |
           set -euo pipefail
           git clone https://github.com/pnggroup/libpng.git /tmp/libpng-src
           cd /tmp/libpng-src
-          git checkout "$LIBPNG_REF"
-          echo "libpng_ref_input=$LIBPNG_REF" | tee /tmp/libpng_ref.txt
+          git checkout cd952f49f95bb27154ae77dbb103032d95f6e580
+          test "$(git rev-parse HEAD)" = "cd952f49f95bb27154ae77dbb103032d95f6e580"
+          echo "libpng_tag=v1.6.59" | tee /tmp/libpng_ref.txt
           echo "libpng_commit=$(git rev-parse HEAD)" | tee -a /tmp/libpng_ref.txt
-          echo "libpng_describe=$(git describe --tags --always 2>/dev/null || true)" | tee -a /tmp/libpng_ref.txt
           mkdir build && cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
-          make -j"$(nproc)"
-          sudo make install
+          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DPNG_SHARED=ON -DPNG_STATIC=ON -DPNG_TESTS=OFF -DPNG_TOOLS=OFF -DPNG_HARDWARE_OPTIMIZATIONS=OFF
+          ninja
+          sudo ninja install
           sudo ldconfig
           cat /tmp/libpng_ref.txt
 
+
       - name: Build libspng
-        env:
-          LIBSPNG_REF: ${{ inputs.libspng_ref }}
         run: |
           set -euo pipefail
           git clone https://github.com/randy408/libspng.git /tmp/libspng-src
           cd /tmp/libspng-src
-          git checkout "$LIBSPNG_REF"
-          echo "libspng_ref_input=$LIBSPNG_REF" | tee /tmp/libspng_ref.txt
+          git checkout fb768002d4288590083a476af628e51c3f1d47cd
+          test "$(git rev-parse HEAD)" = "fb768002d4288590083a476af628e51c3f1d47cd"
+          echo "libspng_tag=v0.7.4" | tee /tmp/libspng_ref.txt
           echo "libspng_commit=$(git rev-parse HEAD)" | tee -a /tmp/libspng_ref.txt
-          echo "libspng_describe=$(git describe --tags --always 2>/dev/null || true)" | tee -a /tmp/libspng_ref.txt
-          # Build approach (cmake vs meson) to be confirmed by external research.
-          if [ -f CMakeLists.txt ]; then
-            mkdir build && cd build
-            cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
-            make -j"$(nproc)"
-            sudo make install
-          elif [ -f meson.build ]; then
-            sudo apt-get install -y meson ninja-build
-            meson setup build --prefix=/usr/local
-            ninja -C build
-            sudo ninja -C build install
-          else
-            echo "No supported build system found" >&2
-            exit 1
-          fi
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DSPNG_SHARED=ON -DSPNG_STATIC=ON -DBUILD_EXAMPLES=OFF -DENABLE_OPT=OFF
+          ninja -C build
+          sudo ninja -C build install
           sudo ldconfig
           cat /tmp/libspng_ref.txt
+
 
       - name: Compile harnesses
         run: |

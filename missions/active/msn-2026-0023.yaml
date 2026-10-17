@@ -124,7 +124,7 @@ what_is_established_so_far:
     accepting cores DO check CRCs.
 
 what_is_not_established:
-  - "Anything about libpng or libspng. They are NOT_BUILT."
+  - "libpng 1.6.59 (cd952f49...) and libspng 0.7.4 (fb768002...) are now pinned in the CI workflow, but not yet executed; behavior predictions rest on source reading."
   - "Whether this is a defect, a policy choice, or a scope question. That is what the adversarial review is for."
   - "Any security consequence. Nothing here demonstrates an exploitable path."
   - "Go result reproduced independently by orchestrator on 2026-10-17 using a separately written Go program (go1.26.4); pair-primary-cri accepted, negc-cri-badcrc rejected. This closes the Go reproduction gap, though it remains the same library/version."
