@@ -1,0 +1,81 @@
+name: utf8-strict-validation
+
+# msn-2026-0024: regenerate the 606-vector strict UTF-8 corpus and run it
+# through the three committed adapters. No secrets; contents: read.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "utf8-cross-impl/**"
+      - ".github/workflows/utf8-strict-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Frontier
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake git ninja-build python3 clang
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+
+      - name: Record toolchains
+        run: |
+          echo "rustc: $(rustc --version)"
+          echo "go: $(go version)"
+          echo "clang: $(clang --version | head -n1)"
+          echo "cmake: $(cmake --version | head -n1)"
+          echo "python: $(python3 --version)"
+
+      - name: Clone and build simdutf 8.2.0
+        run: |
+          git clone --depth 1 --branch v8.2.0 https://github.com/simdutf/simdutf.git /tmp/simdutf
+          cd /tmp/simdutf
+          git rev-parse HEAD
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSIMDUTF_TESTS=OFF -DSIMDUTF_BENCHMARKS=OFF
+          cmake --build build --config Release
+          echo "SIMDUTF_ROOT=/tmp/simdutf" >> "$GITHUB_ENV"
+          echo "SIMDUTF_LIB=/tmp/simdutf/build/src/libsimdutf.a" >> "$GITHUB_ENV"
+
+      - name: Compile adapters
+        working-directory: utf8-cross-impl/adapters
+        run: |
+          rustc -O rust_utf8.rs -o /tmp/utf8-rust
+          go build -o /tmp/utf8-go go_utf8.go
+          clang++ -std=c++17 -O2 -I /tmp/simdutf/include simdutf_utf8.cpp /tmp/simdutf/build/src/libsimdutf.a -o /tmp/utf8-simdutf -lpthread
+
+      - name: Regenerate corpus
+        run: python3 utf8-cross-impl/vectors/gen_vectors.py
+
+      - name: Run matrix
+        env:
+          UTF8_RUST_EXE: /tmp/utf8-rust
+          UTF8_GO_EXE: /tmp/utf8-go
+          UTF8_SIMDUTF_EXE: /tmp/utf8-simdutf
+        run: python3 utf8-cross-impl/runner/run_matrix.py
+
+      - name: Verify result
+        run: |
+          python3 - <<'PY'
+          import json
+          rows=[json.loads(l) for l in open('utf8-cross-impl/results/matrix.jsonl')]
+          assert len(rows)==606, len(rows)
+          assert all(r['all_agree_with_oracle'] for r in rows), "mismatch"
+          print("OK: 606 vectors, 0 mismatches")
+          PY

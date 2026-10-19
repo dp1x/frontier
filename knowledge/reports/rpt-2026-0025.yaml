@@ -26,12 +26,12 @@ links:
   reviews: [rev-2026-0026]
 
 utf8:
-  vectors: 606
+  vectors_tested_with_preserved_results: 606
   implementations: 3
   mismatches_vs_oracle: 0
   mismatches_among_implementations: 0
-  random_differential_vectors: 2000
-  random_mismatches: 0
+  random_differential_executed_unpreserved: 2000
+  random_differential_preserved: 0
   positive_control_ufffd: true
 
 source_verification:
@@ -46,11 +46,11 @@ oracle_correctness:
 
 observed_behavior:
   all_three_agree_on_crafted: true
-  all_three_agree_on_random: true
+  all_three_agree_on_random_unpreserved: "reported 0 mismatches on 2000 ad hoc vectors; not preserved"
   no_replacement_decoding_tested: "APIs are strict validators; no replacement observed"
 
 independent_reproduction:
-  random_differential: "2000 vectors, 0 mismatches"
+  random_differential: "not preserved (2000 ad hoc vectors reported 0 mismatches)"
   adversarial_review: "rev-2026-0026"
 
 implementation_independence:

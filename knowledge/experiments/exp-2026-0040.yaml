@@ -58,7 +58,15 @@ results:
   mismatches_vs_oracle: 0
   mismatches_among_implementations: 0
   errors: 0
-  random_differential_vectors: 2000
-  random_mismatches: 0
+  crafted_vectors_tested: 606
+  crafted_vectors_with_per_impl_results: 606
+  random_differential_executed_unpreserved: 2000
+  random_differential_preserved: 0
+  random_mismatches_reported_unpreserved: 0
+  note_random: >
+    2,000 random vectors (seed 0x5eed, lengths 0-8) were executed ad hoc during
+    the session and reported 0 mismatches, but inputs, expected labels, and
+    per-implementation results were not committed. They are not reproducible
+    from committed evidence and are not counted as tested evidence.
 
 adversarial_review: rev-2026-0026

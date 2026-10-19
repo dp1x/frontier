@@ -6,10 +6,16 @@ updated_at: "2026-10-19T00:00:00Z"
 summary: >
   Adversarial review of the strict UTF-8 validation experiment. Audited the
   cleanroom oracle against Unicode 17.0.0 Table 3-7 and RFC 3629 section 4;
-  independently re-derived validity predicate; 0 mismatches on 606 + 10000 random
+  independently re-derived validity predicate; 0 mismatches on 606 crafted
   vectors. Confirmed adapters read binary stdin. Confirmed U+FFFD positive control.
-  Conclusion: negative result defensible on tested corpus; corpus is finite and
-  equivalence is empirical, not exhaustive. No promotion.
+  Conclusion: negative result defensible on the 606-vector committed corpus;
+  corpus is finite and equivalence is empirical, not exhaustive. No promotion.
+  CORRECTION (2026-10-19): an earlier wording in this artifact claimed
+  "606 + 10000 random vectors". That claim is unsupported: no random-vector
+  inputs, seed, expected labels, or per-implementation results were preserved.
+  An ad hoc run of 2,000 random vectors was executed during the session (seed
+  0x5eed, lengths 0-8) and reported 0 mismatches, but it was not committed and
+  cannot be reproduced from committed evidence.
 epistemic_status: interpretation
 provenance:
   created_by:

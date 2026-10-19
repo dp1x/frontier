@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -10,10 +11,13 @@ ROOT = Path(__file__).resolve().parents[1]
 VECTORS = ROOT / "vectors" / "vectors.jsonl"
 ADAPTERS = ROOT / "adapters"
 RESULTS = ROOT / "results"
+_rust = os.environ.get("UTF8_RUST_EXE", str(ADAPTERS / "rust_utf8.exe"))
+_go = os.environ.get("UTF8_GO_EXE", str(ADAPTERS / "go_utf8.exe"))
+_simd = os.environ.get("UTF8_SIMDUTF_EXE", str(ADAPTERS / "simdutf_utf8.exe"))
 IMPLS = {
-    "rust_core_str_from_utf8": ADAPTERS / "rust_utf8.exe",
-    "go_unicode_utf8_Valid": ADAPTERS / "go_utf8.exe",
-    "simdutf_validate_utf8": ADAPTERS / "simdutf_utf8.exe",
+    "rust_core_str_from_utf8": Path(_rust),
+    "go_unicode_utf8_Valid": Path(_go),
+    "simdutf_validate_utf8": Path(_simd),
 }
 
 
