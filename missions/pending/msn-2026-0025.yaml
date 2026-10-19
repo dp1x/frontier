@@ -1,0 +1,60 @@
+id: msn-2026-0025
+type: mission
+status: pending
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+terminal_reason: null
+summary: >
+  QUIC overlong frame-type handling (RFC 9000 section 12.4) as a
+  behavioral/interoperability experiment. Deferred execution: no QUIC parser core
+  was built in this session; ngtcp2/msquic/liblsquic are available as vcpkg ports
+  but the installed tree is read-only in this environment. Mission scaffolded;
+  execution to be performed on CI (medium compute) in a follow-up.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: beam-free
+    tool: mission creation after MSN-2026-0024
+  sources:
+    - knowledge/specifications/spc-2026-0010.yaml
+    - knowledge/notes/scout-opportunities-2026-10-04.md
+links:
+  hypotheses: [hyp-2026-0035]
+  specifications: [spc-2026-0010]
+title: "MSN-2026-0025 - QUIC overlong frame-type handling"
+objective: >
+  Assess whether independent QUIC implementations accept frame types encoded with
+  longer-than-necessary variable-length integer encodings, per RFC 9000 12.4
+  (permitted rejection). Acceptance alone is not a violation.
+domain: interop
+scope: >
+  Behavioral/interoperability experiment. Receiver acceptance of overlong
+  frame-type encodings is permitted; only rejection is guaranteed-safe. No
+  violation claim from acceptance alone. YAML census deferred unless additional
+  independent parser cores become available.
+constraints:
+  - "RFC 9000 12.4: frame type MUST use shortest possible encoding; endpoint MAY treat longer encoding as PROTOCOL_VIOLATION."
+  - "No security-impact claim without evidence."
+compute:
+  expected_class: medium
+  notes: "CI build of ngtcp2/msquic/liblsquic."
+budget:
+  max_attempts: 3
+  max_independent_reviews: 1
+  max_compute_runs: 6
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Source-verified RFC 9000 12.4 clause (DONE: spc-2026-0010)."
+  - "At least two independent QUIC parser cores exercised (PENDING: ngtcp2, msquic, or liblsquic via CI)."
+  - "Overlong frame-type stimuli sent and responses recorded (PENDING)."
+  - "Results scoped as permitted/observed, not as violations (PENDING)."
+stopping_conditions:
+  - "Budget exhausted."
+  - "No independent core available."
+artifacts:
+  - knowledge/specifications/spc-2026-0010.yaml
+blocked_reason: "no QUIC parser core built in this session; execution deferred to CI"
+notes_path: knowledge/notes/msn-2026-0025.md

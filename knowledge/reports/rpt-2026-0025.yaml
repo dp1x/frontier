@@ -1,0 +1,75 @@
+id: rpt-2026-0025
+type: report
+status: final
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+summary: >
+  Session report: strict UTF-8 validation experiment (MSN-2026-0024) completed
+  with negative result; QUIC overlong frame-type mission (MSN-2026-0025) scaffolded.
+  Counts and claims measured at close.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: synthesizer
+    model: beam-free
+    tool: closeout report
+  sources:
+    - missions/completed/msn-2026-0024.yaml
+    - missions/pending/msn-2026-0025.yaml
+    - knowledge/experiments/exp-2026-0040.yaml
+    - knowledge/verifications/vrf-2026-0019.yaml
+links:
+  missions: [msn-2026-0024, msn-2026-0025]
+  experiments: [exp-2026-0040]
+  verifications: [vrf-2026-0019]
+  reviews: [rev-2026-0026]
+
+utf8:
+  vectors: 606
+  implementations: 3
+  mismatches_vs_oracle: 0
+  mismatches_among_implementations: 0
+  random_differential_vectors: 2000
+  random_mismatches: 0
+  positive_control_ufffd: true
+
+source_verification:
+  unicode_pdf_sha256: "D394812F8EBA54745C7DD067CA7B4DB196C8F1AEE84A72D51B0D8F3C5AFE082A"
+  rfc3629_sha256: "A2A3A39457D30420C812F87A38CC2B9194832F6982EF17E619DE7D816879D6A6"
+  rfc9000_sha256: "F88AAE47F8B18E102024916E975E919201D8DDE689CBA79B01079EAEDD402E22"
+
+oracle_correctness:
+  transcription_errors: 0
+  independent_predicate_mismatches: 0
+  python_strict_decode_mismatches: 0
+
+observed_behavior:
+  all_three_agree_on_crafted: true
+  all_three_agree_on_random: true
+  no_replacement_decoding_tested: "APIs are strict validators; no replacement observed"
+
+independent_reproduction:
+  random_differential: "2000 vectors, 0 mismatches"
+  adversarial_review: "rev-2026-0026"
+
+implementation_independence:
+  rust: "Rust std, independent"
+  go: "Go std, independent"
+  simdutf: "simdutf 8.2.0, independent"
+
+conformance:
+  claim: "No divergence observed within tested corpus; no nonconformance claim"
+  negative_result: "hyp-2026-0034 rejected, preserved"
+
+unresolved_uncertainty:
+  - "Corpus is finite; equivalence is empirical, not exhaustive proof."
+  - "Only one version of each implementation tested."
+  - "QUIC mission pending execution."
+
+validation_at_close:
+  frontier_validate: "ok"
+  pytest: "244 passed, 145 skipped, 1 xfailed"
+  ruff: "pass"
+  artifact_lint: "321 artifacts, clean"
+  promotion_gate_selftest: "PASS (10 modes)"

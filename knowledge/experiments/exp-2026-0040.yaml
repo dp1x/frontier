@@ -1,0 +1,64 @@
+id: exp-2026-0040
+type: experiment
+status: completed
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+summary: >
+  Cross-implementation strict UTF-8 validation experiment. Three independently
+  developed implementations (Rust core::str::from_utf8, Go unicode/utf8.Valid,
+  simdutf validate_utf8) were run on 606 deterministic vectors derived from
+  Unicode 17.0.0 Table 3-7. Zero mismatches vs cleanroom oracle; zero mismatches
+  among implementations. 2000 random vectors also agreed.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: beam-free
+    tool: direct execution of committed corpus and random differential
+  sources:
+    - utf8-cross-impl/vectors/vectors.jsonl
+    - utf8-cross-impl/results/matrix.jsonl
+    - knowledge/specifications/spc-2026-0009.yaml
+    - knowledge/hypotheses/hyp-2026-0034.yaml
+  parent: hyp-2026-0034
+  generation: 1
+links:
+  hypotheses: [hyp-2026-0034]
+  observations: [obs-2026-0070]
+  specifications: [spc-2026-0009]
+
+corpus:
+  vectors: 606
+  categories:
+    empty: 1
+    valid_scalar: 19
+    positive_control: 1
+    overlong: 6
+    surrogate: 3
+    above_max: 5
+    truncated: 9
+    bad_continuation: 4
+    single_byte: 249
+    mutation: 308
+    concat: 1
+  all_expected_from_oracle: true
+
+implementations:
+  - name: "Rust core::str::from_utf8"
+    version: "rustc 1.99.0 (b940084d7 2026-09-28)"
+    source_commit: "toolchain stable-aarch64-pc-windows-msvc"
+  - name: "Go unicode/utf8.Valid"
+    version: "go1.26.4 windows/arm64"
+  - name: "simdutf validate_utf8"
+    version: "simdutf 8.2.0"
+    source_commit: "fd476229424b40ae71a58dd5a205795c3d76b5f1"
+
+results:
+  mismatches_vs_oracle: 0
+  mismatches_among_implementations: 0
+  errors: 0
+  random_differential_vectors: 2000
+  random_mismatches: 0
+
+adversarial_review: rev-2026-0026

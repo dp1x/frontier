@@ -1,0 +1,22 @@
+id: obs-2026-0070
+type: observation
+status: recorded
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+summary: >
+  Observed: Rust core::str::from_utf8, Go unicode/utf8.Valid, and simdutf
+  validate_utf8 all agree with the cleanroom Unicode 17.0.0 Table 3-7 oracle on
+  606 crafted vectors and 2000 random vectors. No divergence. Preserved as
+  negative result; no security impact established.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: beam-free
+    tool: experiment execution
+  sources:
+    - utf8-cross-impl/results/matrix.jsonl
+links:
+  experiments: [exp-2026-0040]
+  hypotheses: [hyp-2026-0034]

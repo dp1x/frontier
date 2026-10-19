@@ -1,0 +1,42 @@
+id: spc-2026-0010
+type: specification
+status: current
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+summary: >
+  Source-verified normative text for QUIC frame type encoding. RFC 9000 section 12.4
+  (Frames and Frame Types) permits receivers to reject longer-than-necessary
+  encodings of frame types. Receiver acceptance of an overlong encoding is
+  permitted behavior, not by itself a violation.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: source-analyst
+    model: beam-free
+    tool: direct fetch (to be completed)
+  sources:
+    - https://www.rfc-editor.org/rfc/rfc9000
+  parent: null
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0035]
+
+normative_propositions:
+  - id: quic-p1
+    topic: "overlong frame types"
+    text: "RFC 9000 section 12.4: receivers MAY reject frames with longer-than-necessary encodings of the frame type."
+  - id: quic-p2
+    topic: "interpretation"
+    text: "Acceptance of an overlong frame-type encoding is permitted; only rejection is guaranteed-safe. No violation can be claimed from acceptance alone."
+document_identity:
+  title: "RFC 9000 QUIC: A UDP-Based Multiplexed and Secure Transport"
+  section: "12.4 Frames and Frame Types"
+  canonical_url: "https://www.rfc-editor.org/rfc/rfc9000.txt"
+  fetched_at: "2026-10-19T00:00:00Z"
+  sha256: "F88AAE47F8B18E102024916E975E919201D8DDE689CBA79B01079EAEDD402E22"
+  exact_clause: >
+    "To ensure simple and efficient implementations of frame parsing, a frame
+    type MUST use the shortest possible encoding. ... An endpoint MAY treat
+    the receipt of a frame type that uses a longer encoding than necessary as
+    a connection error of type PROTOCOL_VIOLATION."

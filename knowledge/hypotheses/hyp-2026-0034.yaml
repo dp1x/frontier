@@ -1,0 +1,28 @@
+id: hyp-2026-0034
+type: hypothesis
+status: rejected
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+summary: >
+  Hypothesis: among Rust core::str::from_utf8, Go unicode/utf8.Valid, and simdutf
+  validate_utf8, at least one diverges from Unicode 17.0.0 Table 3-7 on some input.
+  Result: rejected. All three agree with the cleanroom oracle on 606 crafted vectors
+  plus 2000 random vectors; no divergence observed.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: beam-free
+    tool: experiment execution
+  sources:
+    - knowledge/specifications/spc-2026-0009.yaml
+  parent: null
+  generation: 0
+links:
+  specifications: [spc-2026-0009]
+  experiments: [exp-2026-0040]
+  observations: [obs-2026-0070]
+terminal_reason: >
+  No divergence found across crafted + random + adversarial boundary inputs.
+  Preserved as negative result; not evidence of conformance beyond tested corpus.

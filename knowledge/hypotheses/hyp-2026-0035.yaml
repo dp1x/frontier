@@ -1,0 +1,21 @@
+id: hyp-2026-0035
+type: hypothesis
+status: pending
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+summary: >
+  Hypothesis: independent QUIC implementations may accept overlong frame-type
+  encodings (permitted by RFC 9000 12.4). Acceptance alone is not a violation.
+  Execution pending.
+epistemic_status: hypothesis
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: beam-free
+    tool: mission creation
+  sources:
+    - knowledge/specifications/spc-2026-0010.yaml
+links:
+  specifications: [spc-2026-0010]
+terminal_reason: null

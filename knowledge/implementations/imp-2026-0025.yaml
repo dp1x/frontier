@@ -1,0 +1,26 @@
+id: imp-2026-0025
+type: implementation
+status: pinned
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+summary: >
+  Rust core::str::from_utf8 strict UTF-8 validator. Toolchain rustc 1.99.0
+  (b940084d7 2026-09-28), stable-aarch64-pc-windows-msvc. Used in MSN-2026-0024.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: implementation-archaeologist
+    model: beam-free
+    tool: local toolchain
+  sources:
+    - knowledge/missions/completed/msn-2026-0024.yaml
+links:
+  missions: [msn-2026-0024]
+title: "Rust core::str::from_utf8"
+library:
+  name: "core::str::from_utf8"
+  vendor: "Rust project (rust-lang)"
+  language: "Rust"
+  version: "rustc 1.99.0"
+implementation_lineage: "Rust standard library, independent codebase"

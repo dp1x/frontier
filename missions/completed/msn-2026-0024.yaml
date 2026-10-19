@@ -1,0 +1,88 @@
+id: msn-2026-0024
+type: mission
+status: completed
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+terminal_reason: >
+  Strict UTF-8 validation cross-implementation experiment completed. Cleanroom
+  oracle derived from Unicode 17.0.0 Table 3-7. 606 crafted vectors and 2000
+  random vectors run through Rust core::str::from_utf8, Go unicode/utf8.Valid,
+  and simdutf validate_utf8 with zero mismatches. Adversarial review rev-2026-0026
+  confirmed oracle transcription and negative result with scope limits. No
+  divergence, no novelty, no security impact. Hypothesis hyp-2026-0034 rejected
+  and preserved as negative result.
+summary: >
+  Strict UTF-8 validation under RFC 3629 / Unicode 17.0.0 Table 3-7 across three
+  independently developed implementations. All agree; negative result preserved.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator
+    model: beam-free
+    tool: experiment execution
+  sources:
+    - knowledge/specifications/spc-2026-0009.yaml
+    - knowledge/experiments/exp-2026-0040.yaml
+    - knowledge/observations/obs-2026-0070.yaml
+    - knowledge/reviews/rev-2026-0026.yaml
+    - knowledge/verifications/vrf-2026-0019.yaml
+links:
+  hypotheses: [hyp-2026-0034]
+  experiments: [exp-2026-0040]
+  observations: [obs-2026-0070]
+  specifications: [spc-2026-0009]
+  reviews: [rev-2026-0026]
+  reproducers: [rpr-2026-0018]
+  verifications: [vrf-2026-0019]
+title: "MSN-2026-0024 - Strict UTF-8 validation cross-implementation"
+objective: >
+  Determine whether Rust core::str::from_utf8, Go unicode/utf8.Valid, and simdutf
+  validate_utf8 diverge from Unicode 17.0.0 Table 3-7 on any input.
+domain: interop
+scope: >
+  Boolean strict validation of raw byte sequences. No replacement decoding,
+  normalization, or lossy conversion. Tested versions: Rust 1.99.0, Go 1.26.4,
+  simdutf 8.2.0 (commit fd476229424b40ae71a58dd5a205795c3d76b5f1).
+constraints:
+  - "Corpus is finite and crafted plus random differential; not exhaustive proof."
+  - "No security-impact or nonconformance claim beyond tested scope."
+compute:
+  expected_class: lightweight
+  notes: "Local execution; adapters compiled with rustc/go/clang-cl."
+budget:
+  max_attempts: 3
+  max_independent_reviews: 1
+  max_compute_runs: 4
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Oracle derived from Unicode 17.0.0 Table 3-7 and RFC 3629 (DONE)."
+  - "606-vector corpus with valid boundaries, overlong, surrogate, above-max, invalid starters/continuations, truncated, mutations (DONE)."
+  - "Same raw bytes through all three implementations with preserved results/errors (DONE: matrix.jsonl)."
+  - "Valid U+FFFD encoding as positive control (DONE)."
+  - "Adversarial review of oracle (DONE: rev-2026-0026)."
+  - "Negative result preserved if all agree (DONE: hyp-2026-0034 rejected)."
+stopping_conditions:
+  - "Adversarial review lands."
+  - "Budget exhausted."
+artifacts:
+  - utf8-cross-impl/oracle/utf8_oracle.py
+  - utf8-cross-impl/vectors/gen_vectors.py
+  - utf8-cross-impl/vectors/vectors.jsonl
+  - utf8-cross-impl/adapters/rust_utf8.rs
+  - utf8-cross-impl/adapters/go_utf8.go
+  - utf8-cross-impl/adapters/simdutf_utf8.cpp
+  - utf8-cross-impl/runner/run_matrix.py
+  - utf8-cross-impl/results/matrix.jsonl
+  - utf8-cross-impl/results/matrix.tsv
+  - tests/test_utf8_strict_validation.py
+  - knowledge/specifications/spc-2026-0009.yaml
+  - knowledge/hypotheses/hyp-2026-0034.yaml
+  - knowledge/experiments/exp-2026-0040.yaml
+  - knowledge/observations/obs-2026-0070.yaml
+  - knowledge/reproducers/rpr-2026-0018.yaml
+  - knowledge/reviews/rev-2026-0026.yaml
+  - knowledge/verifications/vrf-2026-0019.yaml
+notes_path: knowledge/notes/msn-2026-0024.md
+blocked_reason: null

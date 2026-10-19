@@ -1,0 +1,60 @@
+id: spc-2026-0009
+type: specification
+status: current
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+summary: >
+  Source-verified normative specification for strict UTF-8 validation. Authoritative
+  oracle is Unicode 17.0.0 Chapter 3 section 3.9.3 (UTF-8) Table 3-7 (Well-Formed
+  UTF-8 Byte Sequences), corroborated by RFC 3629 sections 3-4 (UTF-8 definition and
+  ABNF syntax). Defines permitted byte ranges for 1-4 byte sequences, overlong and
+  surrogate exclusion, and U+10FFFF upper bound.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: source-analyst
+    model: beam-free
+    tool: direct fetch and hash of authoritative sources
+  sources:
+    - https://www.unicode.org/versions/Unicode17.0.0/UnicodeStandard-17.0.pdf
+    - https://www.rfc-editor.org/rfc/rfc3629.txt
+  parent: null
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0034]
+
+document_identities:
+  unicode:
+    title: "The Unicode Standard, Version 17.0.0"
+    section: "Chapter 3, section 3.9.3 UTF-8, Table 3-7 Well-Formed UTF-8 Byte Sequences"
+    canonical_url: "https://www.unicode.org/versions/Unicode17.0.0/"
+    fetched_url: "https://www.unicode.org/versions/Unicode17.0.0/UnicodeStandard-17.0.pdf"
+    fetched_at: "2026-10-19T00:00:00Z"
+    raw_bytes: 14151539
+    sha256: "D394812F8EBA54745C7DD067CA7B4DB196C8F1AEE84A72D51B0D8F3C5AFE082A"
+    html_chapter_url: "https://www.unicode.org/versions/Unicode17.0.0/core-spec/chapter-3/"
+    html_sha256: "69FEF5215C021368A1880D91BC59D7935D13A5455F1373EDA17B8818D41B7B41"
+  rfc3629:
+    title: "RFC 3629 UTF-8, a transformation format of ISO 10646"
+    canonical_url: "https://www.rfc-editor.org/rfc/rfc3629.txt"
+    fetched_at: "2026-10-19T00:00:00Z"
+    sha256: "A2A3A39457D30420C812F87A38CC2B9194832F6982EF17E619DE7D816879D6A6"
+    sections: "3 (UTF-8 definition), 4 (Syntax of UTF-8 Byte Sequences ABNF)"
+
+normative_propositions:
+  - id: utf8-p1
+    topic: "well-formedness"
+    text: "A byte sequence is valid UTF-8 iff it matches Table 3-7 permitted ranges."
+  - id: utf8-p2
+    topic: "surrogates"
+    text: "Code points U+D800..U+DFFF are not Unicode scalar values; any UTF-8 byte sequence mapping to them is ill-formed."
+  - id: utf8-p3
+    topic: "upper bound"
+    text: "Unicode scalar values are at most U+10FFFF; byte sequences encoding above are ill-formed."
+  - id: utf8-p4
+    topic: "overlong"
+    text: "Non-shortest forms are ill-formed (enforced by Table 3-7 lead-byte ranges C2..DF etc.)."
+  - id: utf8-p5
+    topic: "strictness"
+    text: "Conformant processes shall treat ill-formed sequences as an error condition and shall not interpret them as characters (Unicode C10)."

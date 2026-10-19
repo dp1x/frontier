@@ -1,0 +1,25 @@
+id: vrf-2026-0019
+type: verification
+status: completed
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+summary: >
+  Verification of strict UTF-8 cross-implementation experiment: 606 vectors x 3
+  implementations, 0 mismatches; 2000 random vectors, 0 mismatches; oracle
+  matches Python strict decode on 20000 random; adversarial review rev-2026-0026.
+  Negative result preserved; no promotion to verified finding.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: beam-free
+    tool: deterministic validation + adversarial review
+  sources:
+    - knowledge/experiments/exp-2026-0040.yaml
+    - knowledge/reviews/rev-2026-0026.yaml
+links:
+  experiments: [exp-2026-0040]
+  reviews: [rev-2026-0026]
+  observations: [obs-2026-0070]
+verification_result: "pass (negative result)"

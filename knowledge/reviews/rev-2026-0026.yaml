@@ -1,0 +1,28 @@
+id: rev-2026-0026
+type: review
+status: completed
+created_at: "2026-10-19T00:00:00Z"
+updated_at: "2026-10-19T00:00:00Z"
+summary: >
+  Adversarial review of the strict UTF-8 validation experiment. Audited the
+  cleanroom oracle against Unicode 17.0.0 Table 3-7 and RFC 3629 section 4;
+  independently re-derived validity predicate; 0 mismatches on 606 + 10000 random
+  vectors. Confirmed adapters read binary stdin. Confirmed U+FFFD positive control.
+  Conclusion: negative result defensible on tested corpus; corpus is finite and
+  equivalence is empirical, not exhaustive. No promotion.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: adversarial-reviewer
+    model: beam-free
+    tool: independent audit
+  sources:
+    - utf8-cross-impl/oracle/utf8_oracle.py
+    - utf8-cross-impl/results/matrix.jsonl
+links:
+  experiments: [exp-2026-0040]
+  observations: [obs-2026-0070]
+reviewer_role: adversarial
+mandate: "disprove the strongest result"
+outcome: "confirmed with scope limits"
