@@ -70,6 +70,16 @@ jobs:
           UTF8_SIMDUTF_EXE: /tmp/utf8-simdutf
         run: python3 utf8-cross-impl/runner/run_matrix.py
 
+      - name: Install test dependencies
+        run: python3 -m pip install --upgrade pytest
+
+      - name: Run adapter tests
+        env:
+          UTF8_RUST_EXE: /tmp/utf8-rust
+          UTF8_GO_EXE: /tmp/utf8-go
+          UTF8_SIMDUTF_EXE: /tmp/utf8-simdutf
+        run: python3 -m pytest -q -m "requires_adapters"
+
       - name: Verify result
         run: |
           python3 - <<'PY'

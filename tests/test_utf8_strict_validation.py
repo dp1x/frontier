@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -10,9 +11,9 @@ ORACLE_DIR = ROOT / "utf8-cross-impl" / "oracle"
 VECTORS = ROOT / "utf8-cross-impl" / "vectors" / "vectors.jsonl"
 ADAPTERS = ROOT / "utf8-cross-impl" / "adapters"
 IMPLS = {
-    "rust": ADAPTERS / "rust_utf8.exe",
-    "go": ADAPTERS / "go_utf8.exe",
-    "simdutf": ADAPTERS / "simdutf_utf8.exe",
+    "rust": Path(os.environ.get("UTF8_RUST_EXE", str(ADAPTERS / "rust_utf8.exe"))),
+    "go": Path(os.environ.get("UTF8_GO_EXE", str(ADAPTERS / "go_utf8.exe"))),
+    "simdutf": Path(os.environ.get("UTF8_SIMDUTF_EXE", str(ADAPTERS / "simdutf_utf8.exe"))),
 }
 
 
@@ -47,6 +48,7 @@ def test_ufffd_positive_control():
     assert ufffd and ufffd[0]["expected"] is True
 
 
+@pytest.mark.requires_adapters
 def test_adapters_exist():
     for name, exe in IMPLS.items():
         assert exe.exists(), f"missing adapter {name}: {exe}"
@@ -58,6 +60,7 @@ def _run(exe, data):
     return out
 
 
+@pytest.mark.requires_adapters
 def test_matrix_agreement(oracle):
     rows = [json.loads(line) for line in VECTORS.read_text(encoding="utf-8").splitlines() if line.strip()]
     for r in rows:

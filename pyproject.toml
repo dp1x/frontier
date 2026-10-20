@@ -32,6 +32,9 @@ packages = ["src/frontier"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-q"
+markers = [
+  "requires_adapters: tests requiring compiled UTF-8 adapter binaries",
+]
 
 [tool.ruff]
 line-length = 100

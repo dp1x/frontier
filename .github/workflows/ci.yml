@@ -27,7 +27,7 @@ jobs:
       - name: Lint
         run: ruff check src tests
       - name: Tests
-        run: pytest -q
+        run: pytest -q -m "not requires_adapters"
       - name: Validate research state
         run: python -m frontier.cli validate
       - name: Artifact envelope lint
