@@ -1,0 +1,32 @@
+=== T1 ===
+RESULT: ACCEPT
+  chain 0:
+    CN=EE-T1 | 2a41dbca3e97e832daf5f4e759871ccaba98386b03464e52cd73efb42b816092
+    CN=CA-A | 0ece6acf7ca81307d3fae1452f97427b0dded34bef8fae08a797a1f6fbbb8978
+    CN=Root | 438096a6edd17b6addc703502339efe487562985d3585f9777aa592744a8d13d
+=== T2 ===
+RESULT: REJECT
+ERROR: x509: too many intermediates for path length constraint
+  Reason: 3
+  Cert: CN=CA-A
+  CertSHA256: 0ece6acf7ca81307d3fae1452f97427b0dded34bef8fae08a797a1f6fbbb8978
+=== T3 ===
+RESULT: REJECT
+ERROR: x509: too many intermediates for path length constraint
+  Reason: 3
+  Cert: CN=CA-A
+  CertSHA256: 0ece6acf7ca81307d3fae1452f97427b0dded34bef8fae08a797a1f6fbbb8978
+=== T4 ===
+RESULT: REJECT
+ERROR: x509: too many intermediates for path length constraint
+  Reason: 3
+  Cert: CN=CA-A
+  CertSHA256: 5bcb2ec5597728ff1dbadd69edbe898ff648726b19096aaf5a747d1279fb44bf
+=== T5 ===
+RESULT: ACCEPT
+  chain 0:
+    CN=EE-T5 | 71b2dfa11a7019df76a1a4a6e2c94148903691bfd3ce44367af71fff8fcefe74
+    CN=ICA-S | f15672a18f1387dd6b781e72f800d02caa69bdefc4b57bb7767e1bf91a54eccc
+    CN=CA-A | efb26e0aec94bad1bcac66e38222fa8180f28f0fc4721f456ec6e4e031dd081e
+    CN=CA-A | f9d763fd1d6042019ccd459becb39dccda8bc6080f2e72b324172d823131defd
+    CN=Root | 438096a6edd17b6addc703502339efe487562985d3585f9777aa592744a8d13d

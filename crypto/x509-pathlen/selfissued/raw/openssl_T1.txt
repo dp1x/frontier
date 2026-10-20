@@ -1,0 +1,5 @@
+R:\x509-selfissued\certs\EE_T1.pem: OK
+Chain:
+depth=0: CN=EE-T1 (untrusted)
+depth=1: CN=CA-A (untrusted)
+depth=2: CN=Root
