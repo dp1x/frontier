@@ -1,0 +1,48 @@
+id: obs-2026-0071
+type: observation
+status: recorded
+created_at: "2026-10-21T00:00:00Z"
+updated_at: "2026-10-21T00:00:00Z"
+summary: >
+  Observed: Go 1.27.3 rejects T3, while OpenSSL 3.6.5 accepts it, in a
+  five-case X.509 pathLenConstraint experiment. T1, T2, T4, and T5 agree. T3
+  is R -> C(pathLenConstraint=0) -> S(self-issued, no pathLenConstraint) -> EE.
+  RFC 5280 minimum behavior is ACCEPT; Go's result is stricter and is permitted
+  by RFC 5280 section 6.2. No security consequence or normative violation was
+  demonstrated. NIST PKITS 4.6.15 already exercises the same counting behavior.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: experiment reproduction and evidence preservation
+  sources:
+    - crypto/x509-pathlen/selfissued/README.md
+    - crypto/x509-pathlen/selfissued/manifest.json
+    - crypto/x509-pathlen/selfissued/raw/go_output.txt
+    - crypto/x509-pathlen/selfissued/raw/openssl_T3.txt
+    - https://www.rfc-editor.org/rfc/rfc5280
+links:
+  hypotheses: [hyp-2026-0030, hyp-2026-0031]
+  reproducers: [rpr-2026-0019]
+statement: >
+  In a five-case X.509 pathLenConstraint experiment, Go 1.27.3 rejects T3
+  (R -> C(pathLenConstraint=0) -> S(self-issued, no pathLenConstraint) -> EE)
+  with "x509: too many intermediates for path length constraint" at C, while
+  OpenSSL 3.6.5 accepts the same chain. T1, T2, T4, and T5 produce matching
+  results in both implementations. RFC 5280 sections 4.2.1.9 and 6.1.4 require
+  the minimum behavior to be ACCEPT for T3 because self-issued intermediates
+  are not counted. RFC 5280 section 6.2 permits stricter implementations, so
+  the observed difference is an interoperability observation, not a
+  demonstrated conformance violation or security finding. NIST PKITS 4.6.15
+  already tests the same self-issued counting exemption.
+environment:
+  where: local
+  isolation: disposable scratch on R:; durable evidence committed under crypto/x509-pathlen/selfissued/
+  versions:
+    go: "1.27.3 windows/arm64"
+    openssl: "3.6.5 29 Sep 2026 (VC-WIN64-ARM)"
+    python_cryptography: "50.0.1"
+    rfc5280: "RFC 5280, SHA-256 A2F2628C0A83B873FC4786ABD921F9B2C02395954B655D190BF16B831633345D"
+    evidence_commit: "2121b9945d3e83c2b2b55c5606009a491f3877de"

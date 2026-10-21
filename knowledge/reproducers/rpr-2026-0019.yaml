@@ -1,0 +1,38 @@
+id: rpr-2026-0019
+type: reproducer
+status: reproduced
+created_at: "2026-10-21T00:00:00Z"
+updated_at: "2026-10-21T00:00:00Z"
+summary: >
+  Reproducer for the X.509 self-issued pathLenConstraint interoperability
+  observation. Frozen certificate inputs, Go and OpenSSL raw outputs, and
+  hashes are preserved under crypto/x509-pathlen/selfissued/. Reproduction
+  succeeded on Go 1.27.3 and OpenSSL 3.6.5.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: verifier
+    model: grok-4.7
+    tool: evidence preservation and independent reproduction
+  sources:
+    - crypto/x509-pathlen/selfissued/README.md
+    - crypto/x509-pathlen/selfissued/manifest.json
+    - crypto/x509-pathlen/selfissued/raw/go_output.txt
+    - crypto/x509-pathlen/selfissued/raw/openssl_T3.txt
+links:
+  observations: [obs-2026-0071]
+  hypotheses: [hyp-2026-0030, hyp-2026-0031]
+path: crypto/x509-pathlen/selfissued/
+reproduction_commands:
+  - "go version (expected go1.27.3) and go run . in a copy of crypto/x509-pathlen/selfissued/go with certs path set to crypto/x509-pathlen/selfissued/certs"
+  - "openssl verify -CAfile crypto/x509-pathlen/selfissued/certs/R.pem -untrusted crypto/x509-pathlen/selfissued/raw/untrusted_TN.pem -show_chain crypto/x509-pathlen/selfissued/certs/EE_TN.pem"
+reproduced_on:
+  - implementation: "Go crypto/x509"
+    version: "1.27.3 windows/arm64"
+    platform: "Windows 11 ARM64"
+    result: "T1 accept; T2 reject; T3 reject; T4 reject; T5 accept"
+  - implementation: "OpenSSL"
+    version: "3.6.5 29 Sep 2026 (VC-WIN64-ARM)"
+    platform: "Windows 11 ARM64"
+    result: "T1 accept; T2 reject; T3 accept; T4 reject; T5 accept"
