@@ -72,6 +72,14 @@ jobs:
         run: |
           cd /tmp
           git clone --depth 1 --branch llvmorg-20.1.8 https://github.com/llvm/llvm-project.git
+          # Isolate cxxabi.h from the installed libc++ headers: mixing the
+          # installed libc++ header tree with the one being built breaks the
+          # build.  Only the ABI header is needed.
+          mkdir -p /tmp/abi-include
+          cp /usr/lib/llvm-20/include/c++/v1/cxxabi.h /tmp/abi-include/ 2>/dev/null || \
+            cp /usr/include/c++/v1/cxxabi.h /tmp/abi-include/ 2>/dev/null || \
+            find / -name cxxabi.h -not -path "*/llvm-project/*" 2>/dev/null | head -1 | xargs -I{} cp {} /tmp/abi-include/
+          ls -l /tmp/abi-include
           cd llvm-project/libcxx
           cmake -G Ninja -B build \
             -DCMAKE_BUILD_TYPE=Release \
@@ -81,7 +89,8 @@ jobs:
             -DLIBCXX_ENABLE_SHARED=OFF \
             -DLIBCXX_ENABLE_STATIC=ON \
             -DLIBCXX_ENABLE_ABI_LINKER_SCRIPT=OFF \
-            -DCMAKE_CXX_FLAGS="-isystem /usr/include/c++/13 -isystem /usr/include/x86_64-linux-gnu/c++/13 -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"
+            -DLIBCXX_ENABLE_LOCALIZATION=OFF \
+            -DCMAKE_CXX_FLAGS="-I/tmp/abi-include -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"
           cmake --build build -j 2
       - name: Compile harness against the rebuilt libc++
         run: |
