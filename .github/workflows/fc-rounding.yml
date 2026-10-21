@@ -113,34 +113,36 @@ jobs:
           echo "--- guard present in header ---"
           cd /tmp/llvm-project/libcxx
           python3 - <<'PY'
-          import json, re, shlex, subprocess, sys
+          import json, os, shlex, subprocess, sys
           cc = json.load(open("build/compile_commands.json"))
           entry = next(e for e in cc if e["file"].endswith("src/charconv.cpp"))
           args = shlex.split(entry["command"])
           keep = [a for a in args
                   if a.startswith("-I") or a.startswith("-D") or a.startswith("-std=")
                   or a.startswith("--include") or a.startswith("-isystem")]
+          cwd = entry["directory"]
           def preprocess(extra):
+              # The recorded include paths may be relative to the build's
+              # working directory, so run there.
               cmd = ["clang++-20", "-E", "-std=c++17"] + keep + extra + [entry["file"]]
-              r = subprocess.run(cmd, capture_output=True, text=True)
+              r = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
               if r.returncode != 0:
                   print("preprocess failed:", r.stderr[-3000:]); sys.exit(1)
               return r.stdout
           # The guard protects the CALL SITE inside decimal_exp_to_float:
           #     opt_output = clinger_fast_path<T>(init_num, round);
-          # The template DEFINITION stays in the preprocessed text either way.
-          # So the check is whether the CALL appears in the expansion of
-          # decimal_exp_to_float, not whether the name appears at all.
-          call_re = re.compile(r"clinger_fast_path\s*<[^;]*?>\s*\(")
-          def has_call(text):
-              return bool(call_re.search(text))
+          # The template DEFINITION is
+          #     clinger_fast_path(ExpandedFloat<T> init_num, ...)
+          # with no '<' after the name, so the marker "clinger_fast_path<"
+          # identifies the call site specifically.
+          MARKER = "clinger_fast_path<"
           without = preprocess([])
-          if not has_call(without):
+          if MARKER not in without:
               print("FAIL: negative control, the clinger_fast_path CALL SITE is absent without the define")
               sys.exit(1)
           print("--- negative control passed: without the define the call site is present ---")
           withdef = preprocess(["-DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"])
-          if has_call(withdef):
+          if MARKER in withdef:
               print("FAIL: the clinger_fast_path call site is still present WITH the define")
               sys.exit(1)
           print("--- the clinger_fast_path call site is absent WITH the define: the ablation took effect ---")
