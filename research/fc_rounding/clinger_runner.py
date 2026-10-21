@@ -11,6 +11,11 @@ for vf in VECTOR_FILES:
 
 records = []
 for v in vectors:
+    # The Clinger fast path is only reachable from the DECIMAL conversion
+    # route.  Hexadecimal inputs in libc++ take a different route
+    # (binary_exp_to_float), which is pure integer arithmetic.
+    if v["grammar"] == "hex":
+        continue
     typ_char = "f" if v["type"] == "float" else "d"
     for mi, mname in enumerate(MODE_NAMES):
         p = subprocess.run([REPRO, typ_char, str(mi), v["input"]],

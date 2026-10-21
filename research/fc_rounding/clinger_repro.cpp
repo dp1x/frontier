@@ -50,6 +50,10 @@ static Parsed parse_like_libcxx(const char* s) {
     const unsigned long long max_div_by_10 = ~0ULL / 10;
     bool after_decimal = false;
     const char* q = s;
+    // libc++ strips an optional sign before the conversion; the magnitude is
+    // what reaches the conversion machinery.
+    if (*q == '+' || *q == '-')
+        ++q;
     for (;; ++q) {
         if (*q >= '0' && *q <= '9') {
             unsigned d = (unsigned)(*q - '0');
@@ -162,6 +166,17 @@ int main(int argc, char** argv) {
     Parsed p = parse_like_libcxx(s);
     unsigned long long bits = 0;
     bool eligible = (typec == 'f') ? clinger<float>(p, &bits) : clinger<double>(p, &bits);
+
+    // libc++ applies the sign to the magnitude result (see
+    // __calculate_result in libcxx/src/include/from_chars_floating_point.h).
+    // Only meaningful when the Clinger path was actually taken; for an
+    // ineligible input this reproducer models nothing.
+    if (eligible && s[0] == '-') {
+        if (typec == 'f')
+            bits |= 0x80000000ull;
+        else
+            bits |= 0x8000000000000000ull;
+    }
 
     std::printf("{\"clinger_eligible\":%s,\"clinger_bits\":%llu,\"parsed_mantissa\":%llu,"
                 "\"parsed_exponent\":%d,\"truncated\":%s}\n",
