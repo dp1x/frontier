@@ -80,7 +80,8 @@ jobs:
             -DCMAKE_CXX_COMPILER=clang++-20 \
             -DLIBCXX_ENABLE_SHARED=OFF \
             -DLIBCXX_ENABLE_STATIC=ON \
-            -DCMAKE_CXX_FLAGS="-D_LIBCPP_HAS_MUSL_LIBC=OFF -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"
+            -DLIBCXX_ENABLE_ABI_LINKER_SCRIPT=OFF \
+            -DCMAKE_CXX_FLAGS="-I/usr/lib/llvm-20/include/c++/v1 -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"
           cmake --build build -j 2
       - name: Compile harness against the rebuilt libc++
         run: |
