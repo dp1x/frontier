@@ -41,11 +41,21 @@ jobs:
         run: |
           cd research/fc_rounding
           python3 runner.py ./harness_clang vectors.json,vectors_discriminator.json results_clang.jsonl "Clang/libc++ (clang++-20 $(clang++-20 --version | head -1 | grep -oP '\d+\.\d+\.\d+'))" "-std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math"
+      - name: Build and run Clinger mechanism reproducer
+        run: |
+          cd research/fc_rounding
+          clang++-20 -std=c++17 -O0 -fno-fast-math -frounding-math clinger_repro.cpp -o clinger_repro
+          python3 clinger_runner.py ./clinger_repro vectors.json,vectors_discriminator.json results_clinger_repro.jsonl
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
           name: results-clang
           path: research/fc_rounding/results_clang.jsonl
+      - name: Upload clinger reproducer results
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-clinger-repro
+          path: research/fc_rounding/results_clinger_repro.jsonl
 
   # Mechanism confirmation: rebuild libc++ with the Clinger fast path disabled
   # and re-run the same matrix.  If the mode-dependence disappears, the
