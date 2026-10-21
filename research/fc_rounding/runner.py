@@ -1,14 +1,18 @@
 import json, subprocess, sys, os
 
+# usage: runner.py <harness> <vectors.json[,vectors2.json...]> <out.jsonl> <label> [flags]
 HARNESS = sys.argv[1]
-VECTORS = sys.argv[2]
+VECTOR_FILES = sys.argv[2].split(",")
 OUT = sys.argv[3]
 LABEL = sys.argv[4]
 FLAGS = sys.argv[5] if len(sys.argv) > 5 else ""
 
 MODE_NAMES = ["nearest", "downward", "upward", "towardzero"]
 
-vectors = json.load(open(VECTORS))
+vectors = []
+for vf in VECTOR_FILES:
+    vectors.extend(json.load(open(vf)))
+
 records = []
 for v in vectors:
     typ_char = "f" if v["type"] == "float" else "d"
@@ -26,6 +30,7 @@ for v in vectors:
             "input": v["input"],
             "grammar": v["grammar"],
             "destination_type": v["type"],
+            "group": v.get("group", ""),
             "exact_rational_input": v["rational_input"],
             "expected_bits": v["expected_bits"],
             "tie_classification": "non-tie",
@@ -38,11 +43,14 @@ for v in vectors:
             "consumed": run.get("consumed"),
             "actual_bits": run.get("bits"),
             "actual_mode_after": run.get("actual_after"),
+            "control_fpu_probe_bits": run.get("fpu_probe"),
+            "control_strtod_bits": run.get("strtod_probe"),
             "success": run.get("ok"),
             "expected_match": (run.get("bits") == v["expected_bits"]) if run.get("ok") else None,
         }
         records.append(rec)
-        print(v["vector_id"], mname, hex(run.get("bits",0)) if run.get("ok") else "FAIL", "match=" + str(rec["expected_match"]), flush=True)
+        print(v["vector_id"], mname, hex(run.get("bits", 0)) if run.get("ok") else "FAIL",
+              "match=" + str(rec["expected_match"]), flush=True)
 
 with open(OUT, "w") as f:
     for r in records:

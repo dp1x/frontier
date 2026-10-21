@@ -9,6 +9,31 @@
 #pragma STDC FENV_ACCESS ON
 #endif
 
+// Positive control A: raw FPU liveness probe. 1.0 + 1e-20 rounds differently
+// under FE_UPWARD (next double above 1.0) vs FE_DOWNWARD/FE_TONEAREST
+// (1.0) vs FE_TOWARDZERO (1.0).  No standard library involved.
+static unsigned long long fpu_probe() {
+    double a = 1.0;
+    double b = 1e-20;
+    double c = a + b;
+    unsigned long long u = 0;
+    std::memcpy(&u, &c, sizeof(u));
+    return u;
+}
+
+// Positive control B: C library strtod is documented to honour the ambient
+// rounding mode.  Its output is a diagnostic only; the expected bits used by
+// the experiment come from the independent exact-rational oracle, never from
+// this function.
+static unsigned long long strtod_probe(const char* s) {
+    char* end = nullptr;
+    double v = std::strtod(s, &end);
+    (void)end;
+    unsigned long long u = 0;
+    std::memcpy(&u, &v, sizeof(u));
+    return u;
+}
+
 int main(int argc, char** argv) {
     if (argc < 5) {
         std::fprintf(stderr, "usage: %s <f|d> <g|h> <mode 0..3> <input>\n", argv[0]);
@@ -61,8 +86,11 @@ int main(int argc, char** argv) {
 
     int actual_after = std::fegetround();
 
-    // print JSON
-    std::printf("{\"type\":\"%c\",\"fmt\":\"%c\",\"mode\":%d,\"rc_set\":%d,\"actual_before\":%d,\"ec\":%d,\"consumed\":%zu,\"ok\":%s,\"bits\":%llu,\"actual_after\":%d}\n",
-        typec, fmtc, mode, rc_set, actual_before, ec, consumed, ok ? "true" : "false", bits, actual_after);
+    // controls run while the ambient mode is still in effect
+    unsigned long long fpu = fpu_probe();
+    unsigned long long stdod = strtod_probe(s);
+
+    std::printf("{\"type\":\"%c\",\"fmt\":\"%c\",\"mode\":%d,\"rc_set\":%d,\"actual_before\":%d,\"ec\":%d,\"consumed\":%zu,\"ok\":%s,\"bits\":%llu,\"actual_after\":%d,\"fpu_probe\":%llu,\"strtod_probe\":%llu}\n",
+        typec, fmtc, mode, rc_set, actual_before, ec, consumed, ok ? "true" : "false", bits, actual_after, fpu, stdod);
     return 0;
 }

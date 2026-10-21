@@ -17,7 +17,7 @@ jobs:
       - name: Run matrix
         run: |
           cd research/fc_rounding
-          python3 runner.py ./harness_gcc vectors.json results_gcc.jsonl "GCC/libstdc++ (g++ $(g++ -dumpversion))" "-std=c++17 -O0 -fno-fast-math -frounding-math"
+          python3 runner.py ./harness_gcc vectors.json,vectors_discriminator.json results_gcc.jsonl "GCC/libstdc++ (g++ $(g++ -dumpversion))" "-std=c++17 -O0 -fno-fast-math -frounding-math"
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
@@ -40,7 +40,7 @@ jobs:
       - name: Run matrix
         run: |
           cd research/fc_rounding
-          python3 runner.py ./harness_clang vectors.json results_clang.jsonl "Clang/libc++ (clang++-20 $(clang++-20 --version | head -1 | grep -oP '\d+\.\d+\.\d+'))" "-std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math"
+          python3 runner.py ./harness_clang vectors.json,vectors_discriminator.json results_clang.jsonl "Clang/libc++ (clang++-20 $(clang++-20 --version | head -1 | grep -oP '\d+\.\d+\.\d+'))" "-std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math"
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
