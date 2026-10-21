@@ -76,9 +76,10 @@ jobs:
           # installed libc++ header tree with the one being built breaks the
           # build.  Only the ABI header is needed.
           mkdir -p /tmp/abi-include
-          cp /usr/lib/llvm-20/include/c++/v1/cxxabi.h /tmp/abi-include/ 2>/dev/null || \
-            cp /usr/include/c++/v1/cxxabi.h /tmp/abi-include/ 2>/dev/null || \
-            find / -name cxxabi.h -not -path "*/llvm-project/*" 2>/dev/null | head -1 | xargs -I{} cp {} /tmp/abi-include/
+          for f in cxxabi.h __cxxabi_config.h; do
+            src=$(find /usr/lib/llvm-20 /usr/include -name "$f" 2>/dev/null | head -1)
+            if [ -n "$src" ]; then cp "$src" /tmp/abi-include/; fi
+          done
           ls -l /tmp/abi-include
           cd llvm-project/libcxx
           cmake -G Ninja -B build \
