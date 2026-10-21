@@ -1,0 +1,153 @@
+id: msn-2026-0026
+type: mission
+status: verified
+created_at: "2026-10-21T13:00:00Z"
+updated_at: "2026-10-21T17:30:00Z"
+summary: >
+  Bounded empirical investigation of ambient floating-point rounding-mode
+  leakage in std::from_chars. 27 exact-rational, non-tie, in-range vectors
+  crossed with four rounding modes against four targets (GCC/libstdc++,
+  stock libc++ 20.1.8, libc++ 20.1.8 rebuilt with the Clinger fast path
+  disabled, and MSVC STL 14.51.36231). 432 records. Result: libc++ 20.1.8's
+  decimal conversion path is mode-dependent on 12 of 27 vectors, producing
+  the value correctly rounded toward the ambient mode instead of
+  round-to-nearest; the other three targets are mode-invariant and match the
+  exact-rational oracle everywhere. The mechanism is established causally by
+  build-time ablation and explained bit-exactly by a reproducer of the
+  upstream Clinger arithmetic.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.7
+    tool: repository reconnaissance, six specialist workstreams, CI-executed cross-implementation matrix, build-time ablation
+  sources:
+    - research/fc_rounding/README.md
+    - knowledge/experiments/exp-2026-0041.yaml
+    - knowledge/observations/obs-2026-0072.yaml
+    - knowledge/verifications/vrf-2026-0020.yaml
+    - knowledge/reviews/rev-2026-0027.yaml
+    - knowledge/reproducers/rpr-2026-0020.yaml
+  parent: null
+  generation: 0
+links:
+  targets: [tgt-2026-0008]
+  hypotheses: [hyp-2026-0036]
+  experiments: [exp-2026-0041]
+  observations: [obs-2026-0072]
+  findings: [fnd-2026-0017]
+  reproducers: [rpr-2026-0020]
+  reviews: [rev-2026-0027]
+  verifications: [vrf-2026-0020]
+title: "MSN-2026-0026 - ambient rounding-mode dependence of std::from_chars, bounded empirical investigation"
+objective: >
+  Answer one narrow question well: can a caller's active floating-point
+  rounding mode change the output bits of std::from_chars for finite,
+  in-range, non-tie inputs to binary32 and binary64, and if so, in which
+  implementations and by what mechanism?
+domain: compilers
+scope: >
+  std::from_chars floating-point conversion, binary32 and binary64 only.
+  Finite, in-range, non-tie inputs. Rounding modes FE_TONEAREST,
+  FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO. Implementations actually executed:
+  GCC/libstdc++ (CI), Clang/libc++ 20.1.8 stock (CI), Clang/libc++ 20.1.8
+  rebuilt with the Clinger fast path disabled (CI), and MSVC STL 14.51.36231
+  on Windows ARM64 (local). Source analysis used pinned GCC 78d4ac73 and
+  LLVM 7a941dfb for orientation and the tested LLVM 20.1.8 tag for the
+  mechanism. Out of scope: overflow, underflow, NaN/Inf, malformed input,
+  general correctly-rounded conversion guarantees, non-IEC formats, long
+  double, and any security or exploitability claim.
+constraints:
+  - "The broad exact-midpoint DER-style matrix is not reopened; exact-tie behaviour is at most a diagnostic observation."
+  - "The known overflow/underflow issue from P4168R1 is not re-reported as a discovery."
+  - "Exact-tie differences are never classified as a standards violation."
+  - "No unconstrained random or fuzzing campaign."
+  - "No full compiler or standard-library toolchain built from source merely to obtain another target; the one libc++ rebuild is a targeted ablation, not a target-acquisition build."
+  - "Expected values are never derived from std::from_chars, strtod, strtof, Python float(), or from any implementation under test."
+  - "A finding is not committed before its oracle, controls and interpretation have been independently reviewed."
+  - "The user's dirty working tree is preserved; the lint repair is a separate commit from any numerical-research commit."
+  - "Heavy builds run in GitHub Actions, not on the local SSD."
+desired_evidence_level: independently-reviewed
+candidate_dependencies:
+  - "GCC/libstdc++ and Clang/libc++ are not installable on the local Windows ARM64 host; they are obtained in GitHub Actions."
+dependencies: []
+compute:
+  expected_class: medium
+  notes: >
+    The local host has no GCC, no libc++, no WSL and no Docker, so a
+    cross-library matrix requires CI. The ablation requires building libc++
+    20.1.8 from the llvmorg-20.1.8 tag, which is also a CI-only job. The
+    local Windows ARM64 run of the MSVC STL target is lightweight. Nothing
+    heavy ran on the local SSD; all scratch lived on the R: ramdisk.
+budget:
+  max_attempts: 3
+  max_independent_reviews: 2
+  max_compute_runs: 12
+  diminishing_returns_window: 2
+  max_auto_descendants: 1
+acceptance_criteria:
+  - "Every primary vector is finite, in range, and provably not an exact tie, with a uniquely nearest representable value."
+  - "Expected bits are derived from exact rational arithmetic only, never from a tested conversion routine, and are independently re-derived at least twice by different algorithms."
+  - "Each case runs in a fresh process; the requested mode is confirmed active immediately before the from_chars call; a liveness control proves the ambient mode was genuinely in effect."
+  - "At least two genuinely distinct standard libraries are tested, with compiler front end and library identity recorded separately."
+  - "Any observed mode-dependence is explained by a mechanism that is demonstrated, not merely inferred from source reading."
+  - "The behaviour is not described as a standards defect without a separately supported normative argument."
+  - "The independent challenger returns a verdict."
+stopping_conditions:
+  - "A non-tie mode-dependence is reproduced in a fresh process with a confirmed active mode, an independent oracle, and a confirmed path; corpus expansion stops at that point."
+  - "The budget is exhausted, or the evidence is inconclusive."
+  - "The experiment establishes no behaviour beyond what upstream regression tests already cover."
+artifacts:
+  - research/fc_rounding/README.md
+  - research/fc_rounding/oracle.py
+  - research/fc_rounding/crosscheck.py
+  - research/fc_rounding/crosscheck2.py
+  - research/fc_rounding/uniqueness.py
+  - research/fc_rounding/harness.cpp
+  - research/fc_rounding/runner.py
+  - research/fc_rounding/clinger_repro.cpp
+  - research/fc_rounding/clinger_runner.py
+  - research/fc_rounding/vectors.json
+  - research/fc_rounding/vectors_discriminator.json
+  - research/fc_rounding/results/
+  - knowledge/experiments/exp-2026-0041.yaml
+  - knowledge/observations/obs-2026-0072.yaml
+  - knowledge/verifications/vrf-2026-0020.yaml
+  - knowledge/reproducers/rpr-2026-0020.yaml
+  - knowledge/reviews/rev-2026-0027.yaml
+  - knowledge/findings/fnd-2026-0017.yaml
+reviews: [rev-2026-0027]
+status_notes: >
+  CLOSED as verified 2026-10-21. The empirical question is answered for the
+  tested scope: mode-dependence EXISTS in libc++ 20.1.8's decimal conversion
+  path and was NOT observed in GCC/libstdc++ or MSVC STL. The mechanism is
+  the Clinger fast path, established by build-time ablation (removing the
+  path removes the behaviour entirely, 12/12 vectors fixed, none introduced)
+  and corroborated bit-exactly by a reproducer of the upstream arithmetic
+  (76/76 cells identical). The separate standards-conformance question is
+  explicitly NOT answered and is left as an open question.
+terminal_reason: >
+  Objective met. The narrow empirical question is answered with a
+  reproducible, independently checked, mechanism-established result across
+  four targets, within the stated budget, with the negative results for the
+  other three targets preserved rather than dropped. The normative
+  standards-conformance question was explicitly out of scope and is not
+  claimed. The separate CI lint repair was completed as its own commit on
+  the user's tree, untouched by this mission's commits.
+open_questions_left_unresolved:
+  - >
+    Whether the observed behaviour constitutes a conformance defect.
+    [charconv.from.chars] contains conflicting wording (round_to_nearest
+    versus "one of at most two floating-point values closest"); this
+    experiment deliberately did not attempt to resolve it.
+  - >
+    Which libc++ release first exhibited the behaviour. Only 20.1.8 was
+    tested; the onset version is unknown.
+  - >
+    Whether the libc++ hexadecimal path is mode-invariant in general. Five
+    vectors were exercised and all were stable, but the hexadecimal route
+    was not systematically swept.
+  - >
+    Whether other rounding-mode-sensitive standard-library facilities in
+    libc++ share the same cause.
