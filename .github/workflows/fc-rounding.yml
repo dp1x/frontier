@@ -91,45 +91,49 @@ jobs:
             -DLIBCXX_ENABLE_STATIC=ON \
             -DLIBCXX_ENABLE_ABI_LINKER_SCRIPT=OFF \
             -DLIBCXX_ENABLE_LOCALIZATION=OFF \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DCMAKE_CXX_FLAGS="-I/tmp/abi-include -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"
           cmake --build build -j 2
       - name: Assert the Clinger-disable define actually took effect
         run: |
           # The ablation is only meaningful if the define really reached the
-          # conversion code.  Verify it two ways:
-          #  (a) the shared header still contains the guard, and
-          #  (b) the COMPILED object does not contain the clinger_fast_path
-          #      call, by checking the preprocessed source of the TU that
-          #      instantiates the floating-point from_chars.
+          # conversion code.  Verify it against the build's own recorded
+          # compile command for the TU that instantiates the floating-point
+          # from_chars, so the include paths are exactly the ones the build
+          # used.
           set -euo pipefail
           SRC=/tmp/llvm-project/libc/src/__support/str_to_float.h
           grep -n "LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH" "$SRC"
           echo "--- guard present in header ---"
           cd /tmp/llvm-project/libcxx
-          # Preprocess the TU that instantiates __from_chars_floating_point
-          # and confirm the Clinger fast path is compiled OUT of it.
-          clang++-20 -E -std=c++17 \
-            -I/tmp/abi-include \
-            -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH \
-            -I include -I ../libc/src/__support -I ../libc/src -I ../libc/include \
-            -I build/include -I build/include/c++/v1 \
-            src/charconv.cpp > /tmp/charconv.i
-          if grep -q "clinger_fast_path" /tmp/charconv.i; then
-            echo "FAIL: clinger_fast_path is still present in the preprocessed TU"
-            exit 1
-          fi
-          echo "--- clinger_fast_path is absent from the preprocessed TU: define took effect ---"
-          # And confirm the negative control: WITHOUT the define, it IS present.
-          clang++-20 -E -std=c++17 \
-            -I/tmp/abi-include \
-            -I include -I ../libc/src/__support -I ../libc/src -I ../libc/include \
-            -I build/include -I build/include/c++/v1 \
-            src/charconv.cpp > /tmp/charconv_with.i
-          if ! grep -q "clinger_fast_path" /tmp/charconv_with.i; then
-            echo "FAIL: negative control, clinger_fast_path missing without the define"
-            exit 1
-          fi
-          echo "--- negative control passed: without the define the path is present ---"
+          # Reconstruct the compile command for src/charconv.cpp from
+          # compile_commands.json, then re-run it with -E (preprocess only).
+          python3 - <<'PY'
+          import json, shlex, subprocess, sys
+          cc = json.load(open("build/compile_commands.json"))
+          entry = next(e for e in cc if e["file"].endswith("src/charconv.cpp"))
+          args = shlex.split(entry["command"])
+          # strip the output/compile flags, keep the include and define flags
+          keep = [a for a in args
+                  if a.startswith("-I") or a.startswith("-D") or a.startswith("-std=")
+                  or a.startswith("--include") or a.startswith("-isystem")]
+          def preprocess(extra):
+              cmd = ["clang++-20", "-E", "-std=c++17"] + keep + extra + [entry["file"]]
+              r = subprocess.run(cmd, capture_output=True, text=True)
+              if r.returncode != 0:
+                  print("preprocess failed:", r.stderr[-2000:]); sys.exit(1)
+              return r.stdout
+          without = preprocess([])
+          if "clinger_fast_path" not in without:
+              print("FAIL: negative control, clinger_fast_path missing WITHOUT the define")
+              sys.exit(1)
+          print("--- negative control passed: without the define the path is present ---")
+          withdef = preprocess(["-DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"])
+          if "clinger_fast_path" in withdef:
+              print("FAIL: clinger_fast_path still present WITH the define")
+              sys.exit(1)
+          print("--- clinger_fast_path absent WITH the define: the ablation took effect ---")
+          PY
       - name: Compile harness against the rebuilt libc++
         run: |
           cd research/fc_rounding
