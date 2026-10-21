@@ -28,17 +28,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install libc++
-        run: sudo apt-get update && sudo apt-get install -y libc++-dev libc++abi-dev
-      - name: Compile harness (clang++ libc++)
+      - name: Install LLVM 20 + libc++
+        run: |
+          wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
+          sudo apt-get install -y libc++-20-dev libc++abi-20-dev
+      - name: Compile harness (clang++-20 libc++)
         run: |
           cd research/fc_rounding
-          clang++ -std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math harness.cpp -o harness_clang
-          clang++ --version | head -1
+          clang++-20 -std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math harness.cpp -o harness_clang
+          clang++-20 --version | head -1
       - name: Run matrix
         run: |
           cd research/fc_rounding
-          python3 runner.py ./harness_clang vectors.json results_clang.jsonl "Clang/libc++ (clang++ $(clang++ --version | head -1 | grep -oP '\d+\.\d+\.\d+'))" "-std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math"
+          python3 runner.py ./harness_clang vectors.json results_clang.jsonl "Clang/libc++ (clang++-20 $(clang++-20 --version | head -1 | grep -oP '\d+\.\d+\.\d+'))" "-std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math"
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
