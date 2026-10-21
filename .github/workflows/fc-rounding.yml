@@ -46,3 +46,48 @@ jobs:
         with:
           name: results-clang
           path: research/fc_rounding/results_clang.jsonl
+
+  # Mechanism confirmation: rebuild libc++ with the Clinger fast path disabled
+  # and re-run the same matrix.  If the mode-dependence disappears, the
+  # Clinger fast path is confirmed as the cause.
+  clang-libcxx-no-clinger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM 20 + libc++ + build deps
+        run: |
+          wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
+          sudo apt-get install -y libc++-20-dev libc++abi-20-dev ninja-build cmake libatomic-13-dev libzstd-dev
+      - name: Build libc++ 20 from source with Clinger fast path disabled
+        run: |
+          cd /tmp
+          git clone --depth 1 --branch llvmorg-20.1.8 https://github.com/llvm/llvm-project.git
+          cd llvm-project/libcxx
+          cmake -G Ninja -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_LIBCXX=ON \
+            -DCMAKE_C_COMPILER=clang++-20 \
+            -DCMAKE_CXX_COMPILER=clang++-20 \
+            -DLIBCXX_ENABLE_SHARED=OFF \
+            -DLIBCXX_ENABLE_STATIC=ON \
+            -DCMAKE_CXX_FLAGS="-D_LIBCPP_HAS_MUSL_LIBC=OFF -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"
+          cmake --build build -j 2
+      - name: Compile harness against the rebuilt libc++
+        run: |
+          cd research/fc_rounding
+          clang++-20 -std=c++17 -stdlib=libc++ \
+            -nostdinc++ \
+            -isystem /tmp/llvm-project/libcxx/build/include/c++/v1 \
+            -isystem /tmp/llvm-project/libcxx/build/include \
+            -L /tmp/llvm-project/libcxx/build/lib -lc++ -lc++abi \
+            -O0 -fno-fast-math -frounding-math harness.cpp -o harness_clang_nocl
+          clang++-20 --version | head -1
+      - name: Run matrix
+        run: |
+          cd research/fc_rounding
+          python3 runner.py ./harness_clang_nocl vectors.json,vectors_discriminator.json results_clang_nocl.jsonl "Clang/libc++ 20.1.8 rebuilt with LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH" "-std=c++17 -stdlib=libc++ (no-clinger build) -O0 -fno-fast-math -frounding-math"
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-clang-nocl
+          path: research/fc_rounding/results_clang_nocl.jsonl
