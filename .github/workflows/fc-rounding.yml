@@ -67,7 +67,7 @@ jobs:
       - name: Install LLVM 20 + libc++ + build deps
         run: |
           wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
-          sudo apt-get install -y libc++-20-dev libc++abi-20-dev ninja-build cmake libatomic-13-dev libzstd-dev
+          sudo apt-get install -y libc++-20-dev libc++abi-20-dev ninja-build cmake libatomic1 libzstd-dev
       - name: Build libc++ 20 from source with Clinger fast path disabled
         run: |
           cd /tmp
