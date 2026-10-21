@@ -101,38 +101,47 @@ jobs:
           # compile command for the TU that instantiates the floating-point
           # from_chars, so the include paths are exactly the ones the build
           # used.
+          #
+          # The check is on the COMPILED OBJECT, not on the preprocessed text:
+          # the template DEFINITION of clinger_fast_path is always present in
+          # the header, and only the CALL SITE inside decimal_exp_to_float is
+          # guarded.  So the meaningful question is whether the template was
+          # INSTANTIATED, which shows up as a symbol in the object file.
           set -euo pipefail
           SRC=/tmp/llvm-project/libc/src/__support/str_to_float.h
           grep -n "LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH" "$SRC"
           echo "--- guard present in header ---"
           cd /tmp/llvm-project/libcxx
-          # Reconstruct the compile command for src/charconv.cpp from
-          # compile_commands.json, then re-run it with -E (preprocess only).
           python3 - <<'PY'
           import json, shlex, subprocess, sys
           cc = json.load(open("build/compile_commands.json"))
           entry = next(e for e in cc if e["file"].endswith("src/charconv.cpp"))
           args = shlex.split(entry["command"])
-          # strip the output/compile flags, keep the include and define flags
           keep = [a for a in args
                   if a.startswith("-I") or a.startswith("-D") or a.startswith("-std=")
-                  or a.startswith("--include") or a.startswith("-isystem")]
-          def preprocess(extra):
-              cmd = ["clang++-20", "-E", "-std=c++17"] + keep + extra + [entry["file"]]
+                  or a.startswith("--include") or a.startswith("-isystem")
+                  or a.startswith("-f") or a.startswith("-m")]
+          def compile_obj(extra, out):
+              cmd = ["clang++-20", "-std=c++17", "-c"] + keep + extra + [entry["file"], "-o", out]
               r = subprocess.run(cmd, capture_output=True, text=True)
               if r.returncode != 0:
-                  print("preprocess failed:", r.stderr[-2000:]); sys.exit(1)
-              return r.stdout
-          without = preprocess([])
-          if "clinger_fast_path" not in without:
-              print("FAIL: negative control, clinger_fast_path missing WITHOUT the define")
+                  print("compile failed:", r.stderr[-3000:]); sys.exit(1)
+          def has_clinger(obj):
+              r = subprocess.run(["nm", "-C", obj], capture_output=True, text=True)
+              return "clinger_fast_path" in r.stdout
+          # NEGATIVE CONTROL: without the define the template IS instantiated.
+          compile_obj([], "/tmp/charconv_without.o")
+          if not has_clinger("/tmp/charconv_without.o"):
+              print("FAIL: negative control, clinger_fast_path NOT instantiated without the define")
               sys.exit(1)
-          print("--- negative control passed: without the define the path is present ---")
-          withdef = preprocess(["-DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"])
-          if "clinger_fast_path" in withdef:
-              print("FAIL: clinger_fast_path still present WITH the define")
+          print("--- negative control passed: without the define the path is compiled in ---")
+          # WITH the define the call site is removed, so the template is not
+          # instantiated and the symbol disappears.
+          compile_obj(["-DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"], "/tmp/charconv_with.o")
+          if has_clinger("/tmp/charconv_with.o"):
+              print("FAIL: clinger_fast_path still instantiated WITH the define")
               sys.exit(1)
-          print("--- clinger_fast_path absent WITH the define: the ablation took effect ---")
+          print("--- clinger_fast_path not instantiated WITH the define: the ablation took effect ---")
           PY
       - name: Compile harness against the rebuilt libc++
         run: |
