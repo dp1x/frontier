@@ -1,0 +1,61 @@
+id: hyp-2026-0036
+type: hypothesis
+status: confirmed
+created_at: "2026-10-21T13:05:00Z"
+updated_at: "2026-10-21T17:05:00Z"
+summary: >
+  HYPOTHESIS CONFIRMED for one implementation family. A caller's active
+  floating-point rounding mode CAN alter the output bits of std::from_chars
+  for finite, in-range, non-tie inputs. The leakage is observed in libc++
+  20.1.8's decimal conversion path and is absent from GCC 13/14 libstdc++ and
+  MSVC STL 14.51.36231 over the tested vector corpus. The mechanism is the
+  Clinger fast path in libc/src/__support/str_to_float.h, which performs the
+  decimal-to-binary step as a native floating-point multiply or divide that
+  follows the ambient FPU rounding mode. Source-level reasoning alone had
+  predicted leakage was *plausible* in libc++'s Clinger path; the runtime
+  experiment is what establishes it.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: grok-4.7
+    tool: source audit of pinned GCC/libstdc++ and LLVM/libc++ revisions, plus CI-executed runtime matrix
+  sources:
+    - research/fc_rounding/README.md
+    - https://github.com/gcc-mirror/gcc/blob/78d4ac73dd391005b895a6148cd9831e28e1208b/libstdc%2B%2B-v3/src/c%2B%2B17/floating_from_chars.cc
+    - https://github.com/llvm/llvm-project/blob/llvmorg-20.1.8/libc/src/__support/str_to_float.h
+    - https://github.com/llvm/llvm-project/blob/llvmorg-20.1.8/libcxx/src/include/from_chars_floating_point.h
+  parent: msn-2026-0026
+  generation: 0
+links:
+  targets: [tgt-2026-0008]
+  experiments: [exp-2026-0041]
+  observations: [obs-2026-0072]
+  findings: [fnd-2026-0017]
+  missions: [msn-2026-0026]
+title: "HYP-2026-0036 - Ambient rounding mode can change std::from_chars output bits"
+statement: |
+  For a finite, in-range, non-tie decimal input to std::from_chars targeting
+  binary32 or binary64, the returned value depends on the calling thread's
+  active floating-point rounding mode in at least one mainstream
+  implementation.
+
+  Precisely: under libc++ 20.1.8, for inputs that satisfy the Clinger fast
+  path's eligibility conditions, std::from_chars returns the value correctly
+  rounded TOWARD the ambient rounding mode rather than the round-to-nearest
+  value that [charconv.from.chars] specifies. Under GCC 13/14 libstdc++ and
+  MSVC STL 14.51.36231 the returned value is the round-to-nearest value
+  under every tested mode.
+
+  The hypothesis is confirmed in the empirical sense (the mode-dependence
+  exists and is reproducible). It is NOT a standards-defect claim: the
+  normative question, in the presence of conflicting wording in
+  [charconv.from.chars] (round_to_nearest versus "one of at most two
+  floating-point values closest"), is explicitly out of scope here.
+refuted_or_bounded: >
+  Bounded to libc++ 20.1.8 on x86-64 Linux, in the decimal conversion path.
+  Not observed in libstdc++ or MSVC STL over the tested corpus. Hexadecimal
+  inputs take a different libc++ route (binary_exp_to_float, pure integer
+  arithmetic) and were mode-stable in the same runs. The libc++ hexadecimal
+  path's stability is an observation over five vectors, not a proof.

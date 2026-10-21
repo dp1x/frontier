@@ -1,0 +1,180 @@
+id: rev-2026-0027
+type: review
+status: recorded
+created_at: "2026-10-21T16:30:00Z"
+updated_at: "2026-10-21T17:40:00Z"
+summary: >
+  Independent adversarial review of the ambient rounding-mode experiment.
+  The review covers the oracle, the source-path mapping, the vector corpus, the
+  harness controls, and the raw results for all four targets, and its explicit
+  goal is to falsify the conclusion. It also records the structured
+  limitations that survived the review, and one correction made to the
+  artifacts as a result.
+epistemic_status: interpretation
+provenance:
+  created_by:
+    kind: model-agent
+    role: independent-reviewer
+    model: grok-4.7
+    tool: read-only adversarial re-derivation of expected bits, recomputation of tie conditions, inspection of all 432 raw records
+  sources:
+    - research/fc_rounding/results/results_clang.jsonl
+    - research/fc_rounding/results/results_clang_nocl.jsonl
+    - research/fc_rounding/results/results_gcc.jsonl
+    - research/fc_rounding/results/results_msvc.jsonl
+    - research/fc_rounding/vectors.json
+    - research/fc_rounding/vectors_discriminator.json
+  parent: msn-2026-0026
+  generation: 0
+links:
+  targets: [tgt-2026-0008]
+  experiments: [exp-2026-0041]
+  observations: [obs-2026-0072]
+  findings: [fnd-2026-0017]
+  verifications: [vrf-2026-0020]
+  missions: [msn-2026-0026]
+title: "REV-2026-0027 - adversarial review of the libc++ rounding-mode leakage result"
+reviewer_role: independent-reviewer
+reviewer_independence: >
+  The reviewer re-derived expected bits for a sample of vectors without
+  consulting the primary oracle's implementation first, recomputed the
+  non-tie condition for every vector from the raw input strings, and
+  inspected every raw record for harness-integrity fields. It did not reuse
+  the primary oracle's internal calculations as ground truth.
+checks_performed:
+  - "Recomputed the exact tie condition for all 27 vectors from the raw input strings using exact integer arithmetic: 0 ties."
+  - "Re-derived expected bits for a sample of vectors by an independent route and confirmed agreement with vectors.json."
+  - "Inspected fesetround_return, actual_mode_before, actual_mode_after, consumed and ec on all 432 records: no record shows a failed fesetround, a mode that was not active at the call, or a partial consumption."
+  - "Confirmed the control probes vary with the mode on every target, establishing that the ambient mode was live rather than merely requested."
+  - "Confirmed the input strings and mode indices are runtime argv values in harness.cpp, so no conversion is constant-foldable."
+  - "Cross-checked the mechanism reproducer against libc++'s actual output on all Clinger-eligible cells."
+  - "Checked that the finding's stated scope matches the raw data, in particular that the GCC and MSVC claims are negative results over the tested corpus only."
+  - "Checked that the standards-conformance question is explicitly left open rather than answered."
+independent_source_path_review: >
+  A separate read-only source auditor, working only from the upstream bytes
+  and without access to the runtime results, audited the exact
+  llvmorg-20.1.8 sources. It verified provenance by computing the git blob
+  SHA-1 of each file it read and comparing it to the llvmorg-20.1.8 tag,
+  confirming that release/20.x and the tag are byte-identical for every
+  audited file (libc/src/__support/str_to_float.h b4d5646822df370e1ccd51f94ede879900be6474;
+  libcxx/src/include/from_chars_floating_point.h 19eeeb28fb08d24cd7a6ca101f969b38a3e008c9;
+  libcxx/src/charconv.cpp 5e8cb7d97703b430a6608adaf084d613cbcaa440).
+
+  It established the full call chain
+  from_chars -> __from_chars -> __from_chars_floating_point ->
+  __from_chars_floating_point_impl -> __from_chars_floating_point_decimal ->
+  decimal_exp_to_float -> clinger_fast_path, and confirmed that libc++
+  hardcodes RoundDirection::Nearest at
+  libcxx/src/include/from_chars_floating_point.h:398, so the round PARAMETER
+  never selects a non-nearest strategy, while the native multiply/divide
+  inside clinger_fast_path (str_to_float.h:578, 587, 593) remains subject to
+  the ambient FPU mode. It confirmed that the Eisel-Lemire path, the
+  simple_decimal_conversion path and the hexadecimal path
+  (binary_exp_to_float) are all integer-only and therefore
+  rounding-mode independent.
+
+  It independently derived the Clinger eligibility predicate and then
+  classified the four discriminator vectors WITHOUT access to the runtime
+  results:
+    "1.1"                    -> float,  eligible  (mantissa 11,     exp10 -1)
+    "123456789012345e-15"    -> double, eligible  (mantissa 1.23e14, exp10 -15)
+    "1234567e-6"             -> float,  eligible  (mantissa 1234567,exp10 -6)
+    "12345678901234567e-15"  -> double, INELIGIBLE (mantissa 1.23e16 >= 2^52, str_to_float.h:555)
+    "12345678e-6"            -> float,  INELIGIBLE (mantissa 1.23e7  >= 2^23, str_to_float.h:555)
+
+  All five predictions match the observed runtime behaviour exactly: the two
+  ineligible vectors are mode-stable and the three eligible ones are
+  mode-dependent. This is a source-level prediction that was confirmed by
+  runtime data the auditor never saw, which is a strong cross-check of the
+  path attribution.
+
+  The auditor also reported that the upstream fix
+  088f62a2d1c0cd124326d358a66421d837d728e0 (2026-09-30), which is present in
+  the pinned LLVM 23 revision but NOT in 20.1.8, fixes an out-of-bounds
+  access on exp10 == INT32_MIN and a missing negative-exponent case in the
+  non-nearest branch. It established that neither is reachable from
+  std::from_chars, because decimal_exp_to_float rejects out-of-range
+  exponents before calling Clinger, and because libc++ always requests
+  RoundDirection::Nearest.
+corrections_made_as_a_result:
+  - >
+    The mechanism reproducer originally ignored the input sign and did not
+    model the hexadecimal route, so its output did not match libc++ on the
+    negative and hexadecimal vectors. Those 24 cells were not a defect in
+    libc++; they were a defect in the reproducer. The reproducer was
+    corrected to apply the sign as libc++'s __calculate_result does and to
+    restrict itself to the decimal route, after which the match is 76/76
+    exact with zero differences. The earlier claim of "72 matching, 24
+    differing" was an artefact and has been superseded.
+  - >
+    An independent hex-parsing routine used in the claim-verification script
+    double-counted the fractional hex exponent, producing spurious
+    "deviation from round-to-nearest" entries for all five hexadecimal
+    vectors. The routine was corrected; the hexadecimal vectors are
+    confirmed round-to-nearest and mode-stable.
+  - >
+    A sign-bit bug in the third independent oracle (using the sign value -1
+    as a bit shift) produced a false mismatch on every vector. It was
+    corrected and the third oracle then agreed on all 27.
+unresolved_objections:
+  - >
+    The three independent oracle implementations share an author and were
+    written in one session. They use different algorithms and different
+    parsers, but they are not the work of an unrelated party, so they
+    demonstrate algorithmic independence rather than organisational
+    independence.
+  - >
+    The mechanism reproducer is a re-implementation of the upstream Clinger
+    arithmetic rather than the upstream code itself. The build-time ablation
+    is the primary causal evidence; the reproducer corroborates it and
+    explains the mechanism in exact bit terms, but a reviewer preferring
+    upstream-code execution would want the upstream routine compiled
+    directly.
+  - >
+    Only one libc++ version was tested. The behaviour's presence in earlier
+    or later libc++ releases is unknown, so the finding is stated for
+    20.1.8 only.
+  - >
+    The source auditor verified that the llvmorg-20.1.8 tag and release/20.x
+    are byte-identical for the audited files, and that the Ubuntu
+    llvm-toolchain-20 package applies no downstream patch to
+    str_to_float.h or from_chars_floating_point.h. It did not disassemble
+    the installed shared library to confirm the running binary, so the
+    link from source to the tested binary rests on package provenance rather
+    than on binary inspection. The build-time ablation strengthens this
+    materially: the ablation was built from the upstream tag in the same CI
+    environment and reproduced the stock behaviour's absence, so the
+    behaviour is attributable to the audited source.
+  - >
+    The upstream commit 088f62a2d1c0cd124326d358a66421d837d728e0 changes
+    clinger_fast_path's negative-exponent handling after 20.1.8. The source
+    auditor argues, on source grounds, that the changed code is unreachable
+    from std::from_chars. This was not tested at runtime on a newer libc++,
+    so the statement "the behaviour persists in newer libc++" is NOT
+    established and is not claimed.
+  - >
+    The MSVC STL target was exercised on Windows ARM64 only, and its
+    from_chars is a header-inline implementation, so the harness's
+    compilation settings apply to it. A separately built MSVC STL could in
+    principle differ. This is recorded as a scope limit rather than a
+    threat to the negative result.
+  - >
+    The first dispatched independent challenger subagent terminated on an
+    API rate limit without returning a verdict, and the checks it was to
+    perform were carried out by the primary agent. The review recorded here
+    is therefore a re-dispatch performed by an independent agent with the
+    same falsification brief; the reviewer_role field records the
+    independence that actually obtained, and the reviewer-independence
+    caveat is stated rather than glossed.
+verdict: >
+  The conclusion SURVIVES adversarial review within its stated scope. The
+  claim that libc++ 20.1.8's std::from_chars output bits depend on the
+  ambient rounding mode for finite, in-range, non-tie decimal inputs is
+  supported by: an exact-rational oracle independently re-derived three
+  ways, a uniqueness proof for every vector, per-case fresh processes with
+  the mode confirmed active at the call site, positive liveness controls, a
+  build-time ablation that removes the behaviour and introduces none, and a
+  bit-exact mechanism reproduction. The claims about GCC/libstdc++ and MSVC
+  STL are negative results over the tested corpus and are stated as such.
+  The finding is NOT promoted to a standards-defect claim; that question
+  remains open.
