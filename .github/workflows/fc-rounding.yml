@@ -114,16 +114,20 @@ jobs:
           cd /tmp/llvm-project/libcxx
           python3 - <<'PY'
           import json, os, shlex, subprocess, sys
+          DEFINE = "LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"
           cc = json.load(open("build/compile_commands.json"))
           entry = next(e for e in cc if e["file"].endswith("src/charconv.cpp"))
           args = shlex.split(entry["command"])
+          # The recorded command ALREADY carries the define (it was set in
+          # CMAKE_CXX_FLAGS).  Strip it so the negative control is a genuine
+          # "without the define" build, and re-add it explicitly for the
+          # positive case.
           keep = [a for a in args
-                  if a.startswith("-I") or a.startswith("-D") or a.startswith("-std=")
-                  or a.startswith("--include") or a.startswith("-isystem")]
+                  if (a.startswith("-I") or a.startswith("-D") or a.startswith("-std=")
+                      or a.startswith("--include") or a.startswith("-isystem"))
+                  and DEFINE not in a]
           cwd = entry["directory"]
           def preprocess(extra):
-              # The recorded include paths may be relative to the build's
-              # working directory, so run there.
               cmd = ["clang++-20", "-E", "-std=c++17"] + keep + extra + [entry["file"]]
               r = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
               if r.returncode != 0:
@@ -141,14 +145,14 @@ jobs:
               print("FAIL: negative control, the clinger_fast_path CALL SITE is absent without the define")
               sys.exit(1)
           print("--- negative control passed: without the define the call site is present ---")
-          withdef = preprocess(["-DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"])
+          withdef = preprocess(["-D" + DEFINE])
           if MARKER in withdef:
               print("FAIL: the clinger_fast_path call site is still present WITH the define")
               sys.exit(1)
           print("--- the clinger_fast_path call site is absent WITH the define: the ablation took effect ---")
           # Also confirm the build itself used the define: the recorded
           # compile command for this TU must contain it.
-          if "LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH" not in entry["command"]:
+          if DEFINE not in entry["command"]:
               print("FAIL: the build's own compile command for charconv.cpp lacks the define")
               sys.exit(1)
           print("--- the build's own compile command carries the define ---")
