@@ -40,9 +40,9 @@ def test_corpus_exists_and_consistent(oracle):
     assert len(rows) >= 40
     for r in rows:
         if r["track"] == "encoder":
-            b = bytes.fromhex(r["expected_canonical_hex"])
+            bytes.fromhex(r["expected_canonical_hex"])
             # oracle reproduces
-            got = oracle.canonical_bytes(r["type"] if r["type"] != "SEQUENCE" else "SEQ1", r["value"] if r["type"] != "SEQUENCE" else {"name": "", "ok": False}) if False else None
+            oracle.canonical_bytes(r["type"] if r["type"] != "SEQUENCE" else "SEQ1", r["value"] if r["type"] != "SEQUENCE" else {"name": "", "ok": False}) if False else None
     # simpler: check all encoder expected lengths parse
     for r in rows:
         assert "id" in r
@@ -86,7 +86,7 @@ def test_matrix_agreement():
     inp = "".join(json.dumps(q) + "\n" for q in reqs)
     out, err, rc = _run(IMPLS["go"], inp)
     assert rc == 0, err
-    resps = {json.loads(l)["id"]: json.loads(l) for l in out.splitlines() if l.strip()}
+    resps = {json.loads(line)["id"]: json.loads(line) for line in out.splitlines() if line.strip()}
     for r in enc_rows:
         resp = resps[r["id"]]
         assert not resp.get("error"), (r["id"], resp.get("error"))
