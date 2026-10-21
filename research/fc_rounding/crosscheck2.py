@@ -9,11 +9,19 @@ Three things are checked that the earlier cross-check did NOT check independentl
 Fraction is used only for exact comparison of rationals.
 """
 import json
+import os
 import re
 from decimal import Decimal, getcontext
 from fractions import Fraction
 
 getcontext().prec = 80
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+VECTOR_FILES = [
+    os.path.join(_HERE, "vectors.json"),
+    os.path.join(_HERE, "vectors_discriminator.json"),
+    os.path.join(_HERE, "vectors_extra.json"),
+]
 
 # ---------- independent parsers ----------
 
@@ -108,7 +116,10 @@ def round_with_decimal(x, typ):
 
 
 def main():
-    vectors = json.load(open("R:/scratch/fc/vectors.json"))
+    vectors = []
+    for vf in VECTOR_FILES:
+        if os.path.exists(vf):
+            vectors.extend(json.load(open(vf)))
     bad = 0
     for v in vectors:
         if v["grammar"] == "hex":

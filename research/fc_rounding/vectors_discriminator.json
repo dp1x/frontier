@@ -32,22 +32,6 @@
     "dist_adjacent_ulp": "10227/15625"
   },
   {
-    "vector_id": "X03",
-    "input": "123456789012345e-15",
-    "grammar": "general",
-    "chars_format": "general",
-    "type": "double",
-    "group": "X-clinger-eligible",
-    "path_confidence": "mantissa 123456789012345 < 2^53 -> Clinger-eligible (control for X01)",
-    "rational_input": "24691357802469/200000000000000",
-    "expected_bits": 4593560419847042606,
-    "adjacent_bits": 4593560419847042607,
-    "tie": false,
-    "in_range": true,
-    "dist_expected_ulp": "1161839138/6103515625",
-    "dist_adjacent_ulp": "4941676487/6103515625"
-  },
-  {
     "vector_id": "X04",
     "input": "1234567e-6",
     "grammar": "general",
@@ -62,5 +46,21 @@
     "in_range": true,
     "dist_expected_ulp": "6051/15625",
     "dist_adjacent_ulp": "9574/15625"
+  },
+  {
+    "vector_id": "X03",
+    "input": "987654321e-8",
+    "grammar": "general",
+    "chars_format": "general",
+    "type": "double",
+    "group": "X-clinger-eligible",
+    "path_confidence": "Clinger-eligible (mantissa 987654321 < 2^52, exp10 -8); distinct from C02, replacing the previous duplicate",
+    "rational_input": "987654321/100000000",
+    "expected_bits": 4621749617594791475,
+    "adjacent_bits": 4621749617594791476,
+    "tie": false,
+    "in_range": true,
+    "dist_expected_ulp": "118317/390625",
+    "dist_adjacent_ulp": "272308/390625"
   }
 ]

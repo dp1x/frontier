@@ -17,7 +17,7 @@ jobs:
       - name: Run matrix
         run: |
           cd research/fc_rounding
-          python3 runner.py ./harness_gcc vectors.json,vectors_discriminator.json results_gcc.jsonl "GCC/libstdc++ (g++ $(g++ -dumpversion))" "-std=c++17 -O0 -fno-fast-math -frounding-math"
+          python3 runner.py ./harness_gcc vectors.json,vectors_discriminator.json,vectors_extra.json results_gcc.jsonl "GCC/libstdc++ (g++ $(g++ -dumpversion))" "-std=c++17 -O0 -fno-fast-math -frounding-math"
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
@@ -40,12 +40,12 @@ jobs:
       - name: Run matrix
         run: |
           cd research/fc_rounding
-          python3 runner.py ./harness_clang vectors.json,vectors_discriminator.json results_clang.jsonl "Clang/libc++ (clang++-20 $(clang++-20 --version | head -1 | grep -oP '\d+\.\d+\.\d+'))" "-std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math"
+          python3 runner.py ./harness_clang vectors.json,vectors_discriminator.json,vectors_extra.json results_clang.jsonl "Clang/libc++ (clang++-20 $(clang++-20 --version | head -1 | grep -oP '\d+\.\d+\.\d+'))" "-std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math"
       - name: Build and run Clinger mechanism reproducer
         run: |
           cd research/fc_rounding
           clang++-20 -std=c++17 -O0 -fno-fast-math -frounding-math clinger_repro.cpp -o clinger_repro
-          python3 clinger_runner.py ./clinger_repro vectors.json,vectors_discriminator.json results_clinger_repro.jsonl
+          python3 clinger_runner.py ./clinger_repro vectors.json,vectors_discriminator.json,vectors_extra.json results_clinger_repro.jsonl
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
@@ -93,6 +93,43 @@ jobs:
             -DLIBCXX_ENABLE_LOCALIZATION=OFF \
             -DCMAKE_CXX_FLAGS="-I/tmp/abi-include -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"
           cmake --build build -j 2
+      - name: Assert the Clinger-disable define actually took effect
+        run: |
+          # The ablation is only meaningful if the define really reached the
+          # conversion code.  Verify it two ways:
+          #  (a) the shared header still contains the guard, and
+          #  (b) the COMPILED object does not contain the clinger_fast_path
+          #      call, by checking the preprocessed source of the TU that
+          #      instantiates the floating-point from_chars.
+          set -euo pipefail
+          SRC=/tmp/llvm-project/libc/src/__support/str_to_float.h
+          grep -n "LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH" "$SRC"
+          echo "--- guard present in header ---"
+          cd /tmp/llvm-project/libcxx
+          # Preprocess the TU that instantiates __from_chars_floating_point
+          # and confirm the Clinger fast path is compiled OUT of it.
+          clang++-20 -E -std=c++17 \
+            -I/tmp/abi-include \
+            -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH \
+            -I include -I ../libc/src/__support -I ../libc/src -I ../libc/include \
+            -I build/include -I build/include/c++/v1 \
+            src/charconv.cpp > /tmp/charconv.i
+          if grep -q "clinger_fast_path" /tmp/charconv.i; then
+            echo "FAIL: clinger_fast_path is still present in the preprocessed TU"
+            exit 1
+          fi
+          echo "--- clinger_fast_path is absent from the preprocessed TU: define took effect ---"
+          # And confirm the negative control: WITHOUT the define, it IS present.
+          clang++-20 -E -std=c++17 \
+            -I/tmp/abi-include \
+            -I include -I ../libc/src/__support -I ../libc/src -I ../libc/include \
+            -I build/include -I build/include/c++/v1 \
+            src/charconv.cpp > /tmp/charconv_with.i
+          if ! grep -q "clinger_fast_path" /tmp/charconv_with.i; then
+            echo "FAIL: negative control, clinger_fast_path missing without the define"
+            exit 1
+          fi
+          echo "--- negative control passed: without the define the path is present ---"
       - name: Compile harness against the rebuilt libc++
         run: |
           cd research/fc_rounding
@@ -106,7 +143,7 @@ jobs:
       - name: Run matrix
         run: |
           cd research/fc_rounding
-          python3 runner.py ./harness_clang_nocl vectors.json,vectors_discriminator.json results_clang_nocl.jsonl "Clang/libc++ 20.1.8 rebuilt with LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH" "-std=c++17 -stdlib=libc++ (no-clinger build) -O0 -fno-fast-math -frounding-math"
+          python3 runner.py ./harness_clang_nocl vectors.json,vectors_discriminator.json,vectors_extra.json results_clang_nocl.jsonl "Clang/libc++ 20.1.8 rebuilt with LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH" "-std=c++17 -stdlib=libc++ (no-clinger build) -O0 -fno-fast-math -frounding-math"
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:

@@ -9,11 +9,19 @@ Deliberately uses a DIFFERENT algorithm from oracle.py:
 No use of from_chars / strtod / float(). Fractions only.
 """
 import json
+import os
 import sys
 from fractions import Fraction
 
-sys.path.insert(0, "R:/scratch/fc")
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)
 import oracle  # only for parsing (text -> exact rational); rounding is redone here
+
+VECTOR_FILES = [
+    os.path.join(_HERE, "vectors.json"),
+    os.path.join(_HERE, "vectors_discriminator.json"),
+    os.path.join(_HERE, "vectors_extra.json"),
+]
 
 
 def bits_to_frac(b, typ):
@@ -25,9 +33,10 @@ def bits_to_frac(b, typ):
     expf = (b >> mant_width) & ((1 << exp_width) - 1)
     mant = b & ((1 << mant_width) - 1)
     if expf == 0:
-        val = Fraction(mant, 1) * Fraction(1, 1 << (mant_width + 1)) * Fraction(2) ** emin
-        # subnormal: mant * 2^(emin - mant_width - 1)
-        val = Fraction(mant) * Fraction(2) ** (emin - mant_width - 1)
+        # Subnormal: value = mant * 2^(emin - mant_width - 1).
+        # For binary32: emin=-126, mant_width=23 -> 2^(-150) is WRONG;
+        # the correct subnormal scale is 2^(emin - mant_width) = 2^-149.
+        val = Fraction(mant) * Fraction(2) ** (emin - mant_width)
     else:
         e_unb = expf + emin - 1
         val = Fraction((1 << mant_width) | mant) * Fraction(2) ** (e_unb - mant_width)
@@ -134,7 +143,10 @@ def encode(sign, m, e, p, typ):
 
 
 def main():
-    vectors = json.load(open("R:/scratch/fc/vectors.json"))
+    vectors = []
+    for vf in VECTOR_FILES:
+        if os.path.exists(vf):
+            vectors.extend(json.load(open(vf)))
     mismatches = 0
     for v in vectors:
         if v["grammar"] == "hex":

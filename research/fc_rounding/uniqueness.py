@@ -7,8 +7,16 @@ This does not reuse oracle.py's rounding. It only:
   2. compares exact distances.
 """
 import json
+import os
 from fractions import Fraction
 import re
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+VECTOR_FILES = [
+    os.path.join(_HERE, "vectors.json"),
+    os.path.join(_HERE, "vectors_discriminator.json"),
+    os.path.join(_HERE, "vectors_extra.json"),
+]
 
 
 def decode(bits, typ):
@@ -24,7 +32,9 @@ def decode(bits, typ):
     if expf == 0:
         if mant == 0:
             return Fraction(0)
-        return sign * Fraction(mant) * Fraction(2) ** (emin - mant_width - 1)
+        # Subnormal: mant * 2^(emin - mant_width). For binary32 this is
+        # 2^-149, the correct smallest-subnormal scale.
+        return sign * Fraction(mant) * Fraction(2) ** (emin - mant_width)
     e_unb = expf + emin - 1
     return sign * Fraction((1 << mant_width) | mant) * Fraction(2) ** (e_unb - mant_width)
 
@@ -79,7 +89,10 @@ def parse_hex(t):
 
 
 def main():
-    vectors = json.load(open("R:/scratch/fc/vectors.json"))
+    vectors = []
+    for vf in VECTOR_FILES:
+        if os.path.exists(vf):
+            vectors.extend(json.load(open(vf)))
     bad = 0
     print(f"{'id':>4} {'type':<6} {'input':<22} {'expected':>18} {'dist_exp':>26} {'dist_adj':>26}  verdict")
     for v in vectors:
