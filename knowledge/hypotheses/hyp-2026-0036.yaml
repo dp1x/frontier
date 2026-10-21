@@ -10,10 +10,10 @@ summary: >
   20.1.8's decimal conversion path and is absent from GCC 13/14 libstdc++ and
   MSVC STL 14.51.36231 over the tested vector corpus. The mechanism is the
   Clinger fast path in libc/src/__support/str_to_float.h, which performs the
-  decimal-to-binary step as a native floating-point multiply or divide that
-  follows the ambient FPU rounding mode. Source-level reasoning alone had
-  predicted leakage was *plausible* in libc++'s Clinger path; the runtime
-  experiment is what establishes it.
+  decimal-to-binary step as a native floating-point multiply or divide on
+  the magnitude that follows the ambient FPU rounding mode. Source-level
+  reasoning alone had predicted leakage was *plausible* in libc++'s Clinger
+  path; the runtime experiment is what establishes it.
 epistemic_status: observation
 provenance:
   created_by:
@@ -42,11 +42,15 @@ statement: |
   implementation.
 
   Precisely: under libc++ 20.1.8, for inputs that satisfy the Clinger fast
-  path's eligibility conditions, std::from_chars returns the value correctly
-  rounded TOWARD the ambient rounding mode rather than the round-to-nearest
-  value that [charconv.from.chars] specifies. Under GCC 13/14 libstdc++ and
-  MSVC STL 14.51.36231 the returned value is the round-to-nearest value
-  under every tested mode.
+  path's eligibility conditions, std::from_chars returns the value obtained
+  by rounding the input's MAGNITUDE in the ambient rounding direction and
+  then applying the sign, rather than the round-to-nearest value that
+  [charconv.from.chars] specifies. For positive inputs this is the value
+  correctly rounded toward the ambient mode; for negative inputs it rounds
+  away from zero relative to the signed value, because libc++ converts the
+  magnitude and negates at the end. Under GCC 13/14 libstdc++ and MSVC STL
+  14.51.36231 the returned value is the round-to-nearest value under every
+  tested mode.
 
   The hypothesis is confirmed in the empirical sense (the mode-dependence
   exists and is reproducible). It is NOT a standards-defect claim: the

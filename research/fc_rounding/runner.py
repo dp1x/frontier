@@ -1,4 +1,6 @@
-import json, subprocess, sys, os
+import json
+import subprocess
+import sys
 
 # usage: runner.py <harness> <vectors.json[,vectors2.json...]> <out.jsonl> <label> [flags]
 HARNESS = sys.argv[1]

@@ -37,7 +37,7 @@ links:
 title: "VRF-2026-0020 - Deterministic verification of the libc++ rounding-mode dependence"
 method: deterministic-script
 what_was_verified: |
-  The expected output bits for all 27 vectors, derived without any tested
+  The expected output bits for all 34 vectors, derived without any tested
   conversion routine.
 
   1. oracle.py: decimal and hexadecimal text are parsed into exact rationals
@@ -62,8 +62,12 @@ what_was_verified: |
      to the expected value than to either representable neighbour, using
      exact Fraction distances.
 
-  Agreement: 27/27 expected bit patterns identical across all three
-  algorithms; 27/27 proven strictly unique-nearest; 0 ties among the
+  All three verifiers read their vector files relative to their own location
+  and cover all 34 vectors, including the path-discriminator and
+  review-added vectors.
+
+  Agreement: 34/34 expected bit patterns identical across all three
+  algorithms; 34/34 proven strictly unique-nearest; 0 ties among the
   primary corpus.
 ablation_verification:
   method: differential
@@ -76,15 +80,24 @@ ablation_verification:
     path and leaves the Eisel-Lemire and simple-decimal-conversion fallbacks
     in place.
   outcome: >
-    Mode-variant vectors dropped from 12 to 0. All 12 previously
-    mode-variant vectors were fixed. No vector became mode-variant. All 108
+    Mode-variant vectors dropped from 19 to 0. All 19 previously
+    mode-variant vectors were fixed. No vector became mode-variant. All 136
     records matched the exact-rational oracle, and the rebuilt library agreed
-    with GCC/libstdc++ in all 108 cells.
+    with GCC/libstdc++ in all 136 cells.
   why_this_is_causal: >
     The ablation changes exactly one compile-time switch inside the
     conversion routine, and the mode-dependence appears and disappears with
     it. This is stronger than a source-reading argument, which can only
     establish that leakage is plausible.
+  ablation_effectiveness_assertion: >
+    The CI job does not merely assume the define took effect. It
+    reconstructs the build's own recorded compile command for the
+    translation unit that instantiates the floating-point from_chars
+    (libcxx/src/charconv.cpp), preprocesses that unit with and without the
+    define, and requires the clinger_fast_path CALL SITE to be present
+    without the define and absent with it. It additionally requires the
+    build's own compile command to carry the define. The assertion has a
+    negative control, so a broken check cannot pass silently.
 mechanism_verification:
   method: deterministic-script
   what: >
@@ -94,10 +107,11 @@ mechanism_verification:
     multiply or divide, and prints the resulting bit pattern under the
     ambient rounding mode.
   outcome: >
-    All 76 (Clinger-eligible vector, mode) cells matched libc++'s from_chars
-    output bit pattern EXACTLY. Zero differences. The 12 Clinger-ineligible
-    cells have no model in the reproducer and were excluded from this
-    comparison; they are covered by the build-time ablation instead.
+    All 104 (Clinger-eligible vector, mode) cells matched libc++'s from_chars
+    output bit pattern EXACTLY. Zero differences. The 3 Clinger-ineligible
+    vectors (D06, X01, X02) have no model in the reproducer and were
+    excluded from this comparison; they are covered by the build-time
+    ablation instead.
   caveat: >
     The reproducer is a re-implementation of the upstream arithmetic, not the
     upstream code itself. Its evidential weight is corroborative: the

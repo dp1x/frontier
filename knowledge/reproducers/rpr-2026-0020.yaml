@@ -63,6 +63,21 @@ minimal_reproducer: |
   0x3f8ccccc (1.0999999046325684) and 0x3f8ccccd (1.100000023841858), and is
   strictly closer to the latter
   (distance 1/41943040 vs 1/10485760).
+
+  NEGATIVE VARIANT, which shows the direction more sharply. libc++ converts
+  the magnitude and negates at the end, so for a negative input the ambient
+  mode rounds the MAGNITUDE. Changing the string to "-1.1" and the type to
+  double gives:
+
+    ./repro 0   # nearest    -> bits=0xbff199999999999a
+    ./repro 1   # downward   -> bits=0xbff1999999999999  (magnitude rounded DOWN, then negated: AWAY from zero)
+    ./repro 2   # upward     -> bits=0xbff199999999999a
+    ./repro 3   # towardzero -> bits=0xbff1999999999999
+
+  The value correctly rounded toward FE_DOWNWARD for the signed value -1.1
+  would be 0xbff199999999999a, not 0xbff1999999999999, which is why the
+  behaviour is characterised as "magnitude rounded in the ambient direction,
+  then negated" rather than "rounded toward the ambient mode".
 why_it_is_minimal: >
   One input, one output type, four one-argument runs. The input is not a
   tie, is in range, and is fully consumed (from_chars returns ptr == s + 3

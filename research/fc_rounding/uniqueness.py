@@ -8,8 +8,8 @@ This does not reuse oracle.py's rounding. It only:
 """
 import json
 import os
-from fractions import Fraction
 import re
+from fractions import Fraction
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 VECTOR_FILES = [
@@ -22,9 +22,9 @@ VECTOR_FILES = [
 def decode(bits, typ):
     """Independent IEEE-754 bit-pattern -> exact Fraction decoder."""
     if typ == "float":
-        mant_width, exp_width, emin, bias = 23, 8, -126, 127
+        mant_width, exp_width, emin = 23, 8, -126
     else:
-        mant_width, exp_width, emin, bias = 52, 11, -1022, 1023
+        mant_width, exp_width, emin = 52, 11, -1022
     total = mant_width + exp_width + 1
     sign = -1 if (bits >> (total - 1)) & 1 else 1
     expf = (bits >> mant_width) & ((1 << exp_width) - 1)
@@ -94,7 +94,9 @@ def main():
         if os.path.exists(vf):
             vectors.extend(json.load(open(vf)))
     bad = 0
-    print(f"{'id':>4} {'type':<6} {'input':<22} {'expected':>18} {'dist_exp':>26} {'dist_adj':>26}  verdict")
+    hdr = (f"{'id':>4} {'type':<6} {'input':<22} {'expected':>18} "
+           f"{'dist_exp':>26} {'dist_adj':>26}  verdict")
+    print(hdr)
     for v in vectors:
         x = parse_hex(v["input"]) if v["grammar"] == "hex" else parse_decimal(v["input"])
         exp_bits = v["expected_bits"]
@@ -106,12 +108,8 @@ def main():
         d_exp = abs(x - ve)
         # strict uniqueness: expected is strictly closer than BOTH neighbours
         strictly = all(d_exp < d for (d, c, b) in dists) and len(dists) == 2
-        nearest_other = dists[0][1]
         if not strictly:
             bad += 1
-        # also assert the expected value is the nearest of {ve} u neighbours
-        ok = strictly and (d_exp < dists[0][0] or
-                           (d_exp == dists[0][0] and False))
         print(f"{v['vector_id']:>4} {v['type']:<6} {v['input']:<22} 0x{exp_bits:016x} "
               f"{str(d_exp):>26} {str(dists[0][0]):>26}  "
               f"{'UNIQUE-NEAREST' if strictly else 'NOT-UNIQUE'}")

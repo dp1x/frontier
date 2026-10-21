@@ -5,16 +5,17 @@ created_at: "2026-10-21T13:00:00Z"
 updated_at: "2026-10-21T17:30:00Z"
 summary: >
   Bounded empirical investigation of ambient floating-point rounding-mode
-  leakage in std::from_chars. 27 exact-rational, non-tie, in-range vectors
+  leakage in std::from_chars. 34 exact-rational, non-tie, in-range vectors
   crossed with four rounding modes against four targets (GCC/libstdc++,
   stock libc++ 20.1.8, libc++ 20.1.8 rebuilt with the Clinger fast path
-  disabled, and MSVC STL 14.51.36231). 432 records. Result: libc++ 20.1.8's
-  decimal conversion path is mode-dependent on 12 of 27 vectors, producing
-  the value correctly rounded toward the ambient mode instead of
-  round-to-nearest; the other three targets are mode-invariant and match the
-  exact-rational oracle everywhere. The mechanism is established causally by
-  build-time ablation and explained bit-exactly by a reproducer of the
-  upstream Clinger arithmetic.
+  disabled, and MSVC STL 14.51.36231). 544 records. Result: libc++ 20.1.8's
+  decimal conversion path is mode-dependent on 19 of 34 vectors, producing
+  the value obtained by rounding the input's magnitude in the ambient
+  direction and then negating it, instead of round-to-nearest; the other
+  three targets are mode-invariant and match the exact-rational oracle
+  everywhere. The mechanism is established causally by build-time ablation
+  with an asserted-effective define, and explained bit-exactly by a
+  reproducer of the upstream Clinger arithmetic.
 epistemic_status: observation
 provenance:
   created_by:
@@ -110,6 +111,7 @@ artifacts:
   - research/fc_rounding/clinger_runner.py
   - research/fc_rounding/vectors.json
   - research/fc_rounding/vectors_discriminator.json
+  - research/fc_rounding/vectors_extra.json
   - research/fc_rounding/results/
   - knowledge/experiments/exp-2026-0041.yaml
   - knowledge/observations/obs-2026-0072.yaml
@@ -123,10 +125,21 @@ status_notes: >
   tested scope: mode-dependence EXISTS in libc++ 20.1.8's decimal conversion
   path and was NOT observed in GCC/libstdc++ or MSVC STL. The mechanism is
   the Clinger fast path, established by build-time ablation (removing the
-  path removes the behaviour entirely, 12/12 vectors fixed, none introduced)
-  and corroborated bit-exactly by a reproducer of the upstream arithmetic
-  (76/76 cells identical). The separate standards-conformance question is
+  path removes the behaviour entirely, 19/19 vectors fixed, none introduced,
+  with the ablation's defining switch asserted to have taken effect) and
+  corroborated bit-exactly by a reproducer of the upstream arithmetic
+  (104/104 cells identical). The separate standards-conformance question is
   explicitly NOT answered and is left as an open question.
+  The independent adversarial challenger could not falsify the core claim and
+  did find eleven defects in the artifacts' description of it, two of them
+  substantive: the rounding-direction characterization was wrong for
+  negative inputs, and two YAML files carried contradictory counts. The
+  corpus was extended with four negative Clinger-eligible vectors and three
+  two-multiply-sub-branch vectors to close the resulting coverage gaps, the
+  duplicate vector was replaced, the verifiers were made repository-relative
+  and extended to all 34 vectors, and the whole matrix was re-executed. The
+  re-execution confirmed the challenger's own prediction about the
+  negative-input direction.
 terminal_reason: >
   Objective met. The narrow empirical question is answered with a
   reproducible, independently checked, mechanism-established result across

@@ -15,7 +15,10 @@ from fractions import Fraction
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
-import oracle  # only for parsing (text -> exact rational); rounding is redone here
+
+# Imported only for its text->exact-rational parsing; all rounding here is
+# re-derived independently.
+import oracle  # noqa: E402
 
 VECTOR_FILES = [
     os.path.join(_HERE, "vectors.json"),
@@ -59,7 +62,6 @@ def nearest_by_search(x, typ):
     ax = abs(x)
     p = 24 if typ == "float" else 53
     emin = -126 if typ == "float" else -1022
-    emax = 127 if typ == "float" else 1023
     # find e with 2^e <= ax < 2^(e+1) using Fraction comparisons (no bit tricks)
     e = 0
     while Fraction(2) ** (e + 1) <= ax:

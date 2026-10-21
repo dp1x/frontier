@@ -4,12 +4,17 @@ status: recorded
 created_at: "2026-10-21T16:30:00Z"
 updated_at: "2026-10-21T17:40:00Z"
 summary: >
-  Independent adversarial review of the ambient rounding-mode experiment.
-  The review covers the oracle, the source-path mapping, the vector corpus, the
-  harness controls, and the raw results for all four targets, and its explicit
-  goal is to falsify the conclusion. It also records the structured
-  limitations that survived the review, and one correction made to the
-  artifacts as a result.
+  Independent adversarial review of the ambient rounding-mode experiment,
+  carried out by a separate agent whose explicit goal was to falsify the
+  conclusion. The review covered the oracle, the source-path mapping, the
+  vector corpus, the harness controls, and the raw results for all four
+  targets. It could NOT falsify the core empirical claim: the mode-dependence
+  is real, reproducible from the raw records, and correctly attributed. It
+  did find and correct eleven defects in the artifacts' description of that
+  result, two of them substantive: an incorrect characterisation of the
+  rounding direction for negative inputs, and mutually contradictory counts
+  between two YAML files. The corpus was extended to close the resulting
+  coverage gaps and the whole matrix was re-executed.
 epistemic_status: interpretation
 provenance:
   created_by:
@@ -42,14 +47,15 @@ reviewer_independence: >
   inspected every raw record for harness-integrity fields. It did not reuse
   the primary oracle's internal calculations as ground truth.
 checks_performed:
-  - "Recomputed the exact tie condition for all 27 vectors from the raw input strings using exact integer arithmetic: 0 ties."
-  - "Re-derived expected bits for a sample of vectors by an independent route and confirmed agreement with vectors.json."
-  - "Inspected fesetround_return, actual_mode_before, actual_mode_after, consumed and ec on all 432 records: no record shows a failed fesetround, a mode that was not active at the call, or a partial consumption."
-  - "Confirmed the control probes vary with the mode on every target, establishing that the ambient mode was live rather than merely requested."
+  - "Recomputed the exact tie condition for all vectors from the raw input strings using exact integer arithmetic, WITHOUT reading the primary oracle's implementation first: 0 ties."
+  - "Re-derived every expected bit by two unrelated methods: an exact Fraction implementation with hand-rolled parsers, and longhand binary expansion computing the truncated significand and the discarded remainder by hand. All agree with vectors.json, including the four path-discriminator vectors the artifacts' own verifiers did not cover."
+  - "Re-derived all dist_expected_ulp and dist_adjacent_ulp fractions from exact rationals: all match, 0 discrepancies."
+  - "Inspected fesetround_return, actual_mode_before, actual_mode_after, consumed and ec on every record: no record shows a failed fesetround, a mode that was not active at the call, or a partial consumption. The reviewer noted that the FE_* constants are platform-native and differ between glibc and MSVC, and that a naive check against glibc constants produces spurious failures on the MSVC file."
+  - "Tested and excluded the alternative explanations: a strtod fallback (excluded, the from_chars result differs from strtod in 33 of 108 cells), constant folding (excluded, runtime argv), fesetround not honoured (excluded, mode readback and both controls), a wrong input string (excluded, consumed == len(input)), a harness bug (excluded, three other targets return the oracle value on the same harness), and mode readback lag (excluded, before and after identical everywhere)."
+  - "Confirmed the control probes vary with the mode on every target, establishing that the ambient mode was live rather than merely requested, and identified that the FPU probe alone does not distinguish FE_DOWNWARD from FE_TOWARDZERO."
   - "Confirmed the input strings and mode indices are runtime argv values in harness.cpp, so no conversion is constant-foldable."
-  - "Cross-checked the mechanism reproducer against libc++'s actual output on all Clinger-eligible cells."
-  - "Checked that the finding's stated scope matches the raw data, in particular that the GCC and MSVC claims are negative results over the tested corpus only."
-  - "Checked that the standards-conformance question is explicitly left open rather than answered."
+  - "Cross-checked the mechanism reproducer against libc++'s actual output on all Clinger-eligible cells, and independently re-derived the Clinger eligible/ineligible split from libc++ 20.1.8's real parse (uint32 mantissa for float), obtaining the same 19/3 split as the reproducer."
+  - "Confirmed the GCC and MSVC claims are negative results over the tested corpus only, and that the standards-conformance question is explicitly left open rather than answered."
 independent_source_path_review: >
   A separate read-only source auditor, working only from the upstream bytes
   and without access to the runtime results, audited the exact
@@ -98,14 +104,91 @@ independent_source_path_review: >
   RoundDirection::Nearest.
 corrections_made_as_a_result:
   - >
+    SUBSTANTIVE: the characterization "the result is the value correctly
+    rounded TOWARD the ambient mode" was wrong for negative inputs, and the
+    original corpus could not detect it. libc++ converts the MAGNITUDE and
+    negates at the end (__calculate_result), so the ambient mode rounds the
+    magnitude; for a negative input the result rounds away from zero
+    relative to the signed value, not toward the ambient mode. The
+    reviewer demonstrated this with a native-FP program against upstream
+    libc++ semantics. The corpus's only two negative vectors were both
+    degenerate: one exactly representable, and one Clinger-INELIGIBLE (its
+    float mantissa truncates), so both took the integer path.
+    CORRECTION: four negative Clinger-eligible vectors (N01-N04) were added
+    and the whole matrix re-executed. The new data confirms the reviewer's
+    prediction exactly: "-1.1" as a double yields 0xbff199999999999a under
+    FE_TONEAREST and FE_UPWARD, and 0xbff1999999999999 under FE_DOWNWARD and
+    FE_TOWARDZERO, which is the magnitude rounded in the ambient direction
+    and then negated. The finding, observation, hypothesis, reproducer and
+    verification were all restated in those terms, and the exact
+    characterization is now verified on all 104 Clinger-eligible cells with
+    zero exceptions.
+  - >
+    SUBSTANTIVE: the ablation's "direct causal test" language rested on an
+    unverified step, namely that the disable define actually reached the
+    conversion code. The CI job now asserts it: it reconstructs the build's
+    own recorded compile command for the translation unit that instantiates
+    the floating-point from_chars, preprocesses that unit with and without
+    the define, and requires the clinger_fast_path CALL SITE to be present
+    without the define and absent with it, with the build's own compile
+    command required to carry the define. The assertion has a negative
+    control. Two earlier versions of the assertion were themselves wrong
+    (they checked the template definition rather than the call site, and
+    they let the define leak into the negative control); both were fixed
+    before the assertion was accepted.
+  - >
+    Count error: the experiment artifact stated "12 mismatches vs oracle"
+    where the raw records show 20 (now 31) deviating CELLS. 12 was the
+    vector count, not the cell count. The experiment artifact and the
+    observation had contradictory numbers for what read as the same
+    quantity. Both now state vector counts and cell counts separately.
+  - >
+    Count error: the observation stated "the 12 Clinger-ineligible vectors"
+    where the correct number is 3 (D06, X01, X02). The 12 was a
+    transposition of the mode-variant vector count. Corrected.
+  - >
+    The three verifier scripts read an ABSOLUTE path into the author's
+    scratch directory and imported the oracle from that path, so they could
+    not be run from a fresh clone, contradicting the README's "Reproducing"
+    section. They now resolve their vector files relative to their own
+    location.
+  - >
+    The three verifier scripts covered only the 23 vectors in vectors.json;
+    the 4 path-discriminator vectors were never re-derived or
+    uniqueness-proved by any committed script. They now cover all 34
+    vectors across all three vector files.
+  - >
+    Latent bug: uniqueness.py's decoder computed a binary32 subnormal as
+    m / 2^148 and crosscheck.py's decoder used 2^-150, where 2^-149 is
+    correct. No corpus vector is subnormal, so no result in this experiment
+    was affected, but the scripts are cited as correctness evidence and would
+    have silently mis-handled a subnormal. Both decoders are fixed.
+  - >
+    The MSVC results were produced by an earlier runner than the committed
+    one, so the records lacked target_label, compiler_flags, grammar,
+    exact_rational_input and tie_classification, leaving the compiler
+    identity, the STL version, the platform and the flags as prose only.
+    The MSVC matrix was regenerated with the committed runner, so every
+    record now carries its own provenance.
+  - >
+    The corpus contained a duplicate: X03 was byte-identical to C02 (same
+    input, same type, same expected bits), so the 27 vectors were only 26
+    distinct conversions. X03 was replaced with a distinct Clinger-eligible
+    value, 987654321e-8.
+  - >
+    The Clinger sub-branch for exp10 > EXACT_POWERS_OF_TEN, which performs
+    TWO native multiplies, was never exercised, because the corpus's maximum
+    positive exponent was 3. Three vectors (P01-P03) with exponents above
+    the threshold were added. They are mode-dependent, so the leak reaches
+    that sub-branch too.
+  - >
     The mechanism reproducer originally ignored the input sign and did not
     model the hexadecimal route, so its output did not match libc++ on the
     negative and hexadecimal vectors. Those 24 cells were not a defect in
     libc++; they were a defect in the reproducer. The reproducer was
     corrected to apply the sign as libc++'s __calculate_result does and to
-    restrict itself to the decimal route, after which the match is 76/76
-    exact with zero differences. The earlier claim of "72 matching, 24
-    differing" was an artefact and has been superseded.
+    restrict itself to the decimal route, after which the match is 104/104
+    exact with zero differences.
   - >
     An independent hex-parsing routine used in the claim-verification script
     double-counted the fractional hex exponent, producing spurious
@@ -115,14 +198,22 @@ corrections_made_as_a_result:
   - >
     A sign-bit bug in the third independent oracle (using the sign value -1
     as a bit shift) produced a false mismatch on every vector. It was
-    corrected and the third oracle then agreed on all 27.
+    corrected and the third oracle then agreed on all 34.
+  - >
+    The README overstated the discriminating power of the FPU liveness
+    probe. The probe 1.0 + 1e-20 distinguishes FE_UPWARD from the other
+    three modes but does not distinguish FE_DOWNWARD from FE_TOWARDZERO on
+    its own; the strtod probe carries that discrimination. The README now
+    says so precisely.
 unresolved_objections:
   - >
     The three independent oracle implementations share an author and were
     written in one session. They use different algorithms and different
     parsers, but they are not the work of an unrelated party, so they
     demonstrate algorithmic independence rather than organisational
-    independence.
+    independence. The independent challenger partly closes this gap: it
+    re-derived every expected bit independently, by two methods, without
+    consulting the primary oracle first.
   - >
     The mechanism reproducer is a re-implementation of the upstream Clinger
     arithmetic rather than the upstream code itself. The build-time ablation
@@ -157,15 +248,25 @@ unresolved_objections:
     from_chars is a header-inline implementation, so the harness's
     compilation settings apply to it. A separately built MSVC STL could in
     principle differ. This is recorded as a scope limit rather than a
-    threat to the negative result.
+    threat to the negative result. The reviewer additionally could not
+    locate the MSVC STL's from_chars implementation in its checkout, so how
+    MSVC achieves mode-invariance is not established; only that it does, on
+    this configuration.
+  - >
+    The GCC negative result does not by itself discriminate between
+    "integer-only Eisel-Lemire" and "a strtod route with the auto_ferounding
+    guard forcing FE_TONEAREST"; both would produce mode-invariant output.
+    The mechanism claim for libstdc++ is source-supported (the fast_float
+    Eisel-Lemire path is integer-only and is the default on x86-64) but
+    was not discriminated by this experiment, because the CI runner's g++
+    version was recorded only as a major number.
   - >
     The first dispatched independent challenger subagent terminated on an
     API rate limit without returning a verdict, and the checks it was to
     perform were carried out by the primary agent. The review recorded here
-    is therefore a re-dispatch performed by an independent agent with the
-    same falsification brief; the reviewer_role field records the
-    independence that actually obtained, and the reviewer-independence
-    caveat is stated rather than glossed.
+    is a re-dispatch performed by a separate agent with the same
+    falsification brief, which did return a full verdict; the reviewer_role
+    field records the independence that actually obtained.
 verdict: >
   The conclusion SURVIVES adversarial review within its stated scope. The
   claim that libc++ 20.1.8's std::from_chars output bits depend on the
@@ -173,8 +274,17 @@ verdict: >
   supported by: an exact-rational oracle independently re-derived three
   ways, a uniqueness proof for every vector, per-case fresh processes with
   the mode confirmed active at the call site, positive liveness controls, a
-  build-time ablation that removes the behaviour and introduces none, and a
-  bit-exact mechanism reproduction. The claims about GCC/libstdc++ and MSVC
-  STL are negative results over the tested corpus and are stated as such.
+  build-time ablation that removes the behaviour and introduces none AND
+  whose defining switch is now asserted to have taken effect, and a bit-exact
+  mechanism reproduction. The reviewer's own independent re-derivations
+  (longhand binary expansion and a hand-rolled Fraction implementation) and
+  its audit of all 432 then 544 records found no anomaly in the empirical
+  data.
+  The claims about GCC/libstdc++ and MSVC STL are negative results over the
+  tested corpus and are stated as such.
   The finding is NOT promoted to a standards-defect claim; that question
   remains open.
+  The review's two substantive objections were accepted, the corpus was
+  extended to close the coverage gaps they exposed, and the matrix was
+  re-executed; the re-execution confirmed the reviewer's own prediction about
+  the negative-input direction.

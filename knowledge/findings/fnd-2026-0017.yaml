@@ -2,26 +2,30 @@ id: fnd-2026-0017
 type: finding
 status: recorded
 created_at: "2026-10-21T16:50:00Z"
-updated_at: "2026-10-21T17:45:00Z"
+updated_at: "2026-10-21T19:10:00Z"
 summary: >
   libc++ 20.1.8's std::from_chars returns different output bits for the same
   finite, in-range, NON-TIE decimal input depending on the calling thread's
   active floating-point rounding mode. In every observed case the result is
-  exactly the value correctly rounded TOWARD the ambient mode, not the
-  round-to-nearest value that [charconv.from.chars] requires. The mechanism
-  is the Clinger fast path in libc/src/__support/str_to_float.h, which
-  performs the decimal-to-binary step as a native floating-point multiply or
-  divide. The same behaviour was NOT observed in GCC 13/14 libstdc++ or in
-  MSVC STL 14.51.36231 over the same corpus. This is a recorded
-  implementation-behaviour observation; whether it constitutes a conformance
-  defect is an open normative question that this work does not answer.
+  the value obtained by rounding the input's MAGNITUDE in the ambient
+  direction and then applying the sign, which for positive inputs is the
+  value correctly rounded toward the ambient mode and for negative inputs
+  rounds away from zero relative to the signed value. The result is never
+  the round-to-nearest value that [charconv.from.chars] requires. The
+  mechanism is the Clinger fast path in libc/src/__support/str_to_float.h,
+  which performs the decimal-to-binary step as a native floating-point
+  multiply or divide. The same behaviour was NOT observed in GCC 13/14
+  libstdc++ or in MSVC STL 14.51.36231 over the same corpus. This is a
+  recorded implementation-behaviour observation; whether it constitutes a
+  conformance defect is an open normative question that this work does not
+  answer.
 epistemic_status: observation
 provenance:
   created_by:
     kind: model-agent
     role: orchestrator-synthesizer
     model: grok-4.7
-    tool: synthesis of a CI-executed four-target matrix, an exact-rational oracle with three independent re-derivations, a build-time ablation, and an adversarial review
+    tool: synthesis of a CI-executed four-target matrix, an exact-rational oracle with three independent re-derivations, a build-time ablation with an effectiveness assertion, and an adversarial review
   sources:
     - research/fc_rounding/README.md
     - knowledge/experiments/exp-2026-0041.yaml
@@ -54,11 +58,23 @@ statement: |
   binary32 values and is strictly closer to 0x3f8ccccd (distance 1/41943040
   versus 1/10485760), so 0x3f8ccccc is not the nearest representable value.
 
-  Across 27 vectors and 4 modes, 12 vectors were mode-dependent, each by
-  exactly one ulp, and in every case the result equalled the value correctly
-  rounded toward the ambient mode. 15 vectors were mode-invariant, including
-  the two whose wide mantissas defeat the Clinger fast path and all five
-  hexadecimal vectors.
+  Across 34 vectors and 4 modes, 19 vectors were mode-dependent, each by
+  exactly one ulp. 15 vectors were mode-invariant, including the two whose
+  wide mantissas defeat the Clinger fast path, all five hexadecimal
+  vectors, and the negative vector whose float mantissa truncates.
+
+  The exact characterisation, verified on all 104 (Clinger-eligible vector,
+  mode) cells with no exceptions: the result equals the value obtained by
+  rounding the input's MAGNITUDE under the ambient rounding mode and then
+  applying the sign. For positive inputs this is the value correctly rounded
+  toward the ambient mode. For NEGATIVE inputs it is not: libc++ converts the
+  magnitude and negates at the end (__calculate_result in
+  libcxx/src/include/from_chars_floating_point.h), so the result rounds away
+  from zero relative to the signed value. Concretely, "-1.1" as a double
+  yields 0xbff199999999999a under FE_TONEAREST and FE_UPWARD, and
+  0xbff1999999999999 under FE_DOWNWARD and FE_TOWARDZERO, whereas the value
+  correctly rounded toward FE_DOWNWARD for the signed value -1.1 would be
+  0xbff199999999999a.
 
   The cause is the Clinger fast path in libc/src/__support/str_to_float.h
   (llvmorg-20.1.8). clinger_fast_path computes the result as
@@ -69,20 +85,26 @@ statement: |
   in the destination floating-point type, so the hardware rounding mode
   applies. libc++'s std::from_chars path
   (libcxx/src/include/from_chars_floating_point.h) calls
-  decimal_exp_to_float with RoundDirection::Nearest, but the Clinger branch
-  does not enforce nearest rounding independently of the FPU state: for a
-  Nearest request it simply returns the natively-rounded product or quotient.
+  decimal_exp_to_float with RoundDirection::Nearest hardcoded, so the
+  `if (round != RoundDirection::Nearest)` branch of clinger_fast_path, which
+  would recompute with a negated value and restore directed rounding of the
+  SIGNED result, is never entered. The leak comes purely from the native
+  multiply/divide acting on the magnitude.
 
   Two independent lines of evidence establish the mechanism:
 
   1. ABLATION. libc++ 20.1.8 rebuilt with
      -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH produced
-     mode-invariant, oracle-matching output on all 108 records, fixed all 12
+     mode-invariant, oracle-matching output on all 136 records, fixed all 19
      mode-variant vectors, and introduced none. The rebuilt library agreed
-     with GCC/libstdc++ in every cell.
+     with GCC/libstdc++ in every cell. The CI job asserts that the define
+     actually took effect by preprocessing the translation unit that
+     instantiates the floating-point from_chars with and without it, and
+     requiring the clinger_fast_path call site to be present without the
+     define and absent with it.
 
   2. MECHANISM REPRODUCTION. A reproducer of the upstream Clinger arithmetic
-     produced bit patterns IDENTICAL to libc++'s std::from_chars in all 76
+     produced bit patterns IDENTICAL to libc++'s std::from_chars in all 104
      (Clinger-eligible vector, mode) cells, with zero differences.
 
   The behaviour was NOT observed in GCC 13/14 libstdc++ or MSVC STL
@@ -101,10 +123,11 @@ normative_claim_status: >
 scope_limits:
   - "libc++ 20.1.8 on x86-64 Linux, decimal conversion path only"
   - "binary32 and binary64 only; long double, non-IEC formats, overflow, underflow, NaN and Inf are out of scope"
-  - "27 vectors; not an exhaustive sweep of the input space"
+  - "34 vectors; not an exhaustive sweep of the input space"
   - "GCC and MSVC results are negative observations over this corpus, not proofs of mode-invariance in general"
   - "The hexadecimal route was exercised by five vectors; all were stable, but it was not systematically swept"
   - "No other libc++ release was tested, so the onset version is unknown"
+  - "The identity 'libc++ 20.1.8' for the stock build rests on the apt.llvm.org package version; the recorded target_label carries the clang version"
 security_claim: >
   NONE. No security, exploitability, or denial-of-service claim is made. The
   effect is a one-ulp difference in a conversion result, observed only when

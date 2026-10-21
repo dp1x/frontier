@@ -70,9 +70,9 @@ def indep_parse_hex(text):
 def round_with_decimal(x, typ):
     """Return (bits, tie) computed via 80-digit Decimal arithmetic."""
     if typ == "float":
-        p, emin, emax, bias, mant_width, exp_width = 24, -126, 127, 127, 23, 8
+        p, emin, bias, mant_width, exp_width = 24, -126, 127, 23, 8
     else:
-        p, emin, emax, bias, mant_width, exp_width = 53, -1022, 1023, 1023, 52, 11
+        p, emin, bias, mant_width, exp_width = 53, -1022, 1023, 52, 11
 
     if x == 0:
         return (1 << (mant_width + exp_width) if x < 0 else 0), False

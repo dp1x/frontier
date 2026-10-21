@@ -3,8 +3,6 @@
 No use of std::from_chars, strtod, Python float(), or any target library.
 Uses integer arithmetic and fractions.Fraction only as exact rational.
 """
-import json
-import re
 from fractions import Fraction
 from math import gcd
 
@@ -144,7 +142,6 @@ def to_rational_bits(typ, sign, num, den):
         }
 
     e = floor_log2_rational(n, d)
-    orig_e = e
     if e < emin:
         e = emin
     if e > emax:
@@ -222,25 +219,10 @@ def to_rational_bits(typ, sign, num, den):
         exp_field_c = (1 << (8 if typ == "float" else 11)) - 1
     adj_bits = (sign_bit << (total_bits - 1)) | (exp_field_c << mant_width) | mant_field_c
 
-    # rationals
-    def bits_to_value(b):
-        # returns Fraction for a given bit pattern
-        sign_b = (b >> (total_bits - 1)) & 1
-        exp_f = (b >> mant_width) & ((1 << (8 if typ == "float" else 11)) - 1)
-        mant_f = b & ((1 << mant_width) - 1)
-        if exp_f == 0:
-            # subnormal
-            m = mant_f
-            e_unb = emin  # value = m * 2^(emin - p + 1)? Actually subnormal: m * 2^(emin - p + 1) with m < 2^(p-1)
-            # exponent for subnormal ulp: emin - p + 1
-            val = Fraction(m * (1 << (emin - p + 1)) if m else 0)  # but 2^negative -> use Fraction
-            # use Fraction with power
-            val = Fraction(m, 1 << (p - 1 - (emin)))  # careful
-        # easier: use float formula via Fraction powers
-        return None
-
-    # Instead compute expected rational from q_exp and e_final
-    # value = sign * q_exp * 2^(e_final - p + 1)
+    # Compute the expected rational directly from the rounded significand:
+    #   value = sign * q_exp * 2^(e_final - p + 1)
+    # and the competing candidate from the same bin:
+    #   value = sign * comp_mant * 2^(e - p + 1)
     exp_val = e_final - (p - 1)
     if exp_val >= 0:
         exp_rat = Fraction(q_exp * (1 << exp_val)) * (1 if not neg else -1)
@@ -258,11 +240,17 @@ def to_rational_bits(typ, sign, num, den):
     dist_exp = abs(input_rat - exp_rat)
     dist_comp = abs(input_rat - comp_rat)
 
-    # express distances in ULP units (divide by 2^(e_final-p+1)? use expected ulp)
-    ulp = Fraction(1, 1 << (-(e_final - (p - 1)))) if (e_final - (p - 1)) < 0 else Fraction(1 << (e_final - (p - 1)))
-    # distance in ulp = dist / ulp
-    dist_exp_ulp = dist_exp / ulp
-    dist_comp_ulp = dist_comp / (Fraction(1, 1 << (-(e - (p - 1)))) if (e - (p - 1)) < 0 else Fraction(1 << (e - (p - 1))))
+    # Express the distances in ULP units. The ULP of the expected value is
+    # 2^(e_final - p + 1); the competing candidate sits in the bin with
+    # exponent e, whose ULP is 2^(e - p + 1).
+    def ulp_of(exp):
+        shift = exp - (p - 1)
+        if shift < 0:
+            return Fraction(1, 1 << (-shift))
+        return Fraction(1 << shift)
+
+    dist_exp_ulp = dist_exp / ulp_of(e_final)
+    dist_comp_ulp = dist_comp / ulp_of(e)
 
     return {
         "bits": bits,

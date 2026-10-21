@@ -1,4 +1,6 @@
-import json, subprocess, sys
+import json
+import subprocess
+import sys
 
 REPRO = sys.argv[1]
 VECTOR_FILES = sys.argv[2].split(",")
@@ -38,8 +40,9 @@ for v in vectors:
             "truncated": run.get("truncated"),
         }
         records.append(rec)
+        bits = run.get("clinger_bits")
         print(v["vector_id"], mname, "elig=", run.get("clinger_eligible"),
-              "bits=", hex(run.get("clinger_bits", 0)) if run.get("clinger_bits") is not None else None,
+              "bits=", hex(bits) if bits is not None else None,
               "exp=", hex(v["expected_bits"]), flush=True)
 
 with open(OUT, "w") as f:
