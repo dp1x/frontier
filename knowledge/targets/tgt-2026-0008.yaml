@@ -1,0 +1,47 @@
+id: tgt-2026-0008
+type: target
+status: active
+created_at: "2026-10-21T13:00:00Z"
+updated_at: "2026-10-21T17:00:00Z"
+summary: >
+  std::from_chars floating-point conversion in mainstream C++ standard
+  libraries, investigated for ambient floating-point rounding-mode
+  dependence: whether a caller's active rounding mode (FE_TONEAREST,
+  FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO) can change the output bits of a
+  successful conversion for finite, in-range, non-tie inputs to binary32 and
+  binary64. Scope deliberately excludes overflow, underflow, NaN/Inf,
+  malformed input, long double, and non-IEC formats. Standards-conformance
+  interpretation is out of scope for the empirical experiment; a separate
+  normative argument would be required for a defect claim.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.7
+    tool: repository reconnaissance, source audit, and CI-executed cross-implementation runtime matrix
+  sources:
+    - research/fc_rounding/README.md
+    - knowledge/experiments/exp-2026-0041.yaml
+  parent: msn-2026-0026
+  generation: 0
+links:
+  hypotheses: [hyp-2026-0036]
+  experiments: [exp-2026-0041]
+  observations: [obs-2026-0072]
+  findings: [fnd-2026-0017]
+  reproducers: [rpr-2026-0020]
+  reviews: [rev-2026-0027]
+  verifications: [vrf-2026-0020]
+  missions: [msn-2026-0026]
+title: "TGT-2026-0008 - Ambient rounding-mode dependence of std::from_chars (binary32/binary64)"
+domain: compilers
+what_is_being_probed: >
+  The falsifiable question: for selected finite, in-range std::from_chars
+  inputs whose exact mathematical values are not halfway between adjacent
+  representable destination values, does conversion produce the unique
+  nearest result regardless of the calling thread's active rounding mode?
+status_detail: >
+  Active. The bounded experiment has been executed; the finding is recorded at
+  observation epistemic status pending an independent non-synthesizer review
+  before any promotion to verified.

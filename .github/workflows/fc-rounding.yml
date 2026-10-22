@@ -1,0 +1,178 @@
+name: fc-rounding-experiment
+on:
+  workflow_dispatch:
+  push:
+    branches: [exp/fc-rounding]
+
+jobs:
+  gcc-libstdcpp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile harness (g++)
+        run: |
+          cd research/fc_rounding
+          g++ -std=c++17 -O0 -fno-fast-math -frounding-math -fno-strict-aliasing harness.cpp -o harness_gcc
+          g++ --version | head -1
+      - name: Run matrix
+        run: |
+          cd research/fc_rounding
+          python3 runner.py ./harness_gcc vectors.json,vectors_discriminator.json,vectors_extra.json results_gcc.jsonl "GCC/libstdc++ (g++ $(g++ -dumpversion))" "-std=c++17 -O0 -fno-fast-math -frounding-math"
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-gcc
+          path: research/fc_rounding/results_gcc.jsonl
+
+  clang-libcxx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM 20 + libc++
+        run: |
+          wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
+          sudo apt-get install -y libc++-20-dev libc++abi-20-dev
+      - name: Compile harness (clang++-20 libc++)
+        run: |
+          cd research/fc_rounding
+          clang++-20 -std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math harness.cpp -o harness_clang
+          clang++-20 --version | head -1
+      - name: Run matrix
+        run: |
+          cd research/fc_rounding
+          python3 runner.py ./harness_clang vectors.json,vectors_discriminator.json,vectors_extra.json results_clang.jsonl "Clang/libc++ (clang++-20 $(clang++-20 --version | head -1 | grep -oP '\d+\.\d+\.\d+'))" "-std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math"
+      - name: Build and run Clinger mechanism reproducer
+        run: |
+          cd research/fc_rounding
+          clang++-20 -std=c++17 -O0 -fno-fast-math -frounding-math clinger_repro.cpp -o clinger_repro
+          python3 clinger_runner.py ./clinger_repro vectors.json,vectors_discriminator.json,vectors_extra.json results_clinger_repro.jsonl
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-clang
+          path: research/fc_rounding/results_clang.jsonl
+      - name: Upload clinger reproducer results
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-clinger-repro
+          path: research/fc_rounding/results_clinger_repro.jsonl
+
+  # Mechanism confirmation: rebuild libc++ with the Clinger fast path disabled
+  # and re-run the same matrix.  If the mode-dependence disappears, the
+  # Clinger fast path is confirmed as the cause.
+  clang-libcxx-no-clinger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM 20 + libc++ + build deps
+        run: |
+          wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
+          sudo apt-get install -y libc++-20-dev libc++abi-20-dev ninja-build cmake libatomic1 libzstd-dev g++-13
+      - name: Build libc++ 20 from source with Clinger fast path disabled
+        run: |
+          cd /tmp
+          git clone --depth 1 --branch llvmorg-20.1.8 https://github.com/llvm/llvm-project.git
+          # Isolate cxxabi.h from the installed libc++ headers: mixing the
+          # installed libc++ header tree with the one being built breaks the
+          # build.  Only the ABI header is needed.
+          mkdir -p /tmp/abi-include
+          for f in cxxabi.h __cxxabi_config.h; do
+            src=$(find /usr/lib/llvm-20 /usr/include -name "$f" 2>/dev/null | head -1)
+            if [ -n "$src" ]; then cp "$src" /tmp/abi-include/; fi
+          done
+          ls -l /tmp/abi-include
+          cd llvm-project/libcxx
+          cmake -G Ninja -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_LIBCXX=ON \
+            -DCMAKE_C_COMPILER=clang-20 \
+            -DCMAKE_CXX_COMPILER=clang++-20 \
+            -DLIBCXX_ENABLE_SHARED=OFF \
+            -DLIBCXX_ENABLE_STATIC=ON \
+            -DLIBCXX_ENABLE_ABI_LINKER_SCRIPT=OFF \
+            -DLIBCXX_ENABLE_LOCALIZATION=OFF \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_CXX_FLAGS="-I/tmp/abi-include -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"
+          cmake --build build -j 2
+      - name: Assert the Clinger-disable define actually took effect
+        run: |
+          # The ablation is only meaningful if the define really reached the
+          # conversion code.  Verify it against the build's own recorded
+          # compile command for the TU that instantiates the floating-point
+          # from_chars, so the include paths are exactly the ones the build
+          # used.
+          #
+          # The check is on the COMPILED OBJECT, not on the preprocessed text:
+          # the template DEFINITION of clinger_fast_path is always present in
+          # the header, and only the CALL SITE inside decimal_exp_to_float is
+          # guarded.  So the meaningful question is whether the template was
+          # INSTANTIATED, which shows up as a symbol in the object file.
+          set -euo pipefail
+          SRC=/tmp/llvm-project/libc/src/__support/str_to_float.h
+          grep -n "LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH" "$SRC"
+          echo "--- guard present in header ---"
+          cd /tmp/llvm-project/libcxx
+          python3 - <<'PY'
+          import json, os, shlex, subprocess, sys
+          DEFINE = "LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"
+          cc = json.load(open("build/compile_commands.json"))
+          entry = next(e for e in cc if e["file"].endswith("src/charconv.cpp"))
+          args = shlex.split(entry["command"])
+          # The recorded command ALREADY carries the define (it was set in
+          # CMAKE_CXX_FLAGS).  Strip it so the negative control is a genuine
+          # "without the define" build, and re-add it explicitly for the
+          # positive case.
+          keep = [a for a in args
+                  if (a.startswith("-I") or a.startswith("-D") or a.startswith("-std=")
+                      or a.startswith("--include") or a.startswith("-isystem"))
+                  and DEFINE not in a]
+          cwd = entry["directory"]
+          def preprocess(extra):
+              cmd = ["clang++-20", "-E", "-std=c++17"] + keep + extra + [entry["file"]]
+              r = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
+              if r.returncode != 0:
+                  print("preprocess failed:", r.stderr[-3000:]); sys.exit(1)
+              return r.stdout
+          # The guard protects the CALL SITE inside decimal_exp_to_float:
+          #     opt_output = clinger_fast_path<T>(init_num, round);
+          # The template DEFINITION is
+          #     clinger_fast_path(ExpandedFloat<T> init_num, ...)
+          # with no '<' after the name, so the marker "clinger_fast_path<"
+          # identifies the call site specifically.
+          MARKER = "clinger_fast_path<"
+          without = preprocess([])
+          if MARKER not in without:
+              print("FAIL: negative control, the clinger_fast_path CALL SITE is absent without the define")
+              sys.exit(1)
+          print("--- negative control passed: without the define the call site is present ---")
+          withdef = preprocess(["-D" + DEFINE])
+          if MARKER in withdef:
+              print("FAIL: the clinger_fast_path call site is still present WITH the define")
+              sys.exit(1)
+          print("--- the clinger_fast_path call site is absent WITH the define: the ablation took effect ---")
+          # Also confirm the build itself used the define: the recorded
+          # compile command for this TU must contain it.
+          if DEFINE not in entry["command"]:
+              print("FAIL: the build's own compile command for charconv.cpp lacks the define")
+              sys.exit(1)
+          print("--- the build's own compile command carries the define ---")
+          PY
+      - name: Compile harness against the rebuilt libc++
+        run: |
+          cd research/fc_rounding
+          clang++-20 -std=c++17 -stdlib=libc++ \
+            -nostdinc++ \
+            -isystem /tmp/llvm-project/libcxx/build/include/c++/v1 \
+            -isystem /tmp/llvm-project/libcxx/build/include \
+            -L /tmp/llvm-project/libcxx/build/lib -lc++ -lc++abi \
+            -O0 -fno-fast-math -frounding-math harness.cpp -o harness_clang_nocl
+          clang++-20 --version | head -1
+      - name: Run matrix
+        run: |
+          cd research/fc_rounding
+          python3 runner.py ./harness_clang_nocl vectors.json,vectors_discriminator.json,vectors_extra.json results_clang_nocl.jsonl "Clang/libc++ 20.1.8 rebuilt with LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH" "-std=c++17 -stdlib=libc++ (no-clinger build) -O0 -fno-fast-math -frounding-math"
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-clang-nocl
+          path: research/fc_rounding/results_clang_nocl.jsonl

@@ -1,0 +1,174 @@
+id: exp-2026-0041
+type: experiment
+status: executed
+created_at: "2026-10-21T13:10:00Z"
+updated_at: "2026-10-21T17:10:00Z"
+summary: >
+  Bounded ambient-rounding-mode matrix for std::from_chars floating-point
+  conversion: 34 exact-rational, non-tie, in-range vectors (23 primary and
+  control, 4 path-discriminator, 7 added after independent review) crossed
+  with 4 rounding modes, executed against four targets: GCC 13/14 +
+  libstdc++, stock Clang/libc++ 20.1.8, Clang/libc++ 20.1.8 rebuilt with the
+  Clinger fast path disabled, and MSVC STL 14.51.36231 on Windows ARM64.
+  544 records total. Result: libc++ is mode-dependent on 19 of 34 vectors;
+  all other targets are mode-invariant and match the exact-rational oracle
+  on every vector and mode. Rebuilding libc++ with the Clinger path
+  disabled removes the mode-dependence completely, which is a direct causal
+  test.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: grok-4.7
+    tool: C++ harness with runtime argv input, per-case fresh process, exact-rational Python oracle with three independent re-derivations
+  sources:
+    - research/fc_rounding/README.md
+    - research/fc_rounding/harness.cpp
+    - research/fc_rounding/oracle.py
+    - research/fc_rounding/vectors.json
+    - research/fc_rounding/vectors_discriminator.json
+  parent: msn-2026-0026
+  generation: 0
+links:
+  targets: [tgt-2026-0008]
+  hypotheses: [hyp-2026-0036]
+  observations: [obs-2026-0072]
+  reproducers: [rpr-2026-0020]
+  missions: [msn-2026-0026]
+title: "EXP-2026-0041 - Ambient rounding-mode matrix for std::from_chars across four targets"
+design: |
+  Corpus: 34 vectors, every one finite, in range, and NOT an exact tie, so a
+  unique nearest representable value exists. Groups:
+
+    A-GCC-decimal     D01, D02  - decimal inputs, source-condition-qualified
+                                  for libstdc++'s fast_float path
+    control           D03-D10  - simple decimal values including exactly
+                                  representable ones and a negative value
+    C-libcxx-clinger  C01-C08  - Clinger-eligible decimal inputs, with
+                                  opposite-side midpoint pairs
+    B-GCC-hex         H01, H02  - hexadecimal inputs, source-condition-
+                                  qualified for libstdc++'s hex path
+    control           H03-H05  - further hexadecimal inputs
+    X-clinger-defeat X01, X02  - mantissa wide enough that
+                                  (mantissa >> FRACTION_LEN) != 0, so the
+                                  libc++ Clinger fast path is NOT taken
+    X-clinger-eligible X03, X04 - matched controls where the Clinger path IS
+                                  taken
+    N-negative-clinger N01-N04 - negative Clinger-eligible inputs, added
+                                  after independent review to make the
+                                  magnitude-then-negate behaviour observable
+    P-clinger-two-multiply P01-P03 - exponents above EXACT_POWERS_OF_TEN, so
+                                  the two-native-multiply sub-branch of
+                                  clinger_fast_path is exercised
+
+  The N and P vectors were added after the independent adversarial review
+  identified that the original 27-vector corpus could not detect the
+  negative-input direction inversion and never exercised the two-multiply
+  sub-branch. X03 was also changed to a distinct Clinger-eligible value,
+  because it previously duplicated C02 exactly.
+
+  Each vector is run in each of FE_TONEAREST, FE_DOWNWARD, FE_UPWARD and
+  FE_TOWARDZERO. Every (vector, mode) case runs in a FRESH PROCESS. The
+  harness reads the input string and the mode index from argv at runtime, so
+  no conversion can be constant-folded.
+
+  Expected bits come from an exact-rational oracle that never calls
+  from_chars, strtod, strtof, Python float(), or any standard library
+  conversion. The oracle uses integer arithmetic and fractions.Fraction only.
+  Two further independent implementations (binary search over significands;
+  80-digit decimal.Decimal rounding with from-scratch parsers) reproduce every
+  expected bit, and a separate uniqueness check proves each expected value is
+  strictly nearer than both representable neighbours.
+
+  Instrumentation per case: fesetround return status, fegetround immediately
+  before the from_chars call, from_chars error code, characters consumed,
+  raw IEEE bit pattern of the result, fegetround immediately after, and two
+  positive liveness controls executed in the same process while the ambient
+  mode is still active (a raw FPU probe 1.0 + 1e-20, and a strtod probe).
+  The controls vary with the mode, proving the ambient mode was live at the
+  call site. The strtod control is diagnostic only and is never used as an
+  expected value.
+
+  Compile flags for every target: -std=c++17 -O0 -fno-fast-math
+  -frounding-math, no LTO, #pragma STDC FENV_ACCESS ON under Clang. MSVC
+  does not support the STDC FENV_ACCESS pragma (warning C4068) and was run
+  with its default /fp:precise; MSVC's from_chars is a header-inline
+  implementation, so the harness's compilation settings apply to the
+  conversion code itself.
+
+execution:
+  environment: >
+    GitHub Actions ubuntu-latest (Linux x86-64) for the three Linux targets;
+    local Windows 11 ARM64 (build 10.0.26100.0) for the MSVC STL target.
+  compute_route: medium
+  compute_rationale: >
+    Three distinct standard libraries cannot be obtained on the local Windows
+    ARM64 host (no GCC, no libc++, no WSL, no Docker). Building them from
+    source on the host would violate the no-heavy-local-builds rule, so the
+    matrix was routed to GitHub Actions public runners. The libc++ no-Clinger
+    ablation requires building libc++ from the llvmorg-20.1.8 tag, which is
+    also a CI-only job.
+  isolation: >
+    Each (vector, mode) case is a separate OS process; no state carries
+    between cases. CI jobs are separate fresh runners.
+  seeds_and_determinism: >
+    Fully deterministic. Fixed literal input strings, no randomness, no
+    wall-clock or address-dependent behaviour. Each result was reproduced in
+    at least two independent CI runs (runs 39606413728, 39607506255,
+    39607726610, 39608018709, 39608262716, 39608781263, 39609031504) and the
+    local MSVC matrix was re-executed after the harness gained the liveness
+    controls.
+  version_tested:
+    - "GCC: g++ on ubuntu-latest (CI); libstdc++ matching the runner image"
+    - "Clang: clang++-20 / libc++ 20.1.8 (apt.llvm.org llvmorg-20.1.8 packages)"
+    - "Clang ablation: libc++ 20.1.8 rebuilt from the llvmorg-20.1.8 tag with -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH"
+    - "MSVC: cl 19.51.36248 / MSVC STL 14.51.36231, Windows SDK 10.0.26100.0, Windows 11 ARM64"
+results_summary: >
+  544 records across 4 targets x 34 vectors x 4 modes.
+
+    GCC / libstdc++          : 136 records, 0 mode-variant vectors, 0 cells deviating from the oracle
+    Clang / libc++ 20.1.8    : 136 records, 19 mode-variant vectors, 31 cells deviating from the round-to-nearest oracle
+    libc++ with Clinger off  : 136 records, 0 mode-variant vectors, 0 cells deviating from the oracle
+    MSVC STL 14.51.36231     : 136 records, 0 mode-variant vectors, 0 cells deviating from the oracle
+
+  The 19 mode-variant libc++ vectors are C01, C02, C05, C06, C08, D01, D02,
+  D03, D04, D05, N01, N02, N03, N04, P01, P02, P03, X03, X04 - all decimal,
+  all Clinger-eligible. X01 and X02 defeat the Clinger path and are
+  mode-stable, as are the hexadecimal vectors and the Clinger-ineligible
+  negative vector D06.
+
+  Exact characterisation: across all 104 (Clinger-eligible vector, mode)
+  cells the libc++ result equals the magnitude rounded in the ambient
+  direction and then negated (96 cells also match "correctly rounded toward
+  the mode" because the input is positive; 8 cells match only the
+  magnitude-then-negate rule because the input is negative; 0 cells match
+  neither).
+
+  Causal test: rebuilding libc++ with the Clinger fast path disabled removed
+  the mode-dependence on all 19 vectors and introduced none, and the rebuilt
+  library agreed with the oracle and with GCC on every vector and mode. The
+  CI job asserts the ablation define actually took effect by preprocessing
+  the from_chars instantiation with and without it and checking the
+  clinger_fast_path call site.
+
+  Mechanism confirmation: a reproducer that replays the upstream Clinger
+  arithmetic (native FP multiply or divide) under the ambient mode reproduced
+  the libc++ from_chars bit pattern EXACTLY in all 104 (Clinger-eligible
+  vector, mode) cells, with zero differences.
+outcome: >
+  Hypothesis confirmed for libc++ 20.1.8's decimal path; not observed in
+  libstdc++ or MSVC STL. Mechanism established by build-time ablation and by
+  bit-exact mechanism reproduction.
+limitations: >
+  Only two libc++ builds were considered (20.1.8 stock and 20.1.8 rebuilt);
+  no other libc++ release was tested, so the onset version of the behaviour
+  is unknown. The hexadecimal path was exercised by five vectors only. The
+  corpus is 34 vectors, not an exhaustive sweep. long double, non-IEC
+  formats, overflow, underflow, NaN and Inf were out of scope by design. The
+  identity "libc++ 20.1.8" for the stock build rests on the apt.llvm.org
+  package version; the recorded target_label carries the clang version, and
+  the installed library was not disassembled to confirm the bytes. The
+  subnormal region was not exercised, and the Clinger sub-branches other
+  than the divide, the single multiply and the two-multiply scaling
+  sub-branch were not exercised either.

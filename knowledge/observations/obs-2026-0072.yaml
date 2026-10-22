@@ -1,0 +1,146 @@
+id: obs-2026-0072
+type: observation
+status: recorded
+created_at: "2026-10-21T15:30:00Z"
+updated_at: "2026-10-21T19:00:00Z"
+summary: >
+  MEASURED, with the raw records preserved. Under libc++ 20.1.8, 19 of 34
+  finite, in-range, non-tie std::from_chars vectors return DIFFERENT output
+  bits depending on the calling thread's active rounding mode; in every one
+  of the 104 Clinger-eligible (vector, mode) cells the result is exactly the
+  value obtained by rounding the input's MAGNITUDE in the ambient direction
+  and then applying the sign. For positive inputs this is the value correctly
+  rounded toward the ambient mode; for NEGATIVE inputs it is not, because
+  libc++ converts the magnitude and negates at the end, so the result rounds
+  away from zero relative to the signed value. Under GCC 13/14 libstdc++ and
+  MSVC STL 14.51.36231 the output bits are identical across all four modes
+  and identical to the exact-rational oracle on all 34 vectors. Rebuilding
+  libc++ with the Clinger fast path disabled removes the mode-dependence
+  completely, establishing the mechanism causally.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: orchestrator-synthesizer
+    model: grok-4.7
+    tool: CI-executed runtime matrix; raw JSONL records committed under research/fc_rounding/results
+  sources:
+    - research/fc_rounding/results/results_clang.jsonl
+    - research/fc_rounding/results/results_clang_nocl.jsonl
+    - research/fc_rounding/results/results_gcc.jsonl
+    - research/fc_rounding/results/results_msvc.jsonl
+    - research/fc_rounding/results/results_clinger_repro.jsonl
+  parent: msn-2026-0026
+  generation: 0
+links:
+  targets: [tgt-2026-0008]
+  hypotheses: [hyp-2026-0036]
+  experiments: [exp-2026-0041]
+  findings: [fnd-2026-0017]
+  reproducers: [rpr-2026-0020]
+  reviews: [rev-2026-0027]
+  missions: [msn-2026-0026]
+title: "OBS-2026-0072 - libc++ 20.1.8 std::from_chars output bits follow the ambient rounding mode on the decimal path"
+what_was_measured:
+  cohort:
+    - "GCC / libstdc++ (g++ on ubuntu-latest, GitHub Actions)"
+    - "Clang / libc++ 20.1.8, stock (clang++-20 -stdlib=libc++, GitHub Actions)"
+    - "Clang / libc++ 20.1.8 rebuilt from llvmorg-20.1.8 with -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH (GitHub Actions)"
+    - "MSVC STL 14.51.36231 on Windows 11 ARM64 (local)"
+  corpus: >
+    34 vectors (23 primary and control, 4 path-discriminator, 7 added after
+    independent review), each finite, in range, and provably not an exact
+    tie, so a unique nearest representable value exists in the destination
+    type.
+  matrix: 34 vectors x 4 rounding modes x 4 targets = 544 records
+  determinism: >
+    Fully deterministic. Fixed literal input strings, no randomness, no
+    address- or time-dependent behaviour. Every result reproduced across
+    multiple independent CI runs and across a local re-execution.
+  environment_control: >
+    Each case ran in a fresh process. fesetround's return status was
+    recorded, and fegetround read immediately before the from_chars call
+    matched the requested mode on every one of the 544 records (0 setup
+    anomalies). Two positive liveness controls ran in the same process while
+    the ambient mode was still active: a raw FPU probe (1.0 + 1e-20) and a
+    strtod probe. The strtod probe varies across all four modes on every
+    target, proving the ambient rounding mode was live at the call site
+    rather than merely requested. The FPU probe distinguishes FE_UPWARD from
+    the other three modes but does not by itself distinguish FE_DOWNWARD
+    from FE_TOWARDZERO; the strtod probe carries that discrimination.
+  independent_of_oracle: >
+    The expected value for every vector was computed from the input's exact
+    rational value using integer arithmetic and fractions.Fraction only. It
+    was never taken from from_chars, strtod, strtof, Python float(), or from
+    any implementation under test. Two further independent algorithms and a
+    separate uniqueness proof reproduced every expected bit.
+raw_observations:
+  per_target_summary:
+    - "GCC / libstdc++: 136 records, 34 vectors, 0 mode-variant vectors, 0 cells deviating from the oracle, 0 setup anomalies"
+    - "Clang / libc++ 20.1.8 stock: 136 records, 34 vectors, 19 mode-variant vectors, 31 cells deviating from the round-to-nearest oracle, 0 setup anomalies"
+    - "Clang / libc++ 20.1.8 rebuilt with Clinger disabled: 136 records, 34 vectors, 0 mode-variant vectors, 0 cells deviating from the oracle, 0 setup anomalies"
+    - "MSVC STL 14.51.36231: 136 records, 34 vectors, 0 mode-variant vectors, 0 cells deviating from the oracle, 0 setup anomalies"
+  mode_variant_vectors_in_stock_libcxx:
+    - "C01 123456789012344e-15 double  nearest=0x3fbf9add3746f5e6  upward=0x3fbf9add3746f5e7 (+1 ulp)"
+    - "C02 123456789012345e-15 double  nearest=0x3fbf9add3746f62e  upward=0x3fbf9add3746f62f (+1 ulp)"
+    - "C05 99999e-6 float           nearest=0x3dcccc47  downward=0x3dcccc46  towardzero=0x3dcccc46 (-1 ulp)"
+    - "C06 100001e-6 float          nearest=0x3dcccd53  upward=0x3dcccd54 (+1 ulp)"
+    - "C08 1000001e3 float          nearest=0x4e6e6b38  downward=0x4e6e6b37  towardzero=0x4e6e6b37 (-1 ulp)"
+    - "D01 1.1 float                nearest=0x3f8ccccd  downward=0x3f8ccccc  towardzero=0x3f8ccccc (-1 ulp)"
+    - "D02 1.1 double               nearest=0x3ff199999999999a  downward=0x3ff1999999999999  towardzero=0x3ff1999999999999 (-1 ulp)"
+    - "D03 0.1 float                nearest=0x3dcccccd  downward=0x3dcccccc  towardzero=0x3dcccccc (-1 ulp)"
+    - "D04 0.1 double               nearest=0x3fb999999999999a  downward=0x3fb9999999999999  towardzero=0x3fb9999999999999 (-1 ulp)"
+    - "D05 3.141592653589793 double nearest=0x400921fb54442d18  downward=0x400921fb54442d17  towardzero=0x400921fb54442d17 (-1 ulp)"
+    - "N01 -1.1 double              nearest=0xbff199999999999a  downward=0xbff1999999999999  upward=0xbff199999999999a  towardzero=0xbff1999999999999"
+    - "N02 -1.1 float               nearest=0xbf8ccccd  downward=0xbf8ccccc  upward=0xbf8ccccd  towardzero=0xbf8ccccc"
+    - "N03 -0.1 double              nearest=0xbfb999999999999a  downward=0xbfb9999999999999  upward=0xbfb999999999999a  towardzero=0xbfb9999999999999"
+    - "N04 -1234567e-6 float        nearest=0xbf9e064b  downward=0xbf9e064a  upward=0xbf9e064b  towardzero=0xbf9e064a"
+    - "P01 1e24 double              nearest=0x44ea784379d99db4  upward=0x44ea784379d99db5 (+1 ulp)  [exercises the exp10 > EXACT_POWERS_OF_TEN two-multiply sub-branch]"
+    - "P02 1e12 float               nearest=0x5368d4a5  upward=0x5368d4a6 (+1 ulp)  [two-multiply sub-branch]"
+    - "P03 1e13 float               nearest=0x551184e7  upward=0x551184e8 (+1 ulp)  [two-multiply sub-branch]"
+    - "X03 987654321e-8 double      nearest=0x4023c0ca4588f633  upward=0x4023c0ca4588f634 (+1 ulp)"
+    - "X04 1234567e-6 float         nearest=0x3f9e064b  downward=0x3f9e064a  towardzero=0x3f9e064a (-1 ulp)"
+  stable_in_stock_libcxx: >
+    C03, C04, C07, D06, D07, D08, D09, D10, H01, H02, H03, H04, H05, X01,
+    X02. X01 and X02 are the path-discriminator vectors whose mantissas are
+    wide enough that the libc++ Clinger fast path is not taken; they are
+    mode-stable. All five hexadecimal vectors are mode-stable. D06 is a
+    negative Clinger-INELIGIBLE vector (its float mantissa truncates), so it
+    takes the integer path and is stable.
+  exact_characterisation: >
+    Across all 104 (Clinger-eligible vector, mode) cells, the libc++ result
+    equals the value obtained by rounding the input's MAGNITUDE under the
+    ambient rounding mode and then applying the sign: 96 cells match both
+    that rule and "correctly rounded toward the mode" (positive inputs),
+    8 cells match only the magnitude-then-negate rule (the negative inputs
+    N01-N04), and 0 cells match neither. There is no cell that matches
+    "correctly rounded toward the mode" without also matching the
+    magnitude-then-negate rule.
+  identical_across_targets_under_nearest: >
+    Under FE_TONEAREST, all four targets produced byte-identical output bits
+    on all 34 vectors, and those bits equal the exact-rational oracle.
+  causal_test: >
+    Rebuilding libc++ 20.1.8 from the llvmorg-20.1.8 tag with
+    -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH removed the
+    mode-dependence on all 19 mode-variant vectors and introduced none. The
+    rebuilt library matched the oracle and GCC/libstdc++ on all 136 records.
+    The CI job additionally asserts that the define actually took effect, by
+    reconstructing the build's own compile command for the TU that
+    instantiates the floating-point from_chars, preprocessing it with and
+    without the define, and requiring the clinger_fast_path CALL SITE to be
+    present without the define and absent with it.
+  mechanism_reproduction: >
+    A reproducer replaying the upstream Clinger arithmetic (native
+    floating-point multiply or divide under the ambient mode) produced output
+    bits IDENTICAL to libc++'s from_chars in all 104 (Clinger-eligible
+    vector, mode) cells, with zero differences. The 3 Clinger-ineligible
+    vectors (D06, X01, X02) have no model in the reproducer and were
+    excluded from that comparison; they are separately covered by the
+    build-time ablation, which shows them to be mode-stable.
+interpretation_boundary: >
+  This observation records BEHAVIOUR. It does not decide whether the
+  behaviour is a conformance defect: [charconv.from.chars] contains
+  conflicting wording (it requires rounding according to round_to_nearest,
+  while also permitting "one of at most two floating-point values closest"),
+  and resolving that conflict is a separate normative argument. No security
+  or exploitability claim is made.

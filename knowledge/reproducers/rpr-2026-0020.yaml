@@ -1,0 +1,97 @@
+id: rpr-2026-0020
+type: reproducer
+status: recorded
+created_at: "2026-10-21T15:40:00Z"
+updated_at: "2026-10-21T17:15:00Z"
+summary: >
+  Minimal reproducer for the ambient rounding-mode dependence of
+  std::from_chars in libc++ 20.1.8. A single-line input is enough: the
+  string "1.1" converted to float returns 0x3f8ccccd (the round-to-nearest
+  value) under FE_TONEAREST and FE_UPWARD, and 0x3f8ccccc (one ulp lower)
+  under FE_DOWNWARD and FE_TOWARDZERO. The result is reproducible in a fresh
+  process, and the difference is the correctly-rounded-toward-the-mode value,
+  which identifies the Clinger fast path as the mechanism.
+epistemic_status: observation
+provenance:
+  created_by:
+    kind: model-agent
+    role: experiment-designer
+    model: grok-4.7
+    tool: C++ harness reading input and mode from argv at runtime
+  sources:
+    - research/fc_rounding/harness.cpp
+    - research/fc_rounding/results/results_clang.jsonl
+  parent: msn-2026-0026
+  generation: 0
+links:
+  targets: [tgt-2026-0008]
+  experiments: [exp-2026-0041]
+  observations: [obs-2026-0072]
+  findings: [fnd-2026-0017]
+  missions: [msn-2026-0026]
+title: "RPR-2026-0020 - libc++ 20.1.8 from_chars(\"1.1\") float output depends on the ambient rounding mode"
+minimal_reproducer: |
+  #include <charconv>
+  #include <cfenv>
+  #include <cstdio>
+  #include <cstring>
+
+  int main(int argc, char** argv) {
+      const char* s = "1.1";                 // exact value 11/10
+      float v = 0.0f;
+      int mode = (argc > 1) ? atoi(argv[1]) : 0;
+      const int modes[4] = {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
+      std::fesetround(modes[mode]);
+      int before = std::fegetround();
+      auto r = std::from_chars(s, s + 3, v);
+      unsigned u; std::memcpy(&u, &v, sizeof(u));
+      std::printf("mode_before=%d ec=%d ptr=%d bits=0x%08x\n",
+                  before, (int)r.ec, (int)(r.ptr - s), u);
+  }
+
+  Build (libc++ 20.1.8):
+    clang++-20 -std=c++17 -stdlib=libc++ -O0 -fno-fast-math -frounding-math repro.cpp -o repro
+
+  Run (each in a fresh process):
+    ./repro 0   # nearest    -> bits=0x3f8ccccd
+    ./repro 1   # downward   -> bits=0x3f8ccccc
+    ./repro 2   # upward     -> bits=0x3f8ccccd
+    ./repro 3   # towardzero -> bits=0x3f8ccccc
+
+  Expected values come from the exact rational 11/10, NOT from any
+  implementation: 11/10 lies strictly between the binary32 values
+  0x3f8ccccc (1.0999999046325684) and 0x3f8ccccd (1.100000023841858), and is
+  strictly closer to the latter
+  (distance 1/41943040 vs 1/10485760).
+
+  NEGATIVE VARIANT, which shows the direction more sharply. libc++ converts
+  the magnitude and negates at the end, so for a negative input the ambient
+  mode rounds the MAGNITUDE. Changing the string to "-1.1" and the type to
+  double gives:
+
+    ./repro 0   # nearest    -> bits=0xbff199999999999a
+    ./repro 1   # downward   -> bits=0xbff1999999999999  (magnitude rounded DOWN, then negated: AWAY from zero)
+    ./repro 2   # upward     -> bits=0xbff199999999999a
+    ./repro 3   # towardzero -> bits=0xbff1999999999999
+
+  The value correctly rounded toward FE_DOWNWARD for the signed value -1.1
+  would be 0xbff199999999999a, not 0xbff1999999999999, which is why the
+  behaviour is characterised as "magnitude rounded in the ambient direction,
+  then negated" rather than "rounded toward the ambient mode".
+why_it_is_minimal: >
+  One input, one output type, four one-argument runs. The input is not a
+  tie, is in range, and is fully consumed (from_chars returns ptr == s + 3
+  and ec == errc{} in every mode).
+controls_that_rule_out_broken_harness:
+  - "fegetround() read immediately before the call matched the requested mode on all 432 records across all four targets"
+  - "fesetround() returned 0 on all 432 records"
+  - "a raw FPU probe (1.0 + 1e-20) in the same process changed with the mode on all four targets, proving the ambient mode was live"
+  - "a strtod probe in the same process changed with the mode, showing the FPU rounding mode was genuinely in effect, not merely recorded"
+  - "the input string and the mode index are runtime argv values, so no conversion can be constant-folded"
+  - "GCC/libstdc++ and MSVC STL return 0x3f8ccccd in all four modes on the same harness and the same input"
+discriminating_control: >
+  "12345678901234567e-15" (X01) has a mantissa too wide for the Clinger fast
+  path and is mode-stable in the same libc++ build, while
+  "123456789012345e-15" (X03) is Clinger-eligible and is not. A 12-vector
+  Clinger-eligible set and a 2-vector Clinger-ineligible set, same harness,
+  same run, same mode settings.
