@@ -72,8 +72,9 @@ what_was_measured:
     The expected value for every vector was computed from the input's exact
     rational value using integer arithmetic and fractions.Fraction only. It
     was never taken from from_chars, strtod, strtof, Python float(), or from
-    any implementation under test. Two further independent algorithms and a
-    separate uniqueness proof reproduced every expected bit.
+    any implementation under test. Two further algorithmically distinct
+    algorithms (same author) and a separate uniqueness proof reproduced
+    every expected bit.
 raw_observations:
   per_target_summary:
     - "GCC / libstdc++: 136 records, 34 vectors, 0 mode-variant vectors, 0 cells deviating from the oracle, 0 setup anomalies"
@@ -111,7 +112,9 @@ raw_observations:
     Across all 104 (Clinger-eligible vector, mode) cells, the libc++ result
     equals the value obtained by rounding the input's MAGNITUDE under the
     ambient rounding mode and then applying the sign: 96 cells match both
-    that rule and "correctly rounded toward the mode" (positive inputs),
+    that rule and "correctly rounded toward the mode" (including the
+    negative-input cells in FE_TONEAREST and FE_TOWARDZERO, where the two
+    rules coincide),
     8 cells match only the magnitude-then-negate rule (the negative inputs
     N01-N04), and 0 cells match neither. There is no cell that matches
     "correctly rounded toward the mode" without also matching the

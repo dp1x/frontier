@@ -8,7 +8,7 @@ non-tie inputs?
 
 For **libc++ 20.1.8** (clang++ 20, `-stdlib=libc++`) the answer is **yes**, on
 the decimal conversion path. For **GCC 13/14 + libstdc++** and **MSVC STL
-14.51.36231** the answer is **no**: the output bits are identical under
+14.51.36231**, over the tested corpus, the answer is **no**: the output bits are identical under
 `FE_TONEAREST`, `FE_DOWNWARD`, `FE_UPWARD` and `FE_TOWARDZERO`, and identical
 to the exact-rational oracle.
 
@@ -17,7 +17,8 @@ The libc++ behaviour is caused by the **Clinger fast path** in
 as a *native* floating-point multiply or divide. That operation follows the
 ambient FPU rounding mode, so the result is the **magnitude** rounded in the
 ambient direction and then negated, rather than the round-to-nearest value
-that `[charconv.from.chars]` requires. Rebuilding libc++ with
+that one reading of `[charconv.from.chars]` (round_to_nearest) calls for,
+under a non-default ambient mode. Rebuilding libc++ with
 `LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH` removes the mode-dependence
 entirely, which is a direct causal test.
 

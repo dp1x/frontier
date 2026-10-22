@@ -43,5 +43,5 @@ what_is_being_probed: >
   nearest result regardless of the calling thread's active rounding mode?
 status_detail: >
   Active. The bounded experiment has been executed; the finding is recorded at
-  observation epistemic status pending an independent non-synthesizer review
-  before any promotion to verified.
+  observation epistemic status. An independent non-synthesizer review
+  (rev-2026-0027) has been completed; the finding is not promoted to verified.

@@ -10,8 +10,9 @@ summary: >
   the value obtained by rounding the input's MAGNITUDE in the ambient
   direction and then applying the sign, which for positive inputs is the
   value correctly rounded toward the ambient mode and for negative inputs
-  rounds away from zero relative to the signed value. The result is never
-  the round-to-nearest value that [charconv.from.chars] requires. The
+  rounds away from zero relative to the signed value. The result is not the
+  round-to-nearest value that one reading of [charconv.from.chars]
+  (round_to_nearest) calls for, under a non-default ambient mode. The
   mechanism is the Clinger fast path in libc/src/__support/str_to_float.h,
   which performs the decimal-to-binary step as a native floating-point
   multiply or divide. The same behaviour was NOT observed in GCC 13/14
@@ -25,7 +26,7 @@ provenance:
     kind: model-agent
     role: orchestrator-synthesizer
     model: grok-4.7
-    tool: synthesis of a CI-executed four-target matrix, an exact-rational oracle with three independent re-derivations, a build-time ablation with an effectiveness assertion, and an adversarial review
+    tool: synthesis of a CI-executed four-target matrix, an exact-rational oracle with three algorithmically distinct re-derivations (same author), a build-time ablation with an effectiveness assertion, and an adversarial review
   sources:
     - research/fc_rounding/README.md
     - knowledge/experiments/exp-2026-0041.yaml

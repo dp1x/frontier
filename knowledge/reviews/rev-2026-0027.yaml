@@ -21,7 +21,7 @@ provenance:
     kind: model-agent
     role: independent-reviewer
     model: grok-4.7
-    tool: read-only adversarial re-derivation of expected bits, recomputation of tie conditions, inspection of all 432 raw records
+    tool: read-only adversarial re-derivation of expected bits, recomputation of tie conditions, inspection of all 544 raw records
   sources:
     - research/fc_rounding/results/results_clang.jsonl
     - research/fc_rounding/results/results_clang_nocl.jsonl
@@ -29,6 +29,7 @@ provenance:
     - research/fc_rounding/results/results_msvc.jsonl
     - research/fc_rounding/vectors.json
     - research/fc_rounding/vectors_discriminator.json
+    - research/fc_rounding/vectors_extra.json
   parent: msn-2026-0026
   generation: 0
 links:
@@ -207,7 +208,7 @@ corrections_made_as_a_result:
     says so precisely.
 unresolved_objections:
   - >
-    The three independent oracle implementations share an author and were
+    The three oracle implementations (algorithmically distinct) share an author and were
     written in one session. They use different algorithms and different
     parsers, but they are not the work of an unrelated party, so they
     demonstrate algorithmic independence rather than organisational
@@ -278,7 +279,7 @@ verdict: >
   whose defining switch is now asserted to have taken effect, and a bit-exact
   mechanism reproduction. The reviewer's own independent re-derivations
   (longhand binary expansion and a hand-rolled Fraction implementation) and
-  its audit of all 432 then 544 records found no anomaly in the empirical
+  its audit of all 544 records found no anomaly in the empirical
   data.
   The claims about GCC/libstdc++ and MSVC STL are negative results over the
   tested corpus and are stated as such.

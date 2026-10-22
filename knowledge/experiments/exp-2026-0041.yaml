@@ -21,7 +21,7 @@ provenance:
     kind: model-agent
     role: experiment-designer
     model: grok-4.7
-    tool: C++ harness with runtime argv input, per-case fresh process, exact-rational Python oracle with three independent re-derivations
+    tool: C++ harness with runtime argv input, per-case fresh process, exact-rational Python oracle with three algorithmically distinct re-derivations (same author)
   sources:
     - research/fc_rounding/README.md
     - research/fc_rounding/harness.cpp

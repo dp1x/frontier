@@ -6,13 +6,13 @@ updated_at: "2026-10-21T17:20:00Z"
 summary: >
   Deterministic verification of the observed libc++ 20.1.8 rounding-mode
   dependence, in two independent forms. (1) An exact-rational oracle plus two
-  further independent re-derivations and a uniqueness proof establish the
-  expected round-to-nearest bits for all 27 vectors without any tested
+  further algorithmically distinct re-derivations (same author) and a uniqueness proof establish the
+  expected round-to-nearest bits for all 34 vectors without any tested
   conversion routine. (2) A build-time ablation: libc++ 20.1.8 rebuilt with
   -DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH produces mode-invariant,
-  oracle-matching output on all 108 records, and a reproducer of the upstream
+  oracle-matching output on all 136 records, and a reproducer of the upstream
   Clinger arithmetic reproduces libc++'s from_chars bit pattern exactly in
-  all 76 Clinger-eligible (vector, mode) cells.
+  all 104 Clinger-eligible (vector, mode) cells.
 epistemic_status: observation
 provenance:
   created_by:
@@ -126,9 +126,13 @@ residual_uncertainty:
     The oracle was written before the runtime matrix and independently
     re-derived twice, but all three implementations share the same author
     and were not reviewed by a separate party prior to use. An independent
-    reviewer is required before promotion to verified.
+    reviewer (rev-2026-0027) has since re-derived every expected bit by two
+    methods and audited all 544 records; the oracles remain same-author, so
+    organisational independence is only partly closed.
   - >
-    A separate adversarial reviewer subagent was dispatched and terminated
-    on an API rate limit without producing a verdict; the checks it was to
-    perform were carried out by the primary agent instead. This is recorded
-    as a limitation, not as a completed independent review.
+    An independent adversarial reviewer (rev-2026-0027) was subsequently re-dispatched
+    with the same falsification brief and returned a full verdict, finding two
+    substantive defects that were corrected and re-tested. The three oracle
+    implementations still share one author and one session, so organisational
+    independence is only partly closed by rev-2026-0027's re-derivations; the
+    algorithms themselves are distinct.

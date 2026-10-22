@@ -44,8 +44,9 @@ statement: |
   Precisely: under libc++ 20.1.8, for inputs that satisfy the Clinger fast
   path's eligibility conditions, std::from_chars returns the value obtained
   by rounding the input's MAGNITUDE in the ambient rounding direction and
-  then applying the sign, rather than the round-to-nearest value that
-  [charconv.from.chars] specifies. For positive inputs this is the value
+  then applying the sign, rather than the round-to-nearest value that one
+  reading of [charconv.from.chars] (round_to_nearest) specifies. For positive
+  inputs this is the value
   correctly rounded toward the ambient mode; for negative inputs it rounds
   away from zero relative to the signed value, because libc++ converts the
   magnitude and negates at the end. Under GCC 13/14 libstdc++ and MSVC STL
